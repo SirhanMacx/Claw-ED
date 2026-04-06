@@ -1165,7 +1165,7 @@ function writeWorkspacePackageJson(keepPaths) {
         name: '@anthropic-ai/claude-code-build-workspace',
         private: true,
         type: 'module',
-        overrides: {
+        dependencies: {
           'lru-cache': '10.4.3',
         },
       },
