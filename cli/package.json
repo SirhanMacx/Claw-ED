@@ -4,8 +4,5 @@
   "type": "module",
   "scripts": {
     "build": "bun ./scripts/build-cli.mjs"
-  },
-  "overrides": {
-    "lru-cache": "10.4.3"
   }
 }

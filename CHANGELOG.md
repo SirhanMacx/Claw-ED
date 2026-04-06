@@ -1,6 +1,12 @@
 # Changelog
 
-## v4.5.2026.36 (2026-04-06)
+## v4.6.2026 (2026-04-06)
+
+### Major release — model system, security hardening, agent autonomy
+
+This release consolidates 36 incremental pushes from the v4.5 series
+into a clean milestone. Every audit finding addressed, all version
+surfaces aligned, CI green across Python, Docker, and TypeScript.
 
 ### Model system
 - Default model: gemma4:31b-cloud (100% tool-call success, proven in 3-lesson test)

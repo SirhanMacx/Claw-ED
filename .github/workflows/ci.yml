@@ -48,8 +48,6 @@ jobs:
           node-version: '20'
       - name: Verify Bun is available
         run: bun --version
-      - name: Install CLI dependencies
-        run: cd cli && npm install
       - name: Build TypeScript CLI
         run: cd cli && node scripts/build-cli.mjs
       - name: Verify build output
