@@ -1,6 +1,5 @@
 """Tests for session compression."""
 import json
-import os
 import sqlite3
 
 import pytest
