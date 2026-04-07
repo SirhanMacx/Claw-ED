@@ -289,7 +289,7 @@ class GenerateLessonBundleTool:
             try:
                 from clawed.image_pipeline import fetch_all_images
 
-                images = await fetch_all_images(master, config)
+                images = await fetch_all_images(master, config, teacher_id=context.teacher_id)
                 report.images_embedded = len(images)
                 logger.info("Fetched %d images", len(images))
             except Exception as e:

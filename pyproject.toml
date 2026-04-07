@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clawed"
-version = "4.6.2026"
+version = "4.7.2026"
 description = "Your AI co-teacher. Generate lessons, games, slides, and assessments from your terminal. Learns your teaching voice, aligns to your state standards, and works with any LLM provider."
 readme = "README.md"
 license = "MIT"
@@ -17,7 +17,8 @@ keywords = [
     "curriculum", "lesson-plan-generator", "edtech", "k12",
     "open-source-education", "teacher-tools", "ai-for-teachers",
     "lesson-planning", "pedagogy", "hermes-agent", "teachers",
-    "lesson-plans", "clawed", "claw-ed", "teaching",
+    "lesson-plans", "clawed", "claw-ed", "teaching", "manim",
+    "animation", "educational-videos",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -63,6 +64,7 @@ browser = ["playwright>=1.40.0"]
 voice = ["faster-whisper>=0.10.0"]
 tui = ["textual>=0.56.0"]
 memory = ["onnxruntime>=1.16.0"]
+animations = ["manim>=0.18.0", "pyav>=12.0"]
 all = [
     "faster-whisper>=0.10.0",
     "textual>=0.56.0",

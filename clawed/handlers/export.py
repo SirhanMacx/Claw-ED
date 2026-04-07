@@ -61,7 +61,7 @@ class ExportHandler:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            file_path = await self._do_export(lesson, persona, output_dir, fmt)
+            file_path = await self._do_export(lesson, persona, output_dir, fmt, teacher_id=teacher_id)
             caption = {
                 "slides": "Here are your slides!",
                 "handout": "Here's the student handout!",
@@ -73,7 +73,7 @@ class ExportHandler:
             logger.error("Export failed: %s", e)
             return GatewayResponse(text=f"Export failed: {e}")
 
-    async def _do_export(self, lesson, persona, output_dir, fmt) -> Path:
+    async def _do_export(self, lesson, persona, output_dir, fmt, teacher_id: str = "") -> Path:
         from clawed.doc_export import (
             export_lesson_docx,
             export_lesson_pdf,
@@ -81,7 +81,7 @@ class ExportHandler:
             export_student_handout,
         )
         if fmt == "slides":
-            return export_lesson_pptx(lesson, persona, output_dir)
+            return export_lesson_pptx(lesson, persona, output_dir, teacher_id=teacher_id)
         elif fmt == "handout":
             return export_student_handout(lesson, persona, output_dir)
         elif fmt == "doc":

@@ -139,17 +139,51 @@ _STOP_WORDS = frozenset({
     'not', 'was', 'are', 'has', 'had', 'its', 'this', 'that', 'with',
     'from', 'will', 'can', 'all', 'may', 'new', 'one', 'two', 'use',
     'pdf', 'doc', 'docx', 'pptx', 'ppt', 'txt', 'copy', 'final', 'draft',
+    # System path components that leak into directory-based tag extraction
+    'users', 'home', 'documents', 'curricula', 'curriculum', 'desktop',
+    'downloads', 'onedrive', 'google', 'drive', 'dropbox', 'icloud',
 })
 
 
-def _extract_topic_tags(filename: str, content: str) -> list[str]:
-    """Extract topic tags from filename and first portion of content."""
+def _extract_topic_tags(filename: str, content: str, source_path: str = "") -> list[str]:
+    """Extract topic tags from filename, directory path, and content.
+
+    The curriculum directory structure carries strong topic signals:
+    e.g., "7th us history 1/22-23/American_Revolution.pptx"
+    → tags include "us history", "american", "revolution", "7th"
+    """
     tags: set[str] = set()
 
     # From filename — split on common separators, filter stop words
     name = Path(filename).stem
     parts = re.split(r'[-_\s.()]+', name.lower())
     tags.update(p for p in parts if len(p) > 2 and p not in _STOP_WORDS)
+
+    # From directory path — curriculum structure has subject/grade/topic folders
+    if source_path:
+        path_parts = Path(source_path).parts
+        # Skip system prefix: everything up to and including "Documents"/"Curricula"
+        # e.g., C:\Users\jonan\Documents\Curricula\7th us history 1\22-23\file.pptx
+        # Skip: C:, Users, jonan, Documents, Curricula → start at "7th us history 1"
+        skip_prefixes = {'/', 'c:', 'd:', 'users', 'home', 'documents', 'curricula',
+                         'my documents', 'desktop', 'downloads', 'onedrive', 'dropbox'}
+        start_idx = 0
+        for i, part in enumerate(path_parts):
+            if part.lower().rstrip('\\') in skip_prefixes:
+                start_idx = i + 1
+
+        for part in path_parts[start_idx:-1]:  # exclude filename itself
+            dir_tokens = re.split(r'[-_\s.()]+', part.lower())
+            for tok in dir_tokens:
+                if len(tok) > 2 and tok not in _STOP_WORDS and not tok.isdigit():
+                    tags.add(tok)
+            # Also extract multi-word curriculum phrases from directory names
+            # e.g., "7th us history 1" → "us history"
+            multi_word = re.findall(r'[a-z]+(?:\s+[a-z]+)+', part.lower())
+            for phrase in multi_word:
+                cleaned = ' '.join(w for w in phrase.split() if w not in _STOP_WORDS and len(w) > 2)
+                if cleaned and len(cleaned) > 4:
+                    tags.add(cleaned)
 
     # From content — extract capitalised multi-word phrases (likely topics)
     for match in re.finditer(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b', content[:1000]):
@@ -281,7 +315,7 @@ class AssetRegistry:
 
         completeness = 'complete' if material_type in ('slideshow', 'assessment', 'handout') else 'unknown'
 
-        topic_tags = _extract_topic_tags(filename, text)
+        topic_tags = _extract_topic_tags(filename, text, source_path=source_path)
 
         try:
             with sqlite3.connect(self._db_path) as conn:
@@ -545,8 +579,10 @@ class AssetRegistry:
     ) -> list[dict[str, Any]]:
         """Find teacher's own images relevant to a topic.
 
-        Searches context_text, alt_text, title, and topic_tags.
-        Prioritizes: topic_tag match > title match > context match.
+        Two-phase search:
+        1. Fast keyword matching on context_text, alt_text, title, topic_tags
+        2. If keyword match returns 0, fall back to ONNX embedding similarity
+
         Returns images sorted by relevance with valid local paths.
         """
         if not topic or len(topic.strip()) < 2:
@@ -556,17 +592,9 @@ class AssetRegistry:
         if not keywords:
             return []
 
-        with sqlite3.connect(self._db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            # Get all images for this teacher
-            rows = conn.execute(
-                "SELECT ai.*, a.filename, a.title, a.source_path, a.topic_tags "
-                "FROM asset_images ai "
-                "JOIN assets a ON ai.asset_id = a.id "
-                "WHERE a.teacher_id = ? OR a.teacher_id = 'default'",
-                (teacher_id,),
-            ).fetchall()
+        rows = self._get_teacher_image_rows(teacher_id)
 
+        # Phase 1: keyword scoring (fast)
         scored: list[tuple[float, dict]] = []
         for row in rows:
             path = row["image_path"]
@@ -601,5 +629,102 @@ class AssetRegistry:
                     "height": row["height_px"],
                 }))
 
-        scored.sort(key=lambda x: x[0], reverse=True)
-        return [item[1] for item in scored[:limit]]
+        if scored:
+            scored.sort(key=lambda x: x[0], reverse=True)
+            return [item[1] for item in scored[:limit]]
+
+        # Phase 2: embedding similarity fallback (slower, but catches semantic matches)
+        return self._embedding_search_images(rows, topic, limit)
+
+    def _get_teacher_image_rows(self, teacher_id: str) -> list[Any]:
+        """Load all image rows for a teacher from the database."""
+        with sqlite3.connect(self._db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            return conn.execute(
+                "SELECT ai.*, a.filename, a.title, a.source_path, a.topic_tags "
+                "FROM asset_images ai "
+                "JOIN assets a ON ai.asset_id = a.id "
+                "WHERE a.teacher_id = ? OR a.teacher_id = 'default'",
+                (teacher_id,),
+            ).fetchall()
+
+    def _embedding_search_images(
+        self,
+        rows: list[Any],
+        query: str,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        """Semantic search fallback using ONNX MiniLM embeddings.
+
+        When keyword matching finds nothing, this computes cosine similarity
+        between the query and each image's context text. Slower but catches
+        cases where the LLM's image_spec uses different vocabulary than the
+        PPTX slide text.
+        """
+        try:
+            import numpy as np
+            from clawed.agent_core.memory.embeddings import ONNXMiniLMEmbedder
+        except ImportError:
+            logger.debug("ONNX embeddings not available for image fallback search")
+            return []
+
+        # Build candidate list with valid paths and non-empty context
+        candidates: list[tuple[dict, str]] = []
+        for row in rows:
+            path = row["image_path"]
+            if not path or not Path(path).exists():
+                continue
+            context = (row["context_text"] or "") + " " + (row["alt_text"] or "") + " " + (row["title"] or "")
+            context = context.strip()
+            if len(context) < 5:
+                continue
+            fmt = row["image_format"] or "png"
+            candidates.append(({
+                "path": path,
+                "source": row["filename"],
+                "context": row["context_text"] or "",
+                "image_format": fmt,
+                "width": row["width_px"],
+                "height": row["height_px"],
+            }, context))
+
+        if not candidates:
+            return []
+
+        try:
+            embedder = ONNXMiniLMEmbedder()
+            query_emb = np.array(embedder.embed(query), dtype=np.float32)
+
+            # Batch embed all candidate contexts
+            contexts = [c[1][:200] for c in candidates]  # truncate for speed
+            ctx_embs = np.array([embedder.embed(t) for t in contexts], dtype=np.float32)
+
+            # Cosine similarity via matrix multiply (embeddings are L2-normed)
+            query_norm = query_emb / (np.linalg.norm(query_emb) + 1e-8)
+            ctx_norms = ctx_embs / (np.linalg.norm(ctx_embs, axis=1, keepdims=True) + 1e-8)
+            similarities = ctx_norms @ query_norm
+
+            # Rank by similarity, threshold at 0.3
+            ranked = sorted(
+                zip(similarities, candidates),
+                key=lambda x: x[0],
+                reverse=True,
+            )
+
+            results = []
+            for sim, (info, _ctx) in ranked[:limit]:
+                if sim < 0.3:
+                    break
+                info["score"] = float(sim)
+                results.append(info)
+
+            if results:
+                logger.info(
+                    "Embedding fallback found %d images (best score: %.2f)",
+                    len(results), results[0]["score"],
+                )
+            return results
+
+        except Exception as e:
+            logger.debug("Embedding fallback search failed: %s", e)
+            return []

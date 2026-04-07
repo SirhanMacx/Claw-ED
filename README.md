@@ -42,18 +42,20 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 
 ## Features
 
-- CLI agent with 45+ tools (lesson gen, assessments, games, simulations, differentiation)
-- Ingests PDF, DOCX, PPTX, TXT, MD — extracts teaching style and images
-- Semantic search over your curriculum (ONNX MiniLM embeddings, FTS5)
+- CLI agent with 47+ tools (lesson gen, assessments, games, simulations, animations, differentiation)
+- **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides
+- Animated educational videos (timelines, concept maps, cause-effect diagrams) via [Manim](https://www.manim.community/)
+- Ingests PDF, DOCX, PPTX, TXT, MD — extracts teaching style, images, and curriculum structure
+- Semantic search over your curriculum (ONNX MiniLM embeddings, FTS5, embedding-based image matching)
 - [Karpathy-style wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — compiles your files into organized markdown articles
 - [Self-distillation](https://arxiv.org/abs/2604.01193) — learns from your ratings and edits, updates its own soul.md
 - Web search (DuckDuckGo + Playwright), Google Drive integration
 - 50-state standards alignment (NY Regents, TX STAAR, CA CAASPP, etc.)
-- Telegram bot with file delivery, shared session memory
-- Works with Ollama, Anthropic, OpenAI, Google, OpenRouter
+- Telegram bot with file delivery, interactive `/models` selector, shared session memory
+- Works with Ollama, Anthropic, OpenAI, Google, OpenRouter — interactive model switching
 - Scheduled tasks (morning prep, gap detection, wiki maintenance)
 - Self-equipping — can install Python packages (--user scope) and create YAML tool templates when it needs a capability it doesn't have
-- DOCX, PPTX, PDF, HTML export
+- DOCX, PPTX, PDF, HTML, MP4 export
 - MCP server for Claude Code / VS Code integration
 - MIT licensed, no telemetry, no accounts
 

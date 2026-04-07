@@ -415,13 +415,14 @@ def export_lesson_pptx(
     agent_name: str = "Claw-ED",
     include_images: bool = True,
     narrate: bool = False,
+    teacher_id: str = "",
 ) -> Path:
     """Generate a professional PowerPoint presentation from a lesson plan.
 
     Produces a polished, school-board-ready slide deck with:
     - Subject-themed color palette
     - Large readable fonts for projection on classroom screens
-    - Academic images (LOC, Wikimedia, Unsplash) where available
+    - Teacher's own images first, then LOC/Wikimedia/Unsplash fallback
     - Clean, modern, minimal design -- NOT busy or cluttered
     - Consistent visual language throughout
 
@@ -520,17 +521,35 @@ def export_lesson_pptx(
     slide_h = prs.slide_height
 
     # ── Try to fetch images asynchronously (entity-based queries) ────
-    # Extracts named entities (people, places, documents) from lesson content
-    # and searches for those specifically. Up to 5 images per deck.
+    # Phase 1: Teacher's own images (instant, no network)
+    # Phase 2: Named entities from LOC/Wikimedia (web fetch)
     # Images on: Title (bg), Do Now (accent), Direct Instruction (sidebar)
     # No images on: Objectives, Guided Practice, Exit Ticket, Closing
     if include_images:
         from clawed.slide_images import _fetch_wikimedia, extract_image_subjects
         entities = extract_image_subjects(lesson)
 
-        # For named entities (people, places, documents), go directly to Wikipedia —
-        # it's faster and the article thumbnail is always the right image.
-        # For generic topic queries, fall back to the standard LOC→Wikimedia chain.
+        # Phase 1: Try teacher's own extracted images first
+        teacher_images: dict[str, Path | None] = {}
+        if teacher_id:
+            try:
+                from clawed.asset_registry import AssetRegistry
+                registry = AssetRegistry()
+                for i, entity in enumerate(entities[:5]):
+                    query = entity["query"]
+                    matches = registry.search_images_for_topic(teacher_id, query, limit=1)
+                    if matches:
+                        img_path = Path(matches[0]["path"])
+                        if img_path.exists():
+                            teacher_images[f"entity_{i}"] = img_path
+                            logger.info("Teacher image [entity_%d]: %s -> %s", i, query, img_path.name)
+                if teacher_images:
+                    logger.info("Found %d/%d images from teacher's own materials", len(teacher_images), len(entities[:5]))
+            except Exception as e:
+                logger.debug("Teacher asset lookup failed: %s", e)
+
+        # Phase 2: For remaining entities not resolved from teacher assets,
+        # go to Wikipedia / Wikimedia for named entities.
         async def _fetch_entity_images() -> dict[str, Optional[Path]]:
             results: dict[str, Optional[Path]] = {}
             found = 0
@@ -538,6 +557,9 @@ def export_lesson_pptx(
                 if found >= 5:
                     break
                 key = f"entity_{i}"
+                # Skip if already resolved from teacher's own images
+                if key in teacher_images:
+                    continue
                 query = entity["query"]
                 try:
                     path = await asyncio.wait_for(
@@ -574,9 +596,14 @@ def export_lesson_pptx(
             except Exception:
                 images = {}
 
+        # Merge: teacher images take priority over web-fetched
+        images = {**images, **teacher_images}
+
         logger.info(
-            "Image fetch: %d entities, %d images found",
+            "Image fetch: %d entities, %d teacher, %d web, %d total",
             len(entities),
+            len(teacher_images),
+            len([v for v in images.values() if v]) - len(teacher_images),
             len([v for v in images.values() if v]),
         )
     else:

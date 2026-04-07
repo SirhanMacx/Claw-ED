@@ -100,7 +100,7 @@ class ExportDocumentTool:
                 path = export_lesson_docx(lesson, persona, output_dir)
             elif fmt == "pptx":
                 from clawed.export_pptx import export_lesson_pptx
-                path = export_lesson_pptx(lesson, persona, output_dir)
+                path = export_lesson_pptx(lesson, persona, output_dir, teacher_id=context.teacher_id)
             else:
                 return ToolResult(text=f"Unsupported format: {fmt}")
 

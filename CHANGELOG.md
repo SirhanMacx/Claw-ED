@@ -1,5 +1,45 @@
 # Changelog
 
+## v4.7.2026 (2026-04-07)
+
+### Teacher image pipeline + animated educational videos
+
+The #1 user complaint was that generated lessons used generic stock photos
+instead of the teacher's own maps, cartoons, and diagrams — even though
+31,165 images had been extracted from 2,495 PPTX files. Fixed.
+
+### Image pipeline
+- **Critical fix**: generate_lesson_bundle.py now passes teacher_id to
+  fetch_all_images() — this single missing parameter was why zero teacher
+  images appeared in generated lessons
+- **export_pptx.py**: added teacher-asset Phase 1 lookup before Wikimedia
+  fetch — the legacy PPTX export path now also checks teacher's own images
+- **Semantic image matching**: when keyword search returns 0 results,
+  falls back to ONNX MiniLM embedding similarity between image_spec and
+  teacher asset context_text
+- **Topic-tag enrichment**: _extract_topic_tags() now parses curriculum
+  directory structure (e.g., "7th us history 1/22-23/") for richer metadata
+- **teacher_id threaded** through all 3 export paths: generate_lesson_bundle,
+  export_document tool, and handlers/export.py
+
+### Animated educational videos (Manim)
+- **New tool: generate_animation** — creates 3Blue1Brown-style animated
+  educational videos (MP4) via Manim Community Edition
+- **6 animation templates**: HistoricalTimeline, CauseEffectDiagram,
+  ProcessFlow, ConceptMap, VennComparison, VocabularyCard
+- **5-stage pipeline**: PLAN → CODE → RENDER → VALIDATE → DELIVER
+- **Education-optimized**: max 6 on-screen elements, 2-3s pauses between
+  reveals, sans-serif fonts for projector readability
+- **Optional dependency**: `pip install clawed[animations]` — graceful
+  degradation when manim not installed
+- Adapted from Hermes agent manim-video skill architecture
+
+### Hygiene
+- Zero version drift: all 16 version surfaces aligned at 4.7.2026
+- New failure codes: MISSING_DEPENDENCY, RENDER_FAILED
+- Landing page updated with image and animation features
+- 1773 tests pass, 0 failures
+
 ## v4.6.2026 (2026-04-06)
 
 ### Major release — model system, security hardening, agent autonomy
