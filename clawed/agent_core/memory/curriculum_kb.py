@@ -91,42 +91,58 @@ class CurriculumKB:
     def _sanitize_for_indexing(text: str) -> str:
         """Strip non-educational noise from document text before chunking.
 
-        Removes base64-encoded data, XML/HTML tags, repeated whitespace,
-        and other artifacts from document parsers that inflate chunk counts.
-        A 500-slide PPTX should produce ~500 chunks, not 300K.
+        Aggressively removes binary data, XML internals, URL-encoded strings,
+        OLE/OOXML artifacts, and other parser garbage. Only keeps lines that
+        contain real human-readable educational content.
         """
         import re
 
         if not text:
             return ""
 
-        # Strip base64 blobs (images embedded as text by bad parsers)
-        text = re.sub(
-            r'[A-Za-z0-9+/]{100,}={0,2}',
-            ' ',
-            text,
-        )
+        # Strip base64 blobs (images/OLE embedded as text)
+        text = re.sub(r'[A-Za-z0-9+/]{80,}={0,2}', ' ', text)
 
-        # Strip XML/HTML tags that leaked through
+        # Strip XML/HTML tags and internal XML content
         text = re.sub(r'<[^>]{1,500}>', ' ', text)
+        text = re.sub(r'<\?xml[^?]*\?>', ' ', text)
 
-        # Strip common binary/encoding artifacts
+        # Strip URL-encoded sequences (%3D, %26, etc.)
+        text = re.sub(r'(?:%[0-9A-Fa-f]{2}){3,}', ' ', text)
+
+        # Strip binary/encoding artifacts
         text = re.sub(r'\\x[0-9a-fA-F]{2}', ' ', text)
         text = re.sub(r'&#x?[0-9a-fA-F]+;', ' ', text)
 
-        # Collapse excessive whitespace
-        text = re.sub(r'\s{3,}', '\n\n', text)
+        # Strip OLE/OOXML internal paths and markers
+        text = re.sub(r'\b\w+/\w+\.xml\b', ' ', text)
+        text = re.sub(r'\bbjbj\w*\b', ' ', text)
+        text = re.sub(r'\bPK\x03\x04.*', ' ', text)
 
-        # Strip lines that are mostly non-alphanumeric (binary garbage)
+        # Strip runs of non-ASCII (binary data parsed as text)
+        # Keep only lines where >60% of non-space chars are printable ASCII
         lines = text.split('\n')
         clean_lines = []
         for line in lines:
-            if not line.strip():
+            stripped = line.strip()
+            if not stripped:
                 continue
-            alnum = sum(1 for c in line if c.isalnum() or c.isspace())
-            if len(line) > 0 and alnum / len(line) > 0.4:
-                clean_lines.append(line)
+            # Skip very short lines (noise)
+            if len(stripped) < 4:
+                continue
+            # Count actual letters (the stuff that matters in education)
+            letters = sum(1 for c in stripped if c.isalpha())
+            total = len(stripped)
+            # Line must be >40% letters to be real text (not binary/encoded)
+            if total > 0 and letters / total > 0.4:
+                # Must contain at least two real words (3+ letters each)
+                if len(re.findall(r'[A-Za-z]{3,}', stripped)) >= 2:
+                    clean_lines.append(stripped)
+
         text = '\n'.join(clean_lines)
+
+        # Final whitespace cleanup
+        text = re.sub(r'\n{3,}', '\n\n', text)
 
         return text.strip()
 

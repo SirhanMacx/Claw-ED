@@ -2,7 +2,14 @@
 
 ## v4.7.2026.5 (2026-04-07)
 
-### MCP server expansion — 11 tools (was 5)
+### MCP server expansion + bulletproof text sanitizer
+
+**Sanitizer v2**: requires >40% letters + at least 2 real words per line.
+Kills URL-encoded garbage (`%3D%26`), OLE/OOXML internals (`bjbj`,
+`timingInfo.xml`), binary-as-text, while keeping all real educational
+content including standard codes and vocabulary lists.
+
+### MCP server — 11 tools (was 5)
 
 Added 6 new MCP tools for Claude Code / Hermes Agent integration:
 
