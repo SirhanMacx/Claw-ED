@@ -105,6 +105,9 @@ class CurriculumKB:
 
     # Batch size for commits during indexing — prevents OOM on large documents
     _INDEX_BATCH = 50
+    # Max chunks per document — prevents runaway indexing from corrupted files.
+    # A 500-slide PPTX with 500 words per slide = ~500 chunks. 2000 is generous.
+    _MAX_CHUNKS_PER_DOC = 2000
 
     def index(
         self,
@@ -117,13 +120,22 @@ class CurriculumKB:
         """Chunk, embed, and store a document. Returns new chunks added.
 
         Processes chunks in batches of _INDEX_BATCH to keep memory bounded.
-        A 10,000-chunk document is handled the same as a 10-chunk one.
+        Caps at _MAX_CHUNKS_PER_DOC to prevent runaway indexing from
+        corrupted or enormous files.
         """
         import gc
 
         chunks = self._chunk_text(full_text)
         if not chunks:
             return 0
+
+        # Cap runaway docs — a 311K-chunk file is corrupted, not useful
+        if len(chunks) > self._MAX_CHUNKS_PER_DOC:
+            logger.warning(
+                "Doc '%s' has %d chunks (max %d) — capping",
+                doc_title[:50], len(chunks), self._MAX_CHUNKS_PER_DOC,
+            )
+            chunks = chunks[: self._MAX_CHUNKS_PER_DOC]
 
         added = 0
         meta_json = json.dumps(metadata or {})

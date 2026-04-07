@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.7.2026.3 (2026-04-07)
+
+### Per-document chunk cap — prevents runaway indexing
+
+- **_MAX_CHUNKS_PER_DOC = 2000**: corrupted PPTX files were generating
+  up to 311K chunks per document (e.g., "1960s America 2023"). A 500-slide
+  deck with 500 words/slide = ~500 chunks — 2000 is generous. Files
+  exceeding the cap are logged and truncated, not skipped.
+- **glm-5.1:cloud** added to Ollama catalog
+
 ## v4.7.2026.2 (2026-04-07)
 
 ### Memory-safe ingestion for any document size
