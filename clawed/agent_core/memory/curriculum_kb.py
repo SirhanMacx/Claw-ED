@@ -88,8 +88,69 @@ class CurriculumKB:
             )
 
     @staticmethod
+    def _sanitize_for_indexing(text: str) -> str:
+        """Strip non-educational noise from document text before chunking.
+
+        Removes base64-encoded data, XML/HTML tags, repeated whitespace,
+        and other artifacts from document parsers that inflate chunk counts.
+        A 500-slide PPTX should produce ~500 chunks, not 300K.
+        """
+        import re
+
+        if not text:
+            return ""
+
+        # Strip base64 blobs (images embedded as text by bad parsers)
+        text = re.sub(
+            r'[A-Za-z0-9+/]{100,}={0,2}',
+            ' ',
+            text,
+        )
+
+        # Strip XML/HTML tags that leaked through
+        text = re.sub(r'<[^>]{1,500}>', ' ', text)
+
+        # Strip common binary/encoding artifacts
+        text = re.sub(r'\\x[0-9a-fA-F]{2}', ' ', text)
+        text = re.sub(r'&#x?[0-9a-fA-F]+;', ' ', text)
+
+        # Collapse excessive whitespace
+        text = re.sub(r'\s{3,}', '\n\n', text)
+
+        # Strip lines that are mostly non-alphanumeric (binary garbage)
+        lines = text.split('\n')
+        clean_lines = []
+        for line in lines:
+            if not line.strip():
+                continue
+            alnum = sum(1 for c in line if c.isalnum() or c.isspace())
+            if len(line) > 0 and alnum / len(line) > 0.4:
+                clean_lines.append(line)
+        text = '\n'.join(clean_lines)
+
+        return text.strip()
+
+    @staticmethod
     def _chunk_text(text: str) -> list[str]:
-        """Split text into overlapping chunks of roughly _CHUNK_SIZE words."""
+        """Split text into chunks, respecting slide boundaries when present.
+
+        If the text contains [Slide N] markers (from PPTX extraction),
+        chunks by slide — each slide is one chunk. Otherwise uses the
+        standard overlapping word-window approach.
+        """
+        import re
+
+        if not text.strip():
+            return []
+
+        # PPTX slide-aware chunking: [Slide N] markers from ingestor
+        if '[Slide ' in text:
+            slide_chunks = re.split(r'(?=\[Slide \d+\])', text)
+            slides = [s.strip() for s in slide_chunks if s.strip()]
+            if slides:
+                return slides
+
+        # Standard overlapping word-window chunking
         words = text.split()
         if not words:
             return []
@@ -105,9 +166,6 @@ class CurriculumKB:
 
     # Batch size for commits during indexing — prevents OOM on large documents
     _INDEX_BATCH = 50
-    # Max chunks per document — prevents runaway indexing from corrupted files.
-    # A 500-slide PPTX with 500 words per slide = ~500 chunks. 2000 is generous.
-    _MAX_CHUNKS_PER_DOC = 2000
 
     def index(
         self,
@@ -120,22 +178,15 @@ class CurriculumKB:
         """Chunk, embed, and store a document. Returns new chunks added.
 
         Processes chunks in batches of _INDEX_BATCH to keep memory bounded.
-        Caps at _MAX_CHUNKS_PER_DOC to prevent runaway indexing from
-        corrupted or enormous files.
+        Sanitizes text to remove non-educational content (base64, XML, etc.)
+        before chunking.
         """
         import gc
 
+        full_text = self._sanitize_for_indexing(full_text)
         chunks = self._chunk_text(full_text)
         if not chunks:
             return 0
-
-        # Cap runaway docs — a 311K-chunk file is corrupted, not useful
-        if len(chunks) > self._MAX_CHUNKS_PER_DOC:
-            logger.warning(
-                "Doc '%s' has %d chunks (max %d) — capping",
-                doc_title[:50], len(chunks), self._MAX_CHUNKS_PER_DOC,
-            )
-            chunks = chunks[: self._MAX_CHUNKS_PER_DOC]
 
         added = 0
         meta_json = json.dumps(metadata or {})

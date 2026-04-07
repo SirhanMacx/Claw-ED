@@ -1,5 +1,19 @@
 # Changelog
 
+## v4.7.2026.4 (2026-04-07)
+
+### Smart chunking + text sanitization (replaces hard cap)
+
+- **Removed per-document chunk cap** — large docs are handled properly now
+- **Slide-aware chunking**: PPTX text with `[Slide N]` markers is chunked
+  per slide (1 chunk per slide) instead of 500-word overlapping windows.
+  A 500-slide deck = 500 chunks, not 300K
+- **Text sanitization before chunking**: strips base64 blobs, XML/HTML tags,
+  binary artifacts, and lines that are mostly non-alphanumeric. This is
+  why "1960s America 2023" generated 311K chunks — the parser was extracting
+  embedded garbage as text
+- No document is ever truncated or skipped — sanitize and chunk correctly
+
 ## v4.7.2026.3 (2026-04-07)
 
 ### Per-document chunk cap — prevents runaway indexing

@@ -1,6 +1,6 @@
 # Roadmap
 
-Current version: **v4.7.2026.3**
+Current version: **v4.7.2026.4**
 
 ## v4.8 — Ingestion overhaul + slide quality
 
