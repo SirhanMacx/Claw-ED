@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.7.2026.2 (2026-04-07)
+
+### Memory-safe ingestion for any document size
+
+- **Batch indexing**: CurriculumKB.index() now processes chunks in batches of
+  50 with gc.collect() between batches — a 10,000-chunk document uses the same
+  memory as a 10-chunk one. Fixes OOM on large PPTX files (e.g., 9,429 chunks)
+- **OpenRouter GLM 5.1 support**: added to model discovery catalog
+
 ## v4.7.2026.1 (2026-04-07)
 
 ### Curriculum knowledge graph + session compression

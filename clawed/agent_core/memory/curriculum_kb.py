@@ -103,6 +103,9 @@ class CurriculumKB:
             start += _CHUNK_SIZE - _CHUNK_OVERLAP
         return chunks or ([text.strip()] if text.strip() else [])
 
+    # Batch size for commits during indexing — prevents OOM on large documents
+    _INDEX_BATCH = 50
+
     def index(
         self,
         teacher_id: str,
@@ -111,7 +114,13 @@ class CurriculumKB:
         full_text: str,
         metadata: dict[str, Any] | None = None,
     ) -> int:
-        """Chunk, embed, and store a document. Returns new chunks added."""
+        """Chunk, embed, and store a document. Returns new chunks added.
+
+        Processes chunks in batches of _INDEX_BATCH to keep memory bounded.
+        A 10,000-chunk document is handled the same as a 10-chunk one.
+        """
+        import gc
+
         chunks = self._chunk_text(full_text)
         if not chunks:
             return 0
@@ -120,45 +129,59 @@ class CurriculumKB:
         meta_json = json.dumps(metadata or {})
         now = datetime.now().isoformat()
 
-        with sqlite3.connect(self._db_path) as conn:
-            for chunk in chunks:
-                chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:32]
-                existing = conn.execute(
-                    "SELECT 1 FROM chunks "
-                    "WHERE teacher_id=? AND chunk_hash=?",
-                    (teacher_id, chunk_hash),
-                ).fetchone()
-                if existing:
-                    continue
+        # Process in batches to keep memory bounded on large docs
+        for batch_start in range(0, len(chunks), self._INDEX_BATCH):
+            batch = chunks[batch_start: batch_start + self._INDEX_BATCH]
 
-                embedding = self._embedder.embed(chunk)
-                blob = _embed_to_blob(embedding)
+            with sqlite3.connect(self._db_path) as conn:
+                for chunk in batch:
+                    chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:32]
+                    existing = conn.execute(
+                        "SELECT 1 FROM chunks "
+                        "WHERE teacher_id=? AND chunk_hash=?",
+                        (teacher_id, chunk_hash),
+                    ).fetchone()
+                    if existing:
+                        continue
 
-                cursor = conn.execute(
-                    "INSERT INTO chunks "
-                    "(teacher_id, doc_title, source_path, chunk_text, "
-                    "chunk_hash, embedding, metadata, created_at) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        teacher_id, doc_title, source_path,
-                        chunk, chunk_hash, blob, meta_json, now,
-                    ),
-                )
-                # Populate FTS index
-                try:
-                    conn.execute(
-                        "INSERT INTO chunks_fts(rowid, chunk_text, doc_title) "
-                        "VALUES (?, ?, ?)",
-                        (cursor.lastrowid, chunk, doc_title),
+                    embedding = self._embedder.embed(chunk)
+                    blob = _embed_to_blob(embedding)
+
+                    cursor = conn.execute(
+                        "INSERT INTO chunks "
+                        "(teacher_id, doc_title, source_path, chunk_text, "
+                        "chunk_hash, embedding, metadata, created_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        (
+                            teacher_id, doc_title, source_path,
+                            chunk, chunk_hash, blob, meta_json, now,
+                        ),
                     )
-                except Exception:
-                    pass  # FTS table may not exist on old DBs
-                added += 1
+                    # Populate FTS index
+                    try:
+                        conn.execute(
+                            "INSERT INTO chunks_fts(rowid, chunk_text, doc_title) "
+                            "VALUES (?, ?, ?)",
+                            (cursor.lastrowid, chunk, doc_title),
+                        )
+                    except Exception:
+                        pass  # FTS table may not exist on old DBs
+                    added += 1
 
-        logger.debug(
-            "Indexed %d new chunks from '%s' for teacher %s",
-            added, doc_title, teacher_id,
-        )
+            # Free embedding memory between batches
+            if len(chunks) > self._INDEX_BATCH:
+                gc.collect()
+
+        if len(chunks) > 100:
+            logger.info(
+                "Large doc '%s': %d chunks, %d new (batched)",
+                doc_title[:50], len(chunks), added,
+            )
+        else:
+            logger.debug(
+                "Indexed %d new chunks from '%s' for teacher %s",
+                added, doc_title, teacher_id,
+            )
         return added
 
     def search(

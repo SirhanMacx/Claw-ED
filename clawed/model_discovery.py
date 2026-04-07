@@ -121,8 +121,9 @@ GOOGLE_MODELS = [
     {"name": "gemini-2.5-pro", "tier": "deep"},
 ]
 
-# OpenRouter free models (no API key cost — good for trying out)
+# OpenRouter curated models (paid first, then free options)
 OPENROUTER_FREE_MODELS = [
+    {"id": "zhipu/glm-5.1", "name": "GLM 5.1", "free": False, "tools": True},
     {"id": "qwen/qwen3.6-plus:free", "name": "Qwen 3.6 Plus", "free": True},
     {"id": "nvidia/nemotron-3-super-120b-a12b:free", "name": "Nemotron 3 Super 120B", "free": True},
     {"id": "google/gemma-3-27b-it:free", "name": "Gemma 3 27B", "free": True},
