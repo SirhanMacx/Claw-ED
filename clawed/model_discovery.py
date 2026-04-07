@@ -199,6 +199,7 @@ OLLAMA_CLOUD_MODELS = [
     {"name": "nemotron-3-nano:4b-cloud", "tools": True, "tier": "fast"},
     {"name": "devstral-2:123b-cloud", "tools": True, "tier": "deep"},
     {"name": "devstral-small-2:24b-cloud", "tools": True, "tier": "work"},
+    {"name": "glm-5.1:cloud", "tools": True, "tier": "deep"},
     {"name": "glm-5:cloud", "tools": True, "tier": "deep"},
     {"name": "glm-4.7:cloud", "tools": True, "tier": "work"},
     {"name": "kimi-k2.5:cloud", "tools": True, "tier": "deep"},
