@@ -663,6 +663,7 @@ class AssetRegistry:
         """
         try:
             import numpy as np
+
             from clawed.agent_core.memory.embeddings import ONNXMiniLMEmbedder
         except ImportError:
             logger.debug("ONNX embeddings not available for image fallback search")

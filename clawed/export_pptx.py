@@ -544,7 +544,10 @@ def export_lesson_pptx(
                             teacher_images[f"entity_{i}"] = img_path
                             logger.info("Teacher image [entity_%d]: %s -> %s", i, query, img_path.name)
                 if teacher_images:
-                    logger.info("Found %d/%d images from teacher's own materials", len(teacher_images), len(entities[:5]))
+                    logger.info(
+                        "Found %d/%d images from teacher's own materials",
+                        len(teacher_images), len(entities[:5]),
+                    )
             except Exception as e:
                 logger.debug("Teacher asset lookup failed: %s", e)
 
