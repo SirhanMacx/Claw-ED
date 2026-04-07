@@ -1,5 +1,23 @@
 # Changelog
 
+## v4.7.2026.5 (2026-04-07)
+
+### MCP server expansion — 11 tools (was 5)
+
+Added 6 new MCP tools for Claude Code / Hermes Agent integration:
+
+- **search_curriculum**: semantic search over teacher's ingested materials
+  (KB chunks with similarity scores, source paths, full text)
+- **query_knowledge_graph**: topic relationships — prerequisites, related
+  topics, standards, vocabulary from the curriculum KG
+- **kg_stats**: knowledge graph statistics (entities, triples, types)
+- **search_session_history**: semantic search over compressed past sessions
+- **query_wiki**: Q&A over the compiled Karpathy-style curriculum wiki
+- Updated server instructions to highlight search-first workflow
+
+Compatible with Claude Code 2.1.91+ maxResultSizeChars annotation
+for large curriculum search results (up to 500K chars).
+
 ## v4.7.2026.4 (2026-04-07)
 
 ### Smart chunking + text sanitization (replaces hard cap)
