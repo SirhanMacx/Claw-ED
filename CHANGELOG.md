@@ -1,5 +1,43 @@
 # Changelog
 
+## v4.7.2026.1 (2026-04-07)
+
+### Curriculum knowledge graph + session compression
+
+Inspired by MemPalace (11K-star AI memory system). Two new memory layers.
+
+### Knowledge graph
+- **CurriculumKG**: temporal triple store for curriculum concepts — topics,
+  standards, skills, figures, vocabulary with prerequisite/builds_on/related_to
+  relationships and temporal validity windows
+- **Entity extraction**: heuristic extraction from doc titles, content,
+  tags, and standard codes during ingestion (no LLM, fast)
+- **Prompt injection**: `get_topic_context()` feeds prerequisites, related
+  topics, standards, and vocabulary into lesson generation prompts
+- **Semantic entity search**: ONNX MiniLM embeddings on entity names for
+  fuzzy topic matching
+- **Batch embedding**: `batch_embed_unembedded()` for fast post-ingest pass
+
+### Session compression
+- **Structured summaries**: compresses oldest 20 turns into topics, materials
+  generated, decisions, feedback with 2-3 sentence heuristic summary
+- **Semantic recall**: compressed summaries embedded for future search
+- **Auto-trigger**: `maybe_compress_sessions()` fires after each interaction
+  when turn count exceeds 40; keeps last 20 verbatim
+- **Timeline merge**: `get_full_session_timeline()` merges recent turns +
+  compressed summaries chronologically
+
+### Integration
+- Ingestion pipeline: KG populated during `ingest_materials` tool with
+  entity extraction + relationship inference
+- Context loader: Layer 6b (session history) + Layer 7 (KG context)
+- Lesson generation: KG topic context injected alongside KB search results
+- Agent loop: session compression trigger after `maybe_compress_episodes`
+
+### Stats
+- 3 new modules, 2 new test files, 48 new tests
+- 1821 total tests, 0 failures, ruff clean
+
 ## v4.7.2026 (2026-04-07)
 
 ### Teacher image pipeline + animated educational videos

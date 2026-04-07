@@ -162,6 +162,52 @@ class IngestMaterialsTool:
             except Exception as e:
                 logger.debug("KB indexing failed: %s", e)
 
+            # Build curriculum knowledge graph (concepts, relationships)
+            try:
+                from clawed.agent_core.memory.kg_extractor import (
+                    extract_entities_from_document,
+                    infer_relationships,
+                )
+                from clawed.agent_core.memory.knowledge_graph import CurriculumKG
+
+                kg = CurriculumKG()
+                kg_entities = 0
+                kg_triples = 0
+                for doc in docs:
+                    tags = list(getattr(doc, "tags", []) or [])
+                    entities = extract_entities_from_document(
+                        doc.title, doc.content[:3000], tags,
+                    )
+                    for ent in entities:
+                        kg.add_entity(
+                            teacher_id=context.teacher_id,
+                            name=ent["name"],
+                            entity_type=ent["entity_type"],
+                            embed=False,
+                        )
+                        kg_entities += 1
+                    rels = infer_relationships(entities, doc.title)
+                    for rel in rels:
+                        kg.add_triple(
+                            teacher_id=context.teacher_id,
+                            subject=rel["subject"],
+                            predicate=rel["predicate"],
+                            object_=rel["object"],
+                            confidence=rel.get("confidence", 0.5),
+                            source="ingest",
+                            source_path=doc.source_path or "",
+                        )
+                        kg_triples += 1
+                # Batch embed all new entities
+                kg.batch_embed_unembedded(context.teacher_id)
+                if kg_entities:
+                    summary += (
+                        f"\nKnowledge graph: {kg_entities} concepts, "
+                        f"{kg_triples} relationships mapped."
+                    )
+            except Exception as e:
+                logger.debug("KG population failed: %s", e)
+
             # Register assets for file-level search
             try:
                 from clawed.asset_registry import AssetRegistry

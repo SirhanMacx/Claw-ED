@@ -124,6 +124,34 @@ def load_memory_context(teacher_id: str, current_message: str) -> dict[str, Any]
     except Exception as e:
         logger.debug("Last session summary load failed: %s", e)
 
+    # Layer 6b: Compressed session history (semantic recall of past sessions)
+    session_history_context = ""
+    try:
+        from clawed.agent_core.memory.session_compress import search_session_history
+
+        summaries = search_session_history(teacher_id, current_message, top_k=3)
+        if summaries:
+            parts = []
+            for s in summaries:
+                if s.get("similarity", 0) > 0.15:
+                    date = s.get("session_date", "")
+                    text = s.get("compressed_text", "")
+                    parts.append(f"- [{date}] {text}")
+            if parts:
+                session_history_context = "\n".join(parts)
+    except Exception as e:
+        logger.debug("Session history search failed: %s", e)
+
+    # Layer 7: Knowledge graph context (prerequisites, related topics)
+    kg_context = ""
+    try:
+        from clawed.agent_core.memory.knowledge_graph import CurriculumKG
+
+        kg = CurriculumKG()
+        kg_context = kg.get_topic_context(teacher_id, current_message)
+    except Exception as e:
+        logger.debug("KG context failed: %s", e)
+
     return {
         "identity_summary": identity_summary,
         "curriculum_summary": curriculum_summary,
@@ -133,4 +161,6 @@ def load_memory_context(teacher_id: str, current_message: str) -> dict[str, Any]
         "autonomy_summary": autonomy_summary,
         "curriculum_kb_context": curriculum_kb_context,
         "last_session_summary": last_session_summary,
+        "session_history_context": session_history_context,
+        "kg_context": kg_context,
     }

@@ -219,6 +219,21 @@ class GenerateLessonBundleTool:
             logger.warning("NLAH_FAILURE=%s: %s", FailureCode.KB_SEARCH_FAILED, e)
             report.warnings.append(f"[{FailureCode.KB_SEARCH_FAILED}] KB search failed: {e}")
 
+        # ── Knowledge graph: prerequisites and related topics ────────
+        try:
+            from clawed.agent_core.memory.knowledge_graph import CurriculumKG
+
+            kg = CurriculumKG()
+            kg_topic_context = kg.get_topic_context(context.teacher_id, topic)
+            if kg_topic_context:
+                if kb_prompt_section:
+                    kb_prompt_section += "\n\n" + kg_topic_context
+                else:
+                    kb_prompt_section = kg_topic_context
+                logger.info("KG found topic context for '%s'", topic)
+        except Exception as e:
+            logger.debug("KG topic context failed: %s", e)
+
         # ── Build a UnitPlan with standards ──────────────────────────
         description = f"Introduction to {topic}"
         if activity_type and activity_type != "general":

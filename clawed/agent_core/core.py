@@ -586,6 +586,16 @@ class Gateway:
         except Exception:
             pass
 
+        # 8b. Maybe compress old session turns
+        try:
+            from clawed.agent_core.memory.session_compress import (
+                maybe_compress_sessions,
+            )
+
+            maybe_compress_sessions(teacher_id)
+        except Exception:
+            pass
+
         return result
 
     # ------------------------------------------------------------------
