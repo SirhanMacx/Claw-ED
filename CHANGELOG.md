@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.7.2026.6 (2026-04-07)
+
+Sanitizer fix included in PyPI (see .5 notes).
+
 ## v4.7.2026.5 (2026-04-07)
 
 ### MCP server expansion + bulletproof text sanitizer
