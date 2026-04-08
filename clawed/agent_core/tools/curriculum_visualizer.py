@@ -158,22 +158,41 @@ class CurriculumVisualizerTool:
             conn.row_factory = sqlite3.Row
 
             # Get top entities by connection count, filtering generic terms
-            _noise = (
-                "'do_now','exit_ticket','lesson_plan','warm_up','activity',"
-                "'worksheet','handout','notes','review','test','quiz',"
-                "'homework','assignment','project','presentation',"
-                "'smithtown_social_studies_lesson_plan'"
-            )
-            entities = conn.execute(
+            # Filter out generic/noise entities — only keep real curriculum concepts
+            # Noise: lesson structure terms, metadata, short generic words
+            entities_raw = conn.execute(
                 "SELECT e.id, e.name, e.entity_type, "
                 "(SELECT COUNT(*) FROM kg_triples t "
                 " WHERE t.subject = e.id OR t.object = e.id) AS connections "
                 "FROM kg_entities e WHERE e.teacher_id = ? "
-                f"AND e.id NOT IN ({_noise}) "
-                "AND e.entity_type IN ('topic', 'standard', 'skill', 'figure') "
+                "AND e.entity_type IN ('topic', 'standard', 'figure') "
+                "AND length(e.name) > 4 "
                 "ORDER BY connections DESC LIMIT ?",
-                (context.teacher_id, max_nodes),
+                (context.teacher_id, max_nodes * 3),
             ).fetchall()
+
+            # Filter noise programmatically
+            _noise_words = {
+                "name", "date", "notes", "review", "test", "quiz", "exam",
+                "lesson", "plan", "handout", "worksheet", "activity",
+                "homework", "assignment", "project", "presentation",
+                "do now", "exit ticket", "warm up", "learning experience",
+                "lesson plan", "social studies", "answer", "question",
+                "page", "chapter", "unit", "section", "part", "copy",
+                "blank", "version", "final", "draft", "new", "old",
+            }
+            entities = []
+            for e in entities_raw:
+                name_lower = e["name"].lower().strip()
+                # Skip if name is a noise word or too generic
+                if name_lower in _noise_words:
+                    continue
+                # Skip single common words
+                if len(name_lower.split()) == 1 and len(name_lower) < 6:
+                    continue
+                entities.append(e)
+                if len(entities) >= max_nodes:
+                    break
 
             entity_ids = {e["id"] for e in entities}
 
