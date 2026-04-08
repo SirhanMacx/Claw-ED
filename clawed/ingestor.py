@@ -1367,9 +1367,24 @@ def full_ingest(
     # ── Step 6: Wiki compilation ─────────────────────────────────────
     _progress("Compiling curriculum wiki...")
     try:
+        import asyncio
+
         from clawed.wiki import compile_wiki
 
-        wiki = compile_wiki(teacher_id)
+        # compile_wiki is async — run it safely from sync context
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # Already in an async context — can't nest asyncio.run()
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                wiki = pool.submit(asyncio.run, compile_wiki(teacher_id)).result()
+        else:
+            wiki = asyncio.run(compile_wiki(teacher_id))
+
         result["wiki_articles"] = wiki.compiled
         _progress(f"Wiki: {wiki.compiled} articles compiled")
     except Exception as e:

@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.7.2026.11 (2026-04-07)
+
+### Fix async wiki compilation in full_ingest()
+
+`compile_wiki()` is async but was called synchronously, returning a
+coroutine object instead of the result. Fixed with proper `asyncio.run()`
+handling that works in both sync and async contexts.
+
 ## v4.7.2026.10 (2026-04-07)
 
 ### Unified ingestion pipeline — images finally flow
