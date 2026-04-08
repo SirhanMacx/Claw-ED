@@ -74,22 +74,28 @@ class GenerateGameTool:
                 except Exception:
                     pass
 
-            # Build a minimal master-like dict for compile_game
-            master = {
-                "topic": topic,
-                "subject": subject or (context.persona or {}).get("subject_area", ""),
-                "grade_level": grade or (
-                    (context.persona or {}).get("grade_levels", [""])[0]
-                    if context.persona else ""
-                ),
-                "game_type": game_type,
-            }
+            # Build a minimal MasterContent for compile_game
+            from clawed.master_content import MasterContent
+
+            resolved_subject = subject or (context.persona or {}).get("subject_area", "")
+            resolved_grade = grade or (
+                (context.persona or {}).get("grade_levels", [""])[0]
+                if context.persona else ""
+            )
+            master = MasterContent(
+                title=f"{topic} Game",
+                subject=resolved_subject,
+                grade_level=resolved_grade,
+                topic=topic,
+                objective=f"Review and reinforce {topic} concepts",
+            )
 
             result_path = await compile_game(
                 master=master,
                 persona=persona,
                 output_dir=None,
                 game_style=game_type,
+                config=context.config,
             )
 
             if result_path and result_path.exists():

@@ -205,13 +205,13 @@ class CurriculumVisualizerTool:
         except Exception:
             pass
 
-        # Render HTML
-        html = _VIS_TEMPLATE.format(
-            teacher_name=teacher_name,
-            node_count=len(nodes),
-            edge_count=len(edges),
-            graph_json=graph_json,
-        )
+        # Render HTML — use replace instead of .format() to avoid
+        # conflicts with JS/CSS braces in the template
+        html = _VIS_TEMPLATE
+        html = html.replace("{teacher_name}", teacher_name)
+        html = html.replace("{node_count}", str(len(nodes)))
+        html = html.replace("{edge_count}", str(len(edges)))
+        html = html.replace("{graph_json}", graph_json)
 
         # Save to output dir
         output_dir = Path("~/clawed_output").expanduser().resolve()
