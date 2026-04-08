@@ -168,6 +168,8 @@ def _resolve_from_teacher_assets(
     """Try to resolve image specs from teacher's own extracted images.
 
     Instant — no network calls, just SQLite lookups.
+    Tracks already-used paths to prevent the same image appearing
+    on multiple slides.
     """
     try:
         from clawed.asset_registry import AssetRegistry
@@ -176,14 +178,23 @@ def _resolve_from_teacher_assets(
         return {}
 
     resolved: dict[str, Path] = {}
+    used_paths: set[str] = set()  # Prevent same image on multiple slides
+
     for spec, context in spec_map.items():
         # Search using both the spec and context for better matching
         query = f"{spec} {context[:100]}"
-        matches = registry.search_images_for_topic(teacher_id, query, limit=1)
-        if matches:
-            path = Path(matches[0]["path"])
-            if path.exists():
+        # Request extra candidates so we can skip already-used ones
+        matches = registry.search_images_for_topic(teacher_id, query, limit=10)
+        for match in matches:
+            path = Path(match["path"])
+            path_str = str(path)
+            if path.exists() and path_str not in used_paths:
                 resolved[spec] = path
-                logger.debug("Teacher image found for '%s': %s", spec[:50], path.name)
+                used_paths.add(path_str)
+                logger.debug(
+                    "Teacher image found for '%s': %s (score: %.1f)",
+                    spec[:50], path.name, match.get("score", 0),
+                )
+                break  # Use first unused match
 
     return resolved

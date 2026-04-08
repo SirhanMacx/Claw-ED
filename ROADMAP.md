@@ -1,44 +1,23 @@
 # Roadmap
 
-Current version: **v4.7.2026.11**
+Current version: **v4.8.2026**
 
-## v4.8 — Human voice + slide quality
+## v4.9 — Next priorities
 
-### AI writing removal
-- [ ] **avoid-ai-writing integration**: strip AI-isms from generated content
-  before compiling to DOCX/PPTX. 109-word replacement table (3 tiers),
-  36 detectable patterns. Ed's output should read like the teacher wrote it.
-  Source: https://github.com/conorbronsdon/avoid-ai-writing
-- [ ] **Prompt-level avoidance**: inject Tier 1 word ban list into Ed's
-  system prompt so the LLM avoids AI-isms from the start
-- [ ] **Post-generation rewrite pass**: run rewrite mode on MasterContent
-  text before DOCX/PPTX compilation
-
-### Semantic knowledge graph (Graphify)
-- [ ] **Graphify integration**: replace heuristic kg_extractor.py with
-  LLM-powered semantic extraction. Leiden community detection clusters
-  related curriculum concepts. Confidence-scored relationships (EXTRACTED /
-  INFERRED / AMBIGUOUS). Interactive HTML curriculum map visualization.
-  Source: https://github.com/safishamsi/graphify
-- [ ] **Curriculum visualizer**: new agent tool that renders the knowledge
-  graph as an interactive HTML page — teacher sees their entire curriculum
-  as a connected visual map
-- [ ] **Multimodal extraction**: use Graphify's image analysis to extract
-  concepts from PPTX diagrams and maps, not just text
+### Semantic knowledge graph (Graphify deep integration)
+- [ ] **LLM-powered entity extraction**: replace heuristic kg_extractor.py
+  with semantic extraction. Source: https://github.com/safishamsi/graphify
+- [ ] **Leiden community detection**: cluster related curriculum concepts
+- [ ] **Multimodal extraction**: analyze PPTX diagrams/maps, not just text
 
 ### Ingestion improvements
-- [ ] **DOCX weighting**: lesson plans (DOCX) should rank higher than
-  slide bullets (PPTX) in search results. Add content_type boost.
-- [ ] **Dedup**: same lesson in .doc + .docx + .pdf gets indexed 3x.
-  Hash-based skip for identical content across formats.
-- [ ] **Background ingest with progress**: teacher shouldn't wait —
-  ingest in daemon thread with Telegram progress updates.
+- [ ] **DOCX weighting**: lesson plans rank higher than slide bullets
+- [ ] **Dedup**: hash-based skip for same lesson in .doc + .docx + .pdf
+- [ ] **Background ingest with progress**: daemon thread + Telegram updates
 
 ### Slide quality
-- [ ] **Slide templates**: match the teacher's existing slide style
-  (fonts, colors, layout) from ingested PPTX files.
-- [ ] **Richer PPTX output**: intelligently place teacher's diagrams,
-  maps, and source images in generated slides.
+- [ ] **Slide templates**: match teacher's existing style (fonts, colors)
+- [ ] **Smarter image placement**: context-aware placement of teacher images
 
 ## Other priorities
 - [ ] Codex/OpenAI OAuth pathway investigation
@@ -47,6 +26,12 @@ Current version: **v4.7.2026.11**
 - [ ] End-to-end integration test (setup → ingest → generate → export)
 
 ## Recently shipped
+
+- [x] v4.8.2026: AI writing removal (humanize.py, 70+ replacements, prompt
+  ban list), image dedup (no more repeated images), curriculum visualizer
+  (interactive HTML map via vis.js), unified full_ingest() pipeline,
+  58K teacher images extracted, 227K KG entities, wiki auto-compilation,
+  GLM 5.1 cloud support, 11 MCP tools, text sanitizer, slide-aware chunking
 
 - [x] v4.7.2026: Teacher image pipeline fixed (31K+ images now flow into
   generated lessons), semantic image matching via ONNX embeddings, topic-tag

@@ -1,5 +1,44 @@
 # Changelog
 
+## v4.8.2026 (2026-04-08)
+
+### Major release — human voice, image dedup, curriculum visualizer
+
+Four pillars shipping together:
+
+### 1. AI writing removal (avoid-ai-writing)
+- **humanize.py**: 70+ Tier 1 word replacements (delve→explore, utilize→use,
+  leverage→use, etc.), Tier 2 cluster detection, Tier 3 density detection
+- **Prompt-level ban list**: Ed's system prompt now explicitly bans 30+ AI-isms
+  so the LLM avoids them from the start
+- **Post-generation filter**: `humanize()` runs on all MasterContent text
+  (direct instruction, vocabulary, exit ticket) before DOCX/PPTX compilation
+- Source: https://github.com/conorbronsdon/avoid-ai-writing
+
+### 2. Image dedup — no more repeated images
+- **`_resolve_from_teacher_assets()`**: now requests 10 candidates per spec
+  and tracks used paths — each slide gets a unique image
+- **`export_pptx.py`**: same dedup logic for the legacy PPTX export path
+- Root cause: `limit=1` returned the same top-scoring image for every spec
+
+### 3. Curriculum visualizer (Graphify-inspired)
+- **`curriculum_visualizer` tool**: generates interactive HTML page from
+  the knowledge graph using vis.js — teacher sees their entire curriculum
+  as a connected visual map with color-coded node types
+- Click nodes to see relationships, scroll to zoom, drag to pan
+- Source: https://github.com/safishamsi/graphify
+
+### 4. Full unified ingestion pipeline
+- All of v4.7's work consolidated: `full_ingest()` handles parse → images
+  → assets → chunks → KG → wiki in one call
+- 58,310 teacher images now flow into generated PPTX slides
+- Wiki compilation with async fix (GLM 5.1 / any LLM)
+
+### Stats
+- 1821 tests pass, ruff clean, zero version drift
+- 3 new modules: humanize.py, curriculum_visualizer.py
+- 48+ tools total
+
 ## v4.7.2026.11 (2026-04-07)
 
 ### Fix async wiki compilation in full_ingest()

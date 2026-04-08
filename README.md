@@ -42,8 +42,10 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 
 ## Features
 
-- CLI agent with 47+ tools (lesson gen, assessments, games, simulations, animations, differentiation)
-- **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides
+- CLI agent with 48+ tools (lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation)
+- **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum)
+- **Writes like you** — AI-ism removal strips "delve", "utilize", "leverage" and 70+ other LLM tells so output reads like a teacher wrote it
+- Interactive curriculum map — visualize how your topics, standards, and vocabulary connect
 - Animated educational videos (timelines, concept maps, cause-effect diagrams) via [Manim](https://www.manim.community/)
 - Ingests PDF, DOCX, PPTX, TXT, MD — extracts teaching style, images, and curriculum structure
 - Semantic search over your curriculum (ONNX MiniLM embeddings, FTS5, embedding-based image matching)

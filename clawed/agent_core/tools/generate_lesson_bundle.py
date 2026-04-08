@@ -314,6 +314,22 @@ class GenerateLessonBundleTool:
         # ── Sanitize: strip non-Latin characters (minimax bilingual leak)
         _sanitize_master_content(master)
 
+        # ── Humanize: strip AI-isms so output reads like teacher wrote it
+        try:
+            from clawed.humanize import humanize
+
+            for section in master.direct_instruction:
+                if section.content:
+                    section.content = humanize(section.content)
+            for entry in master.vocabulary:
+                if entry.definition:
+                    entry.definition = humanize(entry.definition)
+            for sq in master.exit_ticket:
+                if hasattr(sq, "question") and sq.question:
+                    sq.question = humanize(sq.question)
+        except Exception as e:
+            logger.debug("Humanize pass failed: %s", e)
+
         # ── Compile three views ───────────────────────────────────────
         output_dir = Path("~/clawed_output").expanduser().resolve()
         if config and hasattr(config, "output_dir") and config.output_dir:

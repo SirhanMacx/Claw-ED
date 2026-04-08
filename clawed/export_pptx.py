@@ -535,14 +535,18 @@ def export_lesson_pptx(
             try:
                 from clawed.asset_registry import AssetRegistry
                 registry = AssetRegistry()
+                used_paths: set[str] = set()
                 for i, entity in enumerate(entities[:5]):
                     query = entity["query"]
-                    matches = registry.search_images_for_topic(teacher_id, query, limit=1)
-                    if matches:
-                        img_path = Path(matches[0]["path"])
-                        if img_path.exists():
+                    matches = registry.search_images_for_topic(teacher_id, query, limit=10)
+                    for match in matches:
+                        img_path = Path(match["path"])
+                        path_str = str(img_path)
+                        if img_path.exists() and path_str not in used_paths:
                             teacher_images[f"entity_{i}"] = img_path
+                            used_paths.add(path_str)
                             logger.info("Teacher image [entity_%d]: %s -> %s", i, query, img_path.name)
+                            break
                 if teacher_images:
                     logger.info(
                         "Found %d/%d images from teacher's own materials",
