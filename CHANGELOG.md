@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.7.2026.7 (2026-04-07)
+
+### Auto wiki compilation during ingestion
+
+Wiki articles are now automatically compiled from indexed chunks at
+the end of the ingestion pipeline. The teacher no longer needs to
+manually run `clawed kb compile` — Ed does it automatically. Full
+pipeline: parse → sanitize → chunk → embed → images → assets → KG → wiki.
+
 ## v4.7.2026.6 (2026-04-07)
 
 Sanitizer fix included in PyPI (see .5 notes).

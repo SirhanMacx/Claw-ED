@@ -332,6 +332,24 @@ class IngestMaterialsTool:
                 logger.debug("Auto-profile failed: %s", e)
                 profile_update = ""
 
+            # Auto-compile wiki from indexed chunks (LLM synthesis)
+            try:
+                from clawed.wiki import compile_wiki
+
+                if context.progress_callback:
+                    await context.notify_progress(
+                        "Compiling curriculum wiki from your materials..."
+                    )
+                wiki_result = compile_wiki(context.teacher_id)
+                if wiki_result.compiled > 0:
+                    summary += (
+                        f"\nWiki: {wiki_result.compiled} articles compiled "
+                        f"({wiki_result.skipped} unchanged, "
+                        f"{wiki_result.total} total)."
+                    )
+            except Exception as e:
+                logger.debug("Wiki compilation failed: %s", e)
+
             return ToolResult(
                 text=summary + profile_update,
                 data={"files_ingested": len(docs)},
