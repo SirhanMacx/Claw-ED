@@ -47,7 +47,25 @@ const LEFT_PANEL_MAX_WIDTH = 50;
 export function LogoV2() {
   const $ = _c(94);
   const activities = getRecentActivitySync();
-  const username = getGlobalConfig().oauthAccount?.displayName ?? "";
+  // In Claw-ED mode, use the teacher's name from config.json instead of OAuth
+  const username = (() => {
+    if (process.env.CLAWED_MODE || process.env.CLAWED_PROVIDER) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const cfgPath = path.join(
+          process.env.EDUAGENT_DATA_DIR || path.join(require('os').homedir(), '.eduagent'),
+          'config.json'
+        );
+        if (fs.existsSync(cfgPath)) {
+          const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+          const name = cfg?.teacher_profile?.name;
+          if (name) return name;
+        }
+      } catch {}
+    }
+    return getGlobalConfig().oauthAccount?.displayName ?? "";
+  })();
   const {
     columns
   } = useTerminalSize();
@@ -67,7 +85,9 @@ export function LogoV2() {
     t1 = $[1];
   }
   const showSandboxStatus = t1;
-  const showGuestPassesUpsell = useShowGuestPassesUpsell();
+  // Suppress Anthropic-specific upsells in Claw-ED mode
+  const _rawShowGuestPasses = useShowGuestPassesUpsell();
+  const showGuestPassesUpsell = (process.env.CLAWED_MODE || process.env.CLAWED_PROVIDER) ? false : _rawShowGuestPasses;
   const showOverageCreditUpsell = useShowOverageCreditUpsell();
   const agent = useAppState(_temp);
   const effortValue = useAppState(_temp2);
@@ -329,7 +349,8 @@ export function LogoV2() {
     return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze>{t14}{t15}{t16}{t17}{t18}{t19}</>;
   }
   const welcomeMessage_0 = formatWelcomeMessage(username);
-  const modelLine = !process.env.IS_DEMO && config.oauthAccount?.organizationName ? `${modelDisplayName} · ${billingType} · ${config.oauthAccount.organizationName}` : `${modelDisplayName} · ${billingType}`;
+  // In Claw-ED mode, never show OAuth org name — just model + co-teacher tag
+  const modelLine = !process.env.IS_DEMO && config.oauthAccount?.organizationName && !process.env.CLAWED_MODE && !process.env.CLAWED_PROVIDER ? `${modelDisplayName} · ${billingType} · ${config.oauthAccount.organizationName}` : `${modelDisplayName} · ${billingType}`;
   const cwdAvailableWidth_0 = agentName ? LEFT_PANEL_MAX_WIDTH - 1 - stringWidth(agentName) - 3 : LEFT_PANEL_MAX_WIDTH;
   const truncatedCwd_0 = truncatePath(cwd, Math.max(cwdAvailableWidth_0, 10));
   const cwdLine = agentName ? `@${agentName} · ${truncatedCwd_0}` : truncatedCwd_0;

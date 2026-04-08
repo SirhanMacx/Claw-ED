@@ -1,5 +1,16 @@
 # Changelog
 
+## v4.7.2026.8 (2026-04-07)
+
+### Clean branded startup — teacher name, no Anthropic references
+
+- Banner shows teacher name + model instead of OAuth account info
+- Removed "Running in Python mode" developer message
+- Suppressed Anthropic OAuth org name from status line in Claw-ED mode
+- Suppressed guest pass and referral upsells in Claw-ED mode
+- EmergencyTip already suppressed (line 9 guard)
+- Project onboarding tips already suppressed (CLAWED_MODE guard)
+
 ## v4.7.2026.7 (2026-04-07)
 
 ### Auto wiki compilation during ingestion

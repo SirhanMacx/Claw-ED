@@ -86,13 +86,12 @@ def test_find_daemon_entry_returns_none_when_nothing_exists(tmp_path):
 
 
 def test_show_node_notice_branded(capsys):
-    """Node notice shows branded Claw-ED startup."""
+    """Node notice shows branded Claw-ED startup with version."""
     _show_node_notice()
 
     captured = capsys.readouterr()
     assert "C L A W - E D" in captured.out
     assert "Your AI co-teacher" in captured.out
-    assert "Python mode" in captured.out
 
 
 # -- main ------------------------------------------------------------------

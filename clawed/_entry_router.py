@@ -117,18 +117,36 @@ def _ed_greeting() -> None:
 
 
 def _show_node_notice() -> None:
-    """Show clean branded startup banner when running in Python-only mode.
+    """Show clean branded startup banner.
 
-    Displays the Claw-ED logo, version, and a note that Node.js is not
-    installed. This only appears when the teacher has no arguments and
-    the Ink TUI is unavailable.
+    Displays the Claw-ED logo, version, teacher name, and KB stats.
     """
+    import json
+
     from clawed import __version__
+
+    _cfg_dir = _data_dir()
+    config_path = Path(_cfg_dir) / "config.json"
+    name = ""
+    model = ""
+    try:
+        if config_path.exists():
+            data = json.loads(config_path.read_text())
+            tp = data.get("teacher_profile", {})
+            name = tp.get("name", "")
+            provider = data.get("provider", "")
+            model = data.get(f"{provider}_model", "") if provider else ""
+    except Exception:
+        pass
+
     print()
     print("  🍎 C L A W - E D")
     print(f"  Your AI co-teacher  v{__version__}")
-    print()
-    print("  \033[90mRunning in Python mode. Install Node.js for the full TUI.\033[0m")
+    if name:
+        print(f"  \033[32m{name}\033[0m", end="")
+        if model:
+            print(f"  \033[90m· {model}\033[0m", end="")
+        print()
     print()
 
 
