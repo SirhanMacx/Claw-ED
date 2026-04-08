@@ -1,4 +1,8 @@
-"""Tool: curriculum_visualizer — render the knowledge graph as interactive HTML."""
+"""Tool: curriculum_visualizer — render the knowledge graph as interactive HTML.
+
+Uses a self-contained canvas renderer with zero external dependencies.
+Works in any browser including Telegram's in-app browser.
+"""
 from __future__ import annotations
 
 import json
@@ -10,99 +14,20 @@ from clawed.agent_core.context import AgentContext, ToolResult
 
 logger = logging.getLogger(__name__)
 
-_VIS_TEMPLATE = """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Curriculum Map — {teacher_name}</title>
-<script src="https://unpkg.com/vis-network@9/standalone/umd/vis-network.min.js"></script>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, sans-serif; background: #1a1a2e; color: #e6e6e6; }
-  #graph { width: 100vw; height: 100vh; }
-  #info {
-    position: fixed; top: 12px; left: 12px; background: rgba(26,26,46,0.9);
-    padding: 16px 20px; border-radius: 8px; border: 1px solid #333;
-    max-width: 320px; z-index: 10;
-  }
-  #info h2 { font-size: 16px; color: #e94560; margin-bottom: 4px; }
-  #info p { font-size: 12px; color: #999; }
-  #info .stat { color: #4a9eff; font-weight: bold; }
-  #detail {
-    position: fixed; bottom: 12px; right: 12px; background: rgba(26,26,46,0.95);
-    padding: 16px 20px; border-radius: 8px; border: 1px solid #333;
-    max-width: 400px; z-index: 10; display: none;
-  }
-  #detail h3 { color: #16c79a; margin-bottom: 8px; }
-  #detail ul { list-style: none; padding: 0; }
-  #detail li { font-size: 13px; padding: 2px 0; color: #ccc; }
-  #detail li .pred { color: #e94560; }
-</style>
-</head>
-<body>
-<div id="info">
-  <h2>Curriculum Map</h2>
-  <p>{teacher_name}</p>
-  <p><span class="stat">{node_count}</span> concepts &middot;
-     <span class="stat">{edge_count}</span> relationships</p>
-  <p style="margin-top:8px;font-size:11px;color:#666">
-    Click a node to see its connections. Scroll to zoom. Drag to pan.
-  </p>
-</div>
-<div id="detail">
-  <h3 id="detail-title"></h3>
-  <ul id="detail-list"></ul>
-</div>
-<div id="graph"></div>
-<script>
-const data = {graph_json};
-const TYPE_COLORS = {
-  topic: '#4a9eff', standard: '#e94560', skill: '#16c79a',
-  figure: '#f5a623', term: '#9b59b6', unit: '#1abc9c',
-};
-const nodes = new vis.DataSet(data.nodes.map(n => ({
-  id: n.id, label: n.label,
-  color: { background: TYPE_COLORS[n.type] || '#4a9eff', border: '#333' },
-  font: { color: '#e6e6e6', size: Math.min(14 + (n.connections || 0), 24) },
-  shape: 'dot', size: Math.min(8 + (n.connections || 0) * 2, 30),
-})));
-const edges = new vis.DataSet(data.edges.map(e => ({
-  from: e.source, to: e.target,
-  label: e.label || '', font: { color: '#666', size: 9 },
-  color: { color: '#444', highlight: '#e94560' },
-  arrows: 'to', smooth: { type: 'continuous' },
-})));
-const container = document.getElementById('graph');
-const network = new vis.Network(container, { nodes, edges }, {
-  physics: { solver: 'forceAtlas2Based', forceAtlas2Based: {
-    gravitationalConstant: -80, centralGravity: 0.01, springLength: 200,
-    springConstant: 0.02, damping: 0.5,
-  }, stabilization: { iterations: 200 }},
-  interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true },
-  edges: { smooth: { type: 'continuous', roundness: 0.2 } },
-});
-network.on('click', function(params) {
-  const detail = document.getElementById('detail');
-  if (params.nodes.length === 0) { detail.style.display = 'none'; return; }
-  const nodeId = params.nodes[0];
-  const node = data.nodes.find(n => n.id === nodeId);
-  if (!node) return;
-  document.getElementById('detail-title').textContent = node.label + ' (' + node.type + ')';
-  const list = document.getElementById('detail-list');
-  list.innerHTML = '';
-  const rels = data.edges.filter(e => e.source === nodeId || e.target === nodeId);
-  rels.slice(0, 15).forEach(r => {
-    const other = r.source === nodeId ? r.target : r.source;
-    const otherNode = data.nodes.find(n => n.id === other);
-    const li = document.createElement('li');
-    li.innerHTML = '<span class="pred">' + (r.label||'related') + '</span> → ' + (otherNode ? otherNode.label : other);
-    list.appendChild(li);
-  });
-  detail.style.display = 'block';
-});
-</script>
-</body>
-</html>"""
+# Noise words that are NOT curriculum concepts — filter these from the map
+_NOISE = {
+    "slide", "name", "date", "notes", "review", "test", "quiz", "exam",
+    "lesson", "plan", "handout", "worksheet", "activity", "class",
+    "homework", "assignment", "project", "presentation", "teacher",
+    "do now", "exit ticket", "warm up", "learning experience", "period",
+    "lesson plan", "social studies", "answer", "question", "student",
+    "page", "chapter", "unit", "section", "part", "copy", "group",
+    "blank", "version", "final", "draft", "new", "old", "overview",
+    "directions", "instructions", "rubric", "grade", "grading",
+    "objective", "aim", "goals", "materials", "resources", "packet",
+    "united states", "global history", "history", "document",
+    "[slide", "slide]", "smithtown", "great neck",
+}
 
 
 class CurriculumVisualizerTool:
@@ -123,8 +48,8 @@ class CurriculumVisualizerTool:
                     "properties": {
                         "max_nodes": {
                             "type": "integer",
-                            "description": "Max nodes to show (default 200)",
-                            "default": 200,
+                            "description": "Max nodes to show (default 150)",
+                            "default": 150,
                         },
                     },
                     "required": [],
@@ -135,7 +60,7 @@ class CurriculumVisualizerTool:
     async def execute(
         self, params: dict[str, Any], context: AgentContext
     ) -> ToolResult:
-        max_nodes = params.get("max_nodes", 200)
+        max_nodes = params.get("max_nodes", 150)
 
         try:
             from clawed.agent_core.memory.knowledge_graph import CurriculumKG
@@ -151,44 +76,49 @@ class CurriculumVisualizerTool:
                 "Ingest your materials first with /ingest."
             )
 
-        # Build graph data
+        # Build graph data with aggressive noise filtering
         import sqlite3
 
         with sqlite3.connect(kg._db_path) as conn:
             conn.row_factory = sqlite3.Row
 
-            # Get top entities by connection count, filtering generic terms
-            # Filter out generic/noise entities — only keep real curriculum concepts
-            # Noise: lesson structure terms, metadata, short generic words
+            # Ensure indexes exist for performance
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_kg_triple_subj_fast "
+                "ON kg_triples(subject)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_kg_triple_obj_fast "
+                "ON kg_triples(object)"
+            )
+
             entities_raw = conn.execute(
                 "SELECT e.id, e.name, e.entity_type, "
                 "(SELECT COUNT(*) FROM kg_triples t "
                 " WHERE t.subject = e.id OR t.object = e.id) AS connections "
                 "FROM kg_entities e WHERE e.teacher_id = ? "
                 "AND e.entity_type IN ('topic', 'standard', 'figure') "
-                "AND length(e.name) > 4 "
+                "AND length(e.name) > 5 "
                 "ORDER BY connections DESC LIMIT ?",
-                (context.teacher_id, max_nodes * 3),
+                (context.teacher_id, max_nodes * 5),
             ).fetchall()
 
-            # Filter noise programmatically
-            _noise_words = {
-                "name", "date", "notes", "review", "test", "quiz", "exam",
-                "lesson", "plan", "handout", "worksheet", "activity",
-                "homework", "assignment", "project", "presentation",
-                "do now", "exit ticket", "warm up", "learning experience",
-                "lesson plan", "social studies", "answer", "question",
-                "page", "chapter", "unit", "section", "part", "copy",
-                "blank", "version", "final", "draft", "new", "old",
-            }
+            # Filter noise
             entities = []
             for e in entities_raw:
                 name_lower = e["name"].lower().strip()
-                # Skip if name is a noise word or too generic
-                if name_lower in _noise_words:
+                if name_lower in _NOISE:
                     continue
-                # Skip single common words
-                if len(name_lower.split()) == 1 and len(name_lower) < 6:
+                # Skip if contains slide markers
+                if "[slide" in name_lower or "slide]" in name_lower:
+                    continue
+                # Skip single short words
+                words = name_lower.split()
+                if len(words) == 1 and len(name_lower) < 7:
+                    continue
+                # Skip if mostly numbers
+                alpha = sum(1 for c in name_lower if c.isalpha())
+                if len(name_lower) > 0 and alpha / len(name_lower) < 0.5:
                     continue
                 entities.append(e)
                 if len(entities) >= max_nodes:
@@ -196,7 +126,6 @@ class CurriculumVisualizerTool:
 
             entity_ids = {e["id"] for e in entities}
 
-            # Get edges between visible nodes
             triples = conn.execute(
                 "SELECT subject, predicate, object FROM kg_triples "
                 "WHERE teacher_id = ? AND valid_to IS NULL",
@@ -223,8 +152,6 @@ class CurriculumVisualizerTool:
             if t["subject"] in entity_ids and t["object"] in entity_ids
         ]
 
-        graph_json = json.dumps({"nodes": nodes, "edges": edges})
-
         # Get teacher name
         teacher_name = "My Curriculum"
         try:
@@ -234,15 +161,12 @@ class CurriculumVisualizerTool:
         except Exception:
             pass
 
-        # Render HTML — use replace instead of .format() to avoid
-        # conflicts with JS/CSS braces in the template
-        html = _VIS_TEMPLATE
-        html = html.replace("{teacher_name}", teacher_name)
-        html = html.replace("{node_count}", str(len(nodes)))
-        html = html.replace("{edge_count}", str(len(edges)))
-        html = html.replace("{graph_json}", graph_json)
+        # Build self-contained HTML with canvas renderer
+        html = _build_canvas_html(
+            nodes, edges, teacher_name,
+        )
 
-        # Save to output dir
+        # Save
         output_dir = Path("~/clawed_output").expanduser().resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
         out_path = output_dir / "curriculum_map.html"
@@ -257,3 +181,198 @@ class CurriculumVisualizerTool:
             files=[out_path],
             side_effects=[f"Generated curriculum map: {out_path}"],
         )
+
+
+def _build_canvas_html(
+    nodes: list[dict],
+    edges: list[dict],
+    teacher_name: str,
+) -> str:
+    """Build a self-contained HTML page with canvas-based graph renderer.
+
+    Zero external dependencies — works in any browser.
+    """
+    data_json = json.dumps({"nodes": nodes, "edges": edges})
+
+    return f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Curriculum Map</title>
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:#1a1a2e; font-family:-apple-system,sans-serif; overflow:hidden; }}
+canvas {{ display:block; cursor:grab; }}
+canvas:active {{ cursor:grabbing; }}
+#info {{
+  position:fixed; top:10px; left:10px; background:rgba(26,26,46,0.95);
+  padding:12px 16px; border-radius:8px; border:1px solid #333;
+  color:#e6e6e6; font-size:13px; z-index:10; max-width:280px;
+}}
+#info h2 {{ color:#e94560; font-size:15px; margin-bottom:4px; }}
+#info .s {{ color:#4a9eff; font-weight:bold; }}
+#detail {{
+  position:fixed; bottom:10px; right:10px; background:rgba(26,26,46,0.95);
+  padding:12px 16px; border-radius:8px; border:1px solid #333;
+  color:#ccc; font-size:12px; z-index:10; max-width:300px; display:none;
+}}
+#detail h3 {{ color:#16c79a; margin-bottom:6px; font-size:14px; }}
+#detail .r {{ padding:2px 0; }}
+#detail .p {{ color:#e94560; }}
+#legend {{
+  position:fixed; top:10px; right:10px; background:rgba(26,26,46,0.95);
+  padding:10px 14px; border-radius:8px; border:1px solid #333;
+  color:#999; font-size:11px; z-index:10;
+}}
+#legend span {{ display:inline-block; width:10px; height:10px; border-radius:50%;
+  margin-right:4px; vertical-align:middle; }}
+</style>
+</head>
+<body>
+<div id="info">
+  <h2>Curriculum Map</h2>
+  <p>{teacher_name}</p>
+  <p><span class="s">{len(nodes)}</span> topics &middot;
+     <span class="s">{len(edges)}</span> connections</p>
+  <p style="margin-top:6px;font-size:11px;color:#555">
+    Click node for details. Drag to pan. Scroll to zoom.</p>
+</div>
+<div id="legend">
+  <span style="background:#4a9eff"></span>Topic
+  <span style="background:#e94560;margin-left:8px"></span>Standard
+  <span style="background:#f5a623;margin-left:8px"></span>Figure
+</div>
+<div id="detail">
+  <h3 id="dt"></h3>
+  <div id="dl"></div>
+</div>
+<canvas id="c"></canvas>
+<script>
+var D={data_json};
+var cv=document.getElementById("c"),cx=cv.getContext("2d"),W,H;
+var ns=D.nodes,es=D.edges,nm={{}};
+ns.forEach(function(n){{nm[n.id]=n}});
+var TC={{topic:"#4a9eff",standard:"#e94560",skill:"#16c79a",figure:"#f5a623",term:"#9b59b6"}};
+var PI2=Math.PI*2;
+// Init positions in circle
+ns.forEach(function(n,i){{
+  var a=PI2*i/ns.length,r=Math.min(400,ns.length*4);
+  n.x=Math.cos(a)*r+(Math.random()-.5)*80;
+  n.y=Math.sin(a)*r+(Math.random()-.5)*80;
+  n.vx=0;n.vy=0;
+  n.r=Math.min(5+(n.connections||0)*0.3,18);
+  n.c=TC[n.type]||"#4a9eff";
+}});
+// Edge index
+var ei={{}};
+es.forEach(function(e){{
+  if(!ei[e.source])ei[e.source]=[];
+  if(!ei[e.target])ei[e.target]=[];
+  ei[e.source].push(e);ei[e.target].push(e);
+}});
+// Physics
+function sim(){{
+  var rep=3000,k=0.008,dmp=0.88;
+  for(var i=0;i<ns.length;i++){{
+    var a=ns[i];
+    for(var j=i+1;j<ns.length;j++){{
+      var b=ns[j],dx=a.x-b.x,dy=a.y-b.y;
+      var d=Math.sqrt(dx*dx+dy*dy)||1;
+      var f=rep/(d*d);
+      a.vx+=dx/d*f;a.vy+=dy/d*f;
+      b.vx-=dx/d*f;b.vy-=dy/d*f;
+    }}
+    a.vx-=a.x*0.0008;a.vy-=a.y*0.0008;
+  }}
+  es.forEach(function(e){{
+    var a=nm[e.source],b=nm[e.target];
+    if(!a||!b)return;
+    var dx=b.x-a.x,dy=b.y-a.y;
+    var d=Math.sqrt(dx*dx+dy*dy)||1;
+    var f=(d-120)*k;
+    a.vx+=dx/d*f;a.vy+=dy/d*f;
+    b.vx-=dx/d*f;b.vy-=dy/d*f;
+  }});
+  ns.forEach(function(n){{n.vx*=dmp;n.vy*=dmp;n.x+=n.vx;n.y+=n.vy}});
+}}
+// Camera
+var cam={{x:0,y:0,z:1}},drag=false,ds={{x:0,y:0}},cs={{x:0,y:0}},sel=null;
+function resize(){{W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}}
+window.onresize=resize;resize();
+function ts(x,y){{return[(x-cam.x)*cam.z+W/2,(y-cam.y)*cam.z+H/2]}}
+function tw(sx,sy){{return[(sx-W/2)/cam.z+cam.x,(sy-H/2)/cam.z+cam.y]}}
+function draw(){{
+  cx.fillStyle="#1a1a2e";cx.fillRect(0,0,W,H);
+  // Edges
+  cx.lineWidth=Math.max(0.3,0.5*cam.z);
+  es.forEach(function(e){{
+    var a=nm[e.source],b=nm[e.target];
+    if(!a||!b)return;
+    var p1=ts(a.x,a.y),p2=ts(b.x,b.y);
+    cx.strokeStyle="rgba(100,100,130,0.25)";
+    cx.beginPath();cx.moveTo(p1[0],p1[1]);cx.lineTo(p2[0],p2[1]);cx.stroke();
+  }});
+  // Nodes
+  ns.forEach(function(n){{
+    var p=ts(n.x,n.y),r=n.r*cam.z;
+    if(r<1)return;
+    cx.beginPath();cx.arc(p[0],p[1],r,0,PI2);
+    cx.fillStyle=n===sel?"#ffffff":n.c;
+    cx.fill();
+    if(n===sel){{cx.strokeStyle="#fff";cx.lineWidth=2;cx.stroke()}}
+    if(r>3){{
+      cx.fillStyle=n===sel?"#fff":"rgba(230,230,230,0.9)";
+      var fs=Math.max(8,Math.min(13,r*1.2));
+      cx.font=fs+"px -apple-system,sans-serif";
+      cx.textAlign="center";
+      var lbl=n.label.length>28?n.label.substring(0,26)+"..":n.label;
+      cx.fillText(lbl,p[0],p[1]-r-4);
+    }}
+  }});
+}}
+function hit(sx,sy){{
+  var w=tw(sx,sy);
+  for(var i=ns.length-1;i>=0;i--){{
+    var n=ns[i],dx=n.x-w[0],dy=n.y-w[1];
+    if(dx*dx+dy*dy<(n.r+6)*(n.r+6))return n;
+  }}
+  return null;
+}}
+cv.onmousedown=cv.ontouchstart=function(e){{
+  e.preventDefault();
+  var pt=e.touches?e.touches[0]:e;
+  var nd=hit(pt.clientX,pt.clientY);
+  if(nd){{
+    sel=nd;
+    document.getElementById("dt").textContent=nd.label+" ("+nd.type+")";
+    var dl=document.getElementById("dl");dl.innerHTML="";
+    (ei[nd.id]||[]).slice(0,12).forEach(function(edge){{
+      var oid=edge.source===nd.id?edge.target:edge.source;
+      var on=nm[oid];
+      if(on)dl.innerHTML+='<div class="r"><span class="p">'+edge.label+'</span> &rarr; '+on.label+'</div>';
+    }});
+    document.getElementById("detail").style.display="block";
+  }}else{{
+    sel=null;document.getElementById("detail").style.display="none";
+    drag=true;ds={{x:pt.clientX,y:pt.clientY}};cs={{x:cam.x,y:cam.y}};
+  }}
+}};
+cv.onmousemove=cv.ontouchmove=function(e){{
+  if(!drag)return;e.preventDefault();
+  var pt=e.touches?e.touches[0]:e;
+  cam.x=cs.x-(pt.clientX-ds.x)/cam.z;
+  cam.y=cs.y-(pt.clientY-ds.y)/cam.z;
+}};
+cv.onmouseup=cv.ontouchend=function(){{drag=false}};
+cv.onwheel=function(e){{
+  cam.z=Math.max(0.1,Math.min(5,cam.z*(e.deltaY>0?0.9:1.1)));
+  e.preventDefault();
+}};
+// Simulate then animate
+for(var i=0;i<300;i++)sim();
+function loop(){{sim();draw();requestAnimationFrame(loop)}}
+loop();
+</script>
+</body>
+</html>'''
