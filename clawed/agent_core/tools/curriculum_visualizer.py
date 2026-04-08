@@ -202,8 +202,8 @@ def _build_canvas_html(
 <title>Curriculum Map</title>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ background:#1a1a2e; font-family:-apple-system,sans-serif; overflow:hidden; }}
-canvas {{ display:block; cursor:grab; }}
+html,body {{ width:100%; height:100%; background:#1a1a2e; font-family:-apple-system,sans-serif; overflow:hidden; }}
+canvas {{ display:block; cursor:grab; width:100vw; height:100vh; position:fixed; top:0; left:0; }}
 canvas:active {{ cursor:grabbing; }}
 #info {{
   position:fixed; top:10px; left:10px; background:rgba(26,26,46,0.95);
@@ -371,8 +371,11 @@ cv.onwheel=function(e){{
 }};
 // Simulate then animate
 for(var i=0;i<300;i++)sim();
-function loop(){{sim();draw();requestAnimationFrame(loop)}}
-loop();
+function loop(){{resize();sim();draw();requestAnimationFrame(loop)}}
+// Delayed start to handle Telegram/mobile late layout
+setTimeout(function(){{resize();loop()}},100);
+setTimeout(resize,500);
+setTimeout(resize,1000);
 </script>
 </body>
 </html>'''
