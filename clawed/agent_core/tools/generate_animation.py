@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
-from clawed.failure_codes import FailureCode
+from clawed.failure_codes import FailureCode  # noqa: F401 — used in error messages
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ class GenerateAnimationTool:
                     "On macOS you may also need: brew install cairo pango ffmpeg\n"
                     "On Ubuntu: apt install libcairo2-dev libpango1.0-dev ffmpeg"
                 ),
-                failure_code=FailureCode.MISSING_DEPENDENCY,
+                data={"failure_code": FailureCode.MISSING_DEPENDENCY.value},
             )
 
         if not key_points:
@@ -202,7 +202,7 @@ class GenerateAnimationTool:
                     "Could not find 'manim' command. Make sure Manim is installed and on your PATH.\n"
                     "Install with: pip install 'manim>=0.18' pyav"
                 ),
-                failure_code=FailureCode.MISSING_DEPENDENCY,
+                data={"failure_code": FailureCode.MISSING_DEPENDENCY.value},
             )
 
         # Stage 4: Find the output video

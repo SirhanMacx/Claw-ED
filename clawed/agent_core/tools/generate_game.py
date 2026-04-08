@@ -89,7 +89,7 @@ class GenerateGameTool:
                 master=master,
                 persona=persona,
                 output_dir=None,
-                game_type=game_type,
+                game_style=game_type,
             )
 
             if result_path and result_path.exists():

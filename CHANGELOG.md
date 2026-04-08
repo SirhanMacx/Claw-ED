@@ -1,5 +1,12 @@
 # Changelog
 
+## v4.7.2026.9 (2026-04-07)
+
+### Bug fixes: game tool + animation tool
+
+- **generate_game**: fixed `compile_game() got unexpected keyword argument game_type` — param is `game_style`
+- **generate_animation**: fixed `ToolResult.__init__() got unexpected keyword argument failure_code` — use `data` dict
+
 ## v4.7.2026.8 (2026-04-07)
 
 ### Clean branded startup — teacher name, no Anthropic references
