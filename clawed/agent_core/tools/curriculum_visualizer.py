@@ -75,9 +75,11 @@ const edges = new vis.DataSet(data.edges.map(e => ({
 const container = document.getElementById('graph');
 const network = new vis.Network(container, { nodes, edges }, {
   physics: { solver: 'forceAtlas2Based', forceAtlas2Based: {
-    gravitationalConstant: -50, centralGravity: 0.005, springLength: 120,
-  }},
-  interaction: { hover: true, tooltipDelay: 200 },
+    gravitationalConstant: -80, centralGravity: 0.01, springLength: 200,
+    springConstant: 0.02, damping: 0.5,
+  }, stabilization: { iterations: 200 }},
+  interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true },
+  edges: { smooth: { type: 'continuous', roundness: 0.2 } },
 });
 network.on('click', function(params) {
   const detail = document.getElementById('detail');
@@ -155,12 +157,20 @@ class CurriculumVisualizerTool:
         with sqlite3.connect(kg._db_path) as conn:
             conn.row_factory = sqlite3.Row
 
-            # Get top entities by connection count
+            # Get top entities by connection count, filtering generic terms
+            _noise = (
+                "'do_now','exit_ticket','lesson_plan','warm_up','activity',"
+                "'worksheet','handout','notes','review','test','quiz',"
+                "'homework','assignment','project','presentation',"
+                "'smithtown_social_studies_lesson_plan'"
+            )
             entities = conn.execute(
                 "SELECT e.id, e.name, e.entity_type, "
                 "(SELECT COUNT(*) FROM kg_triples t "
                 " WHERE t.subject = e.id OR t.object = e.id) AS connections "
                 "FROM kg_entities e WHERE e.teacher_id = ? "
+                f"AND e.id NOT IN ({_noise}) "
+                "AND e.entity_type IN ('topic', 'standard', 'skill', 'figure') "
                 "ORDER BY connections DESC LIMIT ?",
                 (context.teacher_id, max_nodes),
             ).fetchall()
