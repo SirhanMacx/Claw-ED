@@ -14,6 +14,18 @@ Current version: **v4.7.2026.11**
 - [ ] **Post-generation rewrite pass**: run rewrite mode on MasterContent
   text before DOCX/PPTX compilation
 
+### Semantic knowledge graph (Graphify)
+- [ ] **Graphify integration**: replace heuristic kg_extractor.py with
+  LLM-powered semantic extraction. Leiden community detection clusters
+  related curriculum concepts. Confidence-scored relationships (EXTRACTED /
+  INFERRED / AMBIGUOUS). Interactive HTML curriculum map visualization.
+  Source: https://github.com/safishamsi/graphify
+- [ ] **Curriculum visualizer**: new agent tool that renders the knowledge
+  graph as an interactive HTML page — teacher sees their entire curriculum
+  as a connected visual map
+- [ ] **Multimodal extraction**: use Graphify's image analysis to extract
+  concepts from PPTX diagrams and maps, not just text
+
 ### Ingestion improvements
 - [ ] **DOCX weighting**: lesson plans (DOCX) should rank higher than
   slide bullets (PPTX) in search results. Add content_type boost.
