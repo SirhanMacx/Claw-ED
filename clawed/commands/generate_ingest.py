@@ -211,61 +211,33 @@ def ingest(
     except Exception:
         pass
 
-    # Index documents into curriculum knowledge base for KB search
+    # Full pipeline: images + assets + chunks + KG + wiki
     kb_msg = ""
-    try:
-        from clawed.agent_core.identity import get_teacher_id
-        from clawed.agent_core.memory.curriculum_kb import CurriculumKB
-        kb = CurriculumKB()
-        tid = get_teacher_id()
-        total_chunks = 0
-        for doc in documents:
-            doc_type_val = doc.doc_type.value if hasattr(doc.doc_type, "value") else str(doc.doc_type)
-            total_chunks += kb.index(
-                teacher_id=tid,
-                doc_title=doc.title,
-                source_path=doc.source_path or "",
-                full_text=doc.content,
-                metadata={"doc_type": doc_type_val},
-            )
-        stats = kb.stats(tid)
-        kb_msg = (
-            f"[bold]Knowledge base:[/bold] {stats['doc_count']} documents, "
-            f"{stats['chunk_count']} searchable sections"
-        )
-    except Exception:
-        pass
-
-    # Register assets with rich extraction (images, YouTube links, metadata)
     asset_msg = ""
     try:
-        from clawed.asset_registry import AssetRegistry
-        from clawed.ingestor import extract_rich
-        registry = AssetRegistry()
-        asset_count = 0
-        for doc in documents:
-            doc_type_val = doc.doc_type.value if hasattr(doc.doc_type, "value") else str(doc.doc_type)
-            # Try rich extraction for images/URLs from original file
-            extraction = None
-            if doc.source_path:
-                extraction = extract_rich(Path(doc.source_path))
-            asset_id = registry.register_asset(
-                teacher_id=tid,
-                source_path=doc.source_path or "",
-                title=doc.title,
-                doc_type=doc_type_val,
-                text=doc.content,
-                extraction=extraction,
+        from clawed.agent_core.identity import get_teacher_id
+        from clawed.ingestor import full_ingest
+
+        tid = get_teacher_id()
+        ingest_result = full_ingest(
+            source, teacher_id=tid,
+            progress_callback=lambda msg: console.print(f"  [dim]{msg}[/dim]"),
+        )
+        kb_msg = (
+            f"[bold]Knowledge base:[/bold] {ingest_result['chunks_indexed']} chunks"
+        )
+        if ingest_result["images_extracted"]:
+            asset_msg = (
+                f"[bold]Assets:[/bold] {ingest_result['assets_registered']} files, "
+                f"{ingest_result['images_extracted']} images extracted"
             )
-            if asset_id:
-                asset_count += 1
-        stats = registry.stats("default")
-        parts = [f"{stats['asset_count']} files indexed"]
-        if stats['link_count']:
-            parts.append(f"{stats['link_count']} links catalogued")
-        if stats['image_count']:
-            parts.append(f"{stats['image_count']} images extracted")
-        asset_msg = f"[bold]Asset registry:[/bold] {', '.join(parts)}"
+        if ingest_result["kg_entities"]:
+            kb_msg += (
+                f" · KG: {ingest_result['kg_entities']} concepts, "
+                f"{ingest_result['kg_triples']} relationships"
+            )
+        if ingest_result["wiki_articles"]:
+            kb_msg += f" · Wiki: {ingest_result['wiki_articles']} articles"
     except Exception:
         pass
 

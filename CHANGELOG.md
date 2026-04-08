@@ -1,5 +1,23 @@
 # Changelog
 
+## v4.7.2026.10 (2026-04-07)
+
+### Unified ingestion pipeline — images finally flow
+
+Root cause found: standalone ingestion never called `extract_rich()` or
+`register_asset()`. Images existed in the PPTX files but were never
+extracted to the asset registry. Created `full_ingest()` — ONE function
+that does the complete pipeline: parse → extract images → register assets
+→ index chunks → build KG → compile wiki. Wired into both CLI `clawed
+ingest` and the agent `ingest_materials` tool.
+
+- **`full_ingest()`** in `clawed/ingestor.py` — single entry point for all ingestion
+- **CLI refactored** — `clawed ingest` now uses `full_ingest()` instead of
+  4 separate blocks
+- **Agent tool refactored** — `ingest_materials` uses `full_ingest()` instead
+  of assembling the pipeline manually
+- No entry point can miss images again — they all go through the same function
+
 ## v4.7.2026.9 (2026-04-07)
 
 ### Bug fixes: game tool + animation tool

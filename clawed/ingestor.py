@@ -17,7 +17,7 @@ import tempfile
 import zipfile
 from collections import Counter
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from clawed.asset_registry import ExtractedImage, ExtractedURL, ExtractionResult, extract_urls, extract_youtube_ids
 from clawed.models import DocType, Document
@@ -1206,3 +1206,173 @@ def _dry_run_results(files: list[Path]) -> list[Document]:
                 source_path=str(f),
             ))
     return results
+
+
+# ── Unified full pipeline ────────────────────────────────────────────
+
+
+def full_ingest(
+    path: Path | str,
+    teacher_id: str = "default",
+    progress_callback: Callable | None = None,
+) -> dict[str, Any]:
+    """Complete ingestion pipeline: parse → images → assets → chunks → KG → wiki.
+
+    This is the ONE function that runs the full pipeline. Every entry point
+    (CLI, agent tool, standalone script) should call this instead of assembling
+    the pipeline manually. Ensures teacher images, assets, chunks, knowledge
+    graph, and wiki articles are all populated from a single call.
+
+    Each step is wrapped in try/except — a failure in one step (e.g., wiki
+    compilation needs an LLM) doesn't block the others.
+    """
+    import gc
+
+    result: dict[str, Any] = {
+        "docs_parsed": 0,
+        "assets_registered": 0,
+        "images_extracted": 0,
+        "chunks_indexed": 0,
+        "kg_entities": 0,
+        "kg_triples": 0,
+        "wiki_articles": 0,
+        "errors": [],
+    }
+
+    def _progress(msg: str) -> None:
+        if progress_callback:
+            try:
+                progress_callback(msg)
+            except Exception:
+                pass
+
+    # ── Step 1: Parse all documents ──────────────────────────────────
+    _progress("Parsing files...")
+    docs = ingest_path(Path(path))
+    result["docs_parsed"] = len(docs)
+    _progress(f"Parsed {len(docs)} documents")
+
+    if not docs:
+        return result
+
+    # ── Step 2+3: Extract images + register assets ───────────────────
+    _progress("Extracting images and registering assets...")
+    try:
+        from clawed.asset_registry import AssetRegistry
+
+        registry = AssetRegistry()
+        for i, doc in enumerate(docs):
+            try:
+                if not doc.source_path:
+                    continue
+                doc_type_val = (
+                    doc.doc_type.value
+                    if hasattr(doc.doc_type, "value")
+                    else str(doc.doc_type)
+                )
+                extraction = extract_rich(Path(doc.source_path))
+                aid = registry.register_asset(
+                    teacher_id=teacher_id,
+                    source_path=doc.source_path,
+                    title=doc.title,
+                    doc_type=doc_type_val,
+                    text=doc.content,
+                    extraction=extraction,
+                )
+                if aid:
+                    result["assets_registered"] += 1
+                    if extraction and extraction.images:
+                        result["images_extracted"] += len(extraction.images)
+            except Exception:
+                pass
+            if (i + 1) % 200 == 0:
+                _progress(
+                    f"  assets {i + 1}/{len(docs)} "
+                    f"({result['images_extracted']} images)"
+                )
+                gc.collect()
+        _progress(
+            f"Assets: {result['assets_registered']} registered, "
+            f"{result['images_extracted']} images extracted"
+        )
+    except Exception as e:
+        result["errors"].append(f"Asset registration: {e}")
+
+    # ── Step 4: Index text chunks ────────────────────────────────────
+    _progress("Indexing into knowledge base...")
+    try:
+        from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
+        kb = CurriculumKB()
+        for i, doc in enumerate(docs):
+            try:
+                text = doc.content
+                if len(text.strip()) < 20:
+                    continue
+                chunks = kb.index(
+                    teacher_id, doc.title,
+                    doc.source_path or "", text,
+                )
+                result["chunks_indexed"] += chunks
+            except Exception:
+                pass
+            if (i + 1) % 200 == 0:
+                _progress(
+                    f"  chunks {i + 1}/{len(docs)} "
+                    f"({result['chunks_indexed']} chunks)"
+                )
+                gc.collect()
+        _progress(f"Indexed {result['chunks_indexed']} chunks")
+    except Exception as e:
+        result["errors"].append(f"KB indexing: {e}")
+
+    # ── Step 5: Knowledge graph ──────────────────────────────────────
+    _progress("Building knowledge graph...")
+    try:
+        from clawed.agent_core.memory.kg_extractor import (
+            extract_entities_from_document,
+            infer_relationships,
+        )
+        from clawed.agent_core.memory.knowledge_graph import CurriculumKG
+
+        kg = CurriculumKG()
+        for doc in docs:
+            tags = list(getattr(doc, "tags", []) or [])
+            entities = extract_entities_from_document(
+                doc.title, doc.content[:3000], tags,
+            )
+            for ent in entities:
+                kg.add_entity(
+                    teacher_id, ent["name"], ent["entity_type"], embed=False,
+                )
+                result["kg_entities"] += 1
+            rels = infer_relationships(entities, doc.title)
+            for rel in rels:
+                kg.add_triple(
+                    teacher_id, rel["subject"], rel["predicate"],
+                    rel["object"],
+                    confidence=rel.get("confidence", 0.5),
+                    source="ingest",
+                    source_path=doc.source_path or "",
+                )
+                result["kg_triples"] += 1
+        kg.batch_embed_unembedded(teacher_id)
+        _progress(
+            f"KG: {result['kg_entities']} entities, "
+            f"{result['kg_triples']} relationships"
+        )
+    except Exception as e:
+        result["errors"].append(f"Knowledge graph: {e}")
+
+    # ── Step 6: Wiki compilation ─────────────────────────────────────
+    _progress("Compiling curriculum wiki...")
+    try:
+        from clawed.wiki import compile_wiki
+
+        wiki = compile_wiki(teacher_id)
+        result["wiki_articles"] = wiki.compiled
+        _progress(f"Wiki: {wiki.compiled} articles compiled")
+    except Exception as e:
+        result["errors"].append(f"Wiki: {e}")
+
+    return result

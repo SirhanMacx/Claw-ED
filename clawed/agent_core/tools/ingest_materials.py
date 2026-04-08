@@ -134,112 +134,40 @@ class IngestMaterialsTool:
                 else:
                     summary += " (Could not extract style patterns.)"
 
-            # Index documents into curriculum knowledge base
+            # Full pipeline: images + assets + chunks + KG + wiki
             try:
-                from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+                from clawed.ingestor import full_ingest
 
-                kb = CurriculumKB()
-                total_chunks = 0
-                for doc in docs:
-                    doc_type_val = (
-                        doc.doc_type.value
-                        if hasattr(doc.doc_type, "value")
-                        else str(doc.doc_type)
-                    )
-                    total_chunks += kb.index(
-                        teacher_id=context.teacher_id,
-                        doc_title=doc.title,
-                        source_path=doc.source_path or "",
-                        full_text=doc.content,
-                        metadata={"doc_type": doc_type_val},
-                    )
-                kb_stats = kb.stats(context.teacher_id)
-                summary += (
-                    f"\n\nIndexed into your curriculum knowledge base: "
-                    f"{kb_stats['doc_count']} documents, "
-                    f"{kb_stats['chunk_count']} searchable sections."
+                async def _notify(msg: str) -> None:
+                    if context.progress_callback:
+                        await context.notify_progress(msg)
+
+                ingest_result = full_ingest(
+                    raw_path,
+                    teacher_id=context.teacher_id,
+                    progress_callback=lambda msg: logger.info(msg),
                 )
+                parts = []
+                if ingest_result["chunks_indexed"]:
+                    parts.append(
+                        f"{ingest_result['chunks_indexed']} searchable sections"
+                    )
+                if ingest_result["images_extracted"]:
+                    parts.append(
+                        f"{ingest_result['images_extracted']} images extracted"
+                    )
+                if ingest_result["kg_entities"]:
+                    parts.append(
+                        f"{ingest_result['kg_entities']} concepts mapped"
+                    )
+                if ingest_result["wiki_articles"]:
+                    parts.append(
+                        f"{ingest_result['wiki_articles']} wiki articles"
+                    )
+                if parts:
+                    summary += "\n\n" + " · ".join(parts)
             except Exception as e:
-                logger.debug("KB indexing failed: %s", e)
-
-            # Build curriculum knowledge graph (concepts, relationships)
-            try:
-                from clawed.agent_core.memory.kg_extractor import (
-                    extract_entities_from_document,
-                    infer_relationships,
-                )
-                from clawed.agent_core.memory.knowledge_graph import CurriculumKG
-
-                kg = CurriculumKG()
-                kg_entities = 0
-                kg_triples = 0
-                for doc in docs:
-                    tags = list(getattr(doc, "tags", []) or [])
-                    entities = extract_entities_from_document(
-                        doc.title, doc.content[:3000], tags,
-                    )
-                    for ent in entities:
-                        kg.add_entity(
-                            teacher_id=context.teacher_id,
-                            name=ent["name"],
-                            entity_type=ent["entity_type"],
-                            embed=False,
-                        )
-                        kg_entities += 1
-                    rels = infer_relationships(entities, doc.title)
-                    for rel in rels:
-                        kg.add_triple(
-                            teacher_id=context.teacher_id,
-                            subject=rel["subject"],
-                            predicate=rel["predicate"],
-                            object_=rel["object"],
-                            confidence=rel.get("confidence", 0.5),
-                            source="ingest",
-                            source_path=doc.source_path or "",
-                        )
-                        kg_triples += 1
-                # Batch embed all new entities
-                kg.batch_embed_unembedded(context.teacher_id)
-                if kg_entities:
-                    summary += (
-                        f"\nKnowledge graph: {kg_entities} concepts, "
-                        f"{kg_triples} relationships mapped."
-                    )
-            except Exception as e:
-                logger.debug("KG population failed: %s", e)
-
-            # Register assets for file-level search
-            try:
-                from clawed.asset_registry import AssetRegistry
-                registry = AssetRegistry()
-                asset_count = 0
-                for doc in docs:
-                    doc_type_val = (
-                        doc.doc_type.value
-                        if hasattr(doc.doc_type, "value")
-                        else str(doc.doc_type)
-                    )
-                    extraction = None
-                    if doc.source_path:
-                        try:
-                            from clawed.ingestor import extract_rich
-                            extraction = extract_rich(Path(doc.source_path))
-                        except Exception:
-                            pass
-                    aid = registry.register_asset(
-                        teacher_id=context.teacher_id,
-                        source_path=doc.source_path or "",
-                        title=doc.title,
-                        doc_type=doc_type_val,
-                        text=doc.content,
-                        extraction=extraction,
-                    )
-                    if aid:
-                        asset_count += 1
-                if asset_count:
-                    summary += f" ({asset_count} files catalogued for search)"
-            except Exception as e:
-                logger.debug("Asset registration failed: %s", e)
+                logger.debug("Full ingest pipeline failed: %s", e)
 
             # Update soul.md with what we learned
             try:
@@ -331,24 +259,6 @@ class IngestMaterialsTool:
             except Exception as e:
                 logger.debug("Auto-profile failed: %s", e)
                 profile_update = ""
-
-            # Auto-compile wiki from indexed chunks (LLM synthesis)
-            try:
-                from clawed.wiki import compile_wiki
-
-                if context.progress_callback:
-                    await context.notify_progress(
-                        "Compiling curriculum wiki from your materials..."
-                    )
-                wiki_result = compile_wiki(context.teacher_id)
-                if wiki_result.compiled > 0:
-                    summary += (
-                        f"\nWiki: {wiki_result.compiled} articles compiled "
-                        f"({wiki_result.skipped} unchanged, "
-                        f"{wiki_result.total} total)."
-                    )
-            except Exception as e:
-                logger.debug("Wiki compilation failed: %s", e)
 
             return ToolResult(
                 text=summary + profile_update,
