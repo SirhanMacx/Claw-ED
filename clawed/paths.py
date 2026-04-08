@@ -155,3 +155,39 @@ def models_dir() -> Path:
 
 def api_token_path() -> Path:
     return data_dir() / "api_token"
+
+
+# ── Databases (all SQLite files) ────────────────────────────────────
+
+def curriculum_kb_db() -> Path:
+    return data_dir() / "memory" / "curriculum_kb.db"
+
+
+def sessions_db() -> Path:
+    return data_dir() / "memory" / "sessions.db"
+
+
+def episodes_db() -> Path:
+    return data_dir() / "memory" / "episodes.db"
+
+
+def quality_db() -> Path:
+    return data_dir() / "memory" / "quality.db"
+
+
+def bot_state_db() -> Path:
+    return data_dir() / "bot_state.db"
+
+
+def approvals_db() -> Path:
+    return data_dir() / "approvals.db"
+
+
+def task_queue_db() -> Path:
+    return data_dir() / "memory" / "task_queue.db"
+
+
+# ── Cache ───────────────────────────────────────────────────────────
+
+def animation_dir() -> Path:
+    return data_dir() / "animations"

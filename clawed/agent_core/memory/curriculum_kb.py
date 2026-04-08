@@ -23,7 +23,14 @@ from clawed.agent_core.memory.embeddings import get_embedder
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DB = Path.home() / ".eduagent" / "memory" / "curriculum_kb.db"
+def _get_default_db() -> Path:
+    """Resolve DB path respecting EDUAGENT_DATA_DIR."""
+    import os
+    base = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
+    return base / "memory" / "curriculum_kb.db"
+
+
+_DEFAULT_DB = None  # Lazy — see _get_default_db()
 _CHUNK_SIZE = 500  # ~500 words per chunk
 _CHUNK_OVERLAP = 50
 
@@ -48,7 +55,7 @@ class CurriculumKB:
     """
 
     def __init__(self, db_path: Path | None = None) -> None:
-        self._db_path = db_path or _DEFAULT_DB
+        self._db_path = db_path or _get_default_db()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._embedder = get_embedder()
         self._init_db()

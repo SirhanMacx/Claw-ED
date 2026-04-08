@@ -22,7 +22,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DB = Path.home() / ".eduagent" / "memory" / "curriculum_kb.db"
+def _get_default_db() -> Path:
+    import os as _os
+    base = Path(_os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
+    return base / "memory" / "curriculum_kb.db"
 
 VALID_ENTITY_TYPES = frozenset({
     "topic", "standard", "skill", "figure", "term", "unit",
@@ -61,7 +64,7 @@ class CurriculumKG:
     """Curriculum knowledge graph with temporal triples."""
 
     def __init__(self, db_path: Path | None = None) -> None:
-        self._db_path = db_path or _DEFAULT_DB
+        self._db_path = db_path or _get_default_db()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 

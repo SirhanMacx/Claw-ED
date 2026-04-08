@@ -164,12 +164,11 @@ TIER3_WORDS: set[str] = {
 _STRUCTURE_PATTERNS: list[tuple[re.Pattern, str]] = [
     # Colon-heavy headers: "Key Takeaway: The revolution..."
     (re.compile(r"^(#{1,3}\s+\w[\w\s]{2,20}):\s+", re.MULTILINE), r"\1 — "),
-    # Rhetorical question openers
-    (re.compile(r"^(Have you ever wondered|What if I told you|Did you know that)\s+", re.MULTILINE), ""),
-    # "Let's" opener overuse
-    (re.compile(r"^Let's (dive into|explore|take a look at|examine)\s+", re.MULTILINE), ""),
     # Em-dash lists (AI loves these)
     (re.compile(r"\s+—\s+(and|but|or|yet)\s+"), r" \1 "),
+    # NOTE: Removed rhetorical question and "Let's" openers — they
+    # deleted entire sentences when replaced with "". Word-level Tier 1
+    # replacements are sufficient without these destructive patterns.
 ]
 
 

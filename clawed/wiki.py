@@ -230,48 +230,76 @@ async def compile_wiki(
 
     result.total = len(doc_groups)
     state = _load_compile_state()
-    current = 0
 
+    # Filter to only docs that need compilation
+    to_compile: list[tuple[str, list[dict], str]] = []
     for doc_title, chunks in doc_groups.items():
-        current += 1
-        if on_progress:
-            on_progress(doc_title, current, result.total)
-
-        # Check if document has changed
         doc_hash = _compute_doc_hash(chunks)
         prev = state.get(doc_title, {})
         if not force and prev.get("hash") == doc_hash:
             result.skipped += 1
-            continue
+        else:
+            to_compile.append((doc_title, chunks, doc_hash))
 
-        # Compile the article
-        try:
-            article_md = await compile_article(doc_title, chunks, config)
-            if not article_md or len(article_md) < 20:
-                result.errors.append(f"{doc_title}: LLM returned empty/short article")
-                continue
+    if not to_compile:
+        return result
 
-            # Write article to disk
-            filename = safe_filename(doc_title, max_len=60) + ".md"
-            article_path = ARTICLES_DIR / filename
-            article_path.write_text(article_md, encoding="utf-8")
+    # Compile articles in parallel batches (5 concurrent LLM calls)
+    import asyncio
+    from datetime import datetime as _dt
 
-            # Update state
-            state[doc_title] = {
-                "hash": doc_hash,
-                "compiled_at": __import__("datetime").datetime.now().isoformat(),
-                "article_file": filename,
-                "source_path": chunks[0].get("source_path", ""),
-                "chunk_count": len(chunks),
-            }
-            result.compiled += 1
+    concurrency = 5
+    sem = asyncio.Semaphore(concurrency)
+    compiled_count = 0
 
-        except Exception as e:
-            logger.error("Failed to compile %s: %s", doc_title, e)
-            result.errors.append(f"{doc_title}: {e}")
+    async def _compile_one(
+        title: str, chunks: list[dict], doc_hash: str,
+    ) -> tuple[str, str | None, str]:
+        """Compile one article under semaphore."""
+        async with sem:
+            try:
+                md = await compile_article(title, chunks, config)
+                return title, md, doc_hash
+            except Exception as e:
+                logger.error("Failed to compile %s: %s", title, e)
+                return title, None, str(e)
 
-    # Save state and rebuild index
-    _save_compile_state(state)
+    # Process in batches to save state periodically
+    batch_size = 50
+    for batch_start in range(0, len(to_compile), batch_size):
+        batch = to_compile[batch_start: batch_start + batch_size]
+        tasks = [
+            _compile_one(title, chunks, doc_hash)
+            for title, chunks, doc_hash in batch
+        ]
+        results_batch = await asyncio.gather(*tasks)
+
+        for title, article_md, doc_hash_or_err in results_batch:
+            if article_md and len(article_md) >= 20:
+                filename = safe_filename(title, max_len=60) + ".md"
+                article_path = ARTICLES_DIR / filename
+                article_path.write_text(article_md, encoding="utf-8")
+                state[title] = {
+                    "hash": doc_hash_or_err,
+                    "compiled_at": _dt.now().isoformat(),
+                    "article_file": filename,
+                    "source_path": "",
+                    "chunk_count": 0,
+                }
+                result.compiled += 1
+            elif article_md is None:
+                result.errors.append(f"{title}: {doc_hash_or_err}")
+            else:
+                result.errors.append(f"{title}: LLM returned empty/short article")
+
+        compiled_count += len(batch)
+        if on_progress:
+            on_progress(f"Batch {batch_start // batch_size + 1}", compiled_count, len(to_compile))
+
+        # Save state after each batch (crash recovery)
+        _save_compile_state(state)
+
+    # Rebuild index
     index_md = _build_index()
     INDEX_PATH.write_text(index_md, encoding="utf-8")
 

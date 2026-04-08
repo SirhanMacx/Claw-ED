@@ -54,7 +54,10 @@ class FileListTool:
         subpath = params.get("path", "")
         pattern = params.get("pattern", "*")
 
-        target = output_dir / subpath if subpath else output_dir
+        target = (output_dir / subpath).resolve() if subpath else output_dir.resolve()
+        # Prevent path traversal outside output directory
+        if not str(target).startswith(str(output_dir.resolve())):
+            return ToolResult(text="ERROR: path outside output directory")
         if not target.exists():
             return ToolResult(text=f"Directory not found: {target}")
 

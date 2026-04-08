@@ -11,23 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
+from clawed.noise_words import ALL_NOISE
 
 logger = logging.getLogger(__name__)
-
-# Noise words that are NOT curriculum concepts — filter these from the map
-_NOISE = {
-    "slide", "name", "date", "notes", "review", "test", "quiz", "exam",
-    "lesson", "plan", "handout", "worksheet", "activity", "class",
-    "homework", "assignment", "project", "presentation", "teacher",
-    "do now", "exit ticket", "warm up", "learning experience", "period",
-    "lesson plan", "social studies", "answer", "question", "student",
-    "page", "chapter", "unit", "section", "part", "copy", "group",
-    "blank", "version", "final", "draft", "new", "old", "overview",
-    "directions", "instructions", "rubric", "grade", "grading",
-    "objective", "aim", "goals", "materials", "resources", "packet",
-    "united states", "global history", "history", "document",
-    "[slide", "slide]", "smithtown", "great neck",
-}
 
 
 class CurriculumVisualizerTool:
@@ -103,11 +89,11 @@ class CurriculumVisualizerTool:
                 (context.teacher_id, max_nodes * 5),
             ).fetchall()
 
-            # Filter noise
+            # Filter noise using shared canonical noise words
             entities = []
             for e in entities_raw:
                 name_lower = e["name"].lower().strip()
-                if name_lower in _NOISE:
+                if name_lower in ALL_NOISE:
                     continue
                 # Skip if contains slide markers
                 if "[slide" in name_lower or "slide]" in name_lower:
@@ -192,7 +178,10 @@ def _build_canvas_html(
 
     Zero external dependencies — works in any browser.
     """
-    data_json = json.dumps({"nodes": nodes, "edges": edges})
+    # Double-encode JSON: inject as string literal, parse at runtime.
+    # This prevents special characters in labels from breaking JS on
+    # strict parsers (iOS Safari, Telegram in-app browser).
+    data_json_str = json.dumps(json.dumps({"nodes": nodes, "edges": edges}))
 
     return f'''<!DOCTYPE html>
 <html lang="en">
@@ -249,7 +238,7 @@ canvas:active {{ cursor:grabbing; }}
 </div>
 <canvas id="c"></canvas>
 <script>
-var D={data_json};
+var D=JSON.parse({data_json_str});
 var cv=document.getElementById("c"),cx=cv.getContext("2d"),W,H;
 var ns=D.nodes,es=D.edges,nm={{}};
 ns.forEach(function(n){{nm[n.id]=n}});

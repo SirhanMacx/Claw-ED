@@ -8,16 +8,7 @@ from __future__ import annotations
 
 import re
 
-_STOP_WORDS = frozenset({
-    "the", "a", "an", "and", "or", "for", "in", "on", "of", "to", "is",
-    "it", "by", "at", "be", "as", "do", "if", "so", "no", "up", "but",
-    "not", "was", "are", "has", "had", "its", "this", "that", "with",
-    "from", "will", "can", "all", "may", "new", "one", "two", "use",
-    "pdf", "doc", "docx", "pptx", "ppt", "txt", "copy", "final", "draft",
-    "lesson", "plan", "unit", "chapter", "section", "part", "page", "test",
-    "quiz", "exam", "homework", "assignment", "activity", "worksheet",
-    "handout", "notes", "review", "study", "guide", "packet", "project",
-})
+from clawed.noise_words import ALL_NOISE as _STOP_WORDS
 
 # Standard code patterns
 _STANDARD_PATTERNS = [
