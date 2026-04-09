@@ -451,6 +451,32 @@ async def generate_master_content(
             "\n".join(f"  - {i}" for i in remaining),
         )
 
+    # ── Stage 2: LLM-based critic (Teaching Constitution) ─────────
+    # Separate model call reviews the lesson against pedagogical principles.
+    # Non-blocking — if the critic fails, the lesson still ships.
+    try:
+        critic_path = Path(__file__).parent / "prompts" / "teaching_constitution.txt"
+        if critic_path.exists():
+            critic_prompt = critic_path.read_text(encoding="utf-8")
+            lesson_json = master.model_dump_json(indent=2)
+            # Truncate to avoid token limits
+            if len(lesson_json) > 6000:
+                lesson_json = lesson_json[:6000] + "\n... (truncated)"
+
+            critic_response = await client.generate(
+                prompt=(
+                    f"Review this lesson plan:\n\n{lesson_json}\n\n"
+                    "Apply the Teaching Constitution above."
+                ),
+                system=critic_prompt,
+                temperature=0.2,
+                max_tokens=500,
+            )
+            if "NEEDS_REVISION" in critic_response:
+                logger.info("Teaching Constitution critic flagged issues:\n%s", critic_response[:500])
+    except Exception as exc:
+        logger.debug("Teaching Constitution critic skipped: %s", exc)
+
     return master
 
 

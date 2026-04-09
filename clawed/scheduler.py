@@ -198,20 +198,82 @@ def _parse_cron_expr(expr: str) -> dict[str, str]:
 
 
 async def _task_morning_prep() -> str:
-    """Morning prep: check for missing lessons, auto-generate drafts."""
+    """Morning prep: check for missing lessons, auto-generate drafts.
+
+    Scans the current unit for lessons that haven't been generated yet.
+    If any are missing, auto-generates them using the teacher's persona
+    and notifies via Telegram.
+    """
     from clawed.workspace import append_daily_note
 
-    append_daily_note("Morning prep task ran.", category="scheduler")
+    append_daily_note("Morning prep task started.", category="scheduler")
 
-    # Check for lessons due today
     try:
-        from clawed.database import Database
-        db = Database()
-        stats = db.get_stats()
-        summary = f"Morning prep: {stats.get('lessons', 0)} lessons in database, {stats.get('units', 0)} units."
-        db.close()
+        from clawed.agent_core.identity import get_teacher_id
+        from clawed.models import AppConfig, TeacherPersona
+        from clawed.state import TeacherSession
+
+        teacher_id = get_teacher_id()
+        session = TeacherSession.load(teacher_id)
+        config = AppConfig.load()
+        persona = session.persona or TeacherPersona()
+
+        # Check if there's a current unit with ungenerated lessons
+        if not session.current_unit:
+            summary = "Morning prep: no active unit. Start a unit with 'plan a unit on [topic]'."
+            append_daily_note(summary, category="morning-prep")
+            return summary
+
+        unit = session.current_unit
+        generated_ids = set(session.config.get("generated_lesson_ids", []))
+        missing = [
+            b for b in unit.daily_lessons
+            if b.lesson_number not in generated_ids
+        ]
+
+        if not missing:
+            summary = (
+                f"Morning prep: all {len(unit.daily_lessons)} lessons in "
+                f"'{unit.title}' are generated. You're set!"
+            )
+            append_daily_note(summary, category="morning-prep")
+            return summary
+
+        # Auto-generate the NEXT missing lesson (not all at once)
+        next_brief = missing[0]
+        from clawed.lesson import generate_lesson as _gen
+
+        lesson = await _gen(
+            lesson_number=next_brief.lesson_number,
+            unit=unit,
+            persona=persona,
+            config=config,
+        )
+        session.save_lesson(lesson)
+        generated_ids.add(next_brief.lesson_number)
+        session.config["generated_lesson_ids"] = list(generated_ids)
+        session.save()
+
+        summary = (
+            f"Morning prep: auto-generated lesson {next_brief.lesson_number} "
+            f"'{next_brief.topic}' for unit '{unit.title}'. "
+            f"{len(missing) - 1} lessons still pending."
+        )
+
+        # Notify via Telegram if bot is configured
+        try:
+            from clawed.transports.telegram import send_notification
+            send_notification(
+                f"\U0001f305 Good morning! I generated today's lesson:\n"
+                f"Lesson {next_brief.lesson_number}: {next_brief.topic}\n\n"
+                f"Reply 'show lesson {next_brief.lesson_number}' to review it."
+            )
+        except Exception:
+            pass  # Telegram not configured — that's fine
+
     except Exception as exc:
-        summary = f"Morning prep: could not query database ({exc})"
+        summary = f"Morning prep failed: {exc}"
+        logger.exception("morning-prep task error")
 
     append_daily_note(summary, category="morning-prep")
     logger.info("morning-prep: %s", summary)
@@ -219,11 +281,88 @@ async def _task_morning_prep() -> str:
 
 
 async def _task_weekly_plan() -> str:
-    """Weekly plan: draft next week's lesson plans."""
+    """Weekly plan: draft next week's lessons from the current unit.
+
+    Generates up to 5 lessons for the next week using the current unit's
+    lesson briefs. Saves each lesson to the session and notifies the teacher.
+    """
     from clawed.workspace import append_daily_note
 
-    append_daily_note("Weekly plan task ran.", category="scheduler")
-    summary = "Weekly plan: drafted outlines for next week (stub)."
+    append_daily_note("Weekly plan task started.", category="scheduler")
+
+    try:
+        from clawed.agent_core.identity import get_teacher_id
+        from clawed.models import AppConfig, TeacherPersona
+        from clawed.state import TeacherSession
+
+        teacher_id = get_teacher_id()
+        session = TeacherSession.load(teacher_id)
+        config = AppConfig.load()
+        persona = session.persona or TeacherPersona()
+
+        if not session.current_unit:
+            summary = "Weekly plan: no active unit to plan from."
+            append_daily_note(summary, category="weekly-plan")
+            return summary
+
+        unit = session.current_unit
+        generated_ids = set(session.config.get("generated_lesson_ids", []))
+        missing = [
+            b for b in unit.daily_lessons
+            if b.lesson_number not in generated_ids
+        ]
+
+        # Generate up to 5 lessons for next week
+        to_generate = missing[:5]
+        if not to_generate:
+            summary = f"Weekly plan: all lessons in '{unit.title}' already generated!"
+            append_daily_note(summary, category="weekly-plan")
+            return summary
+
+        from clawed.lesson import generate_lesson as _gen
+
+        generated_count = 0
+        for brief in to_generate:
+            try:
+                lesson = await _gen(
+                    lesson_number=brief.lesson_number,
+                    unit=unit,
+                    persona=persona,
+                    config=config,
+                )
+                session.save_lesson(lesson)
+                generated_ids.add(brief.lesson_number)
+                generated_count += 1
+            except Exception as exc:
+                logger.warning(
+                    "Weekly plan: failed to generate lesson %d: %s",
+                    brief.lesson_number, exc,
+                )
+
+        session.config["generated_lesson_ids"] = list(generated_ids)
+        session.save()
+
+        remaining = len(missing) - generated_count
+        summary = (
+            f"Weekly plan: generated {generated_count} lessons for "
+            f"'{unit.title}'. {remaining} lessons remaining in unit."
+        )
+
+        try:
+            from clawed.transports.telegram import send_notification
+            topics = ", ".join(b.topic for b in to_generate[:generated_count])
+            send_notification(
+                f"\U0001f4c5 Weekly plan ready!\n"
+                f"Generated {generated_count} lessons:\n{topics}\n\n"
+                f"Reply 'show lesson 1' to start reviewing."
+            )
+        except Exception:
+            pass
+
+    except Exception as exc:
+        summary = f"Weekly plan failed: {exc}"
+        logger.exception("weekly-plan task error")
+
     append_daily_note(summary, category="weekly-plan")
     logger.info("weekly-plan: %s", summary)
     return summary

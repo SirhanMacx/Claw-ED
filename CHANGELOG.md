@@ -1,5 +1,34 @@
 # Changelog
 
+## v4.9.2026.6 (2026-04-09)
+
+### Everything Release — Complete Teacher Operating System
+**Scheduler wired live:**
+- `morning-prep` auto-generates missing lessons each morning from current unit
+- `weekly-plan` drafts up to 5 lessons for next week every Sunday, notifies via Telegram
+- Both handlers call real `generate_lesson()` pipeline with quality gate + persona
+
+**Audio lesson generation:**
+- `compile_audio.py` — TTS-ready narration scripts from teacher_script fields
+- `compile_audio_mp3()` — direct MP3 export via OpenAI TTS API (optional)
+- Structured for natural reading: hooks, pauses, vocabulary previews, key points
+
+**Multi-agent critic pipeline:**
+- Teaching Constitution now wired into generate_master_content() as Stage 2 critic
+- Separate LLM call reviews every lesson against 8 pedagogical principles
+- Non-blocking — if critic fails, lesson still ships with warnings
+
+**LMS export formats:**
+- **Common Cartridge (.imscc)** — ZIP+XML package that imports directly into Canvas, Moodle, Blackboard, Schoology. No API keys needed.
+- **Google Classroom** — `post_to_google_classroom()` creates coursework via Classroom API using existing OAuth credentials
+- **UDL 3-tier generation** — `generate_udl_tiers()` mechanically creates on-level, scaffolded (word banks, sentence starters, simplified vocab), and enriched (extension tasks, modern parallels) versions
+
+**Exit ticket auto-grading:**
+- `grade_exit_ticket()` scores student responses against MasterContent answer keys
+- Keyword overlap + length analysis for instant scoring (0-4 scale)
+- Formative feedback with sentence starters when score < 4
+- Returns score, feedback, meets_standard, cognitive_level
+
 ## v4.9.2026.5 (2026-04-09)
 
 ### The Autonomous Teaching Partner Release
