@@ -173,8 +173,8 @@ async def generate_lesson(parsed: ParsedIntent, session: TeacherSession) -> str:
     try:
         cfg = AppConfig.load()
         teacher_state = cfg.teacher_profile.state or ""
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Could not load teacher state for standards: %s", exc)
 
     try:
         config = route_model("lesson_plan", AppConfig.load())

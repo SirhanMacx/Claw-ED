@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.9.2026.11 (2026-04-09)
+
+### Test Coverage & Hardening
+- **25 new tests** for previously untested modules: compile_project (3), compile_audio (4), adaptive (5), classroom_profile (4), audit verification (9)
+- **F8 partial**: Silent failure in generation.py config loading replaced with debug logging
+- Fixed async event loop test isolation (pytest.mark.asyncio instead of manual loop)
+- 1,975 tests total (was 1,950 at start of audit remediation)
+
 ## v4.9.2026.10 (2026-04-09)
 
 ### Audit Remediation Part 2 — Hardening & Test Coverage
