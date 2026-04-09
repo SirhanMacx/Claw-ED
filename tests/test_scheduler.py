@@ -62,13 +62,19 @@ class TestDefaultTasks:
     def test_morning_prep_defaults(self):
         task = DEFAULT_TASKS["morning-prep"]
         assert task["cron"]["hour"] == "6"
-        # All tasks start disabled (blank slate — teachers opt in)
-        assert task["enabled"] is False
+        # Core tasks are enabled by default (v4.9.2026.5+)
+        assert task["enabled"] is True
 
-    def test_all_tasks_disabled_by_default(self):
-        """Blank slate: every task starts disabled until the teacher enables it."""
+    def test_core_tasks_enabled_by_default(self):
+        """Core tasks (morning-prep, weekly-plan, gap-detection, curriculum-watch,
+        self-distill) are enabled by default. Others start disabled."""
+        core = {"morning-prep", "weekly-plan", "gap-detection",
+                "curriculum-watch", "self-distill"}
         for name, task in DEFAULT_TASKS.items():
-            assert task["enabled"] is False, f"{name} should start disabled"
+            if name in core:
+                assert task["enabled"] is True, f"{name} should be enabled"
+            else:
+                assert task["enabled"] is False, f"{name} should start disabled"
 
 
 # ── Config loading and saving ─────────────────────────────────────────

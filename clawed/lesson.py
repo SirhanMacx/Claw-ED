@@ -131,6 +131,67 @@ def _validate_quality(master: MasterContent) -> list[str]:
                 f"{len(station.teacher_answer_key.strip())} chars — be specific"
             )
 
+    # ── Bloom's Enforcer ─────────────────────────────────────────────
+    # Research: 98% of AI lessons stuck at recall. Require cognitive progression.
+    if len(master.exit_ticket) >= 3:
+        levels = [
+            getattr(et, "cognitive_level", "").lower()
+            for et in master.exit_ticket
+        ]
+        has_recall = any(lv in ("recall", "remember", "identify") for lv in levels)
+        has_apply = any(lv in ("application", "apply", "explain") for lv in levels)
+        has_analyze = any(lv in ("analysis", "analyze", "evaluate", "create") for lv in levels)
+        if not (has_recall and has_apply and has_analyze):
+            issues.append(
+                "Exit ticket must have Bloom's progression: recall → "
+                "application → analysis. Current levels: "
+                + ", ".join(levels or ["none set"])
+            )
+
+    # ── Voice & personality checks ───────────────────────────────────
+    personality = getattr(master, "lesson_personality", "")
+    if not personality:
+        issues.append(
+            "lesson_personality is empty — every lesson needs a theme "
+            "or hook (e.g. 'Today we're putting Hammurabi on trial')"
+        )
+    first_di = master.direct_instruction[0] if master.direct_instruction else None
+    if first_di:
+        hook = getattr(first_di, "hook", "")
+        if not hook:
+            issues.append(
+                "First direct_instruction section has no hook — "
+                "open with an analogy, mystery, or provocative question"
+            )
+
+    # ── Jigsaw structure enforcement ─────────────────────────────────
+    fmt = getattr(master, "lesson_format", "")
+    jigsaw = getattr(master, "jigsaw", None)
+    if fmt == "jigsaw" and not jigsaw:
+        issues.append(
+            "lesson_format is 'jigsaw' but jigsaw field is empty — "
+            "must include expert groups, timing, and graphic organizer"
+        )
+
+    # ── Diversity & inclusion check ──────────────────────────────────
+    # Scan for stereotypical or exclusionary patterns
+    _bias_flags = [
+        "all men", "mankind", "his or her country",
+        "the orient", "third world", "primitive",
+        "savage", "uncivilized", "backwards",
+    ]
+    lesson_text = " ".join([
+        master.objective,
+        *[di.content for di in master.direct_instruction],
+        *[di.teacher_script for di in master.direct_instruction],
+    ]).lower()
+    for flag in _bias_flags:
+        if flag in lesson_text:
+            issues.append(
+                f"Diversity check: lesson contains '{flag}' — consider "
+                "more inclusive language"
+            )
+
     return issues
 
 

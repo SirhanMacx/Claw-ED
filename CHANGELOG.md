@@ -1,5 +1,20 @@
 # Changelog
 
+## v4.9.2026.5 (2026-04-09)
+
+### The Autonomous Teaching Partner Release
+- **Bloom's Enforcer** — quality gate now requires cognitive progression (recall → application → analysis) in exit tickets. Research showed 98% of AI lessons stuck at memorization. Not anymore.
+- **Voice enforcement** — quality gate requires `lesson_personality` and `hook` on first DI section. No more "today we will learn about..." openings.
+- **Diversity & Inclusion audit** — quality gate scans for exclusionary language (primitive, uncivilized, etc.) and flags for revision
+- **Jigsaw enforcement** — if lesson_format is "jigsaw", structured jigsaw field is required
+- **AI-Resistant Assignments** — prompt now requires independent_work that ChatGPT can't fake (personal interviews, local observations, live performances, physical creations)
+- **Teaching Constitution** — `teaching_constitution.txt` critic prompt for future reflection pipeline (8 pedagogical principles from Danielson + Bloom's + UDL)
+- **Scheduler activated** — morning-prep, weekly-plan, gap-detection, curriculum-watch, and self-distill now ENABLED by default. Ed is autonomous.
+- **Anki flashcard export** — `compile_flashcards.py` generates TSV from vocabulary + guided notes + key points. Import directly into Anki for spaced repetition.
+- **Kahoot quiz export** — CSV with vocabulary MC questions + exit ticket review items. Direct import into Kahoot.
+- **Study guide export** — plain-text review sheet combining all lesson content
+- 18 new tests (1950 total), all passing
+
 ## v4.9.2026.4 (2026-04-09)
 
 ### Multi-Day Project Arcs

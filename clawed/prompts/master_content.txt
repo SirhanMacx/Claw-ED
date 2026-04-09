@@ -90,6 +90,22 @@ The times MUST add up to the lesson duration ({duration_minutes} minutes).
 
 ---
 
+## AI-Resistant Assignments
+
+When designing independent_work or creative_activity tasks, make them AI-RESISTANT:
+tasks that ChatGPT cannot complete for the student. Include at least ONE of:
+- Personal experience: "Interview a family member about..." or "Observe something in your neighborhood..."
+- Local context: "Compare this historical event to something happening in YOUR school/city..."
+- In-class collaboration: "With your partner, act out..." or "Record a video of your group..."
+- Physical creation: "Draw, build, or design..." with specific artistic choices
+- Live performance: "Present to the class and answer questions from your peers..."
+
+Students should PRODUCE something that requires their own thinking, not text that
+an LLM could generate. The best assignments are ones where every student's output
+is unique because it draws on THEIR experience, THEIR community, THEIR perspective.
+
+---
+
 ## Unit Context
 This lesson is part of a larger unit:
 - **Unit Title:** {unit_title}

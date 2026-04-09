@@ -30,6 +30,7 @@ def _good_master() -> MasterContent:
         standards=["NYS 10.2"],
         objective="SWBAT analyze the causes of the French Revolution using primary sources.",
         duration_minutes=45,
+        lesson_personality="Today we're investigating why an entire country snapped",
         vocabulary=[
             VocabularyEntry(
                 term="Bourgeoisie",
@@ -79,6 +80,8 @@ def _good_master() -> MasterContent:
                 ),
                 key_points=["Unequal taxation", "No political voice for Third Estate"],
                 image_spec="French Revolution Three Estates political cartoon 1789",
+                hook="Imagine you work 12 hours a day but your neighbor who sleeps all day gets all the rewards.",
+                transition="So we've seen the unfairness. But anger alone doesn't start a revolution...",
             ),
         ],
         guided_notes=[
@@ -289,8 +292,65 @@ class TestQualityGateSelfContained:
     def test_refer_to_textbook_rejected(self):
         m = _good_master()
         m.primary_sources[0].content_text = (
-            "Please refer to textbook page 142 for the full text of the Declaration. "
-            "This section discusses the key principles of the Enlightenment."
+            "Please refer to textbook page 142 for the full text. "
+            "This section discusses the key principles of the era."
         )
         issues = _validate_quality(m)
         assert any("refer to textbook" in i for i in issues)
+
+
+class TestQualityGateBloomsEnforcer:
+    """Bloom's cognitive progression must be present."""
+
+    def test_good_progression_passes(self):
+        m = _good_master()
+        issues = _validate_quality(m)
+        assert not any("Bloom" in i for i in issues)
+
+    def test_missing_analysis_flagged(self):
+        m = _good_master()
+        for et in m.exit_ticket:
+            et.cognitive_level = "recall"
+        issues = _validate_quality(m)
+        assert any("Bloom" in i for i in issues)
+
+
+class TestQualityGateVoice:
+    """Lesson personality and hooks must be present."""
+
+    def test_empty_personality_flagged(self):
+        m = _good_master()
+        m.lesson_personality = ""
+        issues = _validate_quality(m)
+        assert any("lesson_personality" in i for i in issues)
+
+    def test_missing_hook_flagged(self):
+        m = _good_master()
+        m.direct_instruction[0].hook = ""
+        issues = _validate_quality(m)
+        assert any("hook" in i for i in issues)
+
+    def test_good_voice_passes(self):
+        m = _good_master()
+        m.lesson_personality = "Today we put Hammurabi on trial"
+        m.direct_instruction[0].hook = "Imagine getting fined for eating too much bread"
+        issues = _validate_quality(m)
+        assert not any("personality" in i or "hook" in i for i in issues)
+
+
+class TestQualityGateDiversity:
+    """Diversity check catches exclusionary language."""
+
+    def test_bias_flag_caught(self):
+        m = _good_master()
+        m.direct_instruction[0].content = (
+            "The primitive peoples of this region were uncivilized "
+            "until contact with European explorers."
+        )
+        issues = _validate_quality(m)
+        assert any("Diversity" in i for i in issues)
+
+    def test_clean_content_passes(self):
+        m = _good_master()
+        issues = _validate_quality(m)
+        assert not any("Diversity" in i for i in issues)

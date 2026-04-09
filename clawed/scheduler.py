@@ -29,18 +29,19 @@ SCHEDULE_CONFIG_PATH = Path(
 
 # ── Built-in task definitions ──────────────────────────────────────────
 
-# All tasks start DISABLED. Teachers opt in to what they want.
-# Schedules and enabled state are fully editable via CLI or schedule.json.
+# Core tasks (morning-prep, weekly-plan, gap-detection) are ENABLED by
+# default — teachers can disable via CLI or schedule.json.  Other tasks
+# start disabled and can be opted into.
 DEFAULT_TASKS: dict[str, dict[str, Any]] = {
     "morning-prep": {
         "description": "Review today's classes. Auto-generate missing lesson drafts and notify via Telegram.",
         "cron": {"hour": "6", "minute": "0"},
-        "enabled": False,
+        "enabled": True,
     },
     "weekly-plan": {
         "description": "Draft next week's lesson plans based on unit pacing. Send summary via Telegram.",
         "cron": {"day_of_week": "sun", "hour": "19", "minute": "0"},
-        "enabled": False,
+        "enabled": True,
     },
     "feedback-digest": {
         "description": "Summarize today's ratings and student interactions. Append to daily notes.",
@@ -60,17 +61,17 @@ DEFAULT_TASKS: dict[str, dict[str, Any]] = {
     "gap-detection": {
         "description": "Scan standards coverage, alert teacher about uncovered standards.",
         "cron": {"day_of_week": "mon", "hour": "7", "minute": "0"},
-        "enabled": False,
+        "enabled": True,
     },
     "curriculum-watch": {
         "description": "Monitor ingested folders for new/changed files, auto-re-ingest.",
         "cron": {"hour": "5", "minute": "30"},
-        "enabled": False,
+        "enabled": True,
     },
     "self-distill": {
         "description": "Analyze best/worst outputs, distill improvement rules into soul.md.",
         "cron": {"day_of_week": "sun", "hour": "20", "minute": "0"},
-        "enabled": False,
+        "enabled": True,
     },
 }
 
