@@ -10,6 +10,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class GenerateUnitTool:
     """Generate a multi-week unit plan on a topic."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

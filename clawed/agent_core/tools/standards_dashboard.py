@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 class StandardsDashboardTool:
     """Show a teacher their standards coverage across all generated lessons."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

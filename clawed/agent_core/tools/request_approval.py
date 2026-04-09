@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class RequestApprovalTool:
     """Request teacher approval before performing a sensitive action."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

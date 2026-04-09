@@ -1,5 +1,37 @@
 # Changelog
 
+## v4.9.2026.14 (2026-04-09)
+
+### Triple Audit Remediation — Integration Completeness
+
+**Approval system completed:**
+- `get_standing_approval()` implemented in ApprovalManager — positive approval path now works end-to-end
+- Registration warns on missing risk_level (not blocking, but visible)
+- All 48 tools annotated with explicit risk_level (read_only, write_local, network_call, package_install)
+- Core teacher tools (generate_lesson, etc.) classified as read_only — no approval deadlock
+- request_approval classified as read_only — no circular dependency
+
+**Chrome extension auth fixed:**
+- Bearer token sent on all fetch calls from background.js
+- Popup has token config UI with save/connect flow
+- Clear 401 error messages distinguish auth failure from network failure
+
+**Classroom auth split:**
+- Teacher routes (start, next-slide, timer, poll): require Bearer token
+- Student routes (state, respond, websocket): on separate student_router, class code is auth
+- WebSocket validates code BEFORE accept() — rejects with 1008 on invalid code
+
+**Legacy ?token= removed:**
+- URL token middleware completely removed from server.py
+- Only POST /api/auth/bootstrap and Bearer header remain
+- Auth denied page shows POST form, not URL instructions
+
+**CORS fixed:**
+- `chrome-extension://*` replaced with `allow_origin_regex=r"^chrome-extension://[a-z]{32}$"`
+
+**Documentation:**
+- docs/TOOL_POLICY.md — risk classification guide for contributors
+
 ## v4.9.2026.13 (2026-04-09)
 
 ### Fresh Audit Remediation — Unauthenticated Surfaces Closed

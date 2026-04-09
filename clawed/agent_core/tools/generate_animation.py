@@ -38,6 +38,8 @@ _RENDER_TIMEOUT = 120
 class GenerateAnimationTool:
     """Create animated educational videos using Manim Community Edition."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

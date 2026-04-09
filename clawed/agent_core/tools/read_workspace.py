@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class ReadWorkspaceTool:
     """Read any file from the agent's workspace (~/.eduagent/workspace/)."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

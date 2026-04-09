@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class ScheduleTaskTool:
     """Manage the agent's proactive scheduled tasks."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 class SwitchModelTool:
     """Switch providers, models, or configure tier routing."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

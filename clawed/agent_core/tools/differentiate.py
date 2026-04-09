@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class DifferentiateLessonTool:
     """Modify a lesson for students with special needs."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

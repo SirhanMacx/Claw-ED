@@ -28,6 +28,8 @@ HEARTBEAT_TEMPLATE = """\
 class ReadHeartbeatTool:
     """Read the agent's schedule and autonomous task list from HEARTBEAT.md."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

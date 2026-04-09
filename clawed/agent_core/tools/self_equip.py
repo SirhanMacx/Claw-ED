@@ -133,6 +133,8 @@ class InstallPackageTool:
 class CreateCustomToolTool:
     """Create a custom YAML-based tool template."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

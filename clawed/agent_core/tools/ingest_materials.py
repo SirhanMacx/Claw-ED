@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class IngestMaterialsTool:
     """Ingest teaching materials from a folder or file to learn the teacher's style."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

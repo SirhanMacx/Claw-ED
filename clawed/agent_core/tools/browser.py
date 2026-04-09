@@ -15,6 +15,8 @@ _MAX_TEXT_LENGTH = 8000
 class BrowserNavigateTool:
     """Navigate to a URL and read the page text."""
 
+    risk_level = "network_call"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
@@ -64,6 +66,8 @@ class BrowserNavigateTool:
 
 class BrowserSearchTool:
     """Search the web for information."""
+
+    risk_level = "network_call"
 
     def schema(self) -> dict[str, Any]:
         return {

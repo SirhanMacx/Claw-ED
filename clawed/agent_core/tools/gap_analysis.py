@@ -10,6 +10,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class GapAnalysisTool:
     """Identify curriculum gaps by comparing materials against standards."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

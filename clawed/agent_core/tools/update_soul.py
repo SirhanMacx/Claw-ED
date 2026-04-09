@@ -47,6 +47,8 @@ SECTION_MAP = {
 class UpdateSoulTool:
     """Append observations to SOUL.md — the agent's evolving identity file."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

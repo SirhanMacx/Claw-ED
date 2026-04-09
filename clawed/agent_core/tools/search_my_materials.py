@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 class SearchMyMaterialsTool:
     """Search the teacher's curriculum knowledge base for relevant content."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

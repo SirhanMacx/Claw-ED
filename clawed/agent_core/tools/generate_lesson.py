@@ -10,6 +10,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class GenerateLessonTool:
     """Generate a complete daily lesson plan on a topic."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class SearchStandardsTool:
     """Look up curriculum standards by subject and grade."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

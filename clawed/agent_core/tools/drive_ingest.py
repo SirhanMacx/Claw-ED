@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class DriveIngestTool:
     """Ingest curriculum files from a Google Drive folder into the KB."""
 
+    risk_level = "network_call"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

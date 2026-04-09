@@ -59,6 +59,11 @@ class ToolRegistry:
     def register(self, tool: Tool) -> None:
         """Register a tool instance. Name extracted from schema."""
         name = tool.schema()["function"]["name"]
+        if not hasattr(tool, "risk_level"):
+            logger.warning(
+                "Tool '%s' has no risk_level — defaults to write_local. "
+                "Add explicit risk_level attribute for clarity.", name,
+            )
         self._tools[name] = tool
 
     def get(self, name: str) -> Tool | None:

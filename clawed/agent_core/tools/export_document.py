@@ -10,6 +10,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class ExportDocumentTool:
     """Export a lesson plan to PDF, DOCX, or PPTX format."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

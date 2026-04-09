@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 class WikiCompileTool:
     """Compile the teacher's curriculum into a structured wiki."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
@@ -70,6 +72,8 @@ class WikiCompileTool:
 class WikiQueryTool:
     """Ask a question against the teacher's curriculum wiki."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
@@ -117,6 +121,8 @@ class WikiQueryTool:
 
 class WikiLintTool:
     """Check wiki health — stale, uncovered, and orphaned articles."""
+
+    risk_level = "read_only"
 
     def schema(self) -> dict[str, Any]:
         return {

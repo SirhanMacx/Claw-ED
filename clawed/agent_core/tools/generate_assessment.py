@@ -10,6 +10,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class GenerateAssessmentTool:
     """Generate a quiz or assessment on a topic."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

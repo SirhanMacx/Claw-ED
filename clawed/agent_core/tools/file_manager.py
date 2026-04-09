@@ -22,6 +22,8 @@ def _get_output_dir(context: AgentContext) -> Path:
 class FileListTool:
     """List files in the output directory."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
@@ -84,6 +86,8 @@ class FileListTool:
 
 class FileOrganizeTool:
     """Organize files into folders by subject/unit/date."""
+
+    risk_level = "write_local"
 
     def schema(self) -> dict[str, Any]:
         return {
@@ -163,6 +167,8 @@ class FileOrganizeTool:
 
 class WorkspaceStatusTool:
     """Check workspace health and organization."""
+
+    risk_level = "write_local"
 
     def schema(self) -> dict[str, Any]:
         return {

@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class StudentInsightsTool:
+
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

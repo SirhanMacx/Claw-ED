@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class DriveCreateSlidesTool:
     """Create a native Google Slides presentation in Drive."""
 
+    risk_level = "network_call"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

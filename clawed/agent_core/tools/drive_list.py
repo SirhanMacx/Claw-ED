@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class DriveListTool:
     """List files in a Google Drive folder."""
 
+    risk_level = "network_call"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

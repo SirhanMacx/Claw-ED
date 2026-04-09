@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class GenerateSimulationTool:
     """Create an interactive HTML simulation for classroom use."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

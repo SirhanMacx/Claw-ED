@@ -213,6 +213,8 @@ class WriteFileTool:
 class ReadFileTool:
     """Ed can read any file in his workspace or output directory."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

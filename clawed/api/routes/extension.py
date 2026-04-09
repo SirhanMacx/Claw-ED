@@ -13,9 +13,13 @@ from clawed.api.deps import require_auth
 
 logger = logging.getLogger(__name__)
 
-# All extension/classroom/community routes require auth (P0-1 audit fix).
-# The Chrome extension must send the auth token as a Bearer header.
+# Teacher routes require auth (P0-1 audit fix).
+# Chrome extension must send Bearer token.
 router = APIRouter(tags=["extension"], dependencies=[Depends(require_auth)])
+
+# Student routes do NOT require teacher auth — the class code IS the auth.
+# Students connect with a code they get from their teacher in class.
+student_router = APIRouter(tags=["classroom-student"])
 
 
 # ── Chrome Extension Routes ──────────────────────────────────────────
@@ -241,9 +245,10 @@ async def classroom_launch_poll(code: str, question: str = ""):
     return {"poll": question}
 
 
-@router.post("/classroom/{code}/respond")
+@student_router.post("/classroom/{code}/respond")
 async def classroom_respond(code: str, student_id: str = "", response: str = ""):
-    """Student submits a poll response or exit ticket answer."""
+    """Student submits a poll response or exit ticket answer.
+    On student_router — no teacher auth required. Class code is the auth."""
     session = _classroom_sessions.get(code)
     if not session:
         return {"error": "Session not found"}
@@ -259,22 +264,28 @@ async def classroom_respond(code: str, student_id: str = "", response: str = "")
     return {"received": True}
 
 
-@router.get("/classroom/{code}/state")
+@student_router.get("/classroom/{code}/state")
 async def classroom_state(code: str):
-    """Get current classroom state (for student devices)."""
+    """Get current classroom state (for student devices).
+    On student_router — no teacher auth required."""
     session = _classroom_sessions.get(code)
     if not session:
         return {"error": "Session not found"}
     return session.model_dump()
 
 
-@router.websocket("/classroom/{code}/ws")
+@student_router.websocket("/classroom/{code}/ws")
 async def classroom_websocket(websocket: WebSocket, code: str):
     """WebSocket for real-time classroom updates.
 
-    Students and teacher connect here. All state changes are broadcast
-    to all connected clients instantly.
+    On student_router — class code validates the session.
+    Rejects with 1008 if code is invalid.
     """
+    # Validate code BEFORE accepting (explicit WebSocket auth)
+    if code not in _classroom_sessions:
+        await websocket.close(code=1008, reason="Invalid classroom code")
+        return
+
     await websocket.accept()
     if code not in _classroom_connections:
         _classroom_connections[code] = []

@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class GenerateGameTool:
     """Create an interactive HTML learning game for students."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

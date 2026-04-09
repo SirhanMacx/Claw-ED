@@ -62,6 +62,8 @@ def _sanitize_master_content(master: Any) -> None:
 class GenerateLessonBundleTool:
     """Generate a COMPLETE teaching package: lesson plan + student handout + slideshow."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

@@ -129,6 +129,26 @@ class ApprovalManager:
                     expired.append(pa)
         return expired
 
+    def get_standing_approval(
+        self, teacher_id: str, tool_name: str,
+    ) -> PendingApproval | None:
+        """Check for an existing approved record for this tool.
+
+        A standing approval is any approval with status="approved" whose
+        action_payload contains the tool_name. This enables the central
+        policy layer to allow pre-approved tools through.
+        """
+        for path in self._dir.glob("*.json"):
+            pa = self.load(path.stem)
+            if (
+                pa
+                and pa.teacher_id == teacher_id
+                and pa.status == "approved"
+                and pa.action_payload.get("tool_name") == tool_name
+            ):
+                return pa
+        return None
+
     def _update_status(self, approval_id: str, status: str) -> PendingApproval | None:
         pa = self.load(approval_id)
         if pa is None:

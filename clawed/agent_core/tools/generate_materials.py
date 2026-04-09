@@ -10,6 +10,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class GenerateMaterialsTool:
     """Generate supplementary materials (worksheet) for a lesson topic."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

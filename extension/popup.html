@@ -3,7 +3,7 @@
 <head>
   <style>
     body {
-      width: 320px;
+      width: 340px;
       font-family: Calibri, -apple-system, sans-serif;
       margin: 0;
       padding: 0;
@@ -12,46 +12,36 @@
     .header {
       background: #8B6914;
       color: #fff;
-      padding: 16px;
+      padding: 14px 16px;
       text-align: center;
     }
-    .header h1 {
-      margin: 0;
-      font-size: 20px;
-    }
-    .header p {
-      margin: 4px 0 0;
-      font-size: 12px;
-      opacity: 0.85;
-    }
-    .body {
-      padding: 16px;
-    }
-    .instructions {
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .instructions li {
-      margin-bottom: 8px;
-    }
+    .header h1 { margin: 0; font-size: 18px; }
+    .header p { margin: 4px 0 0; font-size: 11px; opacity: 0.85; }
+    .body { padding: 14px; }
     .status {
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 13px;
-      text-align: center;
+      margin-bottom: 10px; padding: 8px; border-radius: 6px;
+      font-size: 12px; text-align: center;
     }
-    .status.connected {
-      background: #E8F5E9;
-      color: #2D8B4E;
+    .status.connected { background: #E8F5E9; color: #2D8B4E; }
+    .status.disconnected { background: #FFF3E0; color: #E65100; }
+    .status.auth-error { background: #FFEBEE; color: #C62828; }
+    .config { margin: 10px 0; }
+    .config label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+    .config input {
+      width: 100%; box-sizing: border-box; padding: 6px 8px;
+      border: 1px solid #ccc; border-radius: 4px; font-size: 12px;
     }
-    .status.disconnected {
-      background: #FFF3E0;
-      color: #E65100;
+    .config input:focus { border-color: #8B6914; outline: none; }
+    .btn {
+      width: 100%; padding: 8px; margin-top: 8px;
+      background: #8B6914; color: #fff; border: none;
+      border-radius: 4px; cursor: pointer; font-size: 13px;
     }
-    a {
-      color: #8B6914;
-    }
+    .btn:hover { background: #6d5310; }
+    .instructions { font-size: 11px; line-height: 1.4; margin-top: 10px; }
+    .instructions li { margin-bottom: 4px; }
+    a { color: #8B6914; }
+    .saved { color: #2D8B4E; font-size: 11px; display: none; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -60,36 +50,75 @@
     <p>Your AI Teaching Partner</p>
   </div>
   <div class="body">
-    <div id="status" class="status disconnected">Checking server...</div>
+    <div id="status" class="status disconnected">Checking...</div>
+
+    <div class="config">
+      <label>API Token</label>
+      <input id="token" type="password" placeholder="Paste your Claw-ED API token">
+      <div id="saved" class="saved">Token saved!</div>
+    </div>
+    <div class="config">
+      <label>Server URL</label>
+      <input id="url" type="text" placeholder="http://localhost:8000">
+    </div>
+    <button class="btn" id="saveBtn">Save &amp; Connect</button>
+
     <div class="instructions">
       <p><strong>How to use:</strong></p>
       <ol>
+        <li>Enter your API token (from <code>clawed serve</code> output)</li>
         <li>Highlight text on any webpage</li>
         <li>Right-click &rarr; "Generate Lesson from Selection"</li>
-        <li>Claw-ED generates a full lesson bundle using that text as a primary source</li>
       </ol>
-      <p><strong>Or:</strong> Right-click &rarr; "Use as Primary Source" to save text for later</p>
-      <p><a href="http://localhost:8000" target="_blank">Open Dashboard</a></p>
+      <p><a href="http://localhost:8000" target="_blank" id="dashLink">Open Dashboard</a></p>
     </div>
   </div>
   <script>
+    const statusEl = document.getElementById("status");
+    const tokenEl = document.getElementById("token");
+    const urlEl = document.getElementById("url");
+    const savedEl = document.getElementById("saved");
+    const dashLink = document.getElementById("dashLink");
+
+    // Load saved config
+    chrome.storage.sync.get(["apiUrl", "apiToken"], (data) => {
+      if (data.apiUrl) urlEl.value = data.apiUrl;
+      if (data.apiToken) tokenEl.value = data.apiToken;
+      checkServer();
+    });
+
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      const url = urlEl.value.trim() || "http://localhost:8000";
+      const token = tokenEl.value.trim();
+      chrome.storage.sync.set({ apiUrl: url, apiToken: token }, () => {
+        savedEl.style.display = "block";
+        dashLink.href = url;
+        setTimeout(() => { savedEl.style.display = "none"; }, 2000);
+        checkServer();
+      });
+    });
+
     async function checkServer() {
-      const el = document.getElementById("status");
+      const url = urlEl.value.trim() || "http://localhost:8000";
+      const token = tokenEl.value.trim();
+      const headers = token ? { "Authorization": `Bearer ${token}` } : {};
       try {
-        const resp = await fetch("http://localhost:8000/api/health");
+        const resp = await fetch(`${url}/api/health`, { headers });
         if (resp.ok) {
-          el.className = "status connected";
-          el.textContent = "Connected to Claw-ED";
+          statusEl.className = "status connected";
+          statusEl.textContent = "Connected to Claw-ED";
+        } else if (resp.status === 401) {
+          statusEl.className = "status auth-error";
+          statusEl.textContent = "Invalid token. Check your API token.";
         } else {
-          el.className = "status disconnected";
-          el.textContent = "Server error. Run: clawed serve";
+          statusEl.className = "status disconnected";
+          statusEl.textContent = "Server error. Run: clawed serve";
         }
       } catch {
-        el.className = "status disconnected";
-        el.textContent = "Not connected. Run: clawed serve";
+        statusEl.className = "status disconnected";
+        statusEl.textContent = "Not connected. Run: clawed serve";
       }
     }
-    checkServer();
   </script>
 </body>
 </html>

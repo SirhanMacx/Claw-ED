@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class DriveReadTool:
     """Read file metadata and content from Google Drive."""
 
+    risk_level = "network_call"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

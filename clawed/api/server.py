@@ -49,8 +49,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS — single middleware instance (F5 audit fix).
-    # Supports localhost + Chrome extension origins.
+    # CORS — single middleware instance.
+    # Supports localhost + Chrome extension origins (regex for extension IDs).
     cors_origins_raw = os.environ.get("EDUAGENT_CORS_ORIGINS", "")
     if cors_origins_raw:
         cors_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
@@ -58,11 +58,11 @@ def create_app() -> FastAPI:
         cors_origins = [
             "http://localhost:8000",
             "http://127.0.0.1:8000",
-            "chrome-extension://*",
         ]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
+        allow_origin_regex=r"^chrome-extension://[a-z]{32}$",
         allow_credentials=False,
         allow_methods=["GET", "POST"],
         allow_headers=["Authorization", "Content-Type"],
@@ -80,6 +80,7 @@ def create_app() -> FastAPI:
     from clawed.api.routes.export import public_router as export_public_router
     from clawed.api.routes.export import router as export_router
     from clawed.api.routes.extension import router as extension_router
+    from clawed.api.routes.extension import student_router as student_classroom_router
     from clawed.api.routes.feedback import router as feedback_router
     from clawed.api.routes.gateway_chat import router as gateway_chat_router
     from clawed.api.routes.generate import router as generate_router
@@ -101,6 +102,7 @@ def create_app() -> FastAPI:
     app.include_router(tools_router, prefix="/api")
     app.include_router(gateway_chat_router, prefix="/api")
     app.include_router(extension_router, prefix="/api")
+    app.include_router(student_classroom_router, prefix="/api")  # No auth — class code is auth
 
     # ── Page auth helper ─────────────────────────────────────────────
 
@@ -156,31 +158,8 @@ def create_app() -> FastAPI:
         )
         return response
 
-    @app.middleware("http")
-    async def _legacy_token_redirect(request: Request, call_next):
-        """Legacy support: if ?token= is in URL, redirect to POST bootstrap.
-
-        Shows a one-time form that POSTs the token, then redirects to
-        a clean URL. Preserves backward compat while eliminating URL leakage.
-        """
-        response = await call_next(request)
-        token_param = request.query_params.get("token")
-        if token_param and response.status_code in (200, 401):
-            from clawed.api.deps import get_api_token
-            if token_param == get_api_token():
-                # Set cookie and redirect to clean URL
-                clean_url = str(request.url).split("?")[0]
-                is_https = os.environ.get("HTTPS", "").lower() in ("1", "true")
-                redirect = RedirectResponse(clean_url, status_code=303)
-                redirect.set_cookie(
-                    "clawed_token", token_param,
-                    httponly=True,
-                    samesite="strict",
-                    secure=is_https,
-                    max_age=86400,
-                )
-                return redirect
-        return response
+    # Legacy ?token= URL support REMOVED (P1-7 audit fix).
+    # Use POST /api/auth/bootstrap or Bearer header only.
 
     _auth_denied = HTMLResponse(
         "<h1>401 — Auth required</h1>"

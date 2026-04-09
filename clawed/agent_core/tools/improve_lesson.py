@@ -20,6 +20,8 @@ class ImproveLessonTool:
     improvement instruction, and returns the revised section.
     """
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

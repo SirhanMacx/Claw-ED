@@ -10,6 +10,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class CurriculumMapTool:
     """Generate a full-year curriculum map for a subject and grade."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

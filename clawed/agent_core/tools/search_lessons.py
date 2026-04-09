@@ -9,6 +9,8 @@ from clawed.agent_core.context import AgentContext, ToolResult
 class SearchLessonsTool:
     """Search previously generated lessons by unit ID."""
 
+    risk_level = "read_only"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class ResearchTopicTool:
     """Multi-step web research for lesson preparation."""
 
+    risk_level = "network_call"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",

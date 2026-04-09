@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class ConfigureProfileTool:
     """Configure the teacher's profile (name, subject, grade levels)."""
 
+    risk_level = "write_local"
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
