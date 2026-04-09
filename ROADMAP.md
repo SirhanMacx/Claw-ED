@@ -1,6 +1,6 @@
 # Roadmap
 
-Current version: **v4.8.2026.16**
+Current version: **v4.8.2026.17**
 
 ## v4.9 — Architecture + Ecosystem
 

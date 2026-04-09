@@ -107,6 +107,62 @@ async def compile_teacher_view(
 
     doc.add_paragraph("")
 
+    # ── Materials at a Glance ────────────────────────────────────────
+
+    glance_format = getattr(master, "lesson_format", None) or "document_analysis"
+    glance_format_display = glance_format.replace("_", " ").title()
+    glance_standards = ", ".join(master.standards) if master.standards else "N/A"
+    glance_ps_count = len(master.primary_sources) if master.primary_sources else 0
+    glance_vocab_count = len(master.vocabulary) if master.vocabulary else 0
+    glance_et_count = len(master.exit_ticket) if master.exit_ticket else 0
+
+    diff = master.differentiation
+    glance_iep = "IEP \u2713" if diff.struggling else "IEP \u2717"
+    glance_ell = "ELL \u2713" if diff.ell else "ELL \u2717"
+    glance_gifted = "Gifted \u2713" if diff.advanced else "Gifted \u2717"
+
+    glance_table = doc.add_table(rows=4, cols=1)
+    glance_table.style = "Table Grid"
+
+    header_cell = glance_table.rows[0].cells[0]
+    _shaded_cell(header_cell, "2F5496")
+    header_run = header_cell.paragraphs[0].add_run("MATERIALS AT A GLANCE")
+    header_run.bold = True
+    header_run.font.size = Pt(13)
+    header_run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    header_run.font.name = "Calibri"
+    header_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    row1_cell = glance_table.rows[1].cells[0]
+    _shaded_cell(row1_cell, "D6E4F0")
+    row1_run = row1_cell.paragraphs[0].add_run(
+        f"Duration: {master.duration_minutes} min  |  "
+        f"Format: {glance_format_display}  |  "
+        f"Standards: {glance_standards}"
+    )
+    row1_run.font.size = Pt(10)
+    row1_run.font.name = "Calibri"
+
+    row2_cell = glance_table.rows[2].cells[0]
+    _shaded_cell(row2_cell, "D6E4F0")
+    row2_run = row2_cell.paragraphs[0].add_run(
+        f"Primary Sources: {glance_ps_count}  |  "
+        f"Vocabulary Terms: {glance_vocab_count}  |  "
+        f"Exit Ticket: {glance_et_count} questions"
+    )
+    row2_run.font.size = Pt(10)
+    row2_run.font.name = "Calibri"
+
+    row3_cell = glance_table.rows[3].cells[0]
+    _shaded_cell(row3_cell, "D6E4F0")
+    row3_run = row3_cell.paragraphs[0].add_run(
+        f"Differentiation: {glance_iep}  |  {glance_ell}  |  {glance_gifted}"
+    )
+    row3_run.font.size = Pt(10)
+    row3_run.font.name = "Calibri"
+
+    doc.add_paragraph("")
+
     # ── Vocabulary ────────────────────────────────────────────────────
 
     if master.vocabulary:

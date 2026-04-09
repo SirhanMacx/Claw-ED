@@ -149,6 +149,13 @@ NEVER write a bare recall question. "What is photosynthesis?" is banned. "The gr
 - Cognitive progression is REQUIRED: Question 1 = recall/identification, Question 2 = application, Question 3 = analysis or transfer.
 - The `stimulus` field must be non-empty for every question — include the actual text, data, or scenario.
 - `cognitive_level` must be set: "recall", "application", or "analysis".
+- For Social Studies: structure exit tickets as CRQ (Constructed Response Questions):
+  - Q1: Identify/describe based on the stimulus (recall)
+  - Q2: Explain/analyze using evidence from the stimulus (application)
+  - Q3: Evaluate/argue using the stimulus AND outside information (analysis/transfer)
+- For Science: structure as claim-evidence-reasoning (CER)
+- For Math: structure as show-your-work with progressive complexity
+- For ELA: structure as text-dependent analysis with citations
 
 ### Misconceptions (recommended)
 - List 2-3 common student misconceptions about this topic.
@@ -319,6 +326,8 @@ Respond with ONLY a JSON object (no markdown fencing):
         "Item 1 — specific enough that a teacher can gather everything before class",
         "Item 2"
     ],
+
+    "lesson_format": "Choose ONE: document_analysis | station_rotation | socratic_seminar | jigsaw | gallery_walk | gradual_release | simulation | lecture_discussion. Pick the format that best fits this topic and the teacher's style.",
 
     "misconceptions": [
         "Common misunderstanding 1 that students often have about this topic",

@@ -562,10 +562,29 @@ class GenerateLessonBundleTool:
         lines = []
 
         if generated_files:
-            lines.append(f"Complete teaching package for: {master.title}")
-            lines.append(f"{len(generated_files)} files generated:")
-            for f in generated_files:
-                lines.append(f"  - {f.name}")
+            lines.append(f"Complete teaching package for: **{master.title}**")
+            lines.append(f"{len(generated_files)} files generated:\n")
+
+            # Categorize files for clean display
+            core = [f for f in generated_files if f.suffix in (".docx", ".pptx")
+                    and "diff_" not in f.name]
+            diffs = [f for f in generated_files if "diff_" in f.name]
+            extras = [f for f in generated_files
+                      if f.suffix in (".html", ".md") or f not in core + diffs]
+
+            if core:
+                lines.append("Core lesson:")
+                for f in core:
+                    lines.append(f"  {f.name}")
+            if diffs:
+                lines.append("Differentiated:")
+                for f in diffs:
+                    label = f.stem.split("diff_")[-1].upper().replace("_", "/")
+                    lines.append(f"  {f.name} ({label})")
+            if extras:
+                lines.append("Extras:")
+                for f in extras:
+                    lines.append(f"  {f.name}")
 
             # Quality metrics (visible to teacher)
             quality_parts = []
