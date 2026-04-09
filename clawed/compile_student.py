@@ -363,6 +363,13 @@ async def compile_student_view(
     if master.exit_ticket:
         _page_break()
         _heading("Exit Ticket")
+        # Print writing framework reminder (TEA/RACE/CER)
+        fw = getattr(master.exit_ticket[0], "response_framework", "") if master.exit_ticket else ""
+        if fw:
+            _para(f"REMEMBER {fw.upper()}!", bold=True, size_pt=13)
+        else:
+            _para("Answer in complete sentences using evidence from the documents.", bold=True)
+        doc.add_paragraph("")
         for i, sq in enumerate(master.exit_ticket, 1):
             _para(f"Q{i}: {sq.stimulus}", bold=True)
             if sq.stimulus_image_spec:

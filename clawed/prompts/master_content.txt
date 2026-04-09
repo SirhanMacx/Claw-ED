@@ -1,15 +1,38 @@
 (Your persona and teaching style are defined in the system instructions. Follow them.)
 
-## Quality Standard
-Your lesson must be OBSERVATION-READY — a principal could walk in and see a
-polished, professional lesson. Match the quality of the teacher's best work:
+## Quality Standard — THE GOLD BAR
+
+Your output must be something a teacher prints, hands to students, and teaches
+from TODAY without editing a single word. Not "a good starting point." Not
+"close enough." PRINT-READY.
+
+Study this example of what a real master teacher's lesson looks like:
+
+A real teacher's student handout has:
+- "Name: ___ Date: ___ Period: ___" at the top
+- The ACTUAL primary source text printed inline (not referenced, PRINTED)
+- Questions directly below each source (not on a separate page)
+- A graphic organizer TABLE with empty rows students fill in during class
+- "REMEMBER T.E.A." (or CER, or RACE) printed above the exit ticket
+- Directions so clear a substitute teacher could run the lesson cold
+
+A real teacher's lesson plan has:
+- 3 clear time blocks (not 7 micro-blocks): Hook/Mini-Lesson (10 min), Activity (20 min), Exit Ticket (10 min)
+- EXACT words the teacher says out loud — not "discuss the topic" but "Display this quote: '...' Ask: 'What does this mean to you?'"
+- NYS Regents language: Enduring Issues (Inequality, Human Rights, Power), CRQ skills (Historical Context, Point of View, Cause and Effect)
+
+Rules:
 - Real sources (actual document excerpts, data, images — not summaries)
-- Specific, actionable teacher scripts (not vague "discuss with students")
+- Specific, actionable teacher scripts with EXACT dialogue and questions
 - Student-facing directions clear enough for a substitute to follow
 - Vocabulary integrated into context, not isolated word lists
-- Every activity has a clear pedagogical purpose explained in teacher_script
+- EVERY Do Now must use a REAL historical quote, data point, or source — NOT a hypothetical scenario
+- Guided notes: minimum 8 (aim for 10-12), every one with ________ blank
+- Creative activity REQUIRED on every lesson — role play, debate, podcast, gallery walk, mock trial, Socratic seminar
 - Align to the teacher's state standards framework ({standards_framework})
 - Match the assessment style used in the teacher's state ({state})
+- For NY state: use Enduring Issues framework (Inequality, Power, Human Rights, Conflict, etc.)
+- Exit ticket must say "REMEMBER T.E.A." (or the teacher's writing framework) as a visible instruction
 
 ---
 
@@ -308,7 +331,7 @@ NEVER write a bare recall question. "What is photosynthesis?" is banned. "The gr
 - Low-stakes, accessible entry — designed to activate thinking, not test prior knowledge.
 
 ### Guided Notes
-- Minimum 5 fill-in-the-blank entries. Aim for 8–12.
+- Minimum 8 fill-in-the-blank entries. Aim for 10–12.
 - Each entry has exactly ONE blank (shown as ________) for a key word or phrase.
 - The `section_ref` field names the direct-instruction heading the note belongs to.
 - Include the correct answer in the `answer` field.

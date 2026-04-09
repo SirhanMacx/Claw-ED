@@ -80,10 +80,11 @@ def _validate_quality(master: MasterContent) -> list[str]:
                 "stimulus text (>= 50 characters)"
             )
 
-    # ── Guided notes minimum ──────────────────────────────────────────
-    if len(master.guided_notes) < 5:
+    # ── Guided notes minimum (Jon's lessons have 8-12) ─────────────────
+    if len(master.guided_notes) < 8:
         issues.append(
-            f"Only {len(master.guided_notes)} guided notes — minimum 5 required"
+            f"Only {len(master.guided_notes)} guided notes — minimum 8 required "
+            f"(aim for 10-12)"
         )
 
     # ── Differentiation ban list ──────────────────────────────────────
@@ -163,6 +164,14 @@ def _validate_quality(master: MasterContent) -> list[str]:
                 "First direct_instruction section has no hook — "
                 "open with an analogy, mystery, or provocative question"
             )
+
+    # ── Creative activity enforcement ──────────────────────────────────
+    creative = getattr(master, "creative_activity", None)
+    if not creative or not getattr(creative, "title", ""):
+        issues.append(
+            "No creative_activity — every lesson needs a memorable activity "
+            "(role play, debate, podcast, gallery walk, mock trial, etc.)"
+        )
 
     # ── Jigsaw structure enforcement ─────────────────────────────────
     fmt = getattr(master, "lesson_format", "")

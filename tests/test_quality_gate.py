@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from clawed.lesson import _validate_quality
 from clawed.master_content import (
+    CreativeActivity,
     DoNow,
     GuidedNote,
     InstructionSection,
@@ -105,6 +106,18 @@ def _good_master() -> MasterContent:
                 prompt="The Enlightenment promoted ideas of ________.",
                 answer="liberty", section_ref="The Three Estates",
             ),
+            GuidedNote(
+                prompt="The revolution began in ________.",
+                answer="1789", section_ref="The Three Estates",
+            ),
+            GuidedNote(
+                prompt="The ________ was the legislative body.",
+                answer="Estates-General", section_ref="The Three Estates",
+            ),
+            GuidedNote(
+                prompt="Louis XVI was the ________ of France.",
+                answer="king", section_ref="The Three Estates",
+            ),
         ],
         stations=[
             StationDocument(
@@ -167,6 +180,16 @@ def _good_master() -> MasterContent:
             "Third Estate with those of American colonists."
         ),
         materials_needed=["Printed primary source excerpts", "Graphic organizer handout"],
+        creative_activity=CreativeActivity(
+            activity_type="debate",
+            title="Philosophical Chairs: Was Revolution Justified?",
+            scenario="Students debate whether violent revolution was justified.",
+            roles=["Pro-Revolution", "Anti-Revolution"],
+            student_directions="Choose a side. Prepare 2 arguments with evidence.",
+            deliverable="Debate prep sheet with position, evidence, rebuttal",
+            debrief="Teacher asks: What changed your mind?",
+            time_minutes=12,
+        ),
     )
 
 
@@ -215,9 +238,9 @@ class TestQualityGateGuidedNotes:
 
     def test_too_few_guided_notes_rejected(self):
         m = _good_master()
-        m.guided_notes = m.guided_notes[:3]
+        m.guided_notes = m.guided_notes[:5]  # Below the 8 minimum
         issues = _validate_quality(m)
-        assert any("guided notes" in i and "5" in i for i in issues)
+        assert any("guided notes" in i and "8" in i for i in issues)
 
 
 class TestQualityGateDirectInstruction:
