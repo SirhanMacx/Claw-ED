@@ -1,0 +1,114 @@
+(Your persona and teaching style are defined in the system instructions. Follow them.)
+
+## Project Arc Generation
+
+You are generating a multi-day student project that builds toward a culminating performance.
+This project should be the capstone of a unit — it comes AFTER students have learned core
+content through daily lessons, and it asks them to APPLY that knowledge creatively.
+
+## Unit Context
+- **Unit Title:** {unit_title}
+- **Subject:** {subject}
+- **Grade Level:** {grade_level}
+- **Duration:** {duration_days} days
+- **Essential Question:** {essential_question}
+- **Topics Covered:** {topics_covered}
+
+{teacher_materials}
+
+## Quality Standard
+
+This project packet must be COMPLETE and SELF-CONTAINED. A student takes this home,
+follows the roadmap, and produces a professional-quality product. A substitute teacher
+can facilitate every phase using only this document.
+
+Model this after the best student project packets:
+- Day-by-day roadmap with checkboxes students can track
+- Multiple movement/topic options (student choice drives engagement)
+- Multiple format options (poster, podcast, social media, presentation, portfolio)
+- A graphic organizer for research notes
+- Curated research databases (Library of Congress, DocsTeach, Smithsonian, PBS)
+- A debate prep sheet for the culminating discussion
+- A 4-point rubric with specific descriptors (not vague "excellent/good/fair/poor")
+- A culminating performance structure (gallery walk, debate, symposium, presentation)
+
+## What Makes a Great Project Arc
+
+1. **Student choice** — Let students pick their topic AND their format. 6-8 topic options
+   and 3-4 format options gives every student ownership.
+
+2. **Day-by-day scaffolding** — Don't just say "research." Break it down:
+   - Day 1: Selection + initial exploration
+   - Day 2: Deep research with graphic organizer
+   - Day 3: Draft/create the product
+   - Day 4: Peer review + revision
+   - Day 5: Culminating performance (gallery walk, debate, presentations)
+
+3. **Research resource library** — Provide 4-6 curated databases with descriptions.
+   Students should use REAL historical/scientific databases, not just Google.
+
+4. **The debate/discussion component** — Every project should end with a discussion question
+   that forces students to ARGUE using their research. Provide a debate prep sheet with:
+   - "My position: ___"
+   - "My strongest evidence: ___"
+   - "Anticipated counter-argument: ___"
+   - "My rebuttal: ___"
+
+5. **Rubric with teeth** — 4 categories (Content, Primary Source Use, Format Quality,
+   Discussion/Debate Participation). Each category has 4 levels with specific descriptors.
+
+## Output Format
+
+Respond with ONLY a JSON object (no markdown fencing):
+
+{
+    "title": "Project title (engaging, not generic)",
+    "essential_question": "The driving question for the entire project",
+    "duration_days": {duration_days},
+
+    "phases": [
+        {
+            "day_number": 1,
+            "title": "Day 1: The Spark (Selection)",
+            "objective": "Students explore options and commit to a topic and format",
+            "activities": ["Review topic options", "Browse resource library", "Submit selection form"],
+            "student_deliverable": "Completed topic + format selection form",
+            "checkpoint": "Teacher reviews selections, ensures even distribution across topics"
+        }
+    ],
+
+    "movement_options": [
+        "Option 1: Brief description of this topic choice",
+        "Option 2: Brief description",
+        "Option 3: Brief description"
+    ],
+
+    "format_options": [
+        "Option A: The Activist's Portfolio — protest poster + persuasive speech + informational flyer",
+        "Option B: The Time-Traveling Podcaster — 3-5 minute scripted interview with historical figure",
+        "Option C: The Digital Museum Exhibit — 6+ slide presentation with timeline, source analysis, legacy section",
+        "Option D: The Historical Social Media Campaign — profile + 6 posts with images, captions, hashtags"
+    ],
+
+    "resource_library": [
+        {"name": "DocsTeach (National Archives)", "url": "https://www.docsteach.org/", "description": "Primary source documents, photographs, and legislation"},
+        {"name": "Library of Congress Digital Collections", "url": "https://www.loc.gov/", "description": "Historical photos, maps, audio recordings"},
+        {"name": "Smithsonian Learning Lab", "url": "https://learninglab.si.edu/", "description": "Millions of digital resources from Smithsonian museums"}
+    ],
+
+    "graphic_organizer": "The \"Why\" (causes) | The \"Who\" (leaders) | The \"How\" (tactics) | Primary Source Evidence | The \"Result\" (legacy)",
+
+    "rubric_text": "| Category | 4 - Mastery | 3 - Proficient | 2 - Developing | 1 - Beginning |\n|---|---|---|---|---|\n| Historical Content | Covers goals, leaders, tactics, outcomes thoroughly | Most elements covered accurately | Some elements missing or inaccurate | Major elements missing |\n| Primary Source | Seamlessly integrates and explains historical importance | Includes and explains basic connection | Includes but doesn't explain | Does not include |\n| Format Quality | Exceeds expectations, highly creative | Meets expectations, neat and creative | Partially meets expectations | Does not follow guidelines |\n| Discussion/Debate | Uses specific historical evidence | Uses some evidence | Relies on opinion | Does not participate |",
+
+    "culminating_performance": {
+        "title": "The Summit / Gallery Walk / Debate",
+        "format": "gallery_walk or debate or presentation or symposium",
+        "duration_minutes": 40,
+        "setup_instructions": "Arrange desks in a circle for Philosophical Chairs / Set up poster stations around the room",
+        "student_prep": "Completed project + debate prep sheet",
+        "evaluation_criteria": ["Uses specific historical evidence", "Responds to counter-arguments", "Speaks clearly and confidently"],
+        "debrief_protocol": "Teacher poses closing question connecting all topics. Students write a 3-sentence reflection."
+    },
+
+    "debate_prep_template": "The Big Question: ___\n\nMy Position: ___\n\nMy Evidence:\n1. Historical Fact 1: ___\n2. Historical Fact 2: ___\n3. Historical Fact 3: ___\n\nAnticipated Counter-Argument: ___\n\nMy Rebuttal (using evidence): ___\n\nClosing Statement: ___"
+}

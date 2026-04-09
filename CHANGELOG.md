@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.9.2026.4 (2026-04-09)
+
+### Multi-Day Project Arcs
+- **ProjectArc, ProjectPhase, CulminatingPerformance** models — complete project data structures
+- **project_arc.txt** prompt — generates 5-day project arcs modeled on Jon's "Voices of Change" packet
+- **generate_project_arc()** in lesson.py — LLM generates project with phases, choice boards, rubric, debate prep
+- **compile_project.py** — compiles ProjectArc into student-facing DOCX with day-by-day roadmap, topic/format choice boards, graphic organizer table, curated research database links, debate prep sheet, 4-point rubric, and culminating performance instructions
+- **UnitPlan.project** field — units can now include a project arc for multi-week sequences
+
 ## v4.9.2026.3 (2026-04-09)
 
 ### The Voice & Structure Revolution

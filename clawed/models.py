@@ -366,6 +366,45 @@ class AssessmentPlan(BaseModel):
     summative: list[str] = Field(default_factory=list)
 
 
+class ProjectPhase(BaseModel):
+    """One phase/day of a multi-day project arc."""
+
+    day_number: int
+    title: str                              # "Day 1: The Spark (Selection)"
+    objective: str
+    activities: list[str] = Field(default_factory=list)
+    student_deliverable: str = ""           # What students produce this day
+    checkpoint: str = ""                    # How teacher checks progress
+
+
+class CulminatingPerformance(BaseModel):
+    """The final performance task of a project arc."""
+
+    title: str = ""                         # "The Reformers' Summit"
+    format: str = ""                        # gallery_walk, debate, presentation, symposium
+    duration_minutes: int = 40
+    setup_instructions: str = ""            # How to arrange the room
+    student_prep: str = ""                  # What students need ready
+    evaluation_criteria: list[str] = Field(default_factory=list)
+    debrief_protocol: str = ""              # How to close
+
+
+class ProjectArc(BaseModel):
+    """A multi-day project arc with phases, rubric, and culminating performance."""
+
+    title: str
+    essential_question: str = ""            # Driving question for the whole project
+    duration_days: int = 5
+    phases: list[ProjectPhase] = Field(default_factory=list)
+    movement_options: list[str] = Field(default_factory=list)   # Topics students can choose
+    format_options: list[str] = Field(default_factory=list)     # Project formats
+    resource_library: list[dict] = Field(default_factory=list)  # curated research databases
+    rubric_text: str = ""                   # Full 4-point rubric as formatted text
+    culminating_performance: CulminatingPerformance = Field(default_factory=CulminatingPerformance)
+    debate_prep_template: str = ""          # Formatted debate/argument prep sheet
+    graphic_organizer: str = ""             # Research note-taking template
+
+
 class UnitPlan(BaseModel):
     """A complete unit plan."""
 
@@ -381,6 +420,7 @@ class UnitPlan(BaseModel):
     daily_lessons: list[LessonBrief] = Field(default_factory=list)
     assessment_plan: AssessmentPlan = Field(default_factory=AssessmentPlan)
     required_materials: list[str] = Field(default_factory=list)
+    project: Optional[ProjectArc] = None    # Multi-day project arc (for units > 1 week)
 
 
 class ExitTicketQuestion(BaseModel):

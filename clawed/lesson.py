@@ -9,7 +9,7 @@ from clawed.corpus import get_few_shot_context
 from clawed.llm import LLMClient
 from clawed.master_content import MasterContent
 from clawed.model_router import route as route_model
-from clawed.models import AppConfig, DailyLesson, TeacherPersona, UnitPlan
+from clawed.models import AppConfig, DailyLesson, ProjectArc, TeacherPersona, UnitPlan
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +152,7 @@ _MAX_QUALITY_RETRIES = 2
 # lesson_plan.txt will NOT affect the live output.
 PROMPT_PATH = Path(__file__).parent / "prompts" / "lesson_plan.txt"
 MASTER_PROMPT_PATH = Path(__file__).parent / "prompts" / "master_content.txt"
+PROJECT_ARC_PROMPT_PATH = Path(__file__).parent / "prompts" / "project_arc.txt"
 
 
 def _build_system_prompt(
@@ -492,6 +493,57 @@ async def generate_all_lessons(
         )
 
     return lessons
+
+
+async def generate_project_arc(
+    unit: UnitPlan,
+    persona: TeacherPersona,
+    config: AppConfig | None = None,
+    duration_days: int = 5,
+    teacher_materials: str = "",
+) -> ProjectArc:
+    """Generate a multi-day project arc for the culminating week of a unit.
+
+    Returns a ProjectArc with phases, rubric, debate prep, and culminating
+    performance. Modeled on master teacher project packets (choice boards,
+    curated databases, 4-point rubrics, gallery walks, debates).
+    """
+
+    topics_covered = ", ".join(
+        brief.topic for brief in unit.daily_lessons
+    ) if unit.daily_lessons else unit.topic
+
+    essential_question = (
+        unit.essential_questions[0]
+        if unit.essential_questions
+        else f"How did {unit.topic} shape the world we live in today?"
+    )
+
+    prompt_template = PROJECT_ARC_PROMPT_PATH.read_text(encoding="utf-8")
+    prompt = (
+        prompt_template
+        .replace("{unit_title}", unit.title)
+        .replace("{subject}", unit.subject)
+        .replace("{grade_level}", unit.grade_level)
+        .replace("{duration_days}", str(duration_days))
+        .replace("{essential_question}", essential_question)
+        .replace("{topics_covered}", topics_covered)
+        .replace("{teacher_materials}", teacher_materials)
+    )
+
+    system = _build_system_prompt(persona, config, subject=unit.subject)
+
+    cfg = config or AppConfig.load()
+    cfg = route_model("master_content", cfg)
+    client = LLMClient(cfg)
+
+    return await client.safe_generate_json(
+        prompt=prompt,
+        model_class=ProjectArc,
+        system=system,
+        temperature=0.7,
+        max_tokens=8000,
+    )
 
 
 def save_lesson(lesson: DailyLesson, output_dir: Path) -> Path:
