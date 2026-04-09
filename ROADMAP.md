@@ -1,6 +1,6 @@
 # Roadmap
 
-Current version: **v4.8.2026.9**
+Current version: **v4.8.2026.10**
 
 ## v4.9 — Next priorities
 

@@ -125,16 +125,34 @@ TIER1_REPLACEMENTS: dict[str, str] = {
     "is a testament to": "shows",
 }
 
+# ── Education whitelist: NEVER remove these in educational content ────
+
+EDUCATION_WHITELIST: set[str] = {
+    # Science vocabulary
+    "catalyst", "optimize", "optimizes", "optimization",
+    "synthesis", "synthesize", "integral", "integrate",
+    "fundamental", "essential", "vital", "dynamic",
+    "equilibrium", "momentum", "vector", "matrix",
+    # Math vocabulary
+    "function", "variable", "coefficient", "parameter",
+    "significant", "derivative", "transformation",
+    # Social studies / humanities
+    "paradigm", "revolution", "reform", "progressive",
+    "catalyst",  # e.g., "catalyst for change" in history
+    "cornerstone",  # e.g., "cornerstone of democracy"
+    # General academic vocabulary
+    "analyze", "evaluate", "synthesize", "compare",
+    "contrast", "distinguish", "identify", "examine",
+}
+
 # ── Tier 2: Flag when 2+ appear in same paragraph ───────────────────
 
 TIER2_WORDS: set[str] = {
     "streamline", "streamlines", "streamlining",
-    "optimize", "optimizes", "optimizing",
-    "enhance", "enhances", "enhancing",
     "bolster", "bolsters", "bolstering",
     "augment", "augments", "augmenting",
     "amplify", "amplifies", "amplifying",
-    "catalyst", "cornerstone", "linchpin",
+    "linchpin",
     "underpinning", "bedrock", "hallmark",
     "epitome", "quintessential", "seminal",
     "groundbreaking", "trailblazing", "cutting-edge",
@@ -206,7 +224,9 @@ def humanize(text: str, aggressive: bool = False) -> str:
         t2_count = sum(1 for w in TIER2_WORDS if w in para_lower)
         if t2_count >= 2 or aggressive:
             for word in TIER2_WORDS:
-                # Simple removal — these words are usually filler
+                # Skip words in education whitelist (real content, not filler)
+                if word.lower() in EDUCATION_WHITELIST:
+                    continue
                 para = re.sub(
                     rf"\b{re.escape(word)}\b",
                     "",
@@ -228,6 +248,9 @@ def humanize(text: str, aggressive: bool = False) -> str:
         density = t3_count / max(word_count / 500, 1)
         if density > 3:
             for word in TIER3_WORDS:
+                # Skip words in education whitelist
+                if word.lower() in EDUCATION_WHITELIST:
+                    continue
                 text = re.sub(
                     rf"\b{re.escape(word)}\b",
                     "",

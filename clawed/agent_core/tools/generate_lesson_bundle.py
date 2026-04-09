@@ -542,11 +542,27 @@ class GenerateLessonBundleTool:
         # ── Build response ─────────────────────────────────────────────
         lines = []
 
-        if len(generated_files) == 3 and not errors:
+        if generated_files:
             lines.append(f"Complete teaching package for: {master.title}")
-            lines.append("All three files ready:")
+            lines.append(f"{len(generated_files)} files generated:")
             for f in generated_files:
-                lines.append(f"  - {f.name} ({f.suffix.upper().lstrip('.')})")
+                lines.append(f"  - {f.name}")
+
+            # Quality metrics (visible to teacher)
+            quality_parts = []
+            try:
+                if voice_score and voice_score > 0:
+                    quality_parts.append(f"Voice match: {voice_score:.1f}/5.0")
+                if report.images_embedded:
+                    quality_parts.append(f"{report.images_embedded} images")
+                if report.quality_review_passed:
+                    quality_parts.append("Quality: PASSED")
+                elif report.quality_review_passed is False:
+                    quality_parts.append("Quality: needs review")
+            except Exception:
+                pass
+            if quality_parts:
+                lines.append(f"\n[{' | '.join(quality_parts)}]")
         elif generated_files:
             lines.append(
                 f"Generated {len(generated_files)} of 3 files for: "
