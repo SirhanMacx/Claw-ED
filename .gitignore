@@ -47,7 +47,9 @@ cli/source/cli.js
 # cli/source/cli.js.map — tracked via git-lfs (needed for TS build in CI)
 
 # Bundled CLI (build artifacts, included in wheel via force-include)
-clawed/_cli_bundle/
+# Track .gitkeep so the directory exists for pip install from git
+clawed/_cli_bundle/*
+!clawed/_cli_bundle/.gitkeep
 
 # Build prompts (internal)
 BUILD_PROMPT.md
