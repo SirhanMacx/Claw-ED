@@ -499,42 +499,43 @@ clawed lesson "The New Deal" --persona "AP-Rivera"</pre>
     </thead>
     <tbody>
       <tr>
-        <td>Ollama Pro</td>
-        <td>Gemma 4, Llama 4, Qwen 3</td>
-        <td>~$20/mo. Good balance of quality and cost. <span class="rec">Recommended</span></td>
-      </tr>
-      <tr>
         <td>Anthropic</td>
-        <td>Claude Opus 4.6, Sonnet 4.6</td>
-        <td>Best voice matching and pedagogy. Higher cost per lesson.</td>
+        <td>Claude Opus 4.6 (1M ctx), Sonnet 4.6, Haiku 4.5</td>
+        <td>Best voice matching and pedagogy. 128K output. <span class="rec">Best quality</span></td>
       </tr>
       <tr>
         <td>OpenAI</td>
-        <td>GPT-5.4, o3</td>
-        <td>Strong, reliable output. Also higher cost.</td>
+        <td>GPT-5.4, o3, GPT-4.1</td>
+        <td>Strong reasoning and coding. Reliable output across subjects.</td>
       </tr>
       <tr>
         <td>Google</td>
-        <td>Gemini 2.5 Flash, Pro</td>
-        <td>Free tier available. Good way to try things out.</td>
+        <td>Gemini 3.1 Pro, 2.5 Flash</td>
+        <td>94.3% GPQA reasoning. Free tier available for trying things out.</td>
+      </tr>
+      <tr>
+        <td>Ollama Cloud</td>
+        <td>GLM-5.1, Gemma 4, Llama 4 Maverick (400B, 10M ctx)</td>
+        <td>~$20/mo unlimited. Best value for daily use. <span class="rec">Recommended</span></td>
       </tr>
       <tr>
         <td>Ollama Local</td>
-        <td>Any supported model</td>
-        <td>Free. Runs fully offline. Quality depends on your hardware.</td>
+        <td>Gemma 4, Llama 4, GLM-5, DeepSeek V3.2, Qwen 3</td>
+        <td>Free. Fully offline. Quality depends on hardware. DeepSeek V3.2 is 90% of GPT-5.4 at 1/50th cost.</td>
       </tr>
       <tr>
         <td>OpenRouter</td>
-        <td>Any model</td>
-        <td>One API key, access to everything. Pay per token.</td>
+        <td>All models from all providers</td>
+        <td>One API key, access to everything. Pay per token. Best for trying multiple models.</td>
       </tr>
     </tbody>
   </table>
   <p>
-    For most teachers, Ollama Pro at ~$20/month hits the sweet spot. If you
-    want the highest quality voice matching and don't mind paying more per
-    generation, Anthropic or OpenAI are the way to go. Google's free tier is
-    fine for trying things out.
+    For most teachers, Ollama Cloud at ~$20/month hits the sweet spot &mdash;
+    unlimited access to GLM-5.1, Gemma 4, and Llama 4. For the highest quality
+    voice matching, use Anthropic Claude Opus 4.6 (1M context window, 128K output).
+    Google Gemini has a free tier for trying things out. For fully offline use,
+    install Ollama locally with DeepSeek V3.2 or Gemma 4.
   </p>
 </section>
 
