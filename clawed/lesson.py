@@ -411,10 +411,12 @@ async def generate_master_content(
 
     # Inject knowledge graph connections into prompt
     try:
+        from clawed.agent_core.identity import get_teacher_id
         from clawed.lesson_connections import inject_connections_into_prompt
+        _tid = get_teacher_id()
         kg_ctx = inject_connections_into_prompt(
             lesson_brief.topic,
-            teacher_id="",  # Default teacher
+            teacher_id=_tid,
         )
         if kg_ctx:
             prompt = kg_ctx + "\n\n" + prompt

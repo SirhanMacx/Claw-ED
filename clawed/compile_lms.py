@@ -56,6 +56,7 @@ def compile_common_cartridge(master: "MasterContent", output_dir: Path) -> Path:
     manifest = Element("manifest", {
         "identifier": f"clawed_{uuid.uuid4().hex[:12]}",
         "xmlns": "http://www.imsglobal.org/xsd/imsccv1p3/imscp_v1p1",
+        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
     })
 
     metadata = SubElement(manifest, "metadata")
@@ -311,9 +312,15 @@ def generate_udl_tiers(master: "MasterContent") -> dict[str, dict]:
                 "According to the source, ___",
             ]
 
-    # Simplify vocabulary definitions
+    # Simplify vocabulary definitions (sentence-aware — handles "Dr. King")
     for v in scaffolded.get("vocabulary", []):
-        v["definition"] = v["definition"].split(".")[0] + "."
+        defn = v.get("definition", "")
+        # Split on ". " (period + space) not just "." to avoid breaking abbreviations
+        sentences = defn.split(". ")
+        first = sentences[0].rstrip(".")
+        if len(first) > 10:
+            v["definition"] = first + "."
+        # else: keep full definition — too short to simplify
 
     scaffolded["_tier"] = "scaffolded"
     scaffolded["_tier_label"] = "Below-Level / IEP / 504"

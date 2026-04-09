@@ -49,7 +49,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS — default to localhost only. Override with EDUAGENT_CORS_ORIGINS.
+    # CORS — single middleware instance (F5 audit fix).
+    # Supports localhost + Chrome extension origins.
     cors_origins_raw = os.environ.get("EDUAGENT_CORS_ORIGINS", "")
     if cors_origins_raw:
         cors_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
         cors_origins = [
             "http://localhost:8000",
             "http://127.0.0.1:8000",
+            "chrome-extension://*",
         ]
     app.add_middleware(
         CORSMiddleware,
@@ -100,25 +102,18 @@ def create_app() -> FastAPI:
     app.include_router(gateway_chat_router, prefix="/api")
     app.include_router(extension_router, prefix="/api")
 
-    # Allow Chrome extension origin
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins + ["chrome-extension://*"],
-        allow_credentials=False,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Authorization", "Content-Type"],
-    )
-
     # ── Page auth helper ─────────────────────────────────────────────
 
     def _check_page_auth(request: Request) -> bool:
-        """Check auth for HTML pages via token query param or cookie."""
+        """Check auth for HTML pages via cookie, Bearer header, or localhost.
+
+        F4 audit fix: ?token= query params are NO LONGER accepted for page
+        auth. Use POST /api/auth/bootstrap or Bearer header instead.
+        Tokens in URLs leak through browser history, bookmarks, referrers.
+        """
         from clawed.api.deps import get_api_token
         token = get_api_token()
-        # Check query param
-        if request.query_params.get("token") == token:
-            return True
-        # Check cookie
+        # Check cookie (primary method — set via POST /api/auth/bootstrap)
         if request.cookies.get("clawed_token") == token:
             return True
         # Check Bearer header (for API-like access)
@@ -132,25 +127,67 @@ def create_app() -> FastAPI:
                 return True
         return False
 
+    # ── Auth bootstrap (F4 audit fix) ───────────────────────────────
+    # Token accepted via POST body, cookie set, redirect to clean URL.
+
+    from fastapi import Form
+    from fastapi.responses import JSONResponse
+
+    @app.post("/api/auth/bootstrap")
+    async def _auth_bootstrap(token: str = Form(...)):
+        """Accept auth token via POST and set a session cookie.
+
+        Replaces the old ?token= query param flow to prevent token
+        leakage through browser history, bookmarks, and referrers.
+        """
+        from clawed.api.deps import get_api_token
+        expected = get_api_token()
+        if token != expected:
+            return JSONResponse({"error": "Invalid token"}, status_code=401)
+
+        is_https = os.environ.get("HTTPS", "").lower() in ("1", "true")
+        response = RedirectResponse("/", status_code=303)
+        response.set_cookie(
+            "clawed_token", token,
+            httponly=True,
+            samesite="strict",
+            secure=is_https,
+            max_age=86400,
+        )
+        return response
+
     @app.middleware("http")
-    async def _set_auth_cookie_middleware(request: Request, call_next):
-        """Set auth cookie when ?token= is valid.
-        Teacher only needs ?token= on the first page load — cookie
-        persists for 24h after that.
+    async def _legacy_token_redirect(request: Request, call_next):
+        """Legacy support: if ?token= is in URL, redirect to POST bootstrap.
+
+        Shows a one-time form that POSTs the token, then redirects to
+        a clean URL. Preserves backward compat while eliminating URL leakage.
         """
         response = await call_next(request)
         token_param = request.query_params.get("token")
-        if token_param and response.status_code == 200:
+        if token_param and response.status_code in (200, 401):
             from clawed.api.deps import get_api_token
             if token_param == get_api_token():
-                response.set_cookie(
+                # Set cookie and redirect to clean URL
+                clean_url = str(request.url).split("?")[0]
+                is_https = os.environ.get("HTTPS", "").lower() in ("1", "true")
+                redirect = RedirectResponse(clean_url, status_code=303)
+                redirect.set_cookie(
                     "clawed_token", token_param,
-                    httponly=True, samesite="strict", max_age=86400,
+                    httponly=True,
+                    samesite="strict",
+                    secure=is_https,
+                    max_age=86400,
                 )
+                return redirect
         return response
 
     _auth_denied = HTMLResponse(
-        "<h1>401 — Auth required</h1><p>Add ?token=YOUR_TOKEN to the URL</p>",
+        "<h1>401 — Auth required</h1>"
+        '<form method="POST" action="/api/auth/bootstrap">'
+        '<input name="token" placeholder="Paste your token" autofocus>'
+        '<button type="submit">Authenticate</button>'
+        "</form>",
         status_code=401,
     )
 

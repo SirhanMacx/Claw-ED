@@ -728,3 +728,55 @@ def run_bot(token: str | None = None, force: bool = False, data_dir=None) -> Non
     else:
         bot = EduAgentTelegramBot.from_env(data_dir=data_dir)
     bot.run(force=force)
+
+
+def send_notification(text: str) -> bool:
+    """Send a one-off notification to the teacher via Telegram.
+
+    Used by scheduler tasks (morning-prep, weekly-plan) to alert the
+    teacher about auto-generated content. Returns True if sent, False
+    if Telegram is not configured.
+
+    Does NOT require the bot polling loop to be running — creates a
+    temporary connection, sends the message, and disconnects.
+    """
+    try:
+        from clawed.config import get_api_key
+
+        token = get_api_key("telegram_bot_token")
+        if not token:
+            logger.debug("send_notification: no bot token configured")
+            return False
+
+        # Load teacher chat_id from config
+        import json as _json
+
+        config_path = _BASE / "config.json"
+        if not config_path.exists():
+            logger.debug("send_notification: no config.json")
+            return False
+
+        config = _json.loads(config_path.read_text(encoding="utf-8"))
+        chat_id = config.get("telegram_chat_id") or config.get("teacher_chat_id")
+        if not chat_id:
+            logger.debug("send_notification: no chat_id in config")
+            return False
+
+        # Send via Telegram API directly (no bot instance needed)
+        url = f"{_API_BASE}/bot{token}/sendMessage"
+        payload = {
+            "chat_id": int(chat_id),
+            "text": text[:_MAX_MESSAGE_LENGTH],
+            "parse_mode": "Markdown",
+        }
+        resp = _requests.post(url, json=payload, timeout=10)
+        if resp.status_code == 200:
+            logger.info("Notification sent to Telegram chat %s", chat_id)
+            return True
+        else:
+            logger.warning("Telegram notification failed: %s", resp.text[:200])
+            return False
+
+    except Exception as exc:
+        logger.debug("send_notification failed: %s", exc)
+        return False

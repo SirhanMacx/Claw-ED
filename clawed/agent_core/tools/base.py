@@ -12,6 +12,31 @@ from clawed.agent_core.context import AgentContext, ToolResult
 logger = logging.getLogger(__name__)
 
 
+# ── Risk levels for tool capability classification ──────────────────
+# Every tool should declare a risk_level attribute. If absent, defaults
+# to WRITE_LOCAL for safety (requires approval).
+
+RISK_READ_ONLY = "read_only"             # No side effects — always allowed
+RISK_WRITE_LOCAL = "write_local"         # Writes local files — requires approval
+RISK_NETWORK_CALL = "network_call"       # External API calls — requires approval
+RISK_PACKAGE_INSTALL = "package_install" # pip install — ALWAYS requires confirmation
+RISK_EXTERNAL_PUBLISH = "external_publish"  # Posts to external services — ALWAYS requires confirmation
+RISK_DAEMON_CONTROL = "daemon_control"   # Starts/stops background processes
+
+# Levels that ALWAYS require explicit teacher confirmation regardless of config
+_ALWAYS_REQUIRE_APPROVAL = frozenset({
+    RISK_PACKAGE_INSTALL,
+    RISK_EXTERNAL_PUBLISH,
+})
+
+# Levels that require approval unless teacher has opted into auto-approve
+_REQUIRE_APPROVAL_BY_DEFAULT = frozenset({
+    RISK_WRITE_LOCAL,
+    RISK_NETWORK_CALL,
+    RISK_DAEMON_CONTROL,
+})
+
+
 @runtime_checkable
 class Tool(Protocol):
     """Protocol that all agent tools must implement."""
@@ -47,10 +72,49 @@ class ToolRegistry:
 
     async def execute(self, name: str, params: dict[str, Any],
                       context: AgentContext) -> ToolResult:
-        """Execute a tool by name. Returns error ToolResult for unknown tools."""
+        """Execute a tool by name with policy enforcement.
+
+        Every tool is checked against its declared risk_level before execution.
+        High-risk tools (package_install, external_publish) ALWAYS require
+        teacher confirmation. Medium-risk tools require approval unless the
+        teacher has opted into auto-approve mode.
+
+        This enforcement happens HERE in the dispatch path — the LLM cannot
+        bypass it regardless of prompt manipulation.
+        """
         tool = self._tools.get(name)
         if tool is None:
             return ToolResult(text=f"Unknown tool: {name}")
+
+        # ── Policy enforcement ────────────────────────────────────────
+        risk = getattr(tool, "risk_level", RISK_WRITE_LOCAL)
+
+        if risk in _ALWAYS_REQUIRE_APPROVAL:
+            # NEVER auto-approve package installs or external publishing
+            approved = await self._check_approval(name, risk, params, context)
+            if not approved:
+                return ToolResult(
+                    text=f"BLOCKED: '{name}' requires explicit teacher approval "
+                         f"(risk level: {risk}). Ask the teacher to confirm "
+                         f"before proceeding."
+                )
+
+        elif risk in _REQUIRE_APPROVAL_BY_DEFAULT:
+            # Check if auto-approve is enabled
+            import os
+            auto_approve = os.environ.get("CLAWED_AUTO_APPROVE", "").lower() in ("1", "true", "yes")
+            if not auto_approve:
+                approved = await self._check_approval(name, risk, params, context)
+                if not approved:
+                    return ToolResult(
+                        text=f"BLOCKED: '{name}' requires teacher approval "
+                             f"(risk level: {risk}). The teacher can enable "
+                             f"auto-approve with CLAWED_AUTO_APPROVE=1 for "
+                             f"low-risk write operations."
+                    )
+
+        # risk == RISK_READ_ONLY → always allowed, no check needed
+
         try:
             return await tool.execute(params, context)
         except Exception as e:
@@ -62,6 +126,37 @@ class ToolRegistry:
                      f"Either retry with corrected parameters or tell the teacher "
                      f"what went wrong."
             )
+
+    async def _check_approval(
+        self, tool_name: str, risk_level: str,
+        params: dict[str, Any], context: AgentContext,
+    ) -> bool:
+        """Check if the teacher has approved this action.
+
+        Returns True if approved, False if blocked.
+        Currently checks the approval DB for a standing approval
+        for this tool. Future: interactive approval via Telegram.
+        """
+        try:
+            from clawed.agent_core.approvals import ApprovalManager
+            mgr = ApprovalManager()
+            # Check for standing approval for this tool
+            teacher_id = getattr(context, "teacher_id", "default")
+            existing = mgr.get_standing_approval(teacher_id, tool_name)
+            if existing:
+                logger.info(
+                    "Tool '%s' (risk=%s) approved via standing approval",
+                    tool_name, risk_level,
+                )
+                return True
+        except Exception as exc:
+            logger.debug("Approval check failed: %s", exc)
+
+        logger.warning(
+            "Tool '%s' BLOCKED (risk=%s) — no approval found",
+            tool_name, risk_level,
+        )
+        return False
 
     def discover_custom(self, dir_path: Path) -> None:
         """Load custom YAML prompt-template tools from a directory."""

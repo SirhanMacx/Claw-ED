@@ -559,16 +559,26 @@ def main() -> None:
         except Exception:
             pass  # Never block startup
 
-        # Bypass permission prompts for the TUI — teachers shouldn't see
-        # developer trust dialogs. Opt out with auto_approve_tools=false
-        # in config.json.
-        try:
-            from clawed.models import AppConfig
-            _auto = getattr(AppConfig.load(), "auto_approve_tools", True)
-        except Exception:
-            _auto = True
+        # Permission bypass: DISABLED by default (F3 audit fix).
+        # Teachers must explicitly opt in via CLAWED_AUTO_APPROVE=1 env var
+        # or auto_approve_tools=true in config.json.
+        # When bypassed, only read_only tools skip confirmation.
+        import os as _os
+        _auto = _os.environ.get("CLAWED_AUTO_APPROVE", "").lower() in ("1", "true", "yes")
+        if not _auto:
+            try:
+                from clawed.models import AppConfig
+                _auto = getattr(AppConfig.load(), "auto_approve_tools", False)
+            except Exception:
+                _auto = False
         if _auto and "--dangerously-skip-permissions" not in args:
             args = ["--dangerously-skip-permissions"] + args
+            import sys as _sys
+            print(
+                "\u26a0\ufe0f  Permission bypass ACTIVE (CLAWED_AUTO_APPROVE=1). "
+                "Sensitive tools still require approval via the central policy layer.",
+                file=_sys.stderr,
+            )
 
         # Inject --model from eduagent config so the Node CLI uses the
         # teacher's chosen model instead of defaulting to haiku

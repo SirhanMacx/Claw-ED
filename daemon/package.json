@@ -1,6 +1,6 @@
 {
   "name": "clawed-daemon",
-  "version": "4.9.2026.8",
+  "version": "4.9.2026.9",
   "description": "Claw-ED background daemon — always-on Telegram teaching assistant",
   "type": "module",
   "main": "index.ts",

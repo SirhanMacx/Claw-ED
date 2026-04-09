@@ -1,4 +1,9 @@
-"""Self-equipping tools — Ed can install deps and create tools for himself."""
+"""Self-equipping tools — Ed can install deps and create tools for himself.
+
+SECURITY: InstallPackageTool is gated by the central approval policy
+(risk_level = package_install → ALWAYS requires teacher confirmation).
+Additionally, only packages on the curated allowlist can be installed.
+"""
 
 from __future__ import annotations
 
@@ -8,12 +13,28 @@ import sys
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
+from clawed.agent_core.tools.base import RISK_PACKAGE_INSTALL
 
 logger = logging.getLogger(__name__)
 
+# Curated allowlist of safe packages. Only these can be installed.
+# Add to this list as needed — every addition should be reviewed.
+_ALLOWED_PACKAGES = frozenset({
+    "matplotlib", "pandas", "numpy", "scipy", "seaborn",
+    "plotly", "pillow", "requests", "beautifulsoup4",
+    "openpyxl", "xlsxwriter", "tabulate", "rich",
+    "sympy", "networkx", "wordcloud",
+})
+
 
 class InstallPackageTool:
-    """Install a Python package that Ed needs."""
+    """Install a Python package that Ed needs.
+
+    Hardened: requires central approval (risk_level=package_install)
+    AND the package must be on the curated allowlist.
+    """
+
+    risk_level = RISK_PACKAGE_INSTALL  # ALWAYS requires teacher confirmation
 
     def schema(self) -> dict[str, Any]:
         return {
@@ -22,8 +43,8 @@ class InstallPackageTool:
                 "name": "install_package",
                 "description": (
                     "Install a Python package that's needed for a task. "
-                    "Only use when a required package is missing. "
-                    "Ed checks before importing and installs gracefully."
+                    "RESTRICTED: Only allowlisted packages can be installed, "
+                    "and teacher approval is always required."
                 ),
                 "parameters": {
                     "type": "object",
@@ -56,12 +77,21 @@ class InstallPackageTool:
         if package.lower() in blocked:
             return ToolResult(text=f"Cannot install '{package}' — it's a built-in module.")
 
-        # Check if already available
+        # Check if already available (safe — no side effects)
         try:
             __import__(package.replace("-", "_"))
             return ToolResult(text=f"'{package}' is already installed and available.")
         except ImportError:
             pass
+
+        # Allowlist enforcement — only curated packages permitted
+        base_name = package.lower().split("==")[0].split(">=")[0].split("<=")[0].strip()
+        if base_name not in _ALLOWED_PACKAGES:
+            return ToolResult(
+                text=f"BLOCKED: '{package}' is not on the approved package list. "
+                     f"Allowed packages: {', '.join(sorted(_ALLOWED_PACKAGES)[:10])}... "
+                     f"Ask the teacher to add it to the allowlist if needed."
+            )
 
         # Log what we're about to install
         logger.info(
@@ -82,6 +112,15 @@ class InstallPackageTool:
                 if reason:
                     msg += f" (Needed for: {reason})"
                 logger.info("Self-equip: installed %s", package)
+                # Audit log
+                try:
+                    from clawed.workspace import append_daily_note
+                    append_daily_note(
+                        f"Package installed: {package} (reason: {reason or 'not specified'})",
+                        category="self-equip",
+                    )
+                except Exception:
+                    pass
                 return ToolResult(text=msg)
             else:
                 return ToolResult(text=f"Failed to install '{package}': {result.stderr[:500]}")

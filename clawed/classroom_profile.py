@@ -32,8 +32,8 @@ class ClassroomProfile(BaseModel):
     room_number: str = ""
     student_count: int = 0
     seating_arrangement: str = ""       # "rows", "clusters", "u-shape", "flexible"
-    has_smartboard: bool = True
-    has_projector: bool = True
+    has_smartboard: bool = False
+    has_projector: bool = False
     has_chromebooks: bool = False
     has_ipads: bool = False
     has_lab_access: bool = False

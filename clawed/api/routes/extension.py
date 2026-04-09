@@ -108,15 +108,18 @@ async def extension_generate(req: ExtensionGenerateRequest):
         return {"error": str(exc)[:200]}
 
 
-# Saved sources from extension
+# Saved sources from extension (bounded to prevent OOM)
+_MAX_SOURCES = 500
 _saved_sources: list[dict] = []
 
 
 @router.post("/extension/add-source")
 async def extension_add_source(req: ExtensionSourceRequest):
     """Save highlighted text as a primary source for future lessons."""
+    if len(_saved_sources) >= _MAX_SOURCES:
+        _saved_sources.pop(0)  # Remove oldest
     _saved_sources.append({
-        "text": req.text,
+        "text": req.text[:50000],  # Cap text length
         "url": req.source_url,
         "title": req.source_title,
     })
@@ -145,7 +148,8 @@ class ClassroomState(BaseModel):
     poll_responses: list[dict] = Field(default_factory=list)
 
 
-# In-memory classroom sessions (keyed by class code)
+# In-memory classroom sessions (bounded to prevent OOM)
+_MAX_SESSIONS = 100
 _classroom_sessions: dict[str, ClassroomState] = {}
 _classroom_connections: dict[str, list[WebSocket]] = {}
 
@@ -155,7 +159,14 @@ async def classroom_start(lesson_title: str = "", total_slides: int = 10):
     """Start a real-time classroom session. Returns class code."""
     import secrets
 
-    code = secrets.token_hex(3).upper()  # 6-char code like "A3F1B2"
+    # Enforce max sessions to prevent OOM
+    if len(_classroom_sessions) >= _MAX_SESSIONS:
+        # Remove oldest session
+        oldest = next(iter(_classroom_sessions))
+        del _classroom_sessions[oldest]
+        _classroom_connections.pop(oldest, None)
+
+    code = secrets.token_hex(6).upper()  # 12-char code (H3 audit fix)
     _classroom_sessions[code] = ClassroomState(
         lesson_title=lesson_title,
         total_slides=total_slides,
@@ -281,7 +292,10 @@ async def classroom_websocket(websocket: WebSocket, code: str):
             logger.debug("Classroom WS [%s]: %s", code, data[:100])
 
     except WebSocketDisconnect:
-        _classroom_connections[code].remove(websocket)
+        if code in _classroom_connections:
+            conns = _classroom_connections[code]
+            if websocket in conns:
+                conns.remove(websocket)
 
 
 async def _broadcast(code: str, message: dict) -> None:
@@ -308,7 +322,8 @@ class ShareRequest(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
-# Community lesson store (SQLite in production, in-memory for now)
+# Community lesson store (bounded, in-memory — upgrade to SQLite for production)
+_MAX_COMMUNITY_LESSONS = 1000
 _community_lessons: list[dict] = []
 
 
@@ -324,9 +339,19 @@ async def community_share(req: ShareRequest):
     except json.JSONDecodeError:
         return {"error": "Invalid JSON"}
 
-    # Strip teacher identity
-    for field in ("teacher_name", "school", "teacher_id", "persona"):
+    # Enforce max community lessons
+    if len(_community_lessons) >= _MAX_COMMUNITY_LESSONS:
+        _community_lessons.pop(0)
+
+    # Strip teacher identity (deep — check nested objects too)
+    _identity_fields = {"teacher_name", "school", "teacher_id", "persona",
+                        "teacher_email", "name"}
+    for field in _identity_fields:
         lesson_data.pop(field, None)
+    for key, val in list(lesson_data.items()):
+        if isinstance(val, dict):
+            for f in _identity_fields:
+                val.pop(f, None)
 
     entry = {
         "id": len(_community_lessons) + 1,
@@ -379,7 +404,12 @@ async def community_rate(lesson_id: int, rating: float = 5.0):
     """Rate a community lesson (1-5 stars)."""
     for entry in _community_lessons:
         if entry["id"] == lesson_id:
-            entry["rating"] = round((entry["rating"] + rating) / 2, 1)
+            # Proper cumulative average (M2 audit fix)
+            total_stars = entry.get("_total_stars", entry["rating"])
+            num_ratings = entry.get("_num_ratings", 1)
+            entry["_total_stars"] = total_stars + rating
+            entry["_num_ratings"] = num_ratings + 1
+            entry["rating"] = round(entry["_total_stars"] / entry["_num_ratings"], 1)
             entry["uses"] += 1
             return {"rating": entry["rating"], "uses": entry["uses"]}
     return {"error": "Lesson not found"}

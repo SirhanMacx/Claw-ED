@@ -50,10 +50,12 @@ def compile_narration_script(master: "MasterContent", output_dir: Path) -> Path:
         lines.append(f"{personality}")
         lines.append("[PAUSE]")
 
-    lines.append(f"Welcome to today's lesson: {master.title}.")
+    lines.append(f"Welcome to today's lesson: {master.title or 'today'}.")
+    topic_text = master.topic or "today's topic"
+    subject_text = master.subject or "class"
+    grade_text = master.grade_level or "your grade"
     lines.append(
-        f"We're covering {master.topic} in {master.subject}, "
-        f"{master.grade_level}."
+        f"We're covering {topic_text} in {subject_text}, {grade_text}."
     )
     lines.append(f"Our objective: {master.objective}")
     lines.append("[PAUSE]")
@@ -111,7 +113,7 @@ def compile_narration_script(master: "MasterContent", output_dir: Path) -> Path:
         "That's our lesson for today. Review your guided notes, "
         "and come ready to build on this tomorrow."
     )
-    if master.homework:
+    if master.homework and master.homework.strip():
         lines.append(f"For homework: {master.homework}")
 
     safe = safe_filename(master.title)

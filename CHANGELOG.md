@@ -1,5 +1,35 @@
 # Changelog
 
+## v4.9.2026.9 (2026-04-09)
+
+### Dual Audit Remediation — Security & Trust Boundary Hardening
+
+**Addressing all findings from Jon's security audit (F1-F11) + Claude's code audit (27 defects).**
+
+**Security (F1-F5):**
+- [F1] **Central approval/policy layer** — every tool now declares a `risk_level` (read_only, write_local, network_call, package_install, external_publish). ToolRegistry.execute() enforces policy BEFORE tool execution. package_install and external_publish ALWAYS require teacher confirmation. The LLM cannot bypass this.
+- [F2] **InstallPackageTool hardened** — curated allowlist of 15 safe packages only. Approval always required. Audit log written on install. Packages not on the list are blocked.
+- [F3] **Permission bypass inverted** — CLI now defaults to permissions ENFORCED. Teacher must explicitly set `CLAWED_AUTO_APPROVE=1` to opt in. Warning printed when bypass is active.
+- [F4] **Web auth refactored** — `?token=` query params no longer accepted for page auth. New `POST /api/auth/bootstrap` endpoint accepts token via POST body, sets HttpOnly/SameSite/Secure cookie, redirects to clean URL. Legacy `?token=` auto-redirects to clean URL with cookie.
+- [F5] **CORS consolidated** — single middleware instance with localhost + Chrome extension origins. Duplicate removed.
+
+**Blockers Fixed:**
+- [B1] `send_notification()` created in telegram.py — scheduler can now notify teachers via Telegram
+- [B2] Extension icon placeholders created (16x16, 48x48, 128x128 PNG)
+- [B4] Common Cartridge XML namespace declarations added
+
+**Code Correctness:**
+- [H1] XSS fixed in content.js — all `innerHTML` replaced with `textContent` + DOM creation
+- [H2] In-memory state bounded: MAX_SESSIONS=100, MAX_SOURCES=500, MAX_COMMUNITY_LESSONS=1000
+- [H3] Session tokens strengthened: 6→12 char hex codes
+- [H4] UDL vocab simplification fixed: `split(". ")` instead of `split(".")` — "Dr. King" no longer becomes "Dr."
+- [H6] Kahoot duplicate answers fixed: plausible generic wrong answers instead of repeated "None of the above"
+- [M1] WebSocket disconnect safety: KeyError guard for invalid codes
+- [M2] Community rating: proper cumulative average algorithm
+- [M5] Audio narration: None field handling for topic/subject/grade/homework
+- [M7] KG connections: teacher_id passed from identity system instead of hardcoded empty string
+- [M8] Classroom profile: technology defaults to False (teacher opts in, not out)
+
 ## v4.9.2026.8 (2026-04-09)
 
 ### The Final Four — Complete Platform

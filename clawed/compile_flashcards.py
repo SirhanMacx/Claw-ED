@@ -105,9 +105,18 @@ def compile_kahoot_csv(master: "MasterContent", output_dir: Path) -> Path:
         for j, other in enumerate(vocab):
             if j != i and len(distractors) < 3:
                 distractors.append(other.definition[:75])
-        # Pad if not enough distractors
-        while len(distractors) < 3:
-            distractors.append("None of the above")
+        # Pad with plausible generic wrong answers (never duplicate)
+        _generic_wrong = [
+            "None of the above",
+            "A type of government system",
+            "A geographic feature",
+            "A cultural practice",
+        ]
+        for gw in _generic_wrong:
+            if len(distractors) >= 3:
+                break
+            if gw not in distractors:
+                distractors.append(gw)
 
         rows.append([
             question, correct,

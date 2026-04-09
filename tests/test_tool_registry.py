@@ -28,6 +28,8 @@ def _ctx(**overrides) -> AgentContext:
 class _DummyTool:
     """A minimal tool for testing the registry."""
 
+    risk_level = "read_only"  # Test tools bypass approval policy
+
     def schema(self) -> dict:
         return {
             "type": "function",

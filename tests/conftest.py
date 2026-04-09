@@ -21,6 +21,8 @@ def _isolate_state_db(tmp_path, monkeypatch):
     # ── Single source of truth ────────────────────────────────────────
     monkeypatch.setenv("EDUAGENT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("EDUAGENT_LOCAL_AUTH_BYPASS", "1")
+    # Enable auto-approve in tests so tool execution tests pass the policy layer
+    monkeypatch.setenv("CLAWED_AUTO_APPROVE", "1")
 
     # ── Module-level constants that were evaluated at first import ─────
     # These need patching because Python evaluates them once.
