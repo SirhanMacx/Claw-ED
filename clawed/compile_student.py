@@ -113,6 +113,25 @@ async def compile_student_view(
 
     doc = Document()
 
+    # ── Page header / footer ────────────────────────────────────────
+    section = doc.sections[0]
+    # Header: lesson title (left, small gray) + name/date/period fields (right)
+    header = section.header
+    header.is_linked_to_previous = False
+    header_para = header.paragraphs[0]
+    # Left-aligned run: lesson title in small gray
+    title_run = header_para.add_run(master.title)
+    title_run.font.size = Pt(8)
+    title_run.font.color.rgb = RGBColor(128, 128, 128)
+    title_run.font.name = "Calibri"
+    # Tab to push right-aligned content
+    header_para.add_run("\t\t")
+    # Right-aligned run: student fill-in fields
+    fields_run = header_para.add_run("Name: _________ Date: _________ Period: _____")
+    fields_run.font.size = Pt(8)
+    fields_run.font.color.rgb = RGBColor(128, 128, 128)
+    fields_run.font.name = "Calibri"
+
     # ── helpers ──────────────────────────────────────────────────────
 
     def _heading(text: str, level: int = 1) -> None:

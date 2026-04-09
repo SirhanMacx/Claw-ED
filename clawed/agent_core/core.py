@@ -93,24 +93,28 @@ class Gateway:
         try:
             from clawed.state import init_db as init_state_db
             init_state_db()
-        except Exception:
+        except Exception as e:
+            logger.debug("Eager init failed for state DB: %s", e)
             pass
         try:
             from clawed.agent_core.memory.sessions import (
                 _ensure_db as init_sessions_db,
             )
             init_sessions_db()
-        except Exception:
+        except Exception as e:
+            logger.debug("Eager init failed for sessions DB: %s", e)
             pass
         try:
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB
             CurriculumKB()  # Creates DB + tables on init
-        except Exception:
+        except Exception as e:
+            logger.debug("Eager init failed for curriculum KB: %s", e)
             pass
         try:
             from clawed.agent_core.quality import _ensure_db as init_quality_db
             init_quality_db()
-        except Exception:
+        except Exception as e:
+            logger.debug("Eager init failed for quality DB: %s", e)
             pass
 
         # Agent subsystems
@@ -187,7 +191,8 @@ class Gateway:
                     from clawed.agent_core.memory.sessions import save_turn
                     save_turn(teacher_id, "user", message, transport=transport)
                     save_turn(teacher_id, "assistant", result.text, transport=transport)
-                except Exception:
+                except Exception as e:
+                    logger.debug("Failed to save onboarding turn: %s", e)
                     pass
                 return result
 
@@ -199,7 +204,8 @@ class Gateway:
                         from clawed.agent_core.memory.sessions import save_turn
                         save_turn(teacher_id, "user", message, transport=transport)
                         save_turn(teacher_id, "assistant", result.text, transport=transport)
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("Failed to save first-run turn: %s", e)
                         pass
                     return result
                 return GatewayResponse(
@@ -412,7 +418,8 @@ class Gateway:
             report_path = Path.home() / ".eduagent" / "workspace" / "reading_report.md"
             if report_path.exists():
                 reading_report_context = report_path.read_text(encoding="utf-8")[:1500]
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to load reading report: %s", e)
             pass
 
         # 2a. Load SOUL.md if available
@@ -423,7 +430,8 @@ class Gateway:
             soul_path = Path(data_dir) / "workspace" / "soul.md"
             if soul_path.exists():
                 soul_context = soul_path.read_text(encoding="utf-8")[:2000]
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to load SOUL.md: %s", e)
             pass
 
         # 2b. Build system prompt
@@ -495,7 +503,8 @@ class Gateway:
                     f"Anything ingested via CLI is available here.\n"
                     f"=== End KB ===\n"
                 )
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to load curriculum KB stats: %s", e)
             pass
 
         # 2d. Cross-transport conversation context
@@ -575,7 +584,8 @@ class Gateway:
                 "message_length": len(message),
             }
             mem.store(teacher_id, episode_text, metadata=episode_metadata)
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to store episodic memory: %s", e)
             pass
 
         # 8. Maybe compress old episodes (runs every COMPRESSION_THRESHOLD episodes)
@@ -583,7 +593,8 @@ class Gateway:
             from clawed.memory_engine import maybe_compress_episodes
 
             maybe_compress_episodes(teacher_id)
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to compress episodes: %s", e)
             pass
 
         # 8b. Maybe compress old session turns
@@ -593,7 +604,8 @@ class Gateway:
             )
 
             maybe_compress_sessions(teacher_id)
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to compress sessions: %s", e)
             pass
 
         return result
