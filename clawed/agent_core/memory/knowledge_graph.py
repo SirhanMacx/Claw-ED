@@ -130,7 +130,7 @@ class CurriculumKG:
         if not eid:
             return ""
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now().isoformat()
         embedding_blob = None
         if embed:
             try:
@@ -178,7 +178,7 @@ class CurriculumKG:
             return ""
 
         # Auto-create entities (no embedding during bulk ingest — use batch_embed later)
-        now = datetime.utcnow().isoformat()
+        now = datetime.now().isoformat()
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO kg_entities "
@@ -212,7 +212,7 @@ class CurriculumKG:
 
     def invalidate(self, teacher_id: str, triple_id: str) -> bool:
         """Mark a triple as expired by setting valid_to=now."""
-        now = datetime.utcnow().isoformat()[:10]
+        now = datetime.now().isoformat()[:10]
         with sqlite3.connect(self._db_path) as conn:
             cur = conn.execute(
                 "UPDATE kg_triples SET valid_to = ? "
