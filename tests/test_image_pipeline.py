@@ -164,3 +164,91 @@ def test_fetch_all_images_handles_exceptions_in_gather():
         # Exceptions are caught by gather(return_exceptions=True)
         assert isinstance(result, dict)
         assert len(result) == 0
+
+
+# ── _resolve_from_teacher_assets ────────────────────────────────────
+
+
+def test_resolve_teacher_assets_dedup():
+    """Same query for different specs returns different images (no reuse)."""
+    from clawed.image_pipeline import _resolve_from_teacher_assets
+
+    fake_matches = [
+        {"path": "/tmp/img_a.png", "score": 0.9},
+        {"path": "/tmp/img_b.png", "score": 0.8},
+        {"path": "/tmp/img_c.png", "score": 0.7},
+    ]
+
+    mock_registry = MagicMock()
+    mock_registry.search_images_for_topic.return_value = fake_matches
+
+    # All three fake paths must "exist"
+    with patch("clawed.asset_registry.AssetRegistry", return_value=mock_registry), \
+         patch("clawed.image_pipeline.Path") as mock_path_cls:
+        # Make every Path(match["path"]).exists() return True
+        mock_path_inst = MagicMock()
+        mock_path_inst.exists.return_value = True
+        mock_path_cls.side_effect = lambda p: mock_path_inst if isinstance(p, str) else MagicMock()
+        # But we need unique str() values for dedup tracking
+
+        def path_side_effect(p):
+            if isinstance(p, str):
+                m = MagicMock()
+                m.exists.return_value = True
+                m.__str__ = lambda self, _p=p: _p
+                return m
+            return MagicMock()
+
+        mock_path_cls.side_effect = path_side_effect
+
+        spec_map = {
+            "cell division diagram": "mitosis and meiosis",
+            "DNA structure": "double helix structure",
+        }
+        resolved = _resolve_from_teacher_assets(spec_map, "teacher-1")
+
+        # Both specs should resolve, but to DIFFERENT images
+        assert len(resolved) == 2
+        paths_used = [str(v) for v in resolved.values()]
+        assert len(set(paths_used)) == 2, "Same image used for two specs — dedup failed"
+
+
+def test_resolve_empty_returns_empty():
+    """Empty spec_map produces empty result without errors."""
+    from clawed.image_pipeline import _resolve_from_teacher_assets
+
+    result = _resolve_from_teacher_assets({}, "teacher-1")
+    assert result == {}
+
+
+def test_used_paths_tracking():
+    """Already-used paths are skipped, forcing fallback to next candidate."""
+    from clawed.image_pipeline import _resolve_from_teacher_assets
+
+    # Registry returns the SAME image for both queries
+    single_match = [{"path": "/tmp/only_one.png", "score": 0.9}]
+
+    mock_registry = MagicMock()
+    mock_registry.search_images_for_topic.return_value = single_match
+
+    def path_side_effect(p):
+        if isinstance(p, str):
+            m = MagicMock()
+            m.exists.return_value = True
+            m.__str__ = lambda self, _p=p: _p
+            return m
+        return MagicMock()
+
+    with patch("clawed.asset_registry.AssetRegistry", return_value=mock_registry), \
+         patch("clawed.image_pipeline.Path", side_effect=path_side_effect):
+
+        spec_map = {
+            "spec_a": "context a",
+            "spec_b": "context b",
+        }
+        resolved = _resolve_from_teacher_assets(spec_map, "teacher-1")
+
+        # Only one spec can get the image — the other has no unused candidates
+        assert len(resolved) == 1, (
+            f"Expected 1 resolved (dedup should block reuse), got {len(resolved)}"
+        )
