@@ -63,6 +63,14 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 - MCP server for Claude Code / VS Code integration
 - MIT licensed, no telemetry, no accounts
 
+### What makes this different
+
+Other AI tools generate one thing at a time. Claw-ED generates **everything at once** — lesson plan, handout, slides, differentiated versions, a review game, a learning journey, and a research report. One request, 9 files, in your voice.
+
+Other tools don't know how you teach. Claw-ED **reads your actual files** — your old lessons, your PPTX slides, your assessments — and learns your vocabulary, scaffolding patterns, and teaching style. The output sounds like you wrote it.
+
+Other tools run in the cloud. Claw-ED runs **on your machine**. Your files, your students, your lessons — none of it leaves your computer.
+
 ### Trust model
 
 Claw-ED is a **local-first tool** designed for a teacher's own machine. It reads your files, calls LLM APIs you configure, and writes to `~/.eduagent/`. The web API (if you run `clawed serve`) requires a bearer token and binds to localhost by default. Self-equipping installs packages in `--user` scope only. The Telegram bot runs as a background process on your machine. Nothing is sent anywhere except the LLM provider you choose.
