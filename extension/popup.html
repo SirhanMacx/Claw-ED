@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 320px;
+      font-family: Calibri, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #2C1810;
+    }
+    .header {
+      background: #8B6914;
+      color: #fff;
+      padding: 16px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .header p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      opacity: 0.85;
+    }
+    .body {
+      padding: 16px;
+    }
+    .instructions {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .instructions li {
+      margin-bottom: 8px;
+    }
+    .status {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      text-align: center;
+    }
+    .status.connected {
+      background: #E8F5E9;
+      color: #2D8B4E;
+    }
+    .status.disconnected {
+      background: #FFF3E0;
+      color: #E65100;
+    }
+    a {
+      color: #8B6914;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Claw-ED</h1>
+    <p>Your AI Teaching Partner</p>
+  </div>
+  <div class="body">
+    <div id="status" class="status disconnected">Checking server...</div>
+    <div class="instructions">
+      <p><strong>How to use:</strong></p>
+      <ol>
+        <li>Highlight text on any webpage</li>
+        <li>Right-click &rarr; "Generate Lesson from Selection"</li>
+        <li>Claw-ED generates a full lesson bundle using that text as a primary source</li>
+      </ol>
+      <p><strong>Or:</strong> Right-click &rarr; "Use as Primary Source" to save text for later</p>
+      <p><a href="http://localhost:8000" target="_blank">Open Dashboard</a></p>
+    </div>
+  </div>
+  <script>
+    async function checkServer() {
+      const el = document.getElementById("status");
+      try {
+        const resp = await fetch("http://localhost:8000/api/health");
+        if (resp.ok) {
+          el.className = "status connected";
+          el.textContent = "Connected to Claw-ED";
+        } else {
+          el.className = "status disconnected";
+          el.textContent = "Server error. Run: clawed serve";
+        }
+      } catch {
+        el.className = "status disconnected";
+        el.textContent = "Not connected. Run: clawed serve";
+      }
+    }
+    checkServer();
+  </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+#clawed-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 380px;
+  max-height: 500px;
+  background: #fff;
+  border: 2px solid #8B6914;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  z-index: 2147483647;
+  font-family: Calibri, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.clawed-header {
+  background: #8B6914;
+  color: #fff;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.clawed-header button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.clawed-body {
+  padding: 16px;
+  font-size: 14px;
+  color: #2C1810;
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.clawed-body h3 {
+  margin: 0 0 8px;
+  color: #8B6914;
+}
+
+.clawed-body a {
+  color: #8B6914;
+  text-decoration: underline;
+}
+
+.clawed-body ul {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.clawed-error {
+  color: #c00;
+}

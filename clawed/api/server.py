@@ -77,6 +77,7 @@ def create_app() -> FastAPI:
     from clawed.api.routes.chat import router as chat_router
     from clawed.api.routes.export import public_router as export_public_router
     from clawed.api.routes.export import router as export_router
+    from clawed.api.routes.extension import router as extension_router
     from clawed.api.routes.feedback import router as feedback_router
     from clawed.api.routes.gateway_chat import router as gateway_chat_router
     from clawed.api.routes.generate import router as generate_router
@@ -97,6 +98,16 @@ def create_app() -> FastAPI:
     app.include_router(lessons_router, prefix="/api")
     app.include_router(tools_router, prefix="/api")
     app.include_router(gateway_chat_router, prefix="/api")
+    app.include_router(extension_router, prefix="/api")
+
+    # Allow Chrome extension origin
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins + ["chrome-extension://*"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
     # ── Page auth helper ─────────────────────────────────────────────
 

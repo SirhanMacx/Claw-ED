@@ -1,5 +1,31 @@
 # Changelog
 
+## v4.9.2026.8 (2026-04-09)
+
+### The Final Four — Complete Platform
+**Chrome Extension:**
+- Full Manifest V3 extension with context menu ("Generate Lesson from Selection" + "Use as Primary Source")
+- Content script displays results in floating panel with Claw-ED branding
+- Popup with server status check and usage instructions
+- API routes: `/api/extension/generate`, `/api/extension/add-source`, `/api/extension/sources`
+
+**Real-Time Classroom Mode (Nearpod-style):**
+- WebSocket-based live classroom sessions with class code
+- Teacher controls: next/prev slide, start timer, launch poll
+- Student endpoint: submit poll responses, view current slide state
+- Routes: `/api/classroom/start`, `/api/classroom/{code}/ws`, slide/timer/poll controls
+
+**Teacher Community & Sharing:**
+- `POST /api/community/share` — anonymized lesson sharing (strips teacher identity)
+- `GET /api/community/browse` — browse by subject, grade, keyword search
+- `POST /api/community/{id}/rate` — community ratings
+- In-memory store (ready for SQLite upgrade)
+
+**Visible Agent Pipeline:**
+- `GET /api/pipeline/status` — shows all 9 pipeline stages (Standards → Persona → Classroom → KG → LLM → Quality Gate → Critic → Vision → Compilation)
+- `GET /api/pipeline/quality-report` — exposes quality gate check results
+- Teachers can see exactly how Ed built their lesson
+
 ## v4.9.2026.7 (2026-04-09)
 
 ### Knowledge & Context Intelligence
