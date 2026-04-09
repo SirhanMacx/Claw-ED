@@ -103,7 +103,8 @@
       const token = tokenEl.value.trim();
       const headers = token ? { "Authorization": `Bearer ${token}` } : {};
       try {
-        const resp = await fetch(`${url}/api/health`, { headers });
+        // Use /api/settings (auth-protected) to verify both connection AND token
+        const resp = await fetch(`${url}/api/settings`, { headers });
         if (resp.ok) {
           statusEl.className = "status connected";
           statusEl.textContent = "Connected to Claw-ED";

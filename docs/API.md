@@ -5,14 +5,18 @@ REST API reference for the Claw-ED web server (`clawed serve`).
 ## Base URL
 
 ```
-http://localhost:8080
+http://localhost:8000
 ```
 
-The default port is 8080. Override with the `--port` flag or `EDUAGENT_PORT` environment variable.
+The default port is `8000`. Override with `--port`:
+
+```bash
+clawed serve --port 9000
+```
 
 ## Authentication
 
-All endpoints (except `/api/health` and `/api/share/{token}`) require a bearer token.
+All endpoints (except `/api/health` and public share links) require authentication.
 
 ### Bearer Token
 
@@ -28,9 +32,32 @@ The token is auto-generated on first server start and stored at `~/.eduagent/api
 cat ~/.eduagent/api_token
 ```
 
-### Cookie Auth
+### Browser Auth (Cookie)
 
-For browser sessions, append `?token=YOUR_TOKEN` to any page URL on the first visit. A session cookie (`clawed_token`) is set automatically and persists for 24 hours.
+For browser sessions, use the POST bootstrap endpoint:
+
+```
+POST /api/auth/bootstrap
+Content-Type: application/x-www-form-urlencoded
+
+token=YOUR_TOKEN
+```
+
+This sets an `HttpOnly`, `SameSite=Strict` session cookie (`clawed_token`) and redirects to the dashboard. The cookie persists for 24 hours.
+
+If you visit a protected page without a cookie, you'll see a login form that POSTs to this endpoint automatically.
+
+> **Note:** The old `?token=` URL parameter flow has been removed to prevent token leakage through browser history, bookmarks, and referrer headers.
+
+### Chrome Extension Auth
+
+The Chrome extension stores the API token in `chrome.storage.sync` and sends it as a Bearer header on every request. Configure the token in the extension popup.
+
+### Classroom Student Access
+
+Student-facing classroom routes (`/api/classroom/{code}/state`, `/api/classroom/{code}/respond`, WebSocket) do **not** require a Bearer token. The class code itself serves as the session auth — students get the code from their teacher in class.
+
+Teacher classroom control routes (start session, advance slides, launch polls) require the Bearer token.
 
 ### Localhost Bypass
 
