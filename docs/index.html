@@ -407,12 +407,17 @@ footer a:hover { color: var(--text-bright); }
 <span class="prompt">$ </span><span class="cmd">clawed lesson "Causes of World War II" --grade 10 --standards</span>
 <span class="output">Generating lesson package...</span>
 <span class="output">  Standards: CCSS.RH.9-10.2, CCSS.RH.9-10.6</span>
-<span class="output">  Quality score: 8.7/10</span>
-<span class="highlight">Saved:</span>
-<span class="output">  lesson-plan.pdf</span>
-<span class="output">  slides.pptx</span>
-<span class="output">  student-handout.docx</span>
-<span class="output">  review-game.html</span>
+<span class="output">  Quality gate: 12/12 checks passed</span>
+<span class="highlight">Saved 9 files:</span>
+<span class="output">  teacher_plan.docx      (lesson plan + answer keys)</span>
+<span class="output">  student_packet.docx    (handout, no answers)</span>
+<span class="output">  slides.pptx            (warm brown theme)</span>
+<span class="output">  review_game.html       (interactive)</span>
+<span class="output">  anki_flashcards.tsv    (spaced repetition)</span>
+<span class="output">  kahoot_quiz.csv        (import to Kahoot)</span>
+<span class="output">  narration.txt          (TTS-ready audio script)</span>
+<span class="output">  study_guide.txt        (review sheet)</span>
+<span class="output">  lesson.imscc           (Canvas/Moodle import)</span>
     </div>
   </div>
 </section>
@@ -421,21 +426,22 @@ footer a:hover { color: var(--text-bright); }
 <section id="features">
   <h2>Features</h2>
   <ul class="plain">
-    <li>Voice learning -- ingests your files, extracts your teaching style, generates content that sounds like you</li>
-    <li>Your images, your slides -- extracts maps, cartoons, diagrams from your PPTX files and uses them in generated lessons</li>
-    <li>Animated videos -- timelines, concept maps, cause-effect diagrams rendered as MP4 via Manim</li>
+    <li><strong>Voice learning</strong> -- ingests your files, extracts your teaching style, generates content that sounds like you</li>
+    <li><strong>Quality gate with auto-retry</strong> -- 12 pedagogical checks (Bloom's progression, primary source depth, differentiation specificity, diversity audit). Bad output gets rejected and regenerated with feedback.</li>
+    <li><strong>Your images, your slides</strong> -- extracts maps, cartoons, diagrams from your PPTX files. Vision model filters images for quality before embedding.</li>
+    <li><strong>Structured jigsaws + creative activities</strong> -- timed rotations, graphic organizers, role plays, debates, podcast scripts, gallery walks, mock trials</li>
+    <li><strong>Multi-day project arcs</strong> -- 5-day projects with choice boards, research databases, rubrics, debate prep sheets, culminating performances</li>
+    <li><strong>Export everywhere</strong> -- Teacher DOCX, Student DOCX, PPTX, Anki flashcards, Kahoot quizzes, Common Cartridge (.imscc), audio narration, study guides</li>
+    <li><strong>Autonomous scheduling</strong> -- Ed auto-generates missing lessons at 6am, drafts next week's plans Sunday night, scans standards coverage, and improves its own quality</li>
+    <li><strong>Chrome extension</strong> -- highlight text on any webpage, right-click, generate a lesson</li>
+    <li><strong>Real-time classroom</strong> -- live WebSocket sessions with slide control, timers, and polls. Students connect via class code.</li>
+    <li><strong>Exit ticket auto-grading</strong> -- keyword analysis + formative feedback with sentence starters</li>
+    <li><strong>Adaptive feedback loop</strong> -- exit ticket results feed into next lesson (reteach/extend recommendations)</li>
     <li>Multi-provider -- Anthropic, OpenAI, Google Gemini, Ollama (local or cloud), OpenRouter</li>
-    <li>Interactive model switching -- <code>/models</code> on Telegram to browse and switch between 30+ models</li>
-    <li>22+ file format ingestion -- PDF, DOCX, PPTX, DOC, PPT, XLS, HTML, Markdown, images, and more</li>
-    <li>Lesson packages -- generates plan + slides + handout + game in one command</li>
-    <li>Interactive HTML games -- AI-generated HTML5 games tailored to each lesson, not templates</li>
-    <li>50-state standards alignment -- CCSS, NGSS, C3, and state-specific standards databases built in</li>
-    <li>Quality gates -- every output scored 0-10 before delivery; catches truncated text, answer key leaks, broken HTML</li>
-    <li>Telegram bot -- run <code>clawed bot</code> and generate lessons from your phone</li>
-    <li>Agentic onboarding -- the setup wizard uses AI to guide you through configuration step by step</li>
-    <li>Proactive suggestions -- Ed notices patterns in your usage and suggests relevant content</li>
-    <li>Google Drive integration -- pull files directly from Drive for ingestion</li>
-    <li>Browser-based session viewer -- review and edit generated content in a local web UI</li>
+    <li>51+ agent tools, interactive HTML games, animated videos via Manim</li>
+    <li>50-state standards alignment -- CCSS, NGSS, C3, and state-specific databases</li>
+    <li>Telegram bot with file delivery, Google Drive integration, MCP server</li>
+    <li>Central approval policy -- every tool classified by risk level, sensitive actions require teacher confirmation</li>
     <li>Data stays local -- no accounts, no telemetry, no data collection</li>
   </ul>
 </section>
@@ -536,19 +542,21 @@ clawed lesson "The New Deal" --persona "AP-Rivera"</pre>
 <section id="commands">
   <h2>Commands</h2>
   <pre>
-clawed setup                  # interactive setup wizard
-clawed ingest &lt;dir&gt;           # ingest curriculum files
-clawed lesson &lt;topic&gt;         # generate a lesson package
-clawed game &lt;topic&gt;           # generate an interactive HTML game
-clawed slides &lt;topic&gt;         # generate a slide deck
-clawed assessment &lt;topic&gt;     # generate an assessment
-clawed unit &lt;topic&gt;           # generate a full unit plan
-clawed chat                   # open-ended conversation with Ed
-clawed bot                    # start Telegram bot
-clawed export &lt;format&gt;        # export to PDF, DOCX, PPTX
-clawed standards &lt;state&gt;      # browse standards by state
-clawed config                 # view/edit configuration
-clawed provider &lt;name&gt;        # switch AI provider</pre>
+clawed                                    # chat with Ed
+clawed lesson "Topic" -g 8 -s "US History"  # daily lesson (9+ files)
+clawed unit "Topic" -g 9 -w 3            # multi-week unit
+clawed year-map "US History" -g 8         # 180-day curriculum plan
+clawed assess "Topic" --type crq          # CRQ, DBQ, quiz, rubric
+clawed game create "Topic" -g 8           # interactive HTML game
+clawed simulate create "Topic"            # interactive simulation
+clawed ingest ~/Documents/Lessons/        # teach it your style
+clawed differentiate -l lesson.json       # IEP/504/ELL mods
+clawed bot                                # start Telegram bot
+clawed serve                              # start web dashboard + API
+clawed mcp-server                         # MCP for Claude Code
+clawed schedule list                      # view autonomous tasks
+clawed drive auth                         # connect Google Drive
+clawed setup                              # re-run setup wizard</pre>
   <p>
     Most commands accept <code>--grade</code>, <code>--standards</code>,
     <code>--persona</code>, and <code>--format</code> flags. Run

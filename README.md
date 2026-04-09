@@ -1,6 +1,6 @@
 # Claw-ED
 
-> Built by a teacher who was tired of spending weekends writing lessons.
+> Made by a teacher, for teachers.
 
 An open-source CLI agent that generates complete lesson bundles — plans, handouts, slides, differentiated versions, games, and more — in your teaching voice. Feed it your files. It learns how you teach. Then it does the work for you.
 
@@ -46,32 +46,43 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 
 ## Features
 
-- CLI agent with 48+ tools (lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation)
-- **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum)
+- **51+ agent tools** — lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation, project arcs, and more
+- **Quality gate with auto-retry** — 12 pedagogical checks (Bloom's progression, stimulus-based assessment, differentiation specificity, diversity audit) validate every lesson before delivery. Failures auto-retry with specific feedback.
+- **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum). Vision model filters for quality.
 - **Writes like you** — AI-ism removal strips "delve", "utilize", "leverage" and 70+ other LLM tells so output reads like a teacher wrote it
+- **Structured jigsaws + creative activities** — generates timed rotation schedules, graphic organizers, role plays, debates, podcast scripts, gallery walks, mock trials
+- **Multi-day project arcs** — 5-day projects with choice boards, curated research databases, rubrics, debate prep sheets, and culminating performances (gallery walks, Philosophical Chairs)
+- **Export everywhere** — Teacher DOCX, Student DOCX, PPTX slides, Anki flashcards, Kahoot quizzes, Common Cartridge (.imscc for Canvas/Moodle), audio narration scripts, study guides
 - Interactive curriculum map — visualize how your topics, standards, and vocabulary connect
 - Animated educational videos (timelines, concept maps, cause-effect diagrams) via [Manim](https://www.manim.community/)
 - Ingests PDF, DOCX, PPTX, TXT, MD — extracts teaching style, images, and curriculum structure
 - Semantic search over your curriculum (ONNX MiniLM embeddings, FTS5, embedding-based image matching)
 - [Karpathy-style wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — compiles your files into organized markdown articles
 - [Self-distillation](https://arxiv.org/abs/2604.01193) — learns from your ratings and edits, updates its own soul.md
-- Web search (DuckDuckGo + Playwright), Google Drive integration
+- Web search (DuckDuckGo + Playwright), Google Drive integration, Google Classroom posting
 - 50-state standards alignment (NY Regents, TX STAAR, CA CAASPP, etc.)
 - Telegram bot with file delivery, interactive `/models` selector, shared session memory
+- **Autonomous scheduling** — morning prep auto-generates lessons at 6am, weekly planning drafts next week every Sunday, gap detection scans standards coverage, self-distillation improves output quality
+- **Chrome extension** — highlight text on any webpage, right-click, generate a lesson using that text as a primary source
+- **Real-time classroom mode** — WebSocket-based live sessions with slide control, timers, and polls. Students connect via class code.
+- **Exit ticket auto-grading** — keyword analysis + formative feedback with sentence starter suggestions
+- **Classroom memory** — persistent profile (student count, ELL/IEP needs, tech available) injected into every generation
+- **Adaptive feedback loop** — exit ticket results feed into next lesson (reteach/extend recommendations + parent notifications)
 - Works with Ollama, Anthropic, OpenAI, Google, OpenRouter — interactive model switching
-- Scheduled tasks (morning prep, gap detection, wiki maintenance)
-- Self-equipping — can install Python packages (--user scope) and create YAML tool templates when it needs a capability it doesn't have
-- DOCX, PPTX, PDF, HTML, MP4 export
+- **Central approval policy** — every tool classified by risk level (read_only/write_local/network_call/package_install). Sensitive actions require teacher confirmation.
+- DOCX, PPTX, PDF, HTML, MP4, TSV, CSV, IMSCC, TXT export
 - MCP server for Claude Code / VS Code integration
 - MIT licensed, no telemetry, no accounts
 
 ### What makes this different
 
-Other AI tools generate one thing at a time. Claw-ED generates **everything at once** — lesson plan, handout, slides, differentiated versions, a review game, a learning journey, and a research report. One request, 9 files, in your voice.
+Other AI tools generate one thing at a time. Claw-ED generates **everything at once** — lesson plan, handout, slides, differentiated versions, a review game, a learning journey, flashcards, a Kahoot quiz, and a research report. One request, 9+ files, in your voice.
 
 Other tools don't know how you teach. Claw-ED **reads your actual files** — your old lessons, your PPTX slides, your assessments — and learns your vocabulary, scaffolding patterns, and teaching style. The output sounds like you wrote it.
 
 Other tools run in the cloud. Claw-ED runs **on your machine**. Your files, your students, your lessons — none of it leaves your computer.
+
+Other tools give you a first draft you have to edit. Claw-ED has a **12-check quality gate** that catches summaries instead of real sources, generic differentiation, missing checks for understanding, and Bloom's Level 1 exit tickets. Bad output gets rejected and regenerated automatically — teachers get print-ready lessons.
 
 ### Trust model
 
