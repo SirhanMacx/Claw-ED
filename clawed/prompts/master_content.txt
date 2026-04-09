@@ -20,6 +20,12 @@ This lesson is part of a larger unit:
 
 {teacher_materials}
 
+IMPORTANT: If teacher materials are provided above, you MUST reference or build
+upon at least TWO of them in your lesson. Reuse their graphic organizer formats,
+vocabulary terms, scaffolding structures, and primary sources. Explain in the
+teacher_script which materials you drew from. The teacher's own materials are
+MORE valuable than anything you invent.
+
 CRITICAL: Do NOT use XML tags, angle brackets, or pseudo-markup in your response.
 Do NOT wrap content in tags like <teacher prompt>, <transition>, <script>, etc.
 Write plain text only. The JSON values must contain clean, readable prose.
@@ -132,6 +138,23 @@ NEVER write a bare recall question. "What is photosynthesis?" is banned. "The gr
 - Cognitive progression is REQUIRED: Question 1 = recall/identification, Question 2 = application, Question 3 = analysis or transfer.
 - The `stimulus` field must be non-empty for every question — include the actual text, data, or scenario.
 - `cognitive_level` must be set: "recall", "application", or "analysis".
+
+### Misconceptions (recommended)
+- List 2-3 common student misconceptions about this topic.
+- Format: what students THINK vs what's actually true.
+- Example (history): "Students think the Boston Tea Party was about tea prices. Actually it was about the principle of taxation without representation."
+- Example (science): "Students think heavier objects fall faster. Actually, in a vacuum all objects fall at the same rate regardless of mass."
+
+### Formative Checks (recommended)
+- 2-3 quick questions the teacher can ask MID-LESSON (not the exit ticket).
+- These are verbal or show-of-hands — not written assessments.
+- Purpose: catch confusion BEFORE it compounds.
+- Example: "Thumbs up if you can explain WHY the colonists boycotted British goods. Thumbs down if you're not sure yet."
+
+### Prerequisite Skills (recommended)
+- What students need to know BEFORE this lesson.
+- Be specific: "Students should be able to read a timeline and identify cause-effect relationships."
+- Helps the teacher assess readiness and plan review if needed.
 
 ### Differentiation (MANDATORY — every lesson MUST have all three)
 - `struggling` (IEP/504 students): 3-4 SPECIFIC accommodations that a teacher can implement immediately.
@@ -284,5 +307,20 @@ Respond with ONLY a JSON object (no markdown fencing):
     "materials_needed": [
         "Item 1 — specific enough that a teacher can gather everything before class",
         "Item 2"
+    ],
+
+    "misconceptions": [
+        "Common misunderstanding 1 that students often have about this topic",
+        "Common misunderstanding 2 — include what students THINK vs what's actually true"
+    ],
+
+    "formative_checks": [
+        "Quick check question to ask mid-lesson (NOT the exit ticket — these are verbal or show-of-hands)",
+        "Another check-for-understanding that catches confusion before it compounds"
+    ],
+
+    "prerequisite_skills": [
+        "Skill or concept students need before this lesson",
+        "Prior knowledge that today's lesson builds on"
     ]
 }

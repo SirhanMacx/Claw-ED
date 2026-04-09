@@ -1,29 +1,34 @@
 # Roadmap
 
-Current version: **v4.8.2026.10**
+Current version: **v4.8.2026.11**
 
-## v4.9 — Next priorities
+## v4.9 — Architecture + Ecosystem
 
-### Semantic knowledge graph (Graphify deep integration)
+### Architecture cleanup (from audit)
+- [ ] **Database consolidation**: reduce 10 SQLite DBs to 3-4
+- [ ] **Path centralization**: complete paths.py migration for all modules
+- [ ] **Test coverage**: add tests for export_pptx, generation, models (30 untested modules)
+- [ ] **conftest simplification**: one env var patch instead of 19 monkeypatches
+
+### Semantic knowledge graph (Graphify)
 - [ ] **LLM-powered entity extraction**: replace heuristic kg_extractor.py
-  with semantic extraction. Source: https://github.com/safishamsi/graphify
+  Source: https://github.com/safishamsi/graphify
 - [ ] **Leiden community detection**: cluster related curriculum concepts
-- [ ] **Multimodal extraction**: analyze PPTX diagrams/maps, not just text
+- [ ] **Actionable curriculum map**: gap analysis, prerequisite chains, material links
 
-### Ingestion improvements
-- [ ] **DOCX weighting**: lesson plans rank higher than slide bullets
-- [ ] **Dedup**: hash-based skip for same lesson in .doc + .docx + .pdf
-- [ ] **Background ingest with progress**: daemon thread + Telegram updates
+### Teacher experience
+- [ ] **Slide template matching**: extract fonts/colors from teacher's PPTX
+- [ ] **Year planner**: generate full 180-day curriculum from standards
+- [ ] **Lesson revision tool**: improve one section without full regeneration
+- [ ] **Student performance tracking**: integrate with Google Classroom/Canvas
+- [ ] **Real-time classroom mode**: teacher controls journey step-by-step
 
-### Slide quality
-- [ ] **Slide templates**: match teacher's existing style (fonts, colors)
-- [ ] **Smarter image placement**: context-aware placement of teacher images
-
-## Other priorities
-- [ ] Codex/OpenAI OAuth pathway investigation
-- [ ] Visible bot mode — `clawed bot --visible`
-- [ ] Onboarding multi-provider
-- [ ] End-to-end integration test (setup → ingest → generate → export)
+### Growth
+- [ ] **Demo GIF**: 30-second terminal recording for README
+- [ ] **YouTube walkthrough**: 2-minute setup + generation demo
+- [ ] **Product Hunt launch**: prep listing + materials
+- [ ] **School district pilot**: 3 schools, compliance docs, training template
+- [ ] **Chrome extension**: quick lesson gen from any webpage
 
 ## Recently shipped
 

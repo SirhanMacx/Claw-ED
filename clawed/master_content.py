@@ -148,6 +148,20 @@ class MasterContent(BaseModel):
     homework: str | None = None
     materials_needed: list[str] = Field(default_factory=list)
 
+    # v4.8: Optional enrichment fields (don't break existing generation)
+    misconceptions: list[str] = Field(
+        default_factory=list,
+        description="Common student misconceptions to watch for during this lesson",
+    )
+    formative_checks: list[str] = Field(
+        default_factory=list,
+        description="Mid-lesson check-for-understanding questions (distinct from exit ticket)",
+    )
+    prerequisite_skills: list[str] = Field(
+        default_factory=list,
+        description="Skills students should have before this lesson",
+    )
+
     # ── backwards-compat bridge ────────────────────────────────────────────
 
     def to_daily_lesson(self) -> "DailyLesson":  # noqa: F821 — resolved at runtime

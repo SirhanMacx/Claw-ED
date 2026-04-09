@@ -66,6 +66,14 @@ VISUALS — DO NOT USE IMAGE FILES. Create ALL visuals programmatically:
 - Go ABOVE AND BEYOND visually. This should look like a real game, not a \
   school worksheet with buttons.
 
+ACCESSIBILITY (required — students with disabilities must be able to play):
+- Game MUST support keyboard-only navigation (no mouse required).
+- Add ARIA labels to all interactive elements.
+- Use minimum 4.5:1 color contrast ratio for all text.
+- Include a 'Skip to main content' link as the first focusable element.
+- All images must have descriptive alt text.
+- Timer-based activities must have a pause button.
+
 WHAT MAKES A GREAT LEARNING GAME:
 - The mechanic TEACHES, not just tests. Students learn through the gameplay.
 - Wrong answers give feedback that explains WHY it's wrong.

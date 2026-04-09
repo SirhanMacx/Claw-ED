@@ -19,6 +19,23 @@ from clawed.database import Database
 # ── Rate Limiter (in-memory, per-process) ────────────────────────────
 
 _rate_store: dict[str, list[float]] = defaultdict(list)
+_rate_request_count: int = 0
+
+
+def _cleanup_rate_store(window: int) -> None:
+    """Remove stale entries from the rate store to prevent memory leaks.
+
+    Called every 100th request. Removes timestamps older than the window
+    and deletes keys that have become empty.
+    """
+    now = time.time()
+    empty_keys = []
+    for key in list(_rate_store.keys()):
+        _rate_store[key] = [t for t in _rate_store[key] if t > now - window]
+        if not _rate_store[key]:
+            empty_keys.append(key)
+    for key in empty_keys:
+        del _rate_store[key]
 
 
 class _RateLimiter:
@@ -33,6 +50,8 @@ class _RateLimiter:
         def decorator(func):
             @wraps(func)
             async def wrapper(*args, **kwargs):
+                global _rate_request_count
+
                 # Extract request from args or kwargs
                 request = kwargs.get("request")
                 if request is None:
@@ -46,7 +65,12 @@ class _RateLimiter:
                     key = f"{client}:{func.__name__}"
                     now = time.time()
 
-                    # Prune old timestamps
+                    # Periodic full cleanup to prevent memory leak
+                    _rate_request_count += 1
+                    if _rate_request_count % 100 == 0:
+                        _cleanup_rate_store(window)
+
+                    # Prune old timestamps for this key
                     _rate_store[key] = [
                         t for t in _rate_store[key] if t > now - window
                     ]

@@ -552,17 +552,23 @@ class GenerateLessonBundleTool:
             quality_parts = []
             try:
                 if voice_score and voice_score > 0:
-                    quality_parts.append(f"Voice match: {voice_score:.1f}/5.0")
+                    quality_parts.append(f"{voice_score:.1f}/5.0 voice match")
                 if report.images_embedded:
                     quality_parts.append(f"{report.images_embedded} images")
-                if report.quality_review_passed:
-                    quality_parts.append("Quality: PASSED")
-                elif report.quality_review_passed is False:
-                    quality_parts.append("Quality: needs review")
+                if standards_list:
+                    # Show up to 4 standard codes in short form
+                    short_codes = []
+                    for s in standards_list[:4]:
+                        code = s.split(":")[0].strip()
+                        short_codes.append(code)
+                    std_str = ", ".join(short_codes)
+                    if len(standards_list) > 4:
+                        std_str += f" (+{len(standards_list) - 4} more)"
+                    quality_parts.append(f"Standards: {std_str}")
             except Exception:
                 pass
             if quality_parts:
-                lines.append(f"\n[{' | '.join(quality_parts)}]")
+                lines.append(f"\nQuality: {' | '.join(quality_parts)}")
         elif generated_files:
             lines.append(
                 f"Generated {len(generated_files)} of 3 files for: "

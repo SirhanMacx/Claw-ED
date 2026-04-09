@@ -129,8 +129,11 @@ pytest tests/
 
 PRs welcome. Built by a teacher in New York. If you're a teacher, a developer, or just curious — jump in.
 
+- [Getting Started](docs/GETTING_STARTED.md) — 5-minute setup guide
+- [FAQ](docs/FAQ.md) — common questions
 - [Issues](https://github.com/SirhanMacx/Claw-ED/issues)
 - [Discussions](https://github.com/SirhanMacx/Claw-ED/discussions)
+- [Security](SECURITY.md) — privacy and data handling
 
 ---
 
