@@ -697,7 +697,28 @@ class EduAgentTelegramBot:
             api.send_message(chat_id, response.text, reply_markup=reply_markup)
 
         for file_path in response.files:
-            api.send_document(chat_id, file_path)
+            # Add descriptive caption based on file type
+            name = file_path.name if hasattr(file_path, "name") else str(file_path)
+            caption = ""
+            if "teacher" in name.lower():
+                caption = "Teacher lesson plan (with answer key)"
+            elif "student" in name.lower():
+                caption = "Student handout"
+            elif "slides" in name.lower() or name.endswith(".pptx"):
+                caption = "Slideshow"
+            elif "diff_iep" in name.lower() or "diff_504" in name.lower():
+                caption = "IEP/504 accommodations"
+            elif "diff_ell" in name.lower():
+                caption = "ELL scaffolding"
+            elif "diff_advanced" in name.lower():
+                caption = "Gifted extensions"
+            elif "game" in name.lower():
+                caption = "Review game (open in browser)"
+            elif "journey" in name.lower():
+                caption = "Learning journey (open in browser)"
+            elif "research" in name.lower():
+                caption = "Research report"
+            api.send_document(chat_id, file_path, caption=caption)
 
 
 def run_bot(token: str | None = None, force: bool = False, data_dir=None) -> None:
