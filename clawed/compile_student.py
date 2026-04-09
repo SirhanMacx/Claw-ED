@@ -9,6 +9,7 @@ No LLM calls — pure mechanical compilation.
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,67 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _BLANK = "_____________"
+
+
+def _count_syllables(word: str) -> int:
+    """Estimate syllable count for a single word using a vowel-group heuristic."""
+    word = word.lower().strip()
+    if not word:
+        return 1
+    # Remove trailing silent-e
+    if word.endswith("e") and len(word) > 2:
+        word = word[:-1]
+    # Count vowel groups
+    count = len(re.findall(r"[aeiouy]+", word))
+    return max(count, 1)
+
+
+def estimate_reading_level(text: str) -> str:
+    """Estimate reading level using Flesch-Kincaid grade level formula.
+
+    FK Grade = 0.39 * (words/sentences) + 11.8 * (syllables/words) - 15.59
+
+    Returns one of:
+        "Grade 5-6"  — simple vocabulary, short sentences
+        "Grade 7-8"  — standard academic vocabulary
+        "Grade 9-10" — complex vocabulary, longer sentences
+        "Grade 11-12" — advanced academic language
+        "College"    — specialized terminology
+    """
+    if not text or not text.strip():
+        return "Grade 7-8"
+
+    # Split into sentences on . ! ? (with basic filtering for abbreviations)
+    sentences = re.split(r"[.!?]+", text)
+    sentences = [s.strip() for s in sentences if len(s.strip().split()) >= 3]
+    if not sentences:
+        return "Grade 7-8"
+
+    # Split into words (letters/apostrophes only)
+    words = re.findall(r"[a-zA-Z']+", text)
+    if not words:
+        return "Grade 7-8"
+
+    total_words = len(words)
+    total_sentences = len(sentences)
+    total_syllables = sum(_count_syllables(w) for w in words)
+
+    words_per_sentence = total_words / total_sentences
+    syllables_per_word = total_syllables / total_words
+
+    # Flesch-Kincaid Grade Level
+    fk_grade = 0.39 * words_per_sentence + 11.8 * syllables_per_word - 15.59
+
+    if fk_grade <= 6.5:
+        return "Grade 5-6"
+    elif fk_grade <= 8.5:
+        return "Grade 7-8"
+    elif fk_grade <= 10.5:
+        return "Grade 9-10"
+    elif fk_grade <= 12.5:
+        return "Grade 11-12"
+    else:
+        return "College"
 
 
 async def compile_student_view(
@@ -93,6 +155,15 @@ async def compile_student_view(
 
     doc.add_heading(master.title, level=0)
 
+    # Estimate reading level from all student-facing text
+    reading_sample_parts = [master.topic, master.objective]
+    for section in master.direct_instruction:
+        reading_sample_parts.append(section.content)
+    for ps in master.primary_sources:
+        reading_sample_parts.append(ps.content_text)
+    reading_sample = " ".join(reading_sample_parts)
+    reading_level = estimate_reading_level(reading_sample)
+
     meta_lines = [
         f"Subject: {master.subject}  |  Grade: {master.grade_level}",
         f"Topic: {master.topic}",
@@ -100,6 +171,9 @@ async def compile_student_view(
     ]
     for line in meta_lines:
         _para(line)
+
+    _para(f"Reading Level: {reading_level}", italic=True, size_pt=9,
+          color=(100, 100, 100))
 
     doc.add_paragraph("Name: ___________________________  Date: ___________  Period: _____")
     doc.add_paragraph("")

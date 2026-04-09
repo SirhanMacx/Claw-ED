@@ -256,6 +256,48 @@ async def compile_teacher_view(
         _heading("Homework")
         _para(master.homework)
 
+    # ── Misconceptions (teacher-only) ────────────────────────────────
+
+    if getattr(master, "misconceptions", None):
+        _heading("Common Misconceptions to Watch For")
+        _para(
+            "Students often have these misunderstandings about this topic. "
+            "Listen for them during discussion and address directly.",
+            size_pt=10, italic=True, color=(0x66, 0x66, 0x66),
+        )
+        for item in master.misconceptions:
+            p = doc.add_paragraph(style="List Bullet")
+            p.add_run(item)
+        doc.add_paragraph("")
+
+    # ── Formative Checks (teacher-only) ──────────────────────────────
+
+    if getattr(master, "formative_checks", None):
+        _heading("Mid-Lesson Check-for-Understanding")
+        _para(
+            "Ask these during instruction — verbal or show-of-hands. "
+            "Catch confusion before it compounds.",
+            size_pt=10, italic=True, color=(0x66, 0x66, 0x66),
+        )
+        for item in master.formative_checks:
+            p = doc.add_paragraph(style="List Bullet")
+            p.add_run(item)
+        doc.add_paragraph("")
+
+    # ── Prerequisites (teacher-only) ─────────────────────────────────
+
+    if getattr(master, "prerequisite_skills", None):
+        _heading("Prerequisite Skills")
+        _para(
+            "Students should have these before this lesson. "
+            "If not, plan a quick review.",
+            size_pt=10, italic=True, color=(0x66, 0x66, 0x66),
+        )
+        for item in master.prerequisite_skills:
+            p = doc.add_paragraph(style="List Bullet")
+            p.add_run(item)
+        doc.add_paragraph("")
+
     # ── Save ──────────────────────────────────────────────────────────
 
     safe = safe_filename(master.title)

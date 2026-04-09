@@ -148,6 +148,16 @@ class MasterContent(BaseModel):
     homework: str | None = None
     materials_needed: list[str] = Field(default_factory=list)
 
+    # v4.8: Lesson format tracking for variety enforcement
+    lesson_format: str = Field(
+        default="document_analysis",
+        description=(
+            "Pedagogical format: document_analysis, station_rotation, "
+            "socratic_seminar, jigsaw, gallery_walk, gradual_release, "
+            "simulation, lecture_discussion"
+        ),
+    )
+
     # v4.8: Optional enrichment fields (don't break existing generation)
     misconceptions: list[str] = Field(
         default_factory=list,

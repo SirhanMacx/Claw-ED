@@ -370,6 +370,25 @@ class GenerateLessonBundleTool:
             logger.error("Slides compile failed: %s", e)
             errors.append(f"Slideshow PPTX failed: {e}")
 
+        # ── Track lesson generation in quality DB ──────────────────────
+        if generated_files:
+            try:
+                from clawed.agent_core.quality import record_generation
+                record_generation(
+                    teacher_id=context.teacher_id,
+                    generation_type="lesson_bundle",
+                    topic=topic,
+                    subject=subject,
+                    grade=grade,
+                    scores={"format": activity_type, "files_generated": len(generated_files)},
+                )
+                logger.info(
+                    "Tracked lesson generation: topic='%s', format='%s'",
+                    topic, activity_type,
+                )
+            except Exception as e:
+                logger.debug("Lesson count tracking failed: %s", e)
+
         # ── Quality review (NLAH Stage 4 — non-blocking) ────────────
         try:
             from clawed.llm import LLMClient

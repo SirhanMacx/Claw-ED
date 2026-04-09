@@ -137,13 +137,22 @@ class CurriculumKB:
             # Skip very short lines (noise)
             if len(stripped) < 4:
                 continue
+            # Skip OOXML internal paths (PPTX/DOCX zip structure)
+            if '[Content_Types]' in stripped or '.xmlPK' in stripped or '_rels/' in stripped:
+                continue
+            # Skip image format headers (embedded binary images)
+            if re.search(r'\bJFIF\b|\bPNG\b|\bIDAT\b|\bIEND\b', stripped):
+                continue
+            # Skip lines with 3+ consecutive '?' (decoded binary garbage)
+            if '???' in stripped:
+                continue
             # Count actual letters (the stuff that matters in education)
             letters = sum(1 for c in stripped if c.isalpha())
             total = len(stripped)
-            # Line must be >40% letters to be real text (not binary/encoded)
-            if total > 0 and letters / total > 0.4:
-                # Must contain at least two real words (3+ letters each)
-                if len(re.findall(r'[A-Za-z]{3,}', stripped)) >= 2:
+            # Line must be >50% letters to be real text (not binary/encoded)
+            if total > 0 and letters / total > 0.5:
+                # Must contain at least three real words (3+ letters each)
+                if len(re.findall(r'[A-Za-z]{3,}', stripped)) >= 3:
                     clean_lines.append(stripped)
 
         text = '\n'.join(clean_lines)
@@ -270,6 +279,51 @@ class CurriculumKB:
             )
         return added
 
+    @staticmethod
+    def _apply_quality_boost(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Post-process search results with quality-based score boosts.
+
+        Favors longer, lesson-plan-style chunks over short noise:
+        - Chunks >200 words get 1.2x boost (more context = more useful)
+        - Lesson plan markers (Do Now, Exit Ticket, etc.) get 1.3x boost
+        - Vocabulary/key terms chunks get 1.1x boost
+        - Very short chunks (<50 words) get 0.7x penalty
+        """
+        import re
+
+        lesson_plan_re = re.compile(
+            r'\b(Do\s+Now|Exit\s+Ticket|Objective|Aim)\b', re.IGNORECASE,
+        )
+        vocab_re = re.compile(
+            r'\b(vocabulary|key\s+terms)\b', re.IGNORECASE,
+        )
+
+        for result in results:
+            text = result.get("chunk_text", "")
+            word_count = len(text.split())
+            boost = 1.0
+
+            # Penalize very short chunks
+            if word_count < 50:
+                boost *= 0.7
+            # Boost long, content-rich chunks
+            elif word_count > 200:
+                boost *= 1.2
+
+            # Boost lesson plan chunks (most actionable for generation)
+            if lesson_plan_re.search(text):
+                boost *= 1.3
+
+            # Boost vocabulary-rich chunks
+            if vocab_re.search(text):
+                boost *= 1.1
+
+            result["similarity"] = result.get("similarity", 0) * boost
+
+        # Re-sort by boosted similarity and return
+        results.sort(key=lambda x: x["similarity"], reverse=True)
+        return results
+
     def search(
         self,
         teacher_id: str,
@@ -342,28 +396,33 @@ class CurriculumKB:
             return []
 
         # Try numpy vectorized similarity (100x faster)
+        results = None
         try:
-            return self._search_numpy(query_embedding, rows, top_k)
+            results = self._search_numpy(query_embedding, rows, top_k)
         except ImportError:
             pass
 
-        # Fallback: Python loop
-        scored = []
-        for row in rows:
-            stored = _parse_embedding(row["embedding"])
-            sim = self._embedder.cosine_similarity(query_embedding, stored)
-            if sim > 0.05:
-                scored.append({
-                    "doc_title": row["doc_title"],
-                    "source_path": row["source_path"],
-                    "chunk_text": row["chunk_text"],
-                    "metadata": json.loads(row["metadata"]),
-                    "created_at": row["created_at"],
-                    "similarity": sim,
-                })
+        if results is None:
+            # Fallback: Python loop
+            scored = []
+            for row in rows:
+                stored = _parse_embedding(row["embedding"])
+                sim = self._embedder.cosine_similarity(query_embedding, stored)
+                if sim > 0.05:
+                    scored.append({
+                        "doc_title": row["doc_title"],
+                        "source_path": row["source_path"],
+                        "chunk_text": row["chunk_text"],
+                        "metadata": json.loads(row["metadata"]),
+                        "created_at": row["created_at"],
+                        "similarity": sim,
+                    })
 
-        scored.sort(key=lambda x: x["similarity"], reverse=True)
-        return scored[:top_k]
+            scored.sort(key=lambda x: x["similarity"], reverse=True)
+            results = scored[:top_k]
+
+        # Post-processing: boost quality signals to surface best materials
+        return self._apply_quality_boost(results)
 
     @staticmethod
     def _search_numpy(

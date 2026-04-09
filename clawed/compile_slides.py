@@ -452,6 +452,34 @@ async def compile_slides(
                 )
             top_offset += Inches(2.0)
 
+    # ── Speaker notes: misconceptions + formative checks ───────────
+
+    # Add to the FIRST instruction slide's notes (visible in presenter view)
+    notes_parts = []
+    if getattr(master, "misconceptions", None):
+        notes_parts.append("MISCONCEPTIONS TO WATCH FOR:")
+        for m in master.misconceptions:
+            notes_parts.append(f"  - {m}")
+    if getattr(master, "formative_checks", None):
+        notes_parts.append("\nMID-LESSON CHECKS:")
+        for fc in master.formative_checks:
+            notes_parts.append(f"  - {fc}")
+    if getattr(master, "prerequisite_skills", None):
+        notes_parts.append("\nPREREQUISITES:")
+        for ps in master.prerequisite_skills:
+            notes_parts.append(f"  - {ps}")
+
+    if notes_parts and len(prs.slides) > 1:
+        try:
+            # Add to second slide (first instruction slide, not title)
+            target_slide = prs.slides[1]
+            if not target_slide.has_notes_slide:
+                target_slide.notes_slide  # creates notes slide
+            notes_tf = target_slide.notes_slide.notes_text_frame
+            notes_tf.text = "\n".join(notes_parts)
+        except Exception:
+            pass  # Notes are optional, never block
+
     # ── Save ──────────────────────────────────────────────────────────
 
     safe = safe_filename(master.title)
