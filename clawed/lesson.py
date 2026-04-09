@@ -200,6 +200,16 @@ async def generate_master_content(
         .replace("{standards}", standards_text)
         .replace("{few_shot_context}", few_shot_context)
         .replace("{teacher_materials}", teacher_materials)
+        .replace("{standards_framework}", (
+            config.teacher_profile.standards_framework
+            if config and config.teacher_profile
+            else "state standards"
+        ))
+        .replace("{state}", (
+            config.teacher_profile.state
+            if config and config.teacher_profile
+            else ""
+        ))
     )
 
     system = _build_system_prompt(persona, config, subject=unit.subject)
