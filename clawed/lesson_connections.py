@@ -43,9 +43,9 @@ def suggest_connections(
     }
 
     try:
-        from clawed.agent_core.memory.knowledge_graph import KnowledgeGraph
+        from clawed.agent_core.memory.knowledge_graph import CurriculumKG
 
-        kg = KnowledgeGraph()
+        kg = CurriculumKG()
 
         # Get related topics
         related = kg.query_related(teacher_id, topic, direction="both")

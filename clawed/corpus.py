@@ -151,14 +151,41 @@ def get_examples(
     """
     init_corpus_db()
 
+    # Normalize subject for flexible matching
+    # "US History" -> also matches "social studies", "history"
+    subject_aliases = {
+        "us history": "social studies",
+        "global history": "social studies",
+        "world history": "social studies",
+        "american history": "social studies",
+        "government": "social studies",
+        "civics": "social studies",
+        "economics": "social studies",
+        "geography": "social studies",
+        "english": "ela",
+        "language arts": "ela",
+        "reading": "ela",
+        "writing": "ela",
+        "literature": "ela",
+        "biology": "science",
+        "chemistry": "science",
+        "physics": "science",
+        "earth science": "science",
+        "algebra": "math",
+        "geometry": "math",
+        "calculus": "math",
+        "mathematics": "math",
+    }
+    normalized_subject = subject_aliases.get(subject.lower(), subject.lower())
+
     query = """
         SELECT content_json, quality_score, topic, grade_level, framework
         FROM corpus_examples
         WHERE content_type = ?
-        AND subject = ?
+        AND (subject = ? OR subject = ?)
         AND quality_score >= ?
     """
-    params: list = [content_type, subject.lower(), min_quality]
+    params: list = [content_type, subject.lower(), normalized_subject, min_quality]
 
     if grade_level:
         query += " AND (grade_level = ? OR grade_level LIKE ?)"
