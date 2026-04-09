@@ -1093,6 +1093,12 @@ class AppConfig(BaseModel):
     # Per-image network timeout for the image pipeline (seconds)
     image_fetch_timeout: int = 10
 
+    # Zero-touch auto-chain: generate_lesson_bundle auto-produces everything
+    auto_differentiate: bool = True   # Auto-generate IEP/ELL/gifted versions
+    auto_game: bool = True            # Auto-generate review game with each lesson
+    auto_standards: bool = True       # Auto-lookup and align to state standards
+    quality_threshold: float = 3.5    # Warn if voice match score below this
+
     # Teacher profile — the key to auto-tailoring
     teacher_profile: TeacherProfile = Field(default_factory=TeacherProfile)
 

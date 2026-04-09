@@ -427,6 +427,7 @@ class EduAgentTelegramBot:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.api = TelegramAPI(token)
         self._running = False
+        self._chat_ids: set[int] = set()  # Track active teacher chat IDs
 
         from clawed.gateway import Gateway
         self.gateway = Gateway()
@@ -496,8 +497,22 @@ class EduAgentTelegramBot:
                         logger.warning("Error processing pending: %s", e)
         except Exception:
             pass
+        _morning_prep_date = None
+
         while self._running:
             try:
+                # Morning prep: proactive message at 6 AM daily
+                try:
+                    from datetime import date
+                    from datetime import datetime as _dt
+                    now = _dt.now()
+                    if (now.hour == 6 and now.minute < 5
+                            and _morning_prep_date != date.today()):
+                        _morning_prep_date = date.today()
+                        self._send_morning_prep()
+                except Exception:
+                    pass
+
                 updates = self.api.get_updates(offset=offset, timeout=30)
                 for update in updates:
                     offset = update["update_id"] + 1
@@ -512,9 +527,42 @@ class EduAgentTelegramBot:
         self._loop.close()
         self.api.close()
 
+    def _send_morning_prep(self) -> None:
+        """Send proactive morning prep message to the teacher."""
+        try:
+            # Get the teacher's name from config
+            import json
+            from pathlib import Path as _Path
+            cfg_path = _Path.home() / ".eduagent" / "config.json"
+            name = "there"
+            if cfg_path.exists():
+                cfg = json.loads(cfg_path.read_text())
+                raw = cfg.get("teacher_profile", {}).get("name", "")
+                if raw:
+                    parts = raw.strip().split()
+                    name = " ".join(parts[:2]) if len(parts) >= 2 else parts[0]
+
+            msg = (
+                f"Good morning, {name}! Ready to prep today's lessons.\n\n"
+                "What topics are you covering today? I'll generate "
+                "everything — lesson plans, handouts, slides, differentiated "
+                "versions, and a review game — in a few minutes."
+            )
+            # Send to the most recent chat
+            for chat_id in list(self._chat_ids)[:1]:
+                self.api.send_message(chat_id, msg)
+                logger.info("Morning prep message sent to %s", chat_id)
+        except Exception as e:
+            logger.debug("Morning prep failed: %s", e)
+
     def _process_update(self, update: dict) -> None:
         """Route an update through the Gateway."""
         try:
+            # Track chat IDs for proactive messaging (morning prep)
+            msg = update.get("message") or update.get("callback_query", {}).get("message")
+            if msg and msg.get("chat", {}).get("id"):
+                self._chat_ids.add(msg["chat"]["id"])
+
             if "callback_query" in update:
                 cb = update["callback_query"]
                 chat_id = cb["message"]["chat"]["id"]

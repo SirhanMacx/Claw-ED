@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas Test</title>
+</head>
+<body style="margin:0;background:#1a1a2e">
+<canvas id="c" style="width:100%;height:100%;position:absolute;top:0;left:0"></canvas>
+<script>
+var c = document.getElementById('c');
+var ctx = c.getContext('2d');
+c.width = window.innerWidth || document.documentElement.clientWidth || 800;
+c.height = window.innerHeight || document.documentElement.clientHeight || 600;
+
+ctx.fillStyle = '#e94560';
+ctx.beginPath();
+ctx.arc(c.width/2, c.height/2, 50, 0, Math.PI*2);
+ctx.fill();
+
+ctx.fillStyle = '#ffffff';
+ctx.font = '24px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Canvas works!', c.width/2, c.height/2 + 80);
+
+var topics = ['American Revolution', 'Civil War', 'Constitution', 'Cold War', 'WWII'];
+for (var i = 0; i < topics.length; i++) {
+    var angle = Math.PI * 2 * i / topics.length;
+    var x = c.width/2 + Math.cos(angle) * 200;
+    var y = c.height/2 + Math.sin(angle) * 200;
+    ctx.strokeStyle = 'rgba(100,100,130,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(c.width/2, c.height/2);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.fillStyle = '#4a9eff';
+    ctx.beginPath();
+    ctx.arc(x, y, 15, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#e6e6e6';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(topics[i], x, y - 20);
+}
+</script>
+</body>
+</html>

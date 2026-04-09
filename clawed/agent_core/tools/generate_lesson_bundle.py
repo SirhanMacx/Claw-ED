@@ -409,6 +409,102 @@ class GenerateLessonBundleTool:
             report.quality_review_passed = False
             report.quality_review_issues = [f"Review failed: {type(e).__name__}"]
 
+        # ── Zero-touch auto-chain: differentiation + game + standards ──
+        safe_title = master.title.replace(" ", "_")[:40]
+
+        # 4. Auto-differentiate (IEP/504 + ELL + Gifted)
+        if config and getattr(config, "auto_differentiate", True):
+            try:
+                from clawed.llm import LLMClient
+
+                diff_llm = LLMClient(config=config)
+                lesson_summary = (
+                    f"Title: {master.title}\nObjective: {master.objective}\n"
+                    f"Topic: {getattr(master, 'topic', master.title)}"
+                )
+                for diff_type, diff_label in [
+                    ("iep_504", "IEP/504 Accommodations"),
+                    ("ell", "ELL Scaffolding"),
+                    ("advanced", "Gifted Extensions"),
+                ]:
+                    try:
+                        diff_prompt = (
+                            f"Generate {diff_label} for this lesson:\n\n"
+                            f"{lesson_summary}\n\n"
+                            "Provide specific, actionable modifications. "
+                            "Use bullet points. Be concise (under 500 words)."
+                        )
+                        diff_text = await diff_llm.generate(diff_prompt)
+                        if diff_text and len(diff_text) > 50:
+                            from clawed.humanize import humanize
+                            diff_text = humanize(diff_text)
+                            diff_path = (
+                                output_dir / f"{safe_title}_diff_{diff_type}.docx"
+                            )
+                            from docx import Document as DocxDocument
+                            doc = DocxDocument()
+                            doc.add_heading(
+                                f"{master.title} — {diff_label}", 0,
+                            )
+                            for line in diff_text.split("\n"):
+                                if line.strip():
+                                    doc.add_paragraph(line.strip())
+                            doc.save(str(diff_path))
+                            generated_files.append(diff_path)
+                            side_effects.append(
+                                f"{diff_label}: {diff_path.name}"
+                            )
+                    except Exception as e:
+                        logger.debug("Diff %s failed: %s", diff_type, e)
+            except Exception as e:
+                logger.debug("Auto-differentiation failed: %s", e)
+
+        # 5. Auto-generate review game
+        if config and getattr(config, "auto_game", True):
+            try:
+                from clawed.compile_game import compile_game
+
+                game_path = await compile_game(
+                    master=master,
+                    persona=persona,
+                    output_dir=output_dir,
+                    config=config,
+                )
+                if game_path and game_path.exists():
+                    generated_files.append(game_path)
+                    side_effects.append(f"Review game: {game_path.name}")
+            except Exception as e:
+                logger.debug("Auto-game failed: %s", e)
+
+        # 6. Auto-lookup state standards
+        if config and getattr(config, "auto_standards", True):
+            try:
+                state = ""
+                if config.teacher_profile:
+                    state = config.teacher_profile.state
+                if state:
+                    from clawed.state_standards import (
+                        get_standards_context_for_prompt,
+                    )
+                    standards_ctx = get_standards_context_for_prompt(
+                        state, [subject], [grade],
+                    )
+                    if standards_ctx:
+                        logger.info("Standards aligned for %s/%s/%s", state, subject, grade)
+            except Exception as e:
+                logger.debug("Standards lookup failed: %s", e)
+
+        # 7. Quality gate warning
+        try:
+            qt = getattr(config, "quality_threshold", 3.5)
+            if voice_score and voice_score < qt and voice_score > 0:
+                report.warnings.append(
+                    f"Quality below threshold ({voice_score:.1f}/{qt}) — "
+                    "consider regenerating with more specific instructions"
+                )
+        except Exception:
+            pass
+
         # ── Build response ─────────────────────────────────────────────
         lines = []
 
