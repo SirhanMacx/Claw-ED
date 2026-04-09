@@ -98,7 +98,7 @@ Lightweight liveness check. No authentication required. No database or LLM calls
 ```json
 {
   "status": "ok",
-  "version": "4.6.2026"
+  "version": "4.9.2026.14"
 }
 ```
 
@@ -120,7 +120,7 @@ Full diagnostics including database stats and LLM connection test. Requires auth
   "units_generated": 12,
   "lessons_generated": 48,
   "db_size_mb": 3.41,
-  "version": "4.6.2026"
+  "version": "4.9.2026.14"
 }
 ```
 
@@ -237,7 +237,7 @@ Upload teaching materials (lesson plans, handouts, slideshows) to build the teac
 Supported formats: PDF, DOCX, DOC, PPTX, PPT, TXT, MD, HTML, XLSX.
 
 ```bash
-curl -X POST http://localhost:8080/api/ingest \
+curl -X POST http://localhost:8000/api/ingest \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "files=@my_lesson_plan.docx" \
   -F "files=@unit_slides.pptx"
@@ -751,9 +751,9 @@ Import a lesson from a share URL or token.
 
 ```json
 {
-  "url": "http://localhost:8080/shared/abc123token",
+  "url": "http://localhost:8000/shared/abc123token",
   "token": null,
-  "server": "http://localhost:8080"
+  "server": "http://localhost:8000"
 }
 ```
 
@@ -1036,7 +1036,9 @@ All errors follow a consistent format:
 
 ## CORS
 
-By default, CORS is restricted to `http://localhost:8000` and `http://127.0.0.1:8000`. Override with the `EDUAGENT_CORS_ORIGINS` environment variable (comma-separated list of origins).
+By default, CORS is restricted to `http://localhost:8000` and `http://127.0.0.1:8000`. Chrome extension origins matching `chrome-extension://<32-char-id>` are allowed via regex.
+
+Override with the `EDUAGENT_CORS_ORIGINS` environment variable (comma-separated list of origins).
 
 Allowed methods: `GET`, `POST`. Allowed headers: `Authorization`, `Content-Type`.
 
@@ -1050,4 +1052,4 @@ Allowed methods: `GET`, `POST`. Allowed headers: `Authorization`, `Content-Type`
 | `EDUAGENT_LOCAL_AUTH_BYPASS` | Set to `1` to skip auth for localhost requests | unset |
 | `EDUAGENT_DATA_DIR` | Data directory for DB, token, and secrets | `~/.eduagent` |
 | `EDUAGENT_IMPORT_ALLOW_URLS` | Comma-separated additional allowed import URLs | unset |
-| `EDUAGENT_PORT` | Server port | `8080` |
+| `CLAWED_AUTO_APPROVE` | Set to `1` to auto-approve `write_local` and `network_call` tools | unset |
