@@ -400,6 +400,27 @@ async def generate_master_content(
         ))
     )
 
+    # Inject classroom profile context into system prompt
+    try:
+        from clawed.classroom_profile import profile_to_prompt_context
+        classroom_ctx = profile_to_prompt_context()
+        if classroom_ctx:
+            prompt = classroom_ctx + "\n\n" + prompt
+    except Exception:
+        pass
+
+    # Inject knowledge graph connections into prompt
+    try:
+        from clawed.lesson_connections import inject_connections_into_prompt
+        kg_ctx = inject_connections_into_prompt(
+            lesson_brief.topic,
+            teacher_id="",  # Default teacher
+        )
+        if kg_ctx:
+            prompt = kg_ctx + "\n\n" + prompt
+    except Exception:
+        pass
+
     system = _build_system_prompt(persona, config, subject=unit.subject)
 
     if task_type and config:

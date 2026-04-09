@@ -1,5 +1,18 @@
 # Changelog
 
+## v4.9.2026.7 (2026-04-09)
+
+### Knowledge & Context Intelligence
+- **KG-powered lesson connections** — `lesson_connections.py` queries 227K-entity knowledge graph to suggest cross-unit links, prerequisite checks, and "Previously on..." Do Now hooks. Auto-injected into every lesson generation prompt.
+- **Classroom Memory** — `classroom_profile.py` with persistent `ClassroomProfile` model (student count, tech available, ELL/IEP counts, seating, LMS, textbook). Saved as JSON, auto-loaded into every generation prompt.
+- **Adaptive feedback loop** — `adaptive.py` analyzes exit ticket grading results, generates adjustment context for next lesson (reteach/partial/proceed), and drafts parent notifications
+
+### Pipeline Integration
+- Classroom profile context injected into `generate_master_content()` system prompt
+- KG connections injected into lesson generation prompt
+- Year planner confirmed already fully wired (`clawed year-map` CLI command + CurriculumMapper)
+- Sub packet confirmed already fully wired (`clawed sub-packet` CLI + agent tool)
+
 ## v4.9.2026.6 (2026-04-09)
 
 ### Everything Release — Complete Teacher Operating System
