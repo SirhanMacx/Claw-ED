@@ -1,6 +1,8 @@
 # Claw-ED
 
-An open-source CLI agent that generates lesson plans, assessments, slideshows, and games in a teacher's own voice. Feed it your files, talk to it in the terminal or on Telegram.
+> Built by a teacher who was tired of spending weekends writing lessons.
+
+An open-source CLI agent that generates complete lesson bundles — plans, handouts, slides, differentiated versions, games, and more — in your teaching voice. Feed it your files. It learns how you teach. Then it does the work for you.
 
 <p align="center">
   <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/v/clawed?color=blue" alt="PyPI"></a>
