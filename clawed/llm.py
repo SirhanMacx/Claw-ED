@@ -61,6 +61,139 @@ class LLMClient:
             raise ValueError(f"Unknown provider: {self.config.provider}")
         return sanitize_text(raw)
 
+    async def generate_with_image(
+        self,
+        prompt: str,
+        image_path: str | os.PathLike,
+        system: str = "",
+        temperature: float = 0.3,
+        max_tokens: int = 150,
+    ) -> str:
+        """Send an image + text prompt to a vision-capable LLM.
+
+        Used for image quality filtering — the vision model evaluates whether
+        a fetched image is educationally appropriate, clear, and relevant.
+
+        Falls back to text-only generate() if the provider doesn't support
+        vision, returning a permissive "GOOD" to avoid blocking images.
+        """
+        import base64
+        from pathlib import Path
+
+        path = Path(image_path)
+        if not path.exists():
+            return "REJECT: Image file not found"
+
+        data = path.read_bytes()
+        if len(data) < 1000:
+            return "REJECT: Image too small"
+
+        b64 = base64.standard_b64encode(data).decode("utf-8")
+
+        # Detect MIME type
+        if path.suffix.lower() in (".jpg", ".jpeg"):
+            media_type = "image/jpeg"
+        elif path.suffix.lower() == ".png":
+            media_type = "image/png"
+        elif path.suffix.lower() == ".gif":
+            media_type = "image/gif"
+        elif path.suffix.lower() == ".webp":
+            media_type = "image/webp"
+        else:
+            media_type = "image/jpeg"  # Default assumption
+
+        # Anthropic vision
+        if self.config.provider == LLMProvider.ANTHROPIC:
+            try:
+                import anthropic
+
+                from clawed.config import get_api_key, is_anthropic_oauth_token
+
+                api_key = get_api_key("anthropic")
+                if not api_key:
+                    return "GOOD"  # No key = permissive
+
+                is_oauth = is_anthropic_oauth_token(api_key)
+                if is_oauth:
+                    client = anthropic.Anthropic(
+                        auth_token=api_key,
+                        default_headers={
+                            "anthropic-beta": "oauth-2025-04-20",
+                            "x-app": "cli",
+                        },
+                    )
+                else:
+                    client = anthropic.Anthropic(api_key=api_key)
+
+                msg = client.messages.create(
+                    model=self.config.anthropic_model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system=system or "",
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": media_type,
+                                    "data": b64,
+                                },
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }],
+                )
+                return msg.content[0].text
+            except Exception as e:
+                logger.debug("Vision check failed (Anthropic): %s", e)
+                return "GOOD"  # Permissive on failure
+
+        # OpenAI vision
+        if self.config.provider == LLMProvider.OPENAI:
+            try:
+                from clawed.config import get_api_key
+
+                api_key = get_api_key("openai")
+                if not api_key:
+                    return "GOOD"
+
+                async with httpx.AsyncClient(timeout=15) as client:
+                    resp = await client.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {api_key}"},
+                        json={
+                            "model": self.config.openai_model,
+                            "max_tokens": max_tokens,
+                            "temperature": temperature,
+                            "messages": [
+                                {"role": "system", "content": system} if system else None,
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:{media_type};base64,{b64}",
+                                                "detail": "low",
+                                            },
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    )
+                    resp.raise_for_status()
+                    return resp.json()["choices"][0]["message"]["content"]
+            except Exception as e:
+                logger.debug("Vision check failed (OpenAI): %s", e)
+                return "GOOD"
+
+        # Providers without vision support — permissive fallback
+        return "GOOD"
+
     @staticmethod
     def _demo_response(prompt: str, demo_hint: str = "") -> str:
         """Return a canned demo response based on schema hint or prompt keywords."""

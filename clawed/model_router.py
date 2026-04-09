@@ -30,6 +30,7 @@ TASK_TIERS: dict[str, ModelTier] = {
     "search": ModelTier.FAST,
     "bellringer": ModelTier.FAST,
     "formatting": ModelTier.FAST,
+    "image_quality": ModelTier.FAST,  # Vision quality checks use fast tier
 
     # Deep tier — maximum intelligence for everything that matters
     "lesson_plan": ModelTier.DEEP,

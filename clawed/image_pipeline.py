@@ -20,6 +20,62 @@ logger = logging.getLogger(__name__)
 
 _CONCURRENT_LIMIT = 5
 
+_VISION_QUALITY_PROMPT = (
+    "You are an image quality filter for educational materials. "
+    "A teacher is building a lesson and this image was fetched to illustrate "
+    "the topic described below.\n\n"
+    "Evaluate this image on three criteria:\n"
+    "1. RELEVANT — Does it match the educational topic?\n"
+    "2. CLEAR — Is it high resolution, not blurry, not mostly text/watermarks?\n"
+    "3. APPROPRIATE — Is it suitable for a K-12 classroom?\n\n"
+    "Respond with EXACTLY one word: GOOD, ACCEPTABLE, or REJECT.\n"
+    "Then a brief reason (under 15 words).\n\n"
+    "Examples:\n"
+    "GOOD — Clear historical painting of the signing of the Declaration\n"
+    "ACCEPTABLE — Low resolution but relevant diagram of photosynthesis\n"
+    "REJECT — Stock photo with watermark, not educationally relevant\n"
+    "REJECT — Blurry thumbnail, unreadable text\n\n"
+    "Topic: {topic}\nSubject: {subject}"
+)
+
+
+async def check_image_quality(
+    image_path: Path,
+    spec: str,
+    subject: str = "",
+    config: "AppConfig | None" = None,
+) -> bool:
+    """Use a vision model to evaluate whether an image is good enough for a lesson.
+
+    Returns True if the image passes (GOOD or ACCEPTABLE), False if REJECT.
+    Always returns True if no vision-capable model is configured (permissive).
+    """
+    try:
+        from clawed.llm import LLMClient
+        from clawed.model_router import route as route_model
+
+        cfg = config or AppConfig.load()
+        cfg = route_model("image_quality", cfg)
+        client = LLMClient(cfg)
+
+        prompt = _VISION_QUALITY_PROMPT.format(topic=spec, subject=subject)
+        result = await client.generate_with_image(
+            prompt=prompt,
+            image_path=image_path,
+            temperature=0.1,
+            max_tokens=50,
+        )
+
+        verdict = result.strip().split()[0].upper() if result.strip() else "GOOD"
+        if verdict == "REJECT":
+            logger.info("Image REJECTED by vision filter: %s — %s", spec[:60], result.strip())
+            return False
+        logger.debug("Image passed vision filter (%s): %s", verdict, spec[:60])
+        return True
+    except Exception as e:
+        logger.debug("Vision quality check failed, permitting image: %s", e)
+        return True  # Always permissive on failure
+
 
 def _collect_image_specs(master: "MasterContent") -> dict[str, str]:
     """Collect image_spec strings with their content context.
@@ -152,6 +208,28 @@ async def fetch_all_images(
             spec, path = result
             if path is not None:
                 images[spec] = path
+
+    # Phase 3: Vision-model quality filter (reject bad images)
+    if images:
+        rejected: list[str] = []
+        for spec, path in list(images.items()):
+            passed = await check_image_quality(
+                image_path=path,
+                spec=spec,
+                subject=subject,
+                config=config,
+            )
+            if not passed:
+                rejected.append(spec)
+                del images[spec]
+
+        if rejected:
+            logger.info(
+                "Vision filter rejected %d/%d images: %s",
+                len(rejected),
+                len(rejected) + len(images),
+                ", ".join(s[:40] for s in rejected),
+            )
 
     logger.info(
         "Image pipeline: %d/%d resolved (%d from teacher, %d from web)",

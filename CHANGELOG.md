@@ -1,6 +1,16 @@
 # Changelog
 
-## v4.9.2026 (2026-04-09)
+## v4.9.2026.2 (2026-04-09)
+
+### Vision-Powered Image Quality Filter
+- **Vision model quality gate** — every fetched image is evaluated by a vision-capable LLM before embedding
+- Images scored on relevance, clarity, and classroom appropriateness (GOOD/ACCEPTABLE/REJECT)
+- Rejected images are logged and excluded from lesson output
+- Permissive fallback — if no vision model is configured, all images pass (never blocks)
+- Supports Anthropic (Claude) and OpenAI (GPT-4) vision APIs
+- New `generate_with_image()` method on LLMClient for multimodal prompts
+
+## v4.9.2026.1 (2026-04-09)
 
 ### Output Quality Revolution
 - **Quality gate with auto-retry** — validates 8 rules (primary source length, image specificity, exit ticket stimuli, guided notes minimum, teacher script CFU, differentiation ban list, self-contained check, station answer keys); retries 2x with specific failure feedback injected into the prompt
