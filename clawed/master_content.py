@@ -39,9 +39,21 @@ class PrimarySource(BaseModel):
 
     @field_validator("image_spec", mode="after")
     @classmethod
-    def warn_empty_image_spec(cls, v: str) -> str:
+    def require_image_spec(cls, v: str) -> str:
         if not v.strip():
-            logger.warning("Empty image_spec in PrimarySource — images will be missing for this source")
+            logger.warning("Empty image_spec in PrimarySource — provide a specific image search query")
+        elif len(v.strip()) < 10:
+            logger.warning("image_spec '%s' is too vague — use a specific search query", v)
+        return v
+
+    @field_validator("content_text", mode="after")
+    @classmethod
+    def require_substantive_content(cls, v: str) -> str:
+        if v.strip() and len(v.strip()) < 50:
+            logger.warning(
+                "PrimarySource content_text is only %d chars — include the ACTUAL source text",
+                len(v.strip()),
+            )
         return v
 
 

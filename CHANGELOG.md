@@ -1,5 +1,26 @@
 # Changelog
 
+## v4.9.2026 (2026-04-09)
+
+### Output Quality Revolution
+- **Quality gate with auto-retry** — validates 8 rules (primary source length, image specificity, exit ticket stimuli, guided notes minimum, teacher script CFU, differentiation ban list, self-contained check, station answer keys); retries 2x with specific failure feedback injected into the prompt
+- **Few-shot quality exemplars** in master_content.txt — full worked examples of good/bad primary sources, CRQ exit tickets, and differentiation so the LLM sees the standard
+- **Lesson context chaining** — `generate_all_lessons()` passes cumulative vocabulary, sources, and objectives between lessons so Day 3 builds on Day 2
+
+### Visual Overhaul
+- **Warm brown color palette** (#8B6914/#F5E6C8/#2C1810) for History and Social Studies
+- **Subject-aware theming** across DOCX and PPTX — each subject gets its own professional palette
+- **IEP/ELL/Gifted differentiation callout boxes** — gold, teal, and green visual treatment
+- **Page breaks** between major DOCX sections (primary sources, exit ticket, differentiation)
+- **Themed table headers** — white text on subject-colored backgrounds
+
+### Architecture
+- **PPTX subpackage** (`clawed/pptx/`) — helpers, themes, and images extracted from the 1600-line monolith
+- **Granular exception handling** in generation.py — ConnectionError, TimeoutError, ValueError caught separately with full logging
+- **MasterContent validators** for content_text length and image_spec specificity
+- **humanize.py** — added "in conclusion" and "to conclude" to Tier 1 ban list
+- 34 new tests (1932+ total)
+
 ## v4.8.2026 (2026-04-08)
 
 ### Major release — human voice, image dedup, curriculum visualizer

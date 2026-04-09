@@ -29,6 +29,95 @@ This lesson is part of a larger unit:
 
 {few_shot_context}
 
+## QUALITY EXEMPLAR — This Is The Standard
+
+Below is an EXAMPLE of what excellent output looks like for key fields. Your output must match this level of specificity and substance. Study these examples carefully.
+
+### Example: Primary Source (GOOD)
+```json
+{
+    "id": "source_a",
+    "title": "Seneca Falls Declaration of Sentiments (1848)",
+    "source_type": "text_excerpt",
+    "content_text": "We hold these truths to be self-evident: that all men and women are created equal; that they are endowed by their Creator with certain inalienable rights; that among these are life, liberty, and the pursuit of happiness; that to secure these rights governments are instituted, deriving their just powers from the consent of the governed. The history of mankind is a history of repeated injuries and usurpations on the part of man toward woman, having in direct object the establishment of an absolute tyranny over her.",
+    "attribution": "Elizabeth Cady Stanton, Declaration of Sentiments, Seneca Falls Convention, July 19-20, 1848",
+    "image_spec": "Elizabeth Cady Stanton Declaration of Sentiments Seneca Falls Convention 1848 document photograph",
+    "scaffolding_questions": [
+        "What specific document is this Declaration modeled after, and what does that choice suggest about the authors' strategy?",
+        "How does the phrase 'all men and women' change the meaning of the original Declaration of Independence, and why would the authors make this change?"
+    ]
+}
+```
+
+### Example: Primary Source (BAD — would be rejected)
+```json
+{
+    "content_text": "The Declaration of Sentiments was a document that called for women's rights.",
+    "image_spec": "historical document"
+}
+```
+This is BAD because: content_text is a summary (not the actual source text), and image_spec is vague.
+
+### Example: Exit Ticket with CRQ Progression (GOOD)
+```json
+[
+    {
+        "stimulus": "Read the following excerpt from Frederick Douglass's speech 'What to the Slave is the Fourth of July?' (1852): 'What, to the American slave, is your 4th of July? I answer: a day that reveals to him, more than all other days in the year, the gross injustice and cruelty to which he is the constant victim.'",
+        "stimulus_type": "text_excerpt",
+        "question": "According to Douglass, what does the Fourth of July represent to enslaved people?",
+        "answer": "Douglass argues that the Fourth of July represents the 'gross injustice and cruelty' of slavery, highlighting the hypocrisy of celebrating freedom while millions remain enslaved.",
+        "cognitive_level": "recall"
+    },
+    {
+        "stimulus": "Consider Douglass's use of the word 'your' instead of 'our' when referring to the Fourth of July.",
+        "stimulus_type": "text_excerpt",
+        "question": "Why does Douglass deliberately use 'your' instead of 'our'? What rhetorical effect does this word choice create?",
+        "answer": "By saying 'your' Fourth of July, Douglass separates himself and all enslaved people from the celebration, emphasizing that the promises of American freedom do not extend to them. This creates a powerful contrast between American ideals and the reality of slavery.",
+        "cognitive_level": "application"
+    },
+    {
+        "stimulus": "Compare Douglass's 1852 speech with the Declaration of Independence's claim that 'all men are created equal.'",
+        "stimulus_type": "text_excerpt",
+        "question": "To what extent did the United States live up to its founding ideals by 1852? Use evidence from both documents to support your argument.",
+        "answer": "By 1852, the U.S. had failed to live up to its founding ideals for millions of enslaved people. While the Declaration claimed equality, Douglass shows that this promise was hollow — enslaved Americans could not participate in the nation's celebration of freedom. Students should reference specific evidence from both the Declaration and Douglass's speech.",
+        "cognitive_level": "analysis"
+    }
+]
+```
+
+### Example: Differentiation (GOOD — specific scaffolds)
+```json
+{
+    "struggling": [
+        "Provide a pre-filled T-chart with 'Cause' and 'Effect' columns and two rows already completed as models — students complete the remaining three rows",
+        "Reduce exit ticket to questions 1 and 2 only, with sentence starters: 'According to the source, ___' and 'This word choice suggests that ___'",
+        "Break the station rotation into two phases: reading phase (8 min) and writing phase (5 min) with a visible timer on the smart board",
+        "Provide a word bank with 6 key terms from the lesson on a bookmark-sized card students keep at their desk"
+    ],
+    "advanced": [
+        "After completing the station rotation, identify one assumption Douglass makes about his audience and write a paragraph explaining whether that assumption is justified using evidence from the speech",
+        "Research a modern speech that uses similar rhetorical strategies to Douglass and prepare a 2-minute comparison presentation for the class",
+        "Write an original CRQ using a primary source not provided in this lesson — select your source from the Library of Congress digital archive"
+    ],
+    "ell": [
+        "Sentence frames for all written responses: 'The author argues that ___ because ___' and 'This evidence shows that ___'",
+        "Visual glossary card with key terms: abolition, rhetoric, hypocrisy, injustice — each with a simple definition, Spanish cognate (if applicable), and an icon",
+        "Simplified version of the Douglass excerpt with vocabulary defined inline: 'What, to the American slave, is your 4th of July? I answer: a day that reveals [shows] to him... the gross [extreme] injustice [unfairness]...'",
+        "Partner reading protocol: ELL student reads with a fluent partner who pauses after each sentence to check understanding"
+    ]
+}
+```
+
+### Example: Differentiation (BAD — would be rejected)
+```json
+{
+    "struggling": ["Provide extra time", "Modify the assignment as needed", "Offer additional support"],
+    "advanced": ["Write an additional paragraph", "Do extra research"],
+    "ell": ["Provide vocabulary support", "Allow use of dictionary"]
+}
+```
+This is BAD because: every item is generic. None names a specific scaffold, tool, or strategy.
+
 {teacher_materials}
 
 IMPORTANT: If teacher materials are provided above, you MUST reference or build

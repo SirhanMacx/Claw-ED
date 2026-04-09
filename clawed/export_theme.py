@@ -15,21 +15,21 @@ if TYPE_CHECKING:
 
 _COLOR_THEMES: dict[str, dict[str, str]] = {
     "history": {
-        "primary": "8B4513",       # Saddle brown
+        "primary": "8B6914",       # Warm brown (Jon's palette)
         "secondary": "DAA520",     # Goldenrod
-        "accent": "F5E6CC",        # Cream
-        "bg_dark": "2C1810",       # Dark brown
+        "accent": "F5E6C8",        # Warm cream (Jon's palette)
+        "bg_dark": "2C1810",       # Dark brown (Jon's palette)
         "bg_light": "FFF8F0",      # Warm cream
-        "text_dark": "1A1A1A",
+        "text_dark": "2C1810",     # Body text matches dark brown
         "text_light": "FFFFFF",
     },
     "social studies": {
-        "primary": "8B4513",
-        "secondary": "DAA520",
-        "accent": "F5E6CC",
-        "bg_dark": "2C1810",
-        "bg_light": "FFF8F0",
-        "text_dark": "1A1A1A",
+        "primary": "8B6914",       # Warm brown (Jon's palette)
+        "secondary": "DAA520",     # Goldenrod
+        "accent": "F5E6C8",        # Warm cream (Jon's palette)
+        "bg_dark": "2C1810",       # Dark brown (Jon's palette)
+        "bg_light": "FFF8F0",      # Warm cream
+        "text_dark": "2C1810",     # Body text matches dark brown
         "text_light": "FFFFFF",
     },
     "science": {

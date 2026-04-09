@@ -40,6 +40,7 @@ async def compile_teacher_view(
     from docx.oxml.ns import qn
     from docx.shared import Inches, Pt, RGBColor
 
+    from clawed.export_theme import get_color_theme
     from clawed.io import safe_filename
 
     output_dir = Path(output_dir)
@@ -47,10 +48,23 @@ async def compile_teacher_view(
 
     doc = Document()
 
+    # ── subject-aware color theme ───────────────────────────────────
+    theme = get_color_theme(master.subject)
+    primary_hex = theme["primary"]
+    accent_hex = theme["accent"]
+    bg_light_hex = theme["bg_light"]
+
+    def _hex_rgb(h: str) -> RGBColor:
+        return RGBColor(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
     # ── helpers ──────────────────────────────────────────────────────
 
     def _heading(text: str, level: int = 1) -> None:
-        doc.add_heading(text, level=level)
+        h = doc.add_heading(text, level=level)
+        # Theme the heading color
+        if level <= 2:
+            for run in h.runs:
+                run.font.color.rgb = _hex_rgb(primary_hex)
 
     def _para(text: str, bold: bool = False, italic: bool = False,
                size_pt: int = 11, color: tuple[int, int, int] | None = None) -> None:
@@ -62,6 +76,9 @@ async def compile_teacher_view(
         run.font.name = "Calibri"
         if color:
             run.font.color.rgb = RGBColor(*color)
+
+    def _page_break() -> None:
+        doc.add_page_break()
 
     def _embed_image(image_spec: str, width_inches: float = 4.5) -> None:
         """Embed a pre-fetched image if its spec is in the images dict."""
@@ -85,6 +102,28 @@ async def compile_teacher_view(
             qn("w:fill"): fill_hex,
         })
         tcPr.append(shd)
+
+    def _callout_box(title: str, items: list[str], fill_hex: str,
+                     title_hex: str = "FFFFFF") -> None:
+        """Render a colored callout box as a single-column table."""
+        tbl = doc.add_table(rows=1 + len(items), cols=1)
+        tbl.style = "Table Grid"
+        # Header row
+        hdr = tbl.rows[0].cells[0]
+        _shaded_cell(hdr, fill_hex)
+        run = hdr.paragraphs[0].add_run(title)
+        run.bold = True
+        run.font.size = Pt(11)
+        run.font.color.rgb = _hex_rgb(title_hex)
+        run.font.name = "Calibri"
+        # Item rows
+        for i, item in enumerate(items):
+            cell = tbl.rows[i + 1].cells[0]
+            _shaded_cell(cell, bg_light_hex)
+            run = cell.paragraphs[0].add_run(f"\u2022 {item}")
+            run.font.size = Pt(10)
+            run.font.name = "Calibri"
+        doc.add_paragraph("")
 
     # ── Title / metadata header ───────────────────────────────────────
 
@@ -125,7 +164,7 @@ async def compile_teacher_view(
     glance_table.style = "Table Grid"
 
     header_cell = glance_table.rows[0].cells[0]
-    _shaded_cell(header_cell, "2F5496")
+    _shaded_cell(header_cell, primary_hex)
     header_run = header_cell.paragraphs[0].add_run("MATERIALS AT A GLANCE")
     header_run.bold = True
     header_run.font.size = Pt(13)
@@ -134,7 +173,7 @@ async def compile_teacher_view(
     header_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     row1_cell = glance_table.rows[1].cells[0]
-    _shaded_cell(row1_cell, "D6E4F0")
+    _shaded_cell(row1_cell, accent_hex)
     row1_run = row1_cell.paragraphs[0].add_run(
         f"Duration: {master.duration_minutes} min  |  "
         f"Format: {glance_format_display}  |  "
@@ -144,7 +183,7 @@ async def compile_teacher_view(
     row1_run.font.name = "Calibri"
 
     row2_cell = glance_table.rows[2].cells[0]
-    _shaded_cell(row2_cell, "D6E4F0")
+    _shaded_cell(row2_cell, accent_hex)
     row2_run = row2_cell.paragraphs[0].add_run(
         f"Primary Sources: {glance_ps_count}  |  "
         f"Vocabulary Terms: {glance_vocab_count}  |  "
@@ -154,7 +193,7 @@ async def compile_teacher_view(
     row2_run.font.name = "Calibri"
 
     row3_cell = glance_table.rows[3].cells[0]
-    _shaded_cell(row3_cell, "D6E4F0")
+    _shaded_cell(row3_cell, accent_hex)
     row3_run = row3_cell.paragraphs[0].add_run(
         f"Differentiation: {glance_iep}  |  {glance_ell}  |  {glance_gifted}"
     )
@@ -171,9 +210,10 @@ async def compile_teacher_view(
         table.style = "Table Grid"
         hdr_cells = table.rows[0].cells
         for cell, label in zip(hdr_cells, ["Term", "Definition", "Context Sentence"]):
-            _shaded_cell(cell, "BDD7EE")
+            _shaded_cell(cell, primary_hex)
             cell.text = label
             cell.paragraphs[0].runs[0].bold = True
+            cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
         for entry in master.vocabulary:
             row = table.add_row().cells
@@ -231,6 +271,7 @@ async def compile_teacher_view(
     # ── Primary Sources ────────────────────────────────────────────────
 
     if master.primary_sources:
+        _page_break()
         _heading("Primary Sources")
         for ps in master.primary_sources:
             _heading(ps.title, level=2)
@@ -261,6 +302,7 @@ async def compile_teacher_view(
     # ── Exit Ticket (with answers) ────────────────────────────────────
 
     if master.exit_ticket:
+        _page_break()
         _heading("Exit Ticket")
         for i, sq in enumerate(master.exit_ticket, 1):
             _para(f"Q{i} Stimulus ({sq.stimulus_type}): {sq.stimulus}", bold=True)
@@ -272,26 +314,33 @@ async def compile_teacher_view(
                 _para(f"Cognitive Level: {sq.cognitive_level}", size_pt=9, color=(0x66, 0x66, 0x66))
             doc.add_paragraph("")
 
-    # ── Differentiation ───────────────────────────────────────────────
+    # ── Differentiation (themed callout boxes) ─────────────────────────
 
     diff = master.differentiation
+    if diff.struggling or diff.advanced or diff.ell:
+        _page_break()
     _heading("Differentiation")
     if diff.struggling:
-        _para("Struggling Learners:", bold=True)
-        for item in diff.struggling:
-            p = doc.add_paragraph(style="List Bullet")
-            p.add_run(item)
+        _callout_box(
+            "\u2691 IEP / 504 Accommodations",
+            diff.struggling,
+            fill_hex="D4A017",  # Gold
+            title_hex="FFFFFF",
+        )
     if diff.advanced:
-        _para("Advanced Learners:", bold=True)
-        for item in diff.advanced:
-            p = doc.add_paragraph(style="List Bullet")
-            p.add_run(item)
+        _callout_box(
+            "\u2605 Advanced / Gifted Extensions",
+            diff.advanced,
+            fill_hex="2B7A98",  # Teal
+            title_hex="FFFFFF",
+        )
     if diff.ell:
-        _para("ELL Support:", bold=True)
-        for item in diff.ell:
-            p = doc.add_paragraph(style="List Bullet")
-            p.add_run(item)
-    doc.add_paragraph("")
+        _callout_box(
+            "\u2709 ELL Language Supports",
+            diff.ell,
+            fill_hex="2D8B4E",  # Green
+            title_hex="FFFFFF",
+        )
 
     # ── Independent Work ──────────────────────────────────────────────
 

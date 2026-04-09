@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from clawed.corpus import get_few_shot_context
@@ -9,6 +10,131 @@ from clawed.llm import LLMClient
 from clawed.master_content import MasterContent
 from clawed.model_router import route as route_model
 from clawed.models import AppConfig, DailyLesson, TeacherPersona, UnitPlan
+
+logger = logging.getLogger(__name__)
+
+# ── Quality gate ──────────────────────────────────────────────────────────
+# Phrases that indicate lazy, generic differentiation. If any differentiation
+# item contains one of these, the quality gate rejects the lesson for retry.
+
+_GENERIC_DIFF_PHRASES = frozenset({
+    "provide extra time", "provide extra support", "provide additional support",
+    "modify as needed", "adjust as necessary", "provide accommodations",
+    "offer assistance", "give extra help", "provide scaffolding",
+    "allow extra time", "provide support", "offer support",
+    "simplify the task", "reduce complexity", "provide modifications",
+    "additional practice", "extra practice", "more time",
+    "work at their own pace", "extended time", "preferential seating",
+    "check for understanding", "monitor progress", "provide feedback",
+    "modify assessment", "reduce number of", "shorten the assignment",
+})
+
+
+def _validate_quality(master: MasterContent) -> list[str]:
+    """Check MasterContent against pedagogical quality rules.
+
+    Returns a list of human-readable issue strings. An empty list means the
+    lesson passed all checks.
+    """
+    issues: list[str] = []
+
+    # ── Primary sources ───────────────────────────────────────────────
+    for ps in master.primary_sources:
+        if len(ps.content_text.strip()) < 100:
+            issues.append(
+                f"Primary source '{ps.title}' content_text is only "
+                f"{len(ps.content_text.strip())} chars — include the ACTUAL "
+                "SOURCE TEXT (minimum 100 characters), not a summary"
+            )
+        if not ps.image_spec.strip():
+            issues.append(
+                f"Primary source '{ps.title}' has empty image_spec — provide "
+                "a specific image search query (e.g. 'Thomas Nast Boss Tweed "
+                "political cartoon 1871')"
+            )
+        elif len(ps.image_spec.strip()) < 10:
+            issues.append(
+                f"Primary source '{ps.title}' image_spec is too vague "
+                f"({len(ps.image_spec.strip())} chars) — be more specific"
+            )
+
+    # ── Direct instruction ────────────────────────────────────────────
+    for di in master.direct_instruction:
+        if not di.image_spec.strip():
+            issues.append(
+                f"Direct instruction '{di.heading}' has empty image_spec — "
+                "visual aids are required for every section"
+            )
+        if "?" not in di.teacher_script:
+            issues.append(
+                f"Direct instruction '{di.heading}' teacher_script contains no "
+                "question marks — must include checks for understanding"
+            )
+
+    # ── Exit ticket stimuli ───────────────────────────────────────────
+    for i, et in enumerate(master.exit_ticket):
+        if len(et.stimulus.strip()) < 50:
+            issues.append(
+                f"Exit ticket Q{i + 1} stimulus is only "
+                f"{len(et.stimulus.strip())} chars — must include substantive "
+                "stimulus text (>= 50 characters)"
+            )
+
+    # ── Guided notes minimum ──────────────────────────────────────────
+    if len(master.guided_notes) < 5:
+        issues.append(
+            f"Only {len(master.guided_notes)} guided notes — minimum 5 required"
+        )
+
+    # ── Differentiation ban list ──────────────────────────────────────
+    for field_name in ("struggling", "advanced", "ell"):
+        items = getattr(master.differentiation, field_name, [])
+        for item in items:
+            lower = item.lower().strip()
+            for phrase in _GENERIC_DIFF_PHRASES:
+                if phrase in lower:
+                    issues.append(
+                        f"Differentiation '{field_name}' contains generic "
+                        f"phrase '{phrase}' — use SPECIFIC scaffolds"
+                    )
+                    break
+
+    # ── Self-contained check ──────────────────────────────────────────
+    banned_phrases = [
+        "teacher will provide", "refer to textbook", "see page",
+        "open your book", "use the handout", "worksheet attached",
+        "see attached", "distribute the provided", "refer to class notes",
+    ]
+    all_text = " ".join([
+        master.do_now.stimulus,
+        *[di.content for di in master.direct_instruction],
+        *[ps.content_text for ps in master.primary_sources],
+        *[s.student_directions for s in master.stations],
+    ]).lower()
+    for phrase in banned_phrases:
+        if phrase in all_text:
+            issues.append(
+                f"Lesson contains banned phrase '{phrase}' — all materials "
+                "must be self-contained"
+            )
+
+    # ── Station answer keys ─────────────────────────────────────────
+    for station in master.stations:
+        if not station.teacher_answer_key.strip():
+            issues.append(
+                f"Station '{station.title}' missing teacher_answer_key — "
+                "provide complete expected responses"
+            )
+        elif len(station.teacher_answer_key.strip()) < 20:
+            issues.append(
+                f"Station '{station.title}' answer key is only "
+                f"{len(station.teacher_answer_key.strip())} chars — be specific"
+            )
+
+    return issues
+
+
+_MAX_QUALITY_RETRIES = 2
 
 # NOTE: lesson_plan.txt is kept for reference / backward compatibility but is
 # NOT used for primary lesson generation.  All lesson generation goes through
@@ -217,13 +343,53 @@ async def generate_master_content(
     if task_type and config:
         config = route_model(task_type, config)
     client = LLMClient(config)
-    return await client.safe_generate_json(
+
+    master = await client.safe_generate_json(
         prompt=prompt,
         model_class=MasterContent,
         system=system,
         temperature=0.6,
         max_tokens=12000,
     )
+
+    # ── Quality gate with auto-retry ──────────────────────────────────
+    for attempt in range(_MAX_QUALITY_RETRIES):
+        issues = _validate_quality(master)
+        if not issues:
+            break
+        logger.warning(
+            "Quality gate failed (attempt %d/%d) with %d issues:\n%s",
+            attempt + 1,
+            _MAX_QUALITY_RETRIES,
+            len(issues),
+            "\n".join(f"  - {i}" for i in issues),
+        )
+        retry_feedback = (
+            "\n\n---\n## QUALITY FEEDBACK — FIX THESE ISSUES\n\n"
+            "Your previous attempt had these problems:\n"
+            + "\n".join(f"- {i}" for i in issues)
+            + "\n\nFix ALL of the above in your next attempt. "
+            "Do NOT repeat the same mistakes."
+        )
+        master = await client.safe_generate_json(
+            prompt=prompt + retry_feedback,
+            model_class=MasterContent,
+            system=system,
+            temperature=0.5,  # slightly lower for more compliance
+            max_tokens=12000,
+        )
+
+    # Log any remaining issues after retries (deliver with warnings)
+    remaining = _validate_quality(master)
+    if remaining:
+        logger.warning(
+            "Delivering lesson with %d quality warnings after %d retries:\n%s",
+            len(remaining),
+            _MAX_QUALITY_RETRIES,
+            "\n".join(f"  - {i}" for i in remaining),
+        )
+
+    return master
 
 
 async def generate_lesson(
@@ -276,18 +442,55 @@ async def generate_all_lessons(
     config: AppConfig | None = None,
     teacher_materials: str = "",
 ) -> list[DailyLesson]:
-    """Generate lesson plans for every lesson in a unit sequentially."""
+    """Generate lesson plans for every lesson in a unit sequentially.
+
+    Lessons are generated in order so that each lesson receives context about
+    what came before — vocabulary already introduced, sources already used,
+    and objectives already covered.  This prevents Day 3 from re-explaining
+    Day 1 vocabulary and lets the unit build progressively.
+    """
     lessons: list[DailyLesson] = []
+    prior_context = ""
+
     for brief in unit.daily_lessons:
-        lesson = await generate_lesson(
+        # Build cumulative context from prior lessons
+        materials_with_context = teacher_materials
+        if prior_context:
+            materials_with_context = (
+                "## Prior Lessons in This Unit\n"
+                "The following lessons have already been taught. Build on this "
+                "foundation — do NOT re-introduce vocabulary or sources that "
+                "students have already worked with. Reference prior learning "
+                "where appropriate.\n\n"
+                + prior_context
+                + "\n---\n\n"
+                + teacher_materials
+            )
+
+        master = await generate_master_content(
             lesson_number=brief.lesson_number,
             unit=unit,
             persona=persona,
             include_homework=include_homework,
             config=config,
-            teacher_materials=teacher_materials,
+            teacher_materials=materials_with_context,
         )
-        lessons.append(lesson)
+
+        daily = master.to_daily_lesson()
+        daily.lesson_number = brief.lesson_number
+        lessons.append(daily)
+
+        # Accumulate context for the next lesson
+        vocab_terms = ", ".join(v.term for v in master.vocabulary) if master.vocabulary else "none"
+        source_titles = ", ".join(ps.title for ps in master.primary_sources) if master.primary_sources else "none"
+        prior_context += (
+            f"### Lesson {brief.lesson_number}: {master.title}\n"
+            f"- Objective: {master.objective}\n"
+            f"- Vocabulary introduced: {vocab_terms}\n"
+            f"- Primary sources used: {source_titles}\n"
+            f"- Format: {master.lesson_format}\n\n"
+        )
+
     return lessons
 
 

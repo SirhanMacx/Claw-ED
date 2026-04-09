@@ -63,18 +63,19 @@ _TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
             "text_dim": "888888",
         },
     ),
-    # Renaissance / art topics
+    # Renaissance / art / history topics — Jon's warm brown palette
     (
         ["renaissance", "art", "painting", "sculpture", "michelangelo",
          "da vinci", "medici", "baroque", "classical art", "gallery",
-         "fresco", "patron"],
+         "fresco", "patron", "reform", "movement", "amendment",
+         "constitution", "rights", "abolition", "suffrage", "progressive"],
         {
-            "primary": "4a3728",       # Dark brown
-            "secondary": "d4af37",     # Gold accent
-            "accent": "f5efe0",        # Warm cream
-            "bg_dark": "2e2018",       # Deep brown
-            "bg_light": "faf6ef",      # Light cream
-            "text_dark": "1A1A1A",
+            "primary": "8B6914",       # Warm brown (Jon's palette)
+            "secondary": "DAA520",     # Goldenrod
+            "accent": "F5E6C8",        # Warm cream (Jon's palette)
+            "bg_dark": "2C1810",       # Dark brown (Jon's palette)
+            "bg_light": "FFF8F0",      # Warm cream
+            "text_dark": "2C1810",     # Body text
             "text_light": "FFFFFF",
             "text_dim": "888888",
         },

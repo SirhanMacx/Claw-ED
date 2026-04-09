@@ -221,7 +221,7 @@ class TestColorTheme:
         from clawed.doc_export import get_color_theme
 
         theme = get_color_theme("history")
-        assert theme["primary"] == "8B4513"  # Saddle brown
+        assert theme["primary"] == "8B6914"  # Warm brown (Jon's palette)
         assert theme["secondary"] == "DAA520"  # Goldenrod
 
     def test_social_studies_matches_history(self):

@@ -106,12 +106,21 @@ async def compile_student_view(
     from docx.oxml.ns import qn
     from docx.shared import Inches, Pt, RGBColor
 
+    from clawed.export_theme import get_color_theme
     from clawed.io import safe_filename
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     doc = Document()
+
+    # ── subject-aware color theme ───────────────────────────────────
+    theme = get_color_theme(master.subject)
+    primary_hex = theme["primary"]
+    bg_light_hex = theme["bg_light"]
+
+    def _hex_rgb(h: str) -> RGBColor:
+        return RGBColor(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
     # ── Page header / footer ────────────────────────────────────────
     section = doc.sections[0]
@@ -170,6 +179,29 @@ async def compile_student_view(
         })
         tcPr.append(shd)
 
+    def _page_break() -> None:
+        doc.add_page_break()
+
+    def _callout_box(title: str, items: list[str], fill_hex: str,
+                     title_hex: str = "FFFFFF") -> None:
+        """Render a colored callout box as a single-column table."""
+        tbl = doc.add_table(rows=1 + len(items), cols=1)
+        tbl.style = "Table Grid"
+        hdr = tbl.rows[0].cells[0]
+        _shaded_cell(hdr, fill_hex)
+        run = hdr.paragraphs[0].add_run(title)
+        run.bold = True
+        run.font.size = Pt(11)
+        run.font.color.rgb = _hex_rgb(title_hex)
+        run.font.name = "Calibri"
+        for i, item in enumerate(items):
+            cell = tbl.rows[i + 1].cells[0]
+            _shaded_cell(cell, bg_light_hex)
+            run = cell.paragraphs[0].add_run(f"\u2022 {item}")
+            run.font.size = Pt(10)
+            run.font.name = "Calibri"
+        doc.add_paragraph("")
+
     # ── Title / metadata header ───────────────────────────────────────
 
     doc.add_heading(master.title, level=0)
@@ -205,9 +237,10 @@ async def compile_student_view(
         table.style = "Table Grid"
         hdr_cells = table.rows[0].cells
         for cell, label in zip(hdr_cells, ["Term", "Definition", "Context Sentence"]):
-            _shaded_cell(cell, "BDD7EE")
+            _shaded_cell(cell, primary_hex)
             cell.text = label
             cell.paragraphs[0].runs[0].bold = True
+            cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
         for entry in master.vocabulary:
             row = table.add_row().cells
@@ -257,6 +290,7 @@ async def compile_student_view(
     # ── Primary Sources ────────────────────────────────────────────────
 
     if master.primary_sources:
+        _page_break()
         _heading("Primary Sources")
         for ps in master.primary_sources:
             _heading(ps.title, level=2)
@@ -286,6 +320,7 @@ async def compile_student_view(
     # ── Exit Ticket (stimulus + question, no answer) ──────────────────
 
     if master.exit_ticket:
+        _page_break()
         _heading("Exit Ticket")
         for i, sq in enumerate(master.exit_ticket, 1):
             _para(f"Q{i}: {sq.stimulus}", bold=True)
@@ -295,27 +330,31 @@ async def compile_student_view(
             _para(_BLANK)
             doc.add_paragraph("")
 
-    # ── Differentiation (visible to students for self-awareness) ──────
-    # Per spec: differentiation section is included for student view too
+    # ── Differentiation (themed callout boxes) ──────────────────────────
 
     diff = master.differentiation
     _heading("Support Strategies")
     if diff.struggling:
-        _para("If you need extra support:", bold=True)
-        for item in diff.struggling:
-            p = doc.add_paragraph(style="List Bullet")
-            p.add_run(item)
+        _callout_box(
+            "Extra Support",
+            diff.struggling,
+            fill_hex="D4A017",
+            title_hex="FFFFFF",
+        )
     if diff.advanced:
-        _para("Challenge extension:", bold=True)
-        for item in diff.advanced:
-            p = doc.add_paragraph(style="List Bullet")
-            p.add_run(item)
+        _callout_box(
+            "Challenge Extension",
+            diff.advanced,
+            fill_hex="2B7A98",
+            title_hex="FFFFFF",
+        )
     if diff.ell:
-        _para("Language support:", bold=True)
-        for item in diff.ell:
-            p = doc.add_paragraph(style="List Bullet")
-            p.add_run(item)
-    doc.add_paragraph("")
+        _callout_box(
+            "Language Support",
+            diff.ell,
+            fill_hex="2D8B4E",
+            title_hex="FFFFFF",
+        )
 
     # ── Homework ──────────────────────────────────────────────────────
 

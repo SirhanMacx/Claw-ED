@@ -116,7 +116,17 @@ async def generate_unit(parsed: ParsedIntent, session: TeacherSession) -> str:
         )
         session.save_unit(unit)
         return _fmt_unit_summary(unit)
+    except (ConnectionError, TimeoutError) as e:
+        logger.error("Network error generating unit plan: %s", e)
+        return (
+            "Couldn't reach the LLM provider. Check your internet connection "
+            "and API key (`/setup` to check)."
+        )
+    except ValueError as e:
+        logger.error("Validation error generating unit plan: %s", e)
+        return f"The unit plan didn't pass validation: {str(e)[:200]}"
     except Exception as e:
+        logger.exception("Unexpected error generating unit plan")
         return (
             f"Ran into an issue generating the unit plan: {str(e)[:200]}\n\n"
             "Make sure your API key is configured (`/setup` to check)."
@@ -178,7 +188,14 @@ async def generate_lesson(parsed: ParsedIntent, session: TeacherSession) -> str:
         lesson_id = session.save_lesson(lesson)
         session.config["last_lesson_id"] = lesson_id
         return _fmt_lesson_summary(lesson)
+    except (ConnectionError, TimeoutError) as e:
+        logger.error("Network error generating lesson: %s", e)
+        return "Couldn't reach the LLM provider. Check your connection and API key (`/setup`)."
+    except ValueError as e:
+        logger.error("Validation error generating lesson: %s", e)
+        return f"The lesson didn't pass validation: {str(e)[:200]}"
     except Exception as e:
+        logger.exception("Unexpected error generating lesson")
         return f"Had trouble generating the lesson: {str(e)[:200]}"
 
 
@@ -213,7 +230,11 @@ async def generate_materials(parsed: ParsedIntent, session: TeacherSession) -> s
         lines.append("")
         lines.append("_Reply 'export PDF' to download everything as a ready-to-print packet._")
         return "\n".join(lines)
+    except (ConnectionError, TimeoutError) as e:
+        logger.error("Network error generating materials: %s", e)
+        return "Couldn't reach the LLM provider. Check your connection."
     except Exception as e:
+        logger.exception("Unexpected error generating materials")
         return f"Trouble generating materials: {str(e)[:200]}"
 
 
@@ -319,7 +340,11 @@ async def generate_bellringer(parsed: ParsedIntent, session: TeacherSession) -> 
             max_tokens=600,
         )
         return f"\U0001f514 *Bell Ringer Options for {topic}:*\n\n{response}"
+    except (ConnectionError, TimeoutError) as e:
+        logger.error("Network error generating bell ringers: %s", e)
+        return "Couldn't reach the LLM provider. Check your connection."
     except Exception as e:
+        logger.exception("Unexpected error generating bell ringers")
         return f"Trouble generating bell ringers: {str(e)[:200]}"
 
 
@@ -470,7 +495,11 @@ async def generate_differentiation(parsed: ParsedIntent, session: TeacherSession
             lines.append(raw)
 
         return "\n".join(lines)
+    except (ConnectionError, TimeoutError) as e:
+        logger.error("Network error generating differentiation: %s", e)
+        return "Couldn't reach the LLM provider. Check your connection."
     except Exception as e:
+        logger.exception("Unexpected error generating differentiation")
         return f"Trouble generating differentiation notes: {str(e)[:200]}"
 
 
@@ -675,7 +704,11 @@ async def generate_freeform(message: str, session: TeacherSession) -> str:
             max_tokens=800,
         )
         return response
+    except (ConnectionError, TimeoutError) as e:
+        logger.error("Network error in freeform chat: %s", e)
+        return "Couldn't reach the LLM provider. Check your connection and API key (`/status`)."
     except Exception as e:
+        logger.exception("Unexpected error in freeform chat")
         return f"I ran into an issue: {str(e)[:150]}. Check your API key with `/status`."
 
 
