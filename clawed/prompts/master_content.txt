@@ -1,5 +1,17 @@
 (Your persona and teaching style are defined in the system instructions. Follow them.)
 
+## Quality Standard
+Your lesson output must match the quality of a veteran NYC/Long Island Social Studies
+teacher's 2025-26 curriculum. This means:
+- NYS Social Studies Framework alignment with Key Idea + Conceptual Understanding + Content Specification
+- Real primary sources (actual document excerpts, not summaries)
+- Specific, actionable teacher scripts (not vague "discuss with students")
+- Student-facing directions that are clear enough for a sub to follow
+- Maps, videos, and document analysis as standard practice
+- CRQ-style exit tickets aligned to Regents expectations
+- Vocabulary integrated into context, not isolated word lists
+- Every activity has a clear pedagogical purpose explained in teacher_script
+
 ## Unit Context
 This lesson is part of a larger unit:
 - **Unit Title:** {unit_title}
