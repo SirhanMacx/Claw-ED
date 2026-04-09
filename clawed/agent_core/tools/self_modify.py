@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 class SelfModifyConfigTool:
     """Ed can modify his own configuration settings."""
 
+    risk_level = "write_local"  # Requires approval unless auto-approve is on
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
@@ -99,6 +101,8 @@ class SelfModifyConfigTool:
 class WriteFileTool:
     """Ed can create and modify files in his workspace and output directory."""
 
+    risk_level = "write_local"  # Requires approval unless auto-approve is on
+
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
@@ -150,14 +154,36 @@ class WriteFileTool:
         ))
         output_dir = Path(getattr(context.config, "output_dir", "~/clawed_output")).expanduser()
 
-        # Security: only allow writes to workspace or output
+        # Security: only allow writes to workspace subdirs or output (P0-5 audit fix)
+        # DENY writes to sensitive files — even within data_dir
+        denied_files = {
+            "config.json", "secrets.json", "api_token", "schedule.json",
+            "bot.lock", "bot_state.db", "approvals.db", "state.db",
+            "classroom_profile.json", "drive_token.json",
+        }
+        denied_dirs = {"memory", "corpus", "cache"}
+
+        basename = Path(rel_path).name.lower()
+        if basename in denied_files:
+            return ToolResult(
+                text=f"BLOCKED: cannot write to '{basename}' — "
+                     f"this is a protected system file."
+            )
+
+        first_dir = rel_path.split("/")[0] if "/" in rel_path else ""
+        if first_dir in denied_dirs:
+            return ToolResult(
+                text=f"BLOCKED: cannot write to '{first_dir}/' — "
+                     f"this is a protected system directory."
+            )
+
         if rel_path.startswith("workspace/") or rel_path == "workspace":
             full_path = data_dir / rel_path
         elif rel_path.startswith("output/"):
             full_path = output_dir / rel_path[7:]
         else:
-            # Default to workspace
-            full_path = data_dir / rel_path
+            # Default to workspace for safety
+            full_path = data_dir / "workspace" / rel_path
 
         # Block path traversal
         try:

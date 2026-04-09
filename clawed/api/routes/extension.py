@@ -6,12 +6,16 @@ import json
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+
+from clawed.api.deps import require_auth
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["extension"])
+# All extension/classroom/community routes require auth (P0-1 audit fix).
+# The Chrome extension must send the auth token as a Bearer header.
+router = APIRouter(tags=["extension"], dependencies=[Depends(require_auth)])
 
 
 # ── Chrome Extension Routes ──────────────────────────────────────────

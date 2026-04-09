@@ -146,7 +146,7 @@ async def reset_all():
     return {"status": "reset"}
 
 
-@router.post("/onboarding/persona-form")
+@router.post("/onboarding/persona-form", dependencies=[Depends(require_auth)])
 async def create_persona_from_form(req: PersonaFormRequest):
     """Create a persona from the quick form (no file upload needed)."""
     from clawed.models import TeacherPersona, TeachingStyle
@@ -173,7 +173,7 @@ async def create_persona_from_form(req: PersonaFormRequest):
     return {"teacher_id": teacher_id, "persona": persona.model_dump()}
 
 
-@router.post("/onboarding/step")
+@router.post("/onboarding/step", dependencies=[Depends(require_auth)])
 async def update_onboarding_step(req: OnboardingStepRequest):
     """Update onboarding progress for a teacher."""
     db = get_db()
@@ -181,7 +181,7 @@ async def update_onboarding_step(req: OnboardingStepRequest):
     return {"status": "ok", "step": req.step}
 
 
-@router.get("/onboarding/state")
+@router.get("/onboarding/state", dependencies=[Depends(require_auth)])
 async def get_onboarding_state():
     """Get current onboarding state."""
     db = get_db()

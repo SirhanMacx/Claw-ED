@@ -23,8 +23,14 @@ RUN mkdir -p clawed/_cli_bundle && \
 # Non-editable install, base deps only
 RUN pip install --no-cache-dir .
 
+# Run as non-root user (P2-12 audit fix)
+RUN groupadd -r clawed && useradd -r -g clawed -m clawed
+
 VOLUME /data
 ENV EDUAGENT_DATA_DIR=/data
+RUN chown -R clawed:clawed /data 2>/dev/null || true
+
+USER clawed
 
 EXPOSE 8000
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.9.2026.13 (2026-04-09)
+
+### Fresh Audit Remediation — Unauthenticated Surfaces Closed
+**P0-1: Extension/classroom/community routes now require auth.** `Depends(require_auth)` added to the entire extension router. Chrome extension must send Bearer token.
+**P0-2: Onboarding mutation routes now require auth.** `persona-form`, `step`, and `state` endpoints gated.
+**P0-5: WriteFileTool restricted.** Denylist blocks writes to config.json, secrets.json, api_token, schedule.json, bot_state.db, approvals.db, state.db, drive_token.json. Protected directories: memory/, corpus/, cache/. Default writes go to workspace/ subdirectory. SelfModifyConfigTool and WriteFileTool declare risk_level=write_local.
+**P2-12: Docker runs as non-root.** Created `clawed` user/group, set ownership on /data, switched with USER directive.
+
 ## v4.9.2026.12 (2026-04-09)
 
 ### PERFECT Release — All Audit Defects Resolved
