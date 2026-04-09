@@ -476,7 +476,41 @@ class GenerateLessonBundleTool:
             except Exception as e:
                 logger.debug("Auto-game failed: %s", e)
 
-        # 6. Auto-lookup state standards
+        # 6. Auto-generate learning journey (interactive HTML walkthrough)
+        try:
+            from clawed.compile_journey import compile_journey
+
+            journey_path = await compile_journey(
+                master=master, persona=persona, output_dir=output_dir,
+            )
+            if journey_path and journey_path.exists():
+                generated_files.append(journey_path)
+                side_effects.append(f"Learning journey: {journey_path.name}")
+        except Exception as e:
+            logger.debug("Auto-journey failed: %s", e)
+
+        # 7. Auto-deep-research (parallel sub-query synthesis)
+        try:
+            from clawed.deep_research import deep_research
+            from clawed.llm import LLMClient
+
+            research_llm = LLMClient(config=config)
+            research_report = await deep_research(
+                topic=getattr(master, "topic", master.title),
+                subject=subject,
+                grade=grade,
+                llm=research_llm,
+                max_sub_queries=3,
+            )
+            if research_report and len(research_report) > 100:
+                research_path = output_dir / f"{safe_title}_research.md"
+                research_path.write_text(research_report, encoding="utf-8")
+                generated_files.append(research_path)
+                side_effects.append(f"Research report: {research_path.name}")
+        except Exception as e:
+            logger.debug("Auto-research failed: %s", e)
+
+        # 8. Auto-lookup state standards
         if config and getattr(config, "auto_standards", True):
             try:
                 state = ""
