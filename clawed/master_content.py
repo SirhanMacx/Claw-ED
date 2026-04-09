@@ -65,6 +65,8 @@ class InstructionSection(BaseModel):
     teacher_script: str
     key_points: list[str] = Field(default_factory=list)
     image_spec: str = ""
+    hook: str = ""          # Opening hook — analogy, story, provocative question, character intro
+    transition: str = ""    # Scripted pivot phrase to next section
 
     @field_validator("image_spec", mode="after")
     @classmethod
@@ -90,6 +92,9 @@ class StationDocument(BaseModel):
     task: str
     student_directions: str
     teacher_answer_key: str
+    timer_minutes: int = 10          # Visual timer for rotation
+    group_roles: str = ""            # "Reader, Recorder, Reporter, Timekeeper"
+    reporting_template: str = ""     # Structured output format for each station
 
 
 class StimulusQuestion(BaseModel):
@@ -105,6 +110,8 @@ class StimulusQuestion(BaseModel):
     question: str
     answer: str
     cognitive_level: str = ""  # "recall", "application", "analysis"
+    sentence_starters: list[str] = Field(default_factory=list)  # ["According to the source, ___"]
+    response_framework: str = ""  # "TEA", "RACE", "CER"
 
     @field_validator("stimulus", mode="before")
     @classmethod
@@ -123,6 +130,7 @@ class DoNow(BaseModel):
     stimulus_type: str
     questions: list[str]
     answers: list[str]
+    hook_type: str = ""  # "analogy", "provocative_question", "real_world_scenario", "mystery", "image_analysis"
 
 
 class IndependentWork(BaseModel):
@@ -131,6 +139,31 @@ class IndependentWork(BaseModel):
     task: str
     rubric_snippet: str = ""
     exemplar: str = ""
+
+
+class JigsawStructure(BaseModel):
+    """Structured jigsaw activity with timed expert/teaching group rotations."""
+
+    num_expert_groups: int = 4
+    documents_per_group: list[str] = Field(default_factory=list)  # PrimarySource IDs
+    expert_phase_minutes: int = 10
+    teaching_phase_minutes: int = 10
+    graphic_organizer: str = ""     # Table headers/column structure
+    share_out_protocol: str = ""    # "Each expert has 2 minutes to teach..."
+    debrief_question: str = ""      # Whole-class closing question
+
+
+class CreativeActivity(BaseModel):
+    """A creative engagement activity beyond traditional document analysis."""
+
+    activity_type: str = ""  # role_play, debate, podcast_script, social_media, gallery_walk, mock_trial, time_travel
+    title: str = ""
+    scenario: str = ""           # The setup/premise students enter
+    roles: list[str] = Field(default_factory=list)  # Character roles
+    student_directions: str = ""  # Step-by-step what students do
+    deliverable: str = ""        # What students produce
+    debrief: str = ""            # How teacher wraps up
+    time_minutes: int = 15
 
 
 class MasterContent(BaseModel):
@@ -159,6 +192,24 @@ class MasterContent(BaseModel):
     differentiation: DifferentiationNotes
     homework: str | None = None
     materials_needed: list[str] = Field(default_factory=list)
+
+    # v4.9: Voice & structure fields
+    lesson_personality: str = Field(
+        default="",
+        description="One-line theme/character for the lesson (e.g. 'Today we're detectives investigating...')",
+    )
+    minute_by_minute: list[dict] = Field(
+        default_factory=list,
+        description="[{'time': '0:00-3:00', 'activity': 'Do Now', 'teacher_moves': '...'}]",
+    )
+    jigsaw: JigsawStructure | None = Field(
+        default=None,
+        description="Structured jigsaw — required when lesson_format is 'jigsaw'",
+    )
+    creative_activity: CreativeActivity | None = Field(
+        default=None,
+        description="Creative engagement activity (role play, debate, podcast, etc.)",
+    )
 
     # v4.8: Lesson format tracking for variety enforcement
     lesson_format: str = Field(

@@ -1,5 +1,18 @@
 # Changelog
 
+## v4.9.2026.3 (2026-04-09)
+
+### The Voice & Structure Revolution
+- **Lesson personality** — every lesson gets a one-line theme/hook ("Today we're putting Hammurabi on trial")
+- **Hooks & transitions** — first DI section requires an opening hook; all sections require scripted transitions
+- **Sentence starters & writing frameworks** — TEA/RACE/CER scaffolds on every exit ticket question
+- **Minute-by-minute pacing** — full timing chart for every lesson
+- **Structured jigsaws** — JigsawStructure model with expert/teaching group rotation, timed phases, graphic organizer, share-out protocol, debrief question
+- **Creative activities** — CreativeActivity model for role plays, debates, podcasts, social media campaigns, gallery walks, mock trials, time travel scenarios
+- **Station enhancements** — timer_minutes, group_roles, reporting_template fields
+- **DOCX compilation** — jigsaw graphic organizer rendered as real table, creative activity sections with deliverable templates, sentence starters on exit tickets
+- Prompt expanded with Voice & Personality, Jigsaw, Creative Activity, and Minute-by-Minute sections (~100 new lines)
+
 ## v4.9.2026.2 (2026-04-09)
 
 ### Vision-Powered Image Quality Filter

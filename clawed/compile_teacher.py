@@ -299,6 +299,53 @@ async def compile_teacher_view(
             _para(station.teacher_answer_key, italic=True, color=(0xC0, 0x00, 0x00))
             doc.add_paragraph("")
 
+    # ── Jigsaw Structure (if present) ───────────────────────────────────
+
+    jigsaw = getattr(master, "jigsaw", None)
+    if jigsaw:
+        _heading("Jigsaw Activity Structure")
+        _para(f"Expert Groups: {jigsaw.num_expert_groups} groups", bold=True)
+        _para(f"Expert Phase: {jigsaw.expert_phase_minutes} minutes  |  "
+              f"Teaching Phase: {jigsaw.teaching_phase_minutes} minutes")
+        if jigsaw.documents_per_group:
+            _para("Documents per group: " + ", ".join(jigsaw.documents_per_group))
+        if jigsaw.share_out_protocol:
+            _para("Share-Out Protocol:", bold=True)
+            _para(jigsaw.share_out_protocol)
+        if jigsaw.graphic_organizer:
+            _para("Graphic Organizer Columns:", bold=True)
+            _para(jigsaw.graphic_organizer)
+        if jigsaw.debrief_question:
+            _para("Debrief Question:", bold=True)
+            _para(jigsaw.debrief_question)
+        doc.add_paragraph("")
+
+    # ── Creative Activity (if present) ────────────────────────────────
+
+    creative = getattr(master, "creative_activity", None)
+    if creative and creative.title:
+        _heading(f"Creative Activity: {creative.title}")
+        if creative.activity_type:
+            _para(f"Type: {creative.activity_type.replace('_', ' ').title()}  |  "
+                  f"Time: {creative.time_minutes} minutes")
+        if creative.scenario:
+            _para("Scenario:", bold=True)
+            _para(creative.scenario)
+        if creative.roles:
+            _para("Roles:", bold=True)
+            for role in creative.roles:
+                p = doc.add_paragraph(style="List Bullet")
+                p.add_run(role)
+        if creative.student_directions:
+            _para("Student Directions:", bold=True)
+            _para(creative.student_directions)
+        if creative.deliverable:
+            _para(f"Deliverable: {creative.deliverable}", bold=True)
+        if creative.debrief:
+            _para("Debrief:", bold=True)
+            _para(creative.debrief)
+        doc.add_paragraph("")
+
     # ── Exit Ticket (with answers) ────────────────────────────────────
 
     if master.exit_ticket:
@@ -309,6 +356,12 @@ async def compile_teacher_view(
             if sq.stimulus_image_spec:
                 _embed_image(sq.stimulus_image_spec)
             _para(f"Question: {sq.question}")
+            # Sentence starters for students
+            starters = getattr(sq, "sentence_starters", [])
+            if starters:
+                _para("Sentence Starters:", bold=True, color=(0x00, 0x70, 0xC0))
+                for starter in starters:
+                    _para(f"  \u2022 {starter}", color=(0x00, 0x70, 0xC0))
             _para(f"Expected Answer: {sq.answer}", italic=True, color=(0xC0, 0x00, 0x00))
             if sq.cognitive_level:
                 _para(f"Cognitive Level: {sq.cognitive_level}", size_pt=9, color=(0x66, 0x66, 0x66))

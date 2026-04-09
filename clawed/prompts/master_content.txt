@@ -11,6 +11,85 @@ polished, professional lesson. Match the quality of the teacher's best work:
 - Align to the teacher's state standards framework ({standards_framework})
 - Match the assessment style used in the teacher's state ({state})
 
+---
+
+## Voice & Personality — THIS IS WHAT MAKES THE LESSON MEMORABLE
+
+You are not writing a textbook. You are writing a PERFORMANCE that a specific teacher will deliver to real teenagers in a real classroom.
+
+Rules:
+- Every lesson needs a HOOK. Fill the `lesson_personality` field with a one-line theme: "Today we're detectives investigating who really started the French Revolution" or "Welcome to the most unfair dinner party in history."
+- The first `direct_instruction` section MUST have a `hook` field — an analogy, a mystery, a provocative question, or a funny character intro. NOT "Today we will learn about..."
+  GOOD: "Imagine you're at a dinner party. Hammurabi shows up and starts demanding an eye for an eye over who ate the last breadstick."
+  BAD: "Today we will be learning about Hammurabi's Code."
+- Every `direct_instruction` section MUST have a `transition` field — a scripted pivot phrase connecting to the next section.
+  GOOD: "Now that we've seen how unfair the tax system was, ask yourself: if YOU were paying 50% of your grain to a lord who never worked — what would you do?"
+  BAD: [Section just ends with no connection to next]
+- The `teacher_script` field is SCRIPTED DIALOGUE — exact words the teacher says out loud. Include the joke, the analogy, the think-pair-share prompt, the "hands up if..." moment. A substitute teacher should be able to read this script verbatim and deliver a good lesson.
+- Historical figures are CHARACTERS, not encyclopedia entries:
+  GOOD: "Frederick Douglass — escaped slavery, taught himself to read, then wrote speeches so devastating that pro-slavery politicians literally couldn't respond."
+  BAD: "Frederick Douglass was an abolitionist and social reformer."
+
+---
+
+## Sentence Starters & Writing Frameworks
+
+If the teacher uses a writing framework (TEA, RACE, CER), EVERY exit_ticket answer must model that framework. The `sentence_starters` field MUST provide the frame for EVERY exit_ticket question.
+
+Example (TEA — Topic, Evidence, Analysis):
+  sentence_starters: ["The author argues that ___ (TOPIC)", "According to the document, '___' (EVIDENCE)", "This reveals that ___ because ___ (ANALYSIS)"]
+
+Example (CER — Claim, Evidence, Reasoning):
+  sentence_starters: ["Based on the data, I claim that ___", "The evidence for this is ___", "This matters because ___"]
+
+---
+
+## Jigsaw Format (use when lesson_format = "jigsaw")
+
+When lesson_format is "jigsaw", the `jigsaw` field is REQUIRED. Structure:
+- 3-4 expert groups, each assigned a DIFFERENT primary source from this lesson
+- `documents_per_group`: reference actual primary_source IDs (e.g. ["source_a", "source_b"])
+- Expert phase: groups read + analyze their source (8-10 min)
+- Teaching phase: new groups form with one expert from each source (8-10 min)
+- `graphic_organizer`: column structure for note-taking (e.g. "Movement | Main Problem | Solution | Key Evidence")
+- `share_out_protocol`: exactly what each expert says/does during their 2-3 min share
+- `debrief_question`: whole-class question connecting all sources
+
+---
+
+## Creative Activities — Make Learning an Experience
+
+For EVERY lesson, consider whether the objective could be met through a creative structure. If lesson_format is "gallery_walk", "socratic_seminar", "simulation", or "debate", the `creative_activity` field is REQUIRED.
+
+Even for "document_analysis" or "station_rotation" lessons, CONSIDER adding a creative_activity as enrichment. The best lessons have both rigorous analysis AND a memorable activity.
+
+Creative activity types and examples from master teacher lessons:
+- "time_travel": "Impossible Thanksgiving Dinner" — seating chart for historical figures, potluck menu from their cultures, toast in their voice
+- "role_play": "Liberators' Summit" — role play as revolutionary leaders comparing strategies
+- "social_media": "Historical Social Media Campaign" — 6 posts with period-accurate images and hashtags
+- "podcast_script": "Time-Traveling Podcaster" — interview a historical figure (script + optional recording)
+- "debate": "Philosophical Chairs" — structured whole-class debate with prep sheets
+- "gallery_walk": Students rotate through posted sources, leaving sticky-note analysis
+- "mock_trial": Students prosecute/defend a historical decision
+
+The `scenario` field must set the scene. The `roles` field lists character assignments. The `student_directions` field gives step-by-step instructions. The `deliverable` field says what students produce.
+
+---
+
+## Minute-by-Minute Pacing
+
+Fill the `minute_by_minute` field with a list of time blocks:
+[
+  {"time": "0:00-3:00", "activity": "Do Now", "teacher_moves": "Circulate, check stimulus responses"},
+  {"time": "3:00-5:00", "activity": "Do Now Debrief", "teacher_moves": "Cold call 2 students, bridge to lesson"},
+  {"time": "5:00-15:00", "activity": "Direct Instruction", "teacher_moves": "Deliver hook, model analysis"},
+  ...
+]
+
+The times MUST add up to the lesson duration ({duration_minutes} minutes).
+
+---
+
 ## Unit Context
 This lesson is part of a larger unit:
 - **Unit Title:** {unit_title}
@@ -339,7 +418,9 @@ Respond with ONLY a JSON object (no markdown fencing):
             "content": "The actual content being taught — include full source texts, worked examples, data, or passages. Not a summary. A substitute teacher should be able to deliver this from the text alone.",
             "teacher_script": "Scripted teacher language: what the teacher says, key questions to pose, think-aloud annotations, and transition phrases. Include checks for understanding every 3–5 minutes as specific questions.",
             "key_points": ["Key point 1", "Key point 2"],
-            "image_spec": "REQUIRED for ALL subjects — a specific image search query describing the visual aid for this section (e.g. 'American Revolution Battle of Bunker Hill painting', 'cell mitosis phases diagram', 'quadratic formula graph parabola', 'Romeo and Juliet balcony scene painting'). Use real search terms, NOT emoji."
+            "image_spec": "REQUIRED for ALL subjects — a specific image search query. Use real search terms, NOT emoji.",
+            "hook": "Opening hook for this section — analogy, mystery, provocative question, or character intro. REQUIRED for the first section. Example: 'Imagine you just got your paycheck — now imagine the government takes 50% and you have no say in how it's spent.'",
+            "transition": "Scripted pivot to the next section. Example: 'So we've seen why people were angry. But anger alone doesn't start a revolution — what else did they need?'"
         }
     ],
 
@@ -374,7 +455,9 @@ Respond with ONLY a JSON object (no markdown fencing):
             "stimulus_image_spec": "Optional image description or empty string",
             "question": "Question anchored to the stimulus above?",
             "answer": "Expected proficient response",
-            "cognitive_level": "recall"
+            "cognitive_level": "recall",
+            "sentence_starters": ["According to the source, ___", "The author states that ___"],
+            "response_framework": "TEA or RACE or CER — match the teacher's preferred framework"
         },
         {
             "stimulus": "A different or extended stimulus — may reuse an earlier source with a new angle.",
@@ -382,7 +465,9 @@ Respond with ONLY a JSON object (no markdown fencing):
             "stimulus_image_spec": "",
             "question": "Application-level question anchored to the stimulus?",
             "answer": "Expected proficient response",
-            "cognitive_level": "application"
+            "cognitive_level": "application",
+            "sentence_starters": ["This evidence suggests that ___", "The relationship between X and Y shows ___"],
+            "response_framework": ""
         },
         {
             "stimulus": "A new or extended stimulus that requires synthesis or transfer.",
@@ -431,5 +516,37 @@ Respond with ONLY a JSON object (no markdown fencing):
     "prerequisite_skills": [
         "Skill or concept students need before this lesson",
         "Prior knowledge that today's lesson builds on"
-    ]
+    ],
+
+    "lesson_personality": "One-line theme or character for this lesson. Example: 'Today we're putting Hammurabi on trial — you're the jury.' or 'Welcome to the world's most unfair dinner party.'",
+
+    "minute_by_minute": [
+        {"time": "0:00-3:00", "activity": "Do Now", "teacher_moves": "Circulate, check responses, identify 2 students to share"},
+        {"time": "3:00-5:00", "activity": "Do Now Debrief", "teacher_moves": "Cold call, bridge to today's lesson with hook"},
+        {"time": "5:00-18:00", "activity": "Direct Instruction", "teacher_moves": "Deliver content with embedded CFUs every 3-5 min"},
+        {"time": "18:00-32:00", "activity": "Station Rotation / Jigsaw / Activity", "teacher_moves": "Facilitate groups, monitor timer, check graphic organizers"},
+        {"time": "32:00-38:00", "activity": "Exit Ticket", "teacher_moves": "Students write independently, no talking"},
+        {"time": "38:00-40:00", "activity": "Closing", "teacher_moves": "Preview tomorrow, collect exit tickets"}
+    ],
+
+    "jigsaw": {
+        "num_expert_groups": 4,
+        "documents_per_group": ["source_a", "source_b", "source_c", "source_d"],
+        "expert_phase_minutes": 10,
+        "teaching_phase_minutes": 10,
+        "graphic_organizer": "Movement | Main Problem | Proposed Solution | Key Evidence",
+        "share_out_protocol": "Each expert has exactly 2 minutes. Read the key quote, explain the main argument, then answer questions.",
+        "debrief_question": "Which reform movement had the biggest impact on American society? Use evidence from at least two sources."
+    },
+
+    "creative_activity": {
+        "activity_type": "time_travel | role_play | debate | podcast_script | social_media | gallery_walk | mock_trial",
+        "title": "Name of the activity",
+        "scenario": "The setup students enter. Example: 'It's 1848. You've been invited to the Seneca Falls Convention...'",
+        "roles": ["Role 1 — description", "Role 2 — description"],
+        "student_directions": "Step-by-step what students do. Must be specific enough that a substitute could run it.",
+        "deliverable": "What students produce (script, poster, social media posts, debate prep sheet, etc.)",
+        "debrief": "How the teacher wraps up and connects back to the objective",
+        "time_minutes": 15
+    }
 }

@@ -317,6 +317,47 @@ async def compile_student_view(
             _para(_BLANK)
             doc.add_paragraph("")
 
+    # ── Jigsaw Graphic Organizer (if present) ──────────────────────────
+
+    jigsaw = getattr(master, "jigsaw", None)
+    if jigsaw and jigsaw.graphic_organizer:
+        _heading("Jigsaw Notes")
+        cols = [c.strip() for c in jigsaw.graphic_organizer.split("|") if c.strip()]
+        if cols:
+            num_rows = max(jigsaw.num_expert_groups, 3) + 1  # header + data rows
+            tbl = doc.add_table(rows=num_rows, cols=len(cols))
+            tbl.style = "Table Grid"
+            for j, col_name in enumerate(cols):
+                cell = tbl.rows[0].cells[j]
+                _shaded_cell(cell, primary_hex)
+                cell.text = col_name
+                cell.paragraphs[0].runs[0].bold = True
+                cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        if jigsaw.debrief_question:
+            doc.add_paragraph("")
+            _para(f"Debrief: {jigsaw.debrief_question}", bold=True)
+            _para(_BLANK)
+        doc.add_paragraph("")
+
+    # ── Creative Activity (if present) ────────────────────────────────
+
+    creative = getattr(master, "creative_activity", None)
+    if creative and creative.title:
+        _heading(f"Activity: {creative.title}")
+        if creative.scenario:
+            _para(creative.scenario)
+        if creative.roles:
+            _para("Your Role:", bold=True)
+            _para(_BLANK)
+        if creative.student_directions:
+            _para("Directions:", bold=True)
+            _para(creative.student_directions)
+        if creative.deliverable:
+            _para(f"What you will create: {creative.deliverable}", bold=True)
+            _para(_BLANK)
+            _para(_BLANK)
+        doc.add_paragraph("")
+
     # ── Exit Ticket (stimulus + question, no answer) ──────────────────
 
     if master.exit_ticket:
@@ -327,6 +368,12 @@ async def compile_student_view(
             if sq.stimulus_image_spec:
                 _embed_image(sq.stimulus_image_spec)
             _para(sq.question)
+            # Sentence starters for students
+            starters = getattr(sq, "sentence_starters", [])
+            if starters:
+                _para("Use these sentence starters:", italic=True)
+                for starter in starters:
+                    _para(f"  \u2022 {starter}", italic=True)
             _para(_BLANK)
             doc.add_paragraph("")
 
