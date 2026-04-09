@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.9.2026.10 (2026-04-09)
+
+### Audit Remediation Part 2 — Hardening & Test Coverage
+- [F9] **Upload size limits** — per-file 100MB, per-request 500MB, max 200 files. Streamed to disk in 1MB chunks instead of reading all into memory.
+- [F10] **9 new audit verification tests** — approval policy enforcement (read_only/write_local/package_install), InstallPackageTool allowlist, UDL vocab simplification ("Dr. King" fix), Common Cartridge export with namespace, send_notification graceful failure
+- **z-index lowered** in extension panel (2147483647 → 100000)
+- 1,959 tests total (was 1,950)
+
 ## v4.9.2026.9 (2026-04-09)
 
 ### Dual Audit Remediation — Security & Trust Boundary Hardening
