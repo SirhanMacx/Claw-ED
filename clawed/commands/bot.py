@@ -635,6 +635,7 @@ def bot(
         Path(data_dir).expanduser().resolve() if data_dir else None
     )
 
+    from clawed.paths import data_dir as _data_dir_fn
     from clawed.transports.telegram import run_bot as run_new_bot
 
     console.print(
@@ -642,7 +643,7 @@ def bot(
             f"[bold green]Claw-ED Telegram Bot[/bold green]\n\n"
             f"Starting bot...\n"
             f"Data directory:"
-            f" {data_path or Path.home() / '.eduagent'}\n"
+            f" {data_path or _data_dir_fn()}\n"
             f"Mode: polling (httpx)\n\n"
             f"[dim]Press Ctrl+C to stop[/dim]",
             title="Claw-ED",

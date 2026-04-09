@@ -20,7 +20,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DB = Path.home() / ".eduagent" / "memory" / "curriculum_kb.db"
+def _resolve_default_db() -> Path:
+    import os as _os
+    base = Path(_os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
+    return base / "memory" / "curriculum_kb.db"
+
+_DEFAULT_DB = _resolve_default_db()
 
 # ── YouTube URL normalization ────────────────────────────────────────
 

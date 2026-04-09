@@ -13,14 +13,18 @@ from clawed.agent_core.memory.embeddings import get_embedder
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DB = Path.home() / ".eduagent" / "memory" / "episodes.db"
+def _default_db():
+    from clawed.paths import episodes_db_path
+    return episodes_db_path()
+
+_DEFAULT_DB = None  # resolved lazily via _default_db()
 
 
 class EpisodicMemory:
     """Stores and recalls teacher interaction episodes with semantic search."""
 
     def __init__(self, db_path: Path | None = None) -> None:
-        self._db_path = db_path or _DEFAULT_DB
+        self._db_path = db_path or _default_db()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._embedder = get_embedder()
         self._init_db()

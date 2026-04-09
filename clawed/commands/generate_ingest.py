@@ -190,7 +190,8 @@ def ingest(
         pass
     # Also check identity.md
     try:
-        identity_path = Path.home() / ".eduagent" / "workspace" / "identity.md"
+        from clawed.paths import workspace_dir
+        identity_path = workspace_dir() / "identity.md"
         if identity_path.exists():
             import re
             content = identity_path.read_text(encoding="utf-8")

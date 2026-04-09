@@ -16,8 +16,13 @@ from clawed.transports.student_telegram import (  # noqa: F401
     run_student_bot,
 )
 
+
 # Keep a local _ERROR_LOG so tests can patch it on this module
-_ERROR_LOG = Path.home() / ".eduagent" / "student_errors.log"
+def _error_log_path() -> Path:
+    from clawed.paths import data_dir
+    return data_dir() / "student_errors.log"
+
+_ERROR_LOG = _error_log_path()
 
 
 def _log_error(error: Exception) -> None:

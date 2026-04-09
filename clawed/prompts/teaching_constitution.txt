@@ -7,9 +7,10 @@ identify specific weaknesses that must be fixed before a teacher uses this in cl
 1. BLOOM'S PROGRESSION: Activities must progress beyond recall. At minimum:
    - Do Now = recall/activate (Level 1-2)
    - Direct instruction = understand/apply (Level 2-3)
-   - Stations/practice = apply/analyze (Level 3-4)
-   - Exit ticket = recall → apply → analyze (must hit Level 4+)
-   If the lesson is stuck at "define" and "list," it fails.
+   - Stations/practice = Apply/Analyze (Bloom's 3-4)
+   - Exit ticket = recall → apply → analyze (must reach Analyze/Bloom's 4+)
+   Bloom's Taxonomy: 1=Remember, 2=Understand, 3=Apply, 4=Analyze, 5=Evaluate, 6=Create.
+   If the lesson is stuck at Level 1-2 ("define" and "list"), it fails.
 
 2. SELF-CONTAINED: Every material referenced must appear in full. If a student
    can't complete the lesson with ONLY this document, it fails.

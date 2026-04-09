@@ -1,7 +1,6 @@
 """Tool: read_heartbeat — read the agent's schedule from HEARTBEAT.md."""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
@@ -49,7 +48,8 @@ class ReadHeartbeatTool:
     async def execute(
         self, params: dict[str, Any], context: AgentContext
     ) -> ToolResult:
-        heartbeat_path = Path.home() / ".eduagent" / "workspace" / "HEARTBEAT.md"
+        from clawed.paths import workspace_dir
+        heartbeat_path = workspace_dir() / "HEARTBEAT.md"
 
         if not heartbeat_path.exists():
             # Create from default template

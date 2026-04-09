@@ -415,7 +415,8 @@ class Gateway:
         # 2. Load reading report if available
         reading_report_context = ""
         try:
-            report_path = Path.home() / ".eduagent" / "workspace" / "reading_report.md"
+            from clawed.paths import workspace_dir
+            report_path = workspace_dir() / "reading_report.md"
             if report_path.exists():
                 reading_report_context = report_path.read_text(encoding="utf-8")[:1500]
         except Exception as e:
@@ -425,9 +426,8 @@ class Gateway:
         # 2a. Load SOUL.md if available
         soul_context = ""
         try:
-            import os
-            data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-            soul_path = Path(data_dir) / "workspace" / "soul.md"
+            from clawed.paths import workspace_dir as _ws_dir
+            soul_path = _ws_dir() / "soul.md"
             if soul_path.exists():
                 soul_context = soul_path.read_text(encoding="utf-8")[:2000]
         except Exception as e:

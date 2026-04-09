@@ -25,7 +25,11 @@ from clawed.failure_codes import FailureCode  # noqa: F401 — used in error mes
 logger = logging.getLogger(__name__)
 
 # Safe output directory for rendered animations
-_ANIMATION_DIR = Path.home() / ".eduagent" / "animations"
+def _get_animation_dir() -> Path:
+    from clawed.paths import data_dir
+    return data_dir() / "animations"
+
+_ANIMATION_DIR = _get_animation_dir()
 
 # Maximum subprocess timeout for Manim render
 _RENDER_TIMEOUT = 120

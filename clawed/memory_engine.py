@@ -603,11 +603,8 @@ def reset_memory(confirm: bool = False) -> bool:
 
 def _base_dir() -> Path:
     """Get the base data directory for stats files."""
-    import os
-    env_dir = os.environ.get("EDUAGENT_DATA_DIR")
-    if env_dir:
-        return Path(env_dir)
-    return Path.home() / ".eduagent"
+    from clawed.paths import data_dir
+    return data_dir()
 
 
 def _load_stats(stats_path: Path) -> dict[str, Any]:

@@ -505,3 +505,31 @@ async def pipeline_quality_report():
         return quality_data or {"message": "No quality report available yet."}
     except Exception:
         return {"message": "No quality report available."}
+
+
+@router.get("/scheduler/status")
+async def scheduler_job_status():
+    """Get the status of all scheduler jobs (F11 audit fix)."""
+    try:
+        from clawed.scheduler import get_job_status, load_schedule_config
+
+        config = load_schedule_config()
+        status = get_job_status()
+
+        jobs = []
+        for name, cfg in config.items():
+            job = {
+                "name": name,
+                "description": cfg.get("description", ""),
+                "enabled": cfg.get("enabled", False),
+                "cron": cfg.get("cron", {}),
+                "last_run": status.get(name, {}).get("last_run"),
+                "status": status.get(name, {}).get("status", "never_run"),
+                "result": status.get(name, {}).get("result"),
+                "error": status.get(name, {}).get("error"),
+            }
+            jobs.append(job)
+
+        return {"jobs": jobs}
+    except Exception:
+        return {"jobs": [], "error": "Scheduler not available."}

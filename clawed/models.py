@@ -1148,7 +1148,8 @@ class AppConfig(BaseModel):
         env_dir = os.environ.get("EDUAGENT_DATA_DIR")
         if env_dir:
             return Path(env_dir) / "config.json"
-        return Path.home() / ".eduagent" / "config.json"
+        from clawed.paths import data_dir
+        return data_dir() / "config.json"
 
     # Fields that contain secrets and must never be written to the JSON
     # config file.  They are stored via keyring (preferred) or env vars

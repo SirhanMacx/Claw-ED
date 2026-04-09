@@ -179,7 +179,8 @@ class IngestHandler:
             except Exception:
                 pass
             try:
-                _id_path = Path.home() / ".eduagent" / "workspace" / "identity.md"
+                from clawed.paths import workspace_dir as _ws_dir
+                _id_path = _ws_dir() / "identity.md"
                 if _id_path.exists():
                     import re as _re
                     _id_content = _id_path.read_text(encoding="utf-8")
@@ -191,8 +192,9 @@ class IngestHandler:
             except Exception:
                 pass
 
+            from clawed.paths import data_dir as _dd
             from clawed.persona import save_persona
-            save_persona(persona, Path.home() / ".eduagent")
+            save_persona(persona, _dd())
 
             style_info = f"\nLearned teaching style: {persona.teaching_style}"
             if persona.tone:

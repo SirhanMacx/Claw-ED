@@ -46,7 +46,10 @@ def compile_anki_tsv(master: "MasterContent", output_dir: Path) -> Path:
     # Vocabulary → flashcards
     for entry in master.vocabulary:
         front = f"{entry.term}"
-        back = f"{entry.definition}\n\nContext: {entry.context_sentence}"
+        ctx = entry.context_sentence or ""
+        back = f"{entry.definition}"
+        if ctx:
+            back += f"\n\nContext: {ctx}"
         cards.append((front, back, f"{tag_base}::vocabulary"))
 
     # Guided notes → flashcards (prompt = front, answer = back)

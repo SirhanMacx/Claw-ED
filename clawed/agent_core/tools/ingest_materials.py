@@ -81,7 +81,8 @@ class IngestMaterialsTool:
                 except Exception:
                     pass
                 try:
-                    _id_path = Path.home() / ".eduagent" / "workspace" / "identity.md"
+                    from clawed.paths import workspace_dir
+                    _id_path = workspace_dir() / "identity.md"
                     if _id_path.exists():
                         import re as _re
                         _id_content = _id_path.read_text(encoding="utf-8")
@@ -92,7 +93,8 @@ class IngestMaterialsTool:
                                 persona.name = f"{_tname} Teaching Persona"
                 except Exception:
                     pass
-                save_persona(persona, Path.home() / ".eduagent")
+                from clawed.paths import data_dir
+                save_persona(persona, data_dir())
                 # Track persona changes for evolution
                 try:
                     from clawed.persona_evolution import record_ingestion_changes
@@ -115,14 +117,9 @@ class IngestMaterialsTool:
                 if report_text:
                     summary = report_text
                     # Store the report for future system prompts
-                    import os
 
-                    data_dir = Path(
-                        os.environ.get(
-                            "EDUAGENT_DATA_DIR",
-                            str(Path.home() / ".eduagent"),
-                        )
-                    )
+                    from clawed.paths import data_dir as _data_dir_fn
+                    data_dir = _data_dir_fn()
                     report_path = data_dir / "workspace" / "reading_report.md"
                     report_path.parent.mkdir(parents=True, exist_ok=True)
                     report_path.write_text(report_text, encoding="utf-8")

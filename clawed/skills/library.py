@@ -13,7 +13,11 @@ from clawed.skills.base import SubjectSkill
 logger = logging.getLogger(__name__)
 
 # Default location for user-defined custom YAML skills
-CUSTOM_SKILLS_DIR = Path.home() / ".eduagent" / "skills"
+def _custom_skills_dir():
+    from clawed.paths import custom_skills_dir
+    return custom_skills_dir()
+
+CUSTOM_SKILLS_DIR = None  # resolved lazily via _custom_skills_dir()
 
 
 class SkillLibrary:
@@ -29,7 +33,7 @@ class SkillLibrary:
         self._skills: dict[str, SubjectSkill] = {}
         self._alias_map: dict[str, str] = {}
         self._custom_subjects: set[str] = set()
-        self._custom_dir = custom_dir if custom_dir is not None else CUSTOM_SKILLS_DIR
+        self._custom_dir = custom_dir if custom_dir is not None else _custom_skills_dir()
         self._load_all()
         self._load_custom_skills()
 
@@ -174,7 +178,7 @@ def generate_skill_template(subject: str, output_dir: Path | None = None) -> Pat
 
     Returns the path to the created file.
     """
-    target_dir = output_dir if output_dir is not None else CUSTOM_SKILLS_DIR
+    target_dir = output_dir if output_dir is not None else _custom_skills_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
 
     filename = f"{subject.lower().replace(' ', '_')}.yaml"

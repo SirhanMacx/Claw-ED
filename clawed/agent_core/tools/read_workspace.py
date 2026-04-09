@@ -1,7 +1,6 @@
 """Tool: read_workspace — read any file in the agent's workspace."""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
@@ -39,7 +38,8 @@ class ReadWorkspaceTool:
     async def execute(
         self, params: dict[str, Any], context: AgentContext
     ) -> ToolResult:
-        workspace = Path.home() / ".eduagent" / "workspace"
+        from clawed.paths import workspace_dir
+        workspace = workspace_dir()
         filename = params["filename"]
         target = (workspace / filename).resolve()
         if not str(target).startswith(str(workspace.resolve())):

@@ -247,8 +247,9 @@ def _load_persona_for_tool(teacher_id: str = ""):
 
     # Fallback to file on disk
     try:
+        from clawed.paths import data_dir
         from clawed.persona import load_persona
-        return load_persona(Path.home() / ".eduagent" / "persona.json")
+        return load_persona(data_dir() / "persona.json")
     except Exception:
         return TeacherPersona()
 
@@ -382,7 +383,8 @@ async def _tool_read_persona(teacher_id: str = "") -> str:
 def _tool_list_files(directory: str = "all") -> str:
     """List files in teacher's output/workspace directories."""
     dirs_to_check: list[tuple[str, Path]] = []
-    base = Path.home() / ".eduagent"
+    from clawed.paths import data_dir
+    base = data_dir()
 
     if directory in ("output", "all"):
         dirs_to_check.append(("Generated Output", Path("clawed_output").resolve()))
@@ -412,7 +414,8 @@ def _tool_read_file(path: str) -> str:
     """Read a file and return its contents (truncated if large)."""
     p = Path(path).expanduser().resolve()
     # Security: only allow reading from known directories (resolved path containment)
-    allowed = [Path.home() / ".eduagent", Path("clawed_output").resolve(), Path("eduagent_output").resolve()]
+    from clawed.paths import data_dir
+    allowed = [data_dir(), Path("clawed_output").resolve(), Path("eduagent_output").resolve()]
     if not any(str(p).startswith(str(a.resolve()) + os.sep) or p == a.resolve() for a in allowed):
         return "Cannot read files outside of Claw-ED directories."
     if not p.exists():
@@ -430,7 +433,8 @@ def _tool_search_files(query: str) -> str:
     """Search filenames and content for a keyword."""
     query_lower = query.lower()
     matches: list[str] = []
-    dirs = [Path.home() / ".eduagent", Path("clawed_output").resolve(), Path("eduagent_output").resolve()]
+    from clawed.paths import data_dir
+    dirs = [data_dir(), Path("clawed_output").resolve(), Path("eduagent_output").resolve()]
     for d in dirs:
         if not d.exists():
             continue
@@ -517,7 +521,8 @@ async def _tool_ingest_folder(path: str, teacher_id: str = "") -> str:
         from clawed.persona import extract_persona, save_persona
 
         persona = await extract_persona(docs, AppConfig.load())
-        save_persona(persona, Path.home() / ".eduagent")
+        from clawed.paths import data_dir
+        save_persona(persona, data_dir())
         style = persona.teaching_style.value.replace("_", " ").title()
         return f"Ingested {len(docs)} files! Teaching style: {style}, Tone: {persona.tone}."
     except Exception as e:

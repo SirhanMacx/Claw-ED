@@ -9,7 +9,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_TOKEN_PATH = Path.home() / ".eduagent" / "drive_token.json"
+def _default_token_path():
+    from clawed.paths import data_dir
+    return data_dir() / "drive_token.json"
+
+_DEFAULT_TOKEN_PATH = None  # resolved lazily via _default_token_path()
 
 SCOPES = [
     "https://www.googleapis.com/auth/drive.file",
@@ -19,7 +23,7 @@ SCOPES = [
 def save_token(token_data: dict[str, Any],
                token_path: Path | None = None) -> None:
     """Persist OAuth token to disk."""
-    path = token_path or _DEFAULT_TOKEN_PATH
+    path = token_path or _default_token_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(token_data, indent=2), encoding="utf-8")
     try:
@@ -30,7 +34,7 @@ def save_token(token_data: dict[str, Any],
 
 def load_token(token_path: Path | None = None) -> dict[str, Any] | None:
     """Load OAuth token from disk. Returns None if not found."""
-    path = token_path or _DEFAULT_TOKEN_PATH
+    path = token_path or _default_token_path()
     if not path.exists():
         return None
     try:

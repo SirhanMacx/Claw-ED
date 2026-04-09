@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import sqlite3
 import uuid
@@ -33,14 +32,17 @@ logger = logging.getLogger(__name__)
 _SAFE_SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_ ()'.\[\]]+$")
 
 # Default data directory
-DEFAULT_DATA_DIR = Path.home() / ".eduagent"
+def _default_data_dir():
+    from clawed.paths import data_dir
+    return data_dir()
+
+DEFAULT_DATA_DIR = None  # resolved lazily via _default_data_dir()
 
 
 def _db_path() -> Path:
-    env_dir = os.environ.get("EDUAGENT_DATA_DIR")
-    data_dir = Path(env_dir) if env_dir else DEFAULT_DATA_DIR
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / "state.db"
+    dd = _default_data_dir()
+    dd.mkdir(parents=True, exist_ok=True)
+    return dd / "state.db"
 
 
 @contextmanager

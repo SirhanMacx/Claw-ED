@@ -91,7 +91,10 @@ class StudentProgressStore:
     """Read/write student progress rows to ~/.eduagent/bot_state.db."""
 
     def __init__(self, db_path: Optional[Path] = None) -> None:
-        self._db_path = db_path or (Path.home() / ".eduagent" / "bot_state.db")
+        if db_path is None:
+            from clawed.paths import data_dir
+            db_path = data_dir() / "bot_state.db"
+        self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn: Optional[sqlite3.Connection] = None
         self._ensure_table()
@@ -202,7 +205,10 @@ class StudentBotStateStore:
     """Read/write student session rows to ~/.eduagent/bot_state.db."""
 
     def __init__(self, db_path: Optional[Path] = None) -> None:
-        self._db_path = db_path or (Path.home() / ".eduagent" / "bot_state.db")
+        if db_path is None:
+            from clawed.paths import data_dir
+            db_path = data_dir() / "bot_state.db"
+        self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn: Optional[sqlite3.Connection] = None
         self._ensure_table()

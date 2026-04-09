@@ -212,7 +212,8 @@ def save_sub_packet(packet: SubPacket, output_dir: Path | None = None) -> Path:
     from clawed.io import safe_filename, write_text
 
     if output_dir is None:
-        output_dir = Path.home() / ".eduagent" / "sub_packets"
+        from clawed.paths import data_dir
+        output_dir = data_dir() / "sub_packets"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     safe_date = safe_filename(packet.date, max_len=50)

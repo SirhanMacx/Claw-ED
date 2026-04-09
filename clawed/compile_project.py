@@ -48,7 +48,10 @@ async def compile_project_packet(
     primary_hex = theme["primary"]
 
     def _hex_rgb(h: str) -> RGBColor:
-        return RGBColor(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+        try:
+            return RGBColor(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+        except (ValueError, IndexError):
+            return RGBColor(0x8B, 0x69, 0x14)  # Fallback to warm brown
 
     def _shaded_cell(cell, fill_hex: str) -> None:
         tc = cell._tc

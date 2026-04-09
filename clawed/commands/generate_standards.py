@@ -57,7 +57,8 @@ def _gap_analyze_json(*, subject, grade, standards, materials_dir):
         mat_path = Path(materials_dir).expanduser().resolve()
     else:
         cfg = AppConfig.load()
-        corpus_base = Path.home() / ".eduagent"
+        from clawed.paths import data_dir
+        corpus_base = data_dir()
         if getattr(cfg, "active_teacher_id", None):
             corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
         else:
@@ -180,7 +181,8 @@ def gap_analyze(
             raise typer.Exit(1)
     else:
         cfg = AppConfig.load()
-        corpus_base = Path.home() / ".eduagent"
+        from clawed.paths import data_dir
+        corpus_base = data_dir()
         if getattr(cfg, "active_teacher_id", None):
             corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
         else:

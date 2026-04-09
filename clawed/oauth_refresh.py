@@ -102,7 +102,8 @@ def _refresh_token(refresh_token: str | None) -> str | None:
         CREDENTIALS_PATH.write_text(json.dumps(creds, indent=2))
 
         # Also update secrets.json if it has the old token
-        secrets_path = Path.home() / ".eduagent" / "secrets.json"
+        from clawed.paths import data_dir
+        secrets_path = data_dir() / "secrets.json"
         if secrets_path.exists():
             try:
                 secrets = json.loads(secrets_path.read_text())

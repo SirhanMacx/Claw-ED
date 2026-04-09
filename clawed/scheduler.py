@@ -194,7 +194,39 @@ def _parse_cron_expr(expr: str) -> dict[str, str]:
     return {"hour": expr, "minute": "0"}
 
 
-# ── Task implementations (stubs that call existing Claw-ED functions) ──
+# ── Job status tracking (F11 audit fix) ──────────────────────────────
+
+_job_status: dict[str, dict] = {}  # name → {status, last_run, result, error}
+
+
+def get_job_status() -> dict[str, dict]:
+    """Get the status of all scheduler jobs."""
+    return dict(_job_status)
+
+
+def _record_job_start(name: str) -> None:
+    from datetime import datetime
+    _job_status[name] = {
+        "status": "running",
+        "last_run": datetime.now().isoformat(),
+        "result": None,
+        "error": None,
+    }
+
+
+def _record_job_complete(name: str, result: str) -> None:
+    if name in _job_status:
+        _job_status[name]["status"] = "completed"
+        _job_status[name]["result"] = result[:500]
+
+
+def _record_job_failed(name: str, error: str) -> None:
+    if name in _job_status:
+        _job_status[name]["status"] = "failed"
+        _job_status[name]["error"] = error[:500]
+
+
+# ── Task implementations ────────────────────────────────────────────
 
 
 async def _task_morning_prep() -> str:
@@ -204,6 +236,7 @@ async def _task_morning_prep() -> str:
     If any are missing, auto-generates them using the teacher's persona
     and notifies via Telegram.
     """
+    _record_job_start("morning-prep")
     from clawed.workspace import append_daily_note
 
     append_daily_note("Morning prep task started.", category="scheduler")
@@ -277,6 +310,10 @@ async def _task_morning_prep() -> str:
 
     append_daily_note(summary, category="morning-prep")
     logger.info("morning-prep: %s", summary)
+    if "failed" in summary.lower():
+        _record_job_failed("morning-prep", summary)
+    else:
+        _record_job_complete("morning-prep", summary)
     return summary
 
 

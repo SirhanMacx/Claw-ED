@@ -5,7 +5,11 @@
  * Sends highlighted text to the local Claw-ED API server.
  */
 
-const CLAWED_API = "http://localhost:8000";
+// API URL — configurable via chrome.storage. Defaults to localhost.
+let CLAWED_API = "http://localhost:8000";
+chrome.storage.sync.get("apiUrl", (data) => {
+  if (data.apiUrl) CLAWED_API = data.apiUrl;
+});
 
 // Create context menu on install
 chrome.runtime.onInstalled.addListener(() => {

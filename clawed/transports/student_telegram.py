@@ -24,7 +24,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Error log path (separate from teacher bot)
-_ERROR_LOG = Path.home() / ".eduagent" / "student_errors.log"
+def _student_error_log() -> Path:
+    import os as _os
+    base = Path(_os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
+    return base / "student_errors.log"
+
+_ERROR_LOG = _student_error_log()
 
 # Commands registered with BotFather
 STUDENT_BOT_COMMANDS: list[tuple[str, str]] = [

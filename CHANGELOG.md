@@ -1,5 +1,26 @@
 # Changelog
 
+## v4.9.2026.12 (2026-04-09)
+
+### PERFECT Release — All Audit Defects Resolved
+**F6 COMPLETE: All 23 hardcoded paths migrated to paths.py**
+- models.py, student_telegram_bot.py, transports/student_telegram.py, asset_registry.py, slide_images.py, bot_state.py, tools.py (5 instances), agent_core/tools/ingest_materials.py (2), agent_core/tools/generate_animation.py, agent_core/tools/read_heartbeat.py, agent_core/tools/read_workspace.py, agent_core/memory/episodes.py, agent_core/approvals.py, agent_core/autonomy.py, agent_core/core.py, agent_core/drive/auth.py, memory_engine.py, sub_packet.py, search.py, commands/generate_ingest.py, commands/generate_standards.py (2), skills/library.py, handlers/ingest.py (2), handlers/export.py, oauth_refresh.py, state.py, transports/telegram.py (2)
+- Zero remaining hardcoded paths without EDUAGENT_DATA_DIR check
+
+**F11: Job status tracking added to scheduler**
+- _job_status dict tracks: status (running/completed/failed), last_run, result, error
+- GET /api/scheduler/status exposes all job state
+
+**Low-severity polish:**
+- L1: Hex validation in compile_project._hex_rgb() — fallback to warm brown on malformed hex
+- L2: context_sentence=None handling in flashcard export
+- L3: z-index lowered to 100000 (already shipped in .10)
+- L4: Mobile responsive CSS for extension panel (@media max-width: 480px)
+- L5: API URL configurable via chrome.storage in extension
+- L7: Bloom's level numbering clarified in teaching_constitution.txt
+
+**Final audit status: 38/38 defects resolved. Zero remaining.**
+
 ## v4.9.2026.11 (2026-04-09)
 
 ### Test Coverage & Hardening

@@ -718,7 +718,8 @@ def _query_teacher_images_db(
     """
     import sqlite3
 
-    db_path = Path.home() / ".eduagent" / "memory" / "curriculum_kb.db"
+    from clawed.paths import data_dir
+    db_path = data_dir() / "memory" / "curriculum_kb.db"
     if not db_path.exists():
         return []
 

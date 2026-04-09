@@ -10,7 +10,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DB = Path.home() / ".eduagent" / "approvals.db"
+def _default_db():
+    from clawed.paths import approvals_db
+    return approvals_db()
+
+_DEFAULT_DB = None  # resolved lazily via _default_db()
 _MIN_SAMPLES = 10
 _AUTO_THRESHOLD = 0.95
 
@@ -46,7 +50,7 @@ class ApprovalTracker:
     """Tracks approval/rejection rates per action type and offers auto-approval."""
 
     def __init__(self, db_path: Path | None = None) -> None:
-        self._db_path = db_path or _DEFAULT_DB
+        self._db_path = db_path or _default_db()
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
         self._migrate_json_if_needed()

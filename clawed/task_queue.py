@@ -218,10 +218,10 @@ async def _execute_task(task: Task) -> dict[str, Any]:
         return lesson.model_dump()
 
     if task.task_type == TaskType.GENERATE_UNIT:
+        from clawed.paths import data_dir
         from clawed.persona import load_persona
         from clawed.planner import plan_unit, save_unit
-
-        persona_path = Path(payload.get("persona_path", Path.home() / ".eduagent" / "persona.json"))
+        persona_path = Path(payload.get("persona_path", data_dir() / "persona.json"))
         persona = load_persona(persona_path)
         unit = await plan_unit(
             subject=payload["subject"],

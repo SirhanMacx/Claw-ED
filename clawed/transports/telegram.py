@@ -423,7 +423,8 @@ class EduAgentTelegramBot:
 
     def __init__(self, token: str, data_dir: Path | None = None):
         self.token = token
-        self.data_dir = data_dir or Path.home() / ".eduagent"
+        from clawed.paths import data_dir as _data_dir
+        self.data_dir = data_dir or _data_dir()
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.api = TelegramAPI(token)
         self._running = False
@@ -532,8 +533,9 @@ class EduAgentTelegramBot:
         try:
             # Get the teacher's name from config
             import json
-            from pathlib import Path as _Path
-            cfg_path = _Path.home() / ".eduagent" / "config.json"
+
+            from clawed.paths import data_dir as _data_dir_fn
+            cfg_path = _data_dir_fn() / "config.json"
             name = "there"
             if cfg_path.exists():
                 cfg = json.loads(cfg_path.read_text())

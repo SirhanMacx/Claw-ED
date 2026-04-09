@@ -11,7 +11,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_DIR = Path.home() / ".eduagent" / "approvals"
+def _default_dir():
+    from clawed.paths import data_dir
+    return data_dir() / "approvals"
+
+_DEFAULT_DIR = None  # resolved lazily via _default_dir()
 
 
 @dataclass
@@ -60,7 +64,7 @@ class ApprovalManager:
     """Manages PendingApproval lifecycle — create, persist, load, resolve."""
 
     def __init__(self, base_dir: Path | None = None) -> None:
-        self._dir = base_dir or _DEFAULT_DIR
+        self._dir = base_dir or _default_dir()
         self._dir.mkdir(parents=True, exist_ok=True)
 
     def _path(self, approval_id: str) -> Path:

@@ -57,7 +57,8 @@ class ExportHandler:
             return GatewayResponse(text="I couldn't find that lesson. Generate one first!")
 
         persona = _load_persona(teacher_id)
-        output_dir = Path.home() / ".eduagent" / "exports"
+        from clawed.paths import data_dir
+        output_dir = data_dir() / "exports"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         try:

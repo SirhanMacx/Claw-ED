@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import re
-from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -18,7 +17,8 @@ def _get_tavily_key() -> Optional[str]:
     key = os.environ.get("TAVILY_API_KEY")
     if key:
         return key
-    config_path = Path.home() / ".eduagent" / "config.json"
+    from clawed.paths import data_dir
+    config_path = data_dir() / "config.json"
     if config_path.exists():
         try:
             data = json.loads(config_path.read_text(encoding="utf-8"))
