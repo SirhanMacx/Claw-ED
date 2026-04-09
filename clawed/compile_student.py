@@ -245,8 +245,10 @@ async def compile_student_view(
         for entry in master.vocabulary:
             row = table.add_row().cells
             row[0].text = entry.term
-            row[1].text = entry.definition
-            row[2].text = entry.context_sentence
+            # Student view: BLANK definitions for students to fill in during class
+            # (matching real teacher handouts where vocab is a fill-in activity)
+            row[1].text = ""  # left blank for students
+            row[2].text = ""  # left blank for students
             if entry.image_spec:
                 _embed_image(entry.image_spec, width_inches=1.5)
 
@@ -305,16 +307,37 @@ async def compile_student_view(
             _embed_image(ps.image_spec)
             doc.add_paragraph("")
 
-    # ── Stations (student directions only — no answer key) ────────────
+    # ── Stations (student directions + embedded source text — no answer key) ──
 
     if master.stations:
         _heading("Learning Stations")
+        # Build a lookup of primary sources by ID for inline embedding
+        _source_lookup = {ps.id: ps for ps in master.primary_sources} if master.primary_sources else {}
         for station in master.stations:
             _heading(station.title, level=2)
+            # Embed the referenced primary source text directly in the station
+            # so students have the document RIGHT HERE (matching Jon's style)
+            ref_source = _source_lookup.get(station.source_ref)
+            if ref_source and ref_source.content_text:
+                _para(f"Document: {ref_source.title}", bold=True, italic=True,
+                      size_pt=10, color=(80, 80, 80))
+                if ref_source.attribution:
+                    _para(f"— {ref_source.attribution}", italic=True, size_pt=9,
+                          color=(100, 100, 100))
+                _para(ref_source.content_text)
+                _embed_image(ref_source.image_spec)
+                doc.add_paragraph("")
             _para(f"Task: {station.task}")
             _para("Directions:", bold=True)
             _para(station.student_directions)
-            _para(_BLANK)
+            # Add answer lines for each scaffolding question from the source
+            if ref_source and ref_source.scaffolding_questions:
+                doc.add_paragraph("")
+                for qi, sq in enumerate(ref_source.scaffolding_questions, 1):
+                    _para(f"{qi}. {sq}")
+                    _para(_BLANK)
+            else:
+                _para(_BLANK)
             doc.add_paragraph("")
 
     # ── Jigsaw Graphic Organizer (if present) ──────────────────────────
@@ -333,6 +356,33 @@ async def compile_student_view(
                 cell.text = col_name
                 cell.paragraphs[0].runs[0].bold = True
                 cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        # ── Group Sharing Notes Table ─────────────────────────────────
+        # When jigsaw "Teaching Groups" form, students need a table to
+        # record what they learn from each expert. (Matches Jon's "Part 3:
+        # Group Sharing" pattern.)
+        if jigsaw.num_expert_groups and jigsaw.num_expert_groups >= 2:
+            doc.add_paragraph("")
+            _heading("Group Sharing Notes", level=2)
+            _para(
+                "Directions: As your group members share about their stations, "
+                "take notes on the topics you did not study.",
+                italic=True,
+            )
+            # Build a sharing table with rows = expert groups, cols from organizer
+            sharing_cols = [c.strip() for c in jigsaw.graphic_organizer.split("|") if c.strip()]
+            if not sharing_cols:
+                sharing_cols = ["Topic", "Key Findings", "My Notes"]
+            share_rows = jigsaw.num_expert_groups + 1  # header + group rows
+            share_tbl = doc.add_table(rows=share_rows, cols=len(sharing_cols))
+            share_tbl.style = "Table Grid"
+            for j, col_name in enumerate(sharing_cols):
+                cell = share_tbl.rows[0].cells[j]
+                _shaded_cell(cell, primary_hex)
+                cell.text = col_name
+                cell.paragraphs[0].runs[0].bold = True
+                cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+            doc.add_paragraph("")
+
         if jigsaw.debrief_question:
             doc.add_paragraph("")
             _para(f"Debrief: {jigsaw.debrief_question}", bold=True)

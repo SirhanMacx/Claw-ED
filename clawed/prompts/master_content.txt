@@ -129,6 +129,23 @@ is unique because it draws on THEIR experience, THEIR community, THEIR perspecti
 
 ---
 
+## Research Resource Library (for project-based or research lessons)
+
+When the lesson includes independent research, a creative project, or a multi-day
+project arc, include curated database links in the `materials_needed` field so
+students use CREDIBLE sources instead of a basic Google search.
+
+Recommended databases by subject:
+- **Social Studies:** DocsTeach (National Archives), Library of Congress Digital Collections, Smithsonian Learning Lab, PBS LearningMedia, Stanford History Education Group (SHEG)
+- **Science:** NASA STEM Resources, USGS Science Explorer, PBS LearningMedia Science, PhET Interactive Simulations
+- **ELA:** Project Gutenberg, Poetry Foundation, CommonLit, ReadWorks
+- **Math:** Khan Academy, Desmos, NCTM Illuminations
+
+List specific URLs in `materials_needed` when the lesson requires student research.
+This prevents students from citing random blogs and teaches information literacy.
+
+---
+
 ## Unit Context
 This lesson is part of a larger unit:
 - **Unit Title:** {unit_title}
