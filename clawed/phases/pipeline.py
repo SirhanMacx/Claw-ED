@@ -316,6 +316,30 @@ async def _run_phase(
 # ══════════════════════════════════════════════════════════════════════
 
 
+def _validate_phase1(phase1: Phase1Skeleton) -> list[str]:
+    """Quality validator for Phase 1 output."""
+    issues: list[str] = []
+    if len(phase1.primary_sources) < 3:
+        issues.append(
+            f"Only {len(phase1.primary_sources)} primary sources — need 3-4"
+        )
+    for i, ps in enumerate(phase1.primary_sources):
+        if not ps.content_text or len(ps.content_text) < 100:
+            issues.append(
+                f"Primary source {i+1} '{ps.title}' content_text too short "
+                f"({len(ps.content_text or '')} chars) — need 100+ for real quote"
+            )
+    if len(phase1.vocabulary) < 4:
+        issues.append(
+            f"Only {len(phase1.vocabulary)} vocabulary terms — need 4-8"
+        )
+    if not phase1.lesson_personality or len(phase1.lesson_personality) < 20:
+        issues.append("lesson_personality missing or too short — need 20+ chars")
+    if not phase1.title or len(phase1.title) < 10:
+        issues.append("title missing or too short")
+    return issues
+
+
 async def _phase1_skeleton(
     unit: "UnitPlan",
     lesson_brief: "LessonBrief",
@@ -326,15 +350,10 @@ async def _phase1_skeleton(
     task_type: str,
     brain_prompt: str = "",
 ) -> Phase1Skeleton:
-    """Generate Phase 1: skeleton + primary sources.
-
-    Slim prompt — target <3KB total input to stay reliable on
-    GLM 5.1 Cloud and other smaller cloud models.
-    """
+    """Generate Phase 1 with quality validation and retry."""
     template = _load_prompt("phase1_skeleton.txt")
-    # Cap teacher_materials to keep prompt size down
     tm = teacher_materials[:800] if teacher_materials else ""
-    prompt = _fill_template(
+    base_prompt = _fill_template(
         template,
         unit_title=unit.title[:200],
         subject=unit.subject,
@@ -345,12 +364,21 @@ async def _phase1_skeleton(
         standards=standards_text[:500],
         teacher_materials=tm,
     )
-    # Cap brain_prompt contribution to keep total <3KB
+
+    quality_header = (
+        "## STRICT MINIMUMS\n"
+        "- primary_sources: 3-4 entries, each with content_text 100+ chars "
+        "(REAL historical quote with attribution)\n"
+        "- vocabulary: 4-8 terms with definition + context_sentence\n"
+        "- lesson_personality: 20+ chars (the lesson's hook theme)\n"
+        "- title: descriptive (10+ chars)\n\n"
+    )
+    prompt = quality_header + base_prompt
     if brain_prompt:
-        prompt = brain_prompt[:1000] + "\n\n" + prompt
+        prompt = brain_prompt[:800] + "\n\n" + prompt
     logger.info("Phase 1 prompt size: %d chars", len(prompt))
 
-    return await _run_phase(
+    phase1 = await _run_phase(
         "1-skeleton",
         prompt,
         system,
@@ -359,10 +387,83 @@ async def _phase1_skeleton(
         task_type,
     )
 
+    # Validate and retry once if needed
+    issues = _validate_phase1(phase1)
+    if issues:
+        logger.warning(
+            "Phase 1 quality issues — retrying:\n%s",
+            "\n".join(f"- {i}" for i in issues),
+        )
+        retry_prompt = (
+            quality_header
+            + "## YOUR PREVIOUS ATTEMPT FAILED:\n"
+            + "\n".join(f"- {i}" for i in issues)
+            + "\n\nFix ALL issues. Use REAL historical documents with full text quotes.\n\n"
+            + base_prompt
+        )
+        if brain_prompt:
+            retry_prompt = brain_prompt[:800] + "\n\n" + retry_prompt
+        phase1_retry = await _run_phase(
+            "1-skeleton-retry",
+            retry_prompt,
+            system,
+            Phase1Skeleton,
+            client,
+            task_type,
+        )
+        retry_issues = _validate_phase1(phase1_retry)
+        if not retry_issues or len(retry_issues) < len(issues):
+            logger.info("Phase 1 retry improved quality")
+            return phase1_retry
+
+    return phase1
+
 
 # ══════════════════════════════════════════════════════════════════════
 # Phase 2: Instruction + Guided Notes
 # ══════════════════════════════════════════════════════════════════════
+
+
+def _validate_phase2(phase2: Phase2Instruction) -> list[str]:
+    """Quality validator for Phase 2 output."""
+    issues: list[str] = []
+    # Direct instruction: 2-3 sections
+    if len(phase2.direct_instruction) < 2:
+        issues.append(
+            f"Only {len(phase2.direct_instruction)} direct_instruction "
+            f"sections — need 2-3"
+        )
+    # Each section needs substantial teacher_script
+    for i, section in enumerate(phase2.direct_instruction):
+        script_len = len(section.teacher_script or "")
+        if script_len < 150:
+            issues.append(
+                f"Section {i+1} '{section.heading}' teacher_script is only "
+                f"{script_len} chars — need 200+ with 3+ questions"
+            )
+        questions = (section.teacher_script or "").count("?")
+        if questions < 3:
+            issues.append(
+                f"Section {i+1} '{section.heading}' teacher_script has only "
+                f"{questions} question marks — need 3+ for CFUs"
+            )
+    # First section needs a hook
+    if phase2.direct_instruction:
+        first = phase2.direct_instruction[0]
+        if not first.hook or len(first.hook) < 20:
+            issues.append("First direct_instruction section missing hook")
+    # All sections except last need transitions
+    for i, section in enumerate(phase2.direct_instruction[:-1]):
+        if not section.transition or len(section.transition) < 20:
+            issues.append(
+                f"Section {i+1} '{section.heading}' missing transition"
+            )
+    # Guided notes: 8+
+    if len(phase2.guided_notes) < 8:
+        issues.append(
+            f"Only {len(phase2.guided_notes)} guided_notes — need 8-12"
+        )
+    return issues
 
 
 async def _phase2_instruction(
@@ -372,9 +473,9 @@ async def _phase2_instruction(
     client,
     task_type: str,
 ) -> Phase2Instruction:
-    """Generate Phase 2 using Phase 1 as context."""
+    """Generate Phase 2 with quality validation and retry."""
     template = _load_prompt("phase2_instruction.txt")
-    prompt = _fill_template(template,
+    base_prompt = _fill_template(template,
         title=phase1.title,
         subject=phase1.subject,
         grade_level=phase1.grade_level,
@@ -386,17 +487,86 @@ async def _phase2_instruction(
         vocabulary_list=_render_vocabulary_list(phase1.vocabulary),
         primary_sources_block=_render_primary_sources_block(phase1.primary_sources),
         misconceptions_list=_render_misconceptions_list(phase1.misconceptions),
-        persona_voice_hint="",  # Omit — slim system prompt has persona already
+        persona_voice_hint="",
     )
+
+    quality_header = (
+        "## STRICT MINIMUMS (output will be rejected if not met)\n"
+        "- direct_instruction: EXACTLY 2-3 sections\n"
+        "- Each section's teacher_script: 200+ characters, 3+ question marks "
+        "(checks for understanding)\n"
+        "- First section's hook: 20+ characters (analogy or provocative question)\n"
+        "- Every section except last needs transition: 20+ characters\n"
+        "- guided_notes: 8-12 entries, each tied to a section via section_ref\n"
+        "- formative_checks: 2-3 verbal CFUs\n\n"
+    )
+    prompt = quality_header + base_prompt
     logger.info("Phase 2 prompt size: %d chars", len(prompt))
 
-    return await _run_phase(
+    phase2 = await _run_phase(
         "2-instruction",
         prompt,
         system,
         Phase2Instruction,
         client,
         task_type,
+    )
+
+    # Validate and retry if quality is insufficient
+    issues = _validate_phase2(phase2)
+    if issues:
+        logger.warning(
+            "Phase 2 quality issues — retrying:\n%s",
+            "\n".join(f"- {i}" for i in issues),
+        )
+        retry_prompt = (
+            quality_header
+            + "## YOUR PREVIOUS ATTEMPT FAILED THESE CHECKS:\n"
+            + "\n".join(f"- {i}" for i in issues)
+            + "\n\nFix ALL issues. Produce substantial teacher_script with "
+            "EXACT scripted dialogue (Ask: ___? Wait. Call on ___. Then say: ___).\n\n"
+            + base_prompt
+        )
+        logger.info("Phase 2 retry prompt size: %d chars", len(retry_prompt))
+        phase2_retry = await _run_phase(
+            "2-instruction-retry",
+            retry_prompt,
+            system,
+            Phase2Instruction,
+            client,
+            task_type,
+        )
+        retry_issues = _validate_phase2(phase2_retry)
+        if not retry_issues:
+            logger.info("Phase 2 retry succeeded — quality issues resolved")
+            return phase2_retry
+        logger.warning(
+            "Phase 2 retry still has issues, merging best of both attempts",
+        )
+        return _merge_phase2_attempts(phase2, phase2_retry)
+
+    return phase2
+
+
+def _merge_phase2_attempts(
+    a: Phase2Instruction,
+    b: Phase2Instruction,
+) -> Phase2Instruction:
+    """Merge two Phase 2 attempts, taking the better-populated version of each field."""
+    # Pick the version with more sections, or if equal, the one with more script content
+    a_score = sum(len(s.teacher_script or "") for s in a.direct_instruction)
+    b_score = sum(len(s.teacher_script or "") for s in b.direct_instruction)
+    direct_instruction = (
+        a.direct_instruction if a_score >= b_score else b.direct_instruction
+    )
+    return Phase2Instruction(
+        direct_instruction=direct_instruction,
+        guided_notes=a.guided_notes if len(a.guided_notes) >= len(b.guided_notes) else b.guided_notes,
+        formative_checks=(
+            a.formative_checks
+            if len(a.formative_checks) >= len(b.formative_checks)
+            else b.formative_checks
+        ),
     )
 
 
@@ -541,6 +711,47 @@ def _merge_phase3_attempts(
 # ══════════════════════════════════════════════════════════════════════
 
 
+def _validate_phase4(phase4: Phase4Assessment) -> list[str]:
+    """Quality validator for Phase 4 output."""
+    issues: list[str] = []
+    if len(phase4.exit_ticket) != 3:
+        issues.append(
+            f"exit_ticket has {len(phase4.exit_ticket)} questions — need EXACTLY 3"
+        )
+    for i, q in enumerate(phase4.exit_ticket):
+        if not q.stimulus or len(q.stimulus) < 30:
+            issues.append(
+                f"exit_ticket Q{i+1} stimulus too short ({len(q.stimulus or '')} chars)"
+            )
+    # Bloom progression
+    if len(phase4.exit_ticket) >= 3:
+        levels = [q.cognitive_level for q in phase4.exit_ticket]
+        expected = ["recall", "application", "analysis"]
+        if levels[:3] != expected:
+            issues.append(
+                f"exit_ticket cognitive levels are {levels} — need {expected}"
+            )
+    # Differentiation
+    diff = phase4.differentiation
+    for group, items in [("struggling", diff.struggling), ("advanced", diff.advanced), ("ell", diff.ell)]:
+        if len(items) < 3:
+            issues.append(f"differentiation.{group} has only {len(items)} items — need 3+")
+        # Generic phrases ban
+        banned = [
+            "extra time", "additional support",
+            "modify as needed", "as needed",
+        ]
+        for item in items:
+            item_lower = item.lower()
+            if any(phrase in item_lower for phrase in banned):
+                issues.append(
+                    f"differentiation.{group} contains generic phrase: "
+                    f"'{item[:60]}'"
+                )
+                break
+    return issues
+
+
 async def _phase4_assessment(
     phase1: Phase1Skeleton,
     phase2: Phase2Instruction,
@@ -549,10 +760,10 @@ async def _phase4_assessment(
     client,
     task_type: str,
 ) -> Phase4Assessment:
-    """Generate Phase 4 using Phase 1+2 context."""
+    """Generate Phase 4 with quality validation and retry."""
     writing_framework = getattr(persona, "writing_framework", "") or "Claim and Evidence"
     template = _load_prompt("phase4_assessment.txt")
-    prompt = _fill_template(template,
+    base_prompt = _fill_template(template,
         title=phase1.title,
         subject=phase1.subject,
         grade_level=phase1.grade_level,
@@ -562,9 +773,18 @@ async def _phase4_assessment(
         vocabulary_terms=_render_vocabulary_terms(phase1.vocabulary),
         direct_instruction_headings=_render_direct_instruction_headings(phase2.direct_instruction),
     )
+    quality_header = (
+        "## STRICT MINIMUMS\n"
+        "- exit_ticket: EXACTLY 3 questions in recall → application → analysis order\n"
+        "- Each question stimulus: 30+ chars (real text/data/scenario)\n"
+        "- differentiation: 3+ SPECIFIC items in EACH of struggling/advanced/ell\n"
+        "- BANNED phrases in differentiation: 'extra time', 'additional support', "
+        "'modify as needed', 'as needed'\n\n"
+    )
+    prompt = quality_header + base_prompt
     logger.info("Phase 4 prompt size: %d chars", len(prompt))
 
-    return await _run_phase(
+    phase4 = await _run_phase(
         "4-assessment",
         prompt,
         system,
@@ -572,6 +792,34 @@ async def _phase4_assessment(
         client,
         task_type,
     )
+
+    issues = _validate_phase4(phase4)
+    if issues:
+        logger.warning(
+            "Phase 4 quality issues — retrying:\n%s",
+            "\n".join(f"- {i}" for i in issues),
+        )
+        retry_prompt = (
+            quality_header
+            + "## YOUR PREVIOUS ATTEMPT FAILED:\n"
+            + "\n".join(f"- {i}" for i in issues)
+            + "\n\nFix ALL issues. Use SPECIFIC scaffolds (named tools, "
+            "sentence frames, graphic organizers).\n\n"
+            + base_prompt
+        )
+        phase4_retry = await _run_phase(
+            "4-assessment-retry",
+            retry_prompt,
+            system,
+            Phase4Assessment,
+            client,
+            task_type,
+        )
+        retry_issues = _validate_phase4(phase4_retry)
+        if not retry_issues or len(retry_issues) < len(issues):
+            return phase4_retry
+
+    return phase4
 
 
 # ══════════════════════════════════════════════════════════════════════
