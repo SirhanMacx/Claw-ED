@@ -235,6 +235,7 @@ cat > "$CONFIG_FILE" <<JSONEOF
 {
   "provider": "$MODEL_PROVIDER",
   "ollama_base_url": $OLLAMA_BASE_URL_JSON,
+  "telegram_bot_token": $TELEGRAM_TOKEN_JSON,
   "output_dir": "./eduagent_output"
 }
 JSONEOF

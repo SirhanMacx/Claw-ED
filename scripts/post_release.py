@@ -21,7 +21,6 @@ def get_last_commit_message() -> str:
         ["git", "log", "-1", "--format=%s"],
         capture_output=True,
         text=True,
-        cwd="/Users/mind_uploaded_crustacean/Projects/eduagent",
     )
     return result.stdout.strip()
 
@@ -31,7 +30,6 @@ def get_changed_files() -> list[str]:
         ["git", "diff", "HEAD~1", "--name-only"],
         capture_output=True,
         text=True,
-        cwd="/Users/mind_uploaded_crustacean/Projects/eduagent",
     )
     return [f.strip() for f in result.stdout.strip().split("\n") if f.strip()]
 
@@ -96,7 +94,9 @@ def post_to_x(tweet: str) -> bool:
 
 if __name__ == "__main__":
     commit_msg = sys.argv[1] if len(sys.argv) > 1 else get_last_commit_message()
-    date = datetime.now().strftime("%Y.%-m.%-d")
+    # Portable date format (no GNU/BSD-specific %-m / %#m): assemble by hand.
+    now = datetime.now()
+    date = f"{now.year}.{now.month}.{now.day}"
 
     tweet = format_release_tweet(commit_msg, date)
     print(tweet)
