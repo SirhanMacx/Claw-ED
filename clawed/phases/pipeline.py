@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 from clawed.master_content import MasterContent
 from clawed.phases.models import (
     Phase1Skeleton,
+    Phase2aDirectInstruction,
+    Phase2bGuidedNotes,
     Phase2Instruction,
     Phase3Activities,
     Phase4Assessment,
@@ -439,55 +441,195 @@ def _count_dialogue_verbs(script: str) -> int:
     return sum(lower.count(v) for v in _DIALOGUE_VERBS)
 
 
-def _validate_phase2(phase2: Phase2Instruction) -> list[str]:
-    """Quality validator for Phase 2 output."""
+def _validate_phase2a(phase2a: Phase2aDirectInstruction) -> list[str]:
+    """Quality validator for Phase 2a (direct_instruction only)."""
     issues: list[str] = []
-    # Direct instruction: 2-3 sections
-    if len(phase2.direct_instruction) < 2:
+    if len(phase2a.direct_instruction) < 3:
         issues.append(
-            f"Only {len(phase2.direct_instruction)} direct_instruction "
-            f"sections — need 2-3"
+            f"Only {len(phase2a.direct_instruction)} direct_instruction "
+            f"sections — need EXACTLY 3"
         )
-    # Each section needs substantial teacher_script with dialogue verbs
-    for i, section in enumerate(phase2.direct_instruction):
+    for i, section in enumerate(phase2a.direct_instruction):
         script = section.teacher_script or ""
         script_len = len(script)
         if script_len < 200:
             issues.append(
                 f"Section {i+1} '{section.heading}' teacher_script is only "
-                f"{script_len} chars — need 250+ with 3+ questions"
+                f"{script_len} chars — need 250+"
             )
         questions = script.count("?")
         if questions < 3:
             issues.append(
-                f"Section {i+1} '{section.heading}' teacher_script has only "
-                f"{questions} question marks — need 3+ for CFUs"
+                f"Section {i+1} '{section.heading}' has only {questions} "
+                f"question marks — need 3+"
             )
         verbs = _count_dialogue_verbs(script)
         if verbs < 3:
             issues.append(
-                f"Section {i+1} '{section.heading}' teacher_script has only "
-                f"{verbs} directing verbs (Ask:, Say:, Wait, Call on, etc.) "
-                f"— need 3+"
+                f"Section {i+1} '{section.heading}' has only {verbs} "
+                f"directing verbs — need 3+"
             )
-    # EVERY section needs a hook (not just the first)
-    for i, section in enumerate(phase2.direct_instruction):
+    for i, section in enumerate(phase2a.direct_instruction):
         if not section.hook or len(section.hook) < 20:
             issues.append(
-                f"Section {i+1} '{section.heading}' missing hook (need 20+ chars)"
+                f"Section {i+1} '{section.heading}' missing hook"
             )
-    # EVERY section needs a transition (last one pivots to activities)
-    for i, section in enumerate(phase2.direct_instruction):
         if not section.transition or len(section.transition) < 20:
             issues.append(
                 f"Section {i+1} '{section.heading}' missing transition"
             )
-    # Guided notes: 10+
-    if len(phase2.guided_notes) < 10:
+    return issues
+
+
+def _validate_phase2b(phase2b: Phase2bGuidedNotes) -> list[str]:
+    """Quality validator for Phase 2b (guided_notes + formative_checks)."""
+    issues: list[str] = []
+    if len(phase2b.guided_notes) < 10:
         issues.append(
-            f"Only {len(phase2.guided_notes)} guided_notes — need 10-12"
+            f"Only {len(phase2b.guided_notes)} guided_notes — need 10-12"
+        )
+    if len(phase2b.formative_checks) < 2:
+        issues.append(
+            f"Only {len(phase2b.formative_checks)} formative_checks — need 2-3"
         )
     return issues
+
+
+def _render_section_headings_block(sections: list) -> str:
+    """Render section headings as a numbered list for Phase 2b."""
+    if not sections:
+        return "_(no sections)_"
+    return "\n".join(
+        f'{i+1}. "{sec.heading}"' for i, sec in enumerate(sections)
+    )
+
+
+def _render_section_content_block(sections: list) -> str:
+    """Render section content summaries for Phase 2b."""
+    if not sections:
+        return "_(no content)_"
+    lines = []
+    for sec in sections:
+        snippet = (sec.content or "")[:150].replace("\n", " ")
+        lines.append(f"- {sec.heading}: {snippet}...")
+    return "\n".join(lines)
+
+
+async def _phase2a_direct_instruction(
+    phase1: Phase1Skeleton,
+    system: str,
+    client,
+    task_type: str,
+) -> Phase2aDirectInstruction:
+    """Generate Phase 2a — direct_instruction sections only."""
+    template = _load_prompt("phase2a_instruction.txt")
+    prompt = _fill_template(
+        template,
+        title=phase1.title,
+        grade_level=phase1.grade_level,
+        duration_minutes=phase1.duration_minutes,
+        topic=phase1.topic,
+        lesson_format=phase1.lesson_format,
+        lesson_personality=phase1.lesson_personality,
+        vocabulary_list=_render_vocabulary_list(phase1.vocabulary),
+        primary_sources_block=_render_primary_sources_block(phase1.primary_sources),
+        misconceptions_list=_render_misconceptions_list(phase1.misconceptions),
+    )
+    logger.info("Phase 2a prompt size: %d chars", len(prompt))
+
+    phase2a = await _run_phase(
+        "2a-instruction",
+        prompt,
+        system,
+        Phase2aDirectInstruction,
+        client,
+        task_type,
+    )
+
+    issues = _validate_phase2a(phase2a)
+    if issues:
+        logger.warning(
+            "Phase 2a quality issues — retrying:\n%s",
+            "\n".join(f"- {i}" for i in issues),
+        )
+        retry_prompt = (
+            "## YOUR PREVIOUS ATTEMPT FAILED:\n"
+            + "\n".join(f"- {i}" for i in issues)
+            + "\n\nFix ALL issues. Use EXACT scripted dialogue with directing verbs.\n\n"
+            + prompt
+        )
+        phase2a_retry = await _run_phase(
+            "2a-instruction-retry",
+            retry_prompt,
+            system,
+            Phase2aDirectInstruction,
+            client,
+            task_type,
+        )
+        retry_issues = _validate_phase2a(phase2a_retry)
+        if not retry_issues or len(retry_issues) < len(issues):
+            return phase2a_retry
+
+    return phase2a
+
+
+async def _phase2b_guided_notes(
+    phase1: Phase1Skeleton,
+    phase2a: Phase2aDirectInstruction,
+    system: str,
+    client,
+    task_type: str,
+) -> Phase2bGuidedNotes:
+    """Generate Phase 2b — guided_notes + formative_checks."""
+    template = _load_prompt("phase2b_guided_notes.txt")
+    prompt = _fill_template(
+        template,
+        title=phase1.title,
+        topic=phase1.topic,
+        vocabulary_list=_render_vocabulary_list(phase1.vocabulary),
+        section_headings_block=_render_section_headings_block(
+            phase2a.direct_instruction
+        ),
+        section_content_block=_render_section_content_block(
+            phase2a.direct_instruction
+        ),
+    )
+    logger.info("Phase 2b prompt size: %d chars", len(prompt))
+
+    phase2b = await _run_phase(
+        "2b-guided-notes",
+        prompt,
+        system,
+        Phase2bGuidedNotes,
+        client,
+        task_type,
+    )
+
+    issues = _validate_phase2b(phase2b)
+    if issues:
+        logger.warning(
+            "Phase 2b quality issues — retrying:\n%s",
+            "\n".join(f"- {i}" for i in issues),
+        )
+        retry_prompt = (
+            "## YOUR PREVIOUS ATTEMPT FAILED:\n"
+            + "\n".join(f"- {i}" for i in issues)
+            + "\n\nFix ALL issues. Produce 10-12 guided notes distributed across sections.\n\n"
+            + prompt
+        )
+        phase2b_retry = await _run_phase(
+            "2b-guided-notes-retry",
+            retry_prompt,
+            system,
+            Phase2bGuidedNotes,
+            client,
+            task_type,
+        )
+        retry_issues = _validate_phase2b(phase2b_retry)
+        if not retry_issues or len(retry_issues) < len(issues):
+            return phase2b_retry
+
+    return phase2b
 
 
 async def _phase2_instruction(
@@ -497,122 +639,34 @@ async def _phase2_instruction(
     client,
     task_type: str,
 ) -> Phase2Instruction:
-    """Generate Phase 2 with quality validation and retry."""
-    template = _load_prompt("phase2_instruction.txt")
-    base_prompt = _fill_template(template,
-        title=phase1.title,
-        subject=phase1.subject,
-        grade_level=phase1.grade_level,
-        duration_minutes=phase1.duration_minutes,
-        topic=phase1.topic,
-        objective=phase1.objective,
-        lesson_personality=phase1.lesson_personality,
-        lesson_format=phase1.lesson_format,
-        vocabulary_list=_render_vocabulary_list(phase1.vocabulary),
-        primary_sources_block=_render_primary_sources_block(phase1.primary_sources),
-        misconceptions_list=_render_misconceptions_list(phase1.misconceptions),
-        persona_voice_hint="",
-    )
+    """Generate Phase 2 by calling 2a + 2b sequentially.
 
-    quality_header = (
-        "## STRICT MINIMUMS (output will be rejected if not met)\n"
-        "- direct_instruction: EXACTLY 2-3 sections\n"
-        "- Each section's teacher_script: 200+ characters, 3+ question marks "
-        "(checks for understanding)\n"
-        "- First section's hook: 20+ characters (analogy or provocative question)\n"
-        "- Every section except last needs transition: 20+ characters\n"
-        "- guided_notes: 8-12 entries, each tied to a section via section_ref\n"
-        "- formative_checks: 2-3 verbal CFUs\n\n"
-    )
-    prompt = quality_header + base_prompt
-    logger.info("Phase 2 prompt size: %d chars", len(prompt))
-
-    phase2 = await _run_phase(
-        "2-instruction",
-        prompt,
-        system,
-        Phase2Instruction,
-        client,
-        task_type,
-    )
-
-    # Validate and retry if quality is insufficient
-    issues = _validate_phase2(phase2)
-    if issues:
-        logger.warning(
-            "Phase 2 quality issues — retrying:\n%s",
-            "\n".join(f"- {i}" for i in issues),
-        )
-        retry_prompt = (
-            quality_header
-            + "## YOUR PREVIOUS ATTEMPT FAILED THESE CHECKS:\n"
-            + "\n".join(f"- {i}" for i in issues)
-            + "\n\nFix ALL issues. Produce substantial teacher_script with "
-            "EXACT scripted dialogue (Ask: ___? Wait. Call on ___. Then say: ___).\n\n"
-            + base_prompt
-        )
-        logger.info("Phase 2 retry prompt size: %d chars", len(retry_prompt))
-        phase2_retry = await _run_phase(
-            "2-instruction-retry",
-            retry_prompt,
-            system,
-            Phase2Instruction,
-            client,
-            task_type,
-        )
-        retry_issues = _validate_phase2(phase2_retry)
-        if not retry_issues:
-            logger.info("Phase 2 retry succeeded — quality issues resolved")
-            return phase2_retry
-        logger.warning(
-            "Phase 2 retry still has issues, merging best of both attempts",
-        )
-        return _merge_phase2_attempts(phase2, phase2_retry)
-
-    return phase2
-
-
-def _merge_phase2_attempts(
-    a: Phase2Instruction,
-    b: Phase2Instruction,
-) -> Phase2Instruction:
-    """Merge two Phase 2 attempts, taking the better-populated version of each field.
-
-    For guided_notes, ALWAYS prefer the non-empty list (even if the other
-    has slightly more characters in teacher_script). Losing guided_notes
-    is the worst possible outcome of a merge.
+    Splitting prevents token exhaustion. Phase 2a focuses entirely on
+    direct_instruction (long teacher_scripts), Phase 2b focuses entirely
+    on guided_notes (lots of small entries). Each gets the model's full
+    output budget for its task.
     """
-    # Direct instruction: pick the one with more total script content
-    a_score = sum(len(s.teacher_script or "") for s in a.direct_instruction)
-    b_score = sum(len(s.teacher_script or "") for s in b.direct_instruction)
-    direct_instruction = (
-        a.direct_instruction if a_score >= b_score else b.direct_instruction
+    phase2a = await _phase2a_direct_instruction(
+        phase1=phase1, system=system, client=client, task_type=task_type,
+    )
+    logger.info(
+        "Phase 2a complete: %d sections", len(phase2a.direct_instruction),
     )
 
-    # Guided notes: NEVER prefer empty over non-empty
-    if len(a.guided_notes) > 0 and len(b.guided_notes) == 0:
-        guided_notes = a.guided_notes
-    elif len(b.guided_notes) > 0 and len(a.guided_notes) == 0:
-        guided_notes = b.guided_notes
-    elif len(a.guided_notes) >= len(b.guided_notes):
-        guided_notes = a.guided_notes
-    else:
-        guided_notes = b.guided_notes
+    phase2b = await _phase2b_guided_notes(
+        phase1=phase1, phase2a=phase2a, system=system,
+        client=client, task_type=task_type,
+    )
+    logger.info(
+        "Phase 2b complete: %d guided notes, %d formative checks",
+        len(phase2b.guided_notes), len(phase2b.formative_checks),
+    )
 
-    # Formative checks: same logic
-    if len(a.formative_checks) > 0 and len(b.formative_checks) == 0:
-        formative_checks = a.formative_checks
-    elif len(b.formative_checks) > 0 and len(a.formative_checks) == 0:
-        formative_checks = b.formative_checks
-    elif len(a.formative_checks) >= len(b.formative_checks):
-        formative_checks = a.formative_checks
-    else:
-        formative_checks = b.formative_checks
-
+    # Merge into combined Phase2Instruction
     return Phase2Instruction(
-        direct_instruction=direct_instruction,
-        guided_notes=guided_notes,
-        formative_checks=formative_checks,
+        direct_instruction=phase2a.direct_instruction,
+        guided_notes=phase2b.guided_notes,
+        formative_checks=phase2b.formative_checks,
     )
 
 

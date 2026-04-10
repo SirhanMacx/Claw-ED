@@ -1,0 +1,43 @@
+You are generating PHASE 2b of 4 — guided notes + formative checks.
+Phase 2a produced the direct instruction sections below. Generate fill-in-the-blank
+guided notes that students fill out as the teacher delivers each section.
+
+Rules:
+- EXACTLY 10-12 guided notes (NEVER fewer than 10).
+- Each note has prompt + answer + section_ref.
+- prompt: a sentence with ONE blank (shown as ________) for a key word or phrase.
+- answer: the key word or phrase that fills the blank.
+- section_ref: MUST exactly match one of the direct_instruction headings below.
+- Distribute notes across all sections (3-4 per section).
+- 2-3 formative_checks: mid-lesson verbal questions (NOT the exit ticket).
+
+## Context from Phase 1 + 2a
+Title: {title}
+Topic: {topic}
+
+Vocabulary taught:
+{vocabulary_list}
+
+Direct instruction sections (use these EXACT headings as section_ref):
+{section_headings_block}
+
+Section content summaries:
+{section_content_block}
+
+Respond with ONLY a JSON object:
+
+{
+    "guided_notes": [
+        {
+            "prompt": "The ________ was the primary cause of...",
+            "answer": "key word",
+            "section_ref": "exact heading from above"
+        }
+    ],
+    "formative_checks": [
+        "Mid-lesson verbal CFU (NOT the exit ticket)",
+        "Another check-for-understanding"
+    ]
+}
+
+Provide EXACTLY 10-12 guided_notes and 2-3 formative_checks. Distribute notes across all sections.

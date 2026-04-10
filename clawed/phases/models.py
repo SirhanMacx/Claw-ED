@@ -72,21 +72,38 @@ class Phase2Instruction(BaseModel):
     """Phase 2: the TEACHING part of the lesson.
 
     What this phase produces:
-    - Direct instruction sections (2-3) with:
-      - heading, content, teacher_script (exact dialogue)
-      - hook (for first section)
-      - transition (scripted pivot to next section)
-      - image_spec (for visual aid)
-      - key_points
-    - Guided notes (10-12 fill-in-the-blank entries) each tied to a
-      specific direct_instruction section via section_ref
-    - Formative checks (mid-lesson verbal CFUs)
+    - Direct instruction sections (2-3)
+    - Guided notes (10-12)
+    - Formative checks
 
-    This phase SEES Phase 1's primary sources and vocabulary in its
-    prompt context, so the instruction can reference the actual sources.
+    Internally split into Phase 2a (direct_instruction) and Phase 2b
+    (guided_notes + formative_checks) to prevent token exhaustion on
+    long teacher_scripts that was causing guided_notes to drop to 0.
     """
 
     direct_instruction: list[InstructionSection] = Field(default_factory=list)
+    guided_notes: list[GuidedNote] = Field(default_factory=list)
+    formative_checks: list[str] = Field(default_factory=list)
+
+
+class Phase2aDirectInstruction(BaseModel):
+    """Phase 2a: just direct_instruction sections (no guided_notes).
+
+    Splitting Phase 2 prevents token exhaustion — when the model has
+    to produce both long teacher_scripts AND 10+ guided notes in one
+    response, it often drops the guided notes.
+    """
+
+    direct_instruction: list[InstructionSection] = Field(default_factory=list)
+
+
+class Phase2bGuidedNotes(BaseModel):
+    """Phase 2b: guided_notes + formative_checks only.
+
+    Generated AFTER Phase 2a so it can reference the actual section
+    headings via section_ref.
+    """
+
     guided_notes: list[GuidedNote] = Field(default_factory=list)
     formative_checks: list[str] = Field(default_factory=list)
 
