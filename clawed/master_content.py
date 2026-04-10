@@ -17,6 +17,94 @@ from clawed.models import DifferentiationNotes  # reuse — do not duplicate
 logger = logging.getLogger(__name__)
 
 
+class Citation(BaseModel):
+    """Source attribution for a fact or content block.
+
+    Every fact drawn from the brain, corpus, or KG should carry a
+    Citation so teachers can trace exactly where content came from.
+
+    Format mirrors gbrain's source attribution pattern:
+        [Source: {source_type}, {reference}, {date}]
+    """
+
+    source_type: str  # "brain-student", "brain-topic", "corpus", "kg", "web", "user"
+    reference: str  # slug, URL, or document title
+    date: str = ""  # when this source was consulted (YYYY-MM-DD)
+    excerpt: str = ""  # optional: the specific text that informed this
+
+    def render(self) -> str:
+        """Render as inline markdown citation."""
+        parts = [self.source_type, self.reference]
+        if self.date:
+            parts.append(self.date)
+        return f"[Source: {', '.join(parts)}]"
+
+
+class BrainContext(BaseModel):
+    """Context pulled from the brain before lesson generation.
+
+    Injected into the prompt so the LLM has full context of what the
+    teacher knows, what worked before, which students need what.
+    """
+
+    relevant_students: list[str] = Field(
+        default_factory=list,
+        description="Student page slugs with relevant context",
+    )
+    topic_history: str = Field(
+        default="",
+        description="Compiled truth from the topic page (what worked before)",
+    )
+    related_originals: list[str] = Field(
+        default_factory=list,
+        description="Teacher's original pedagogical insights relevant to this lesson",
+    )
+    past_lesson_results: list[str] = Field(
+        default_factory=list,
+        description="Summaries of past lessons on this topic",
+    )
+    citations: list[Citation] = Field(
+        default_factory=list,
+        description="All brain sources consulted",
+    )
+
+    def render_for_prompt(self) -> str:
+        """Render as a prompt block for injection."""
+        if not any([
+            self.relevant_students,
+            self.topic_history,
+            self.related_originals,
+            self.past_lesson_results,
+        ]):
+            return ""
+        lines = ["## Brain Context — What You Already Know", ""]
+        if self.topic_history:
+            lines.append("### What worked before for this topic:")
+            lines.append(self.topic_history)
+            lines.append("")
+        if self.related_originals:
+            lines.append("### Teacher's original pedagogical insights:")
+            for o in self.related_originals:
+                lines.append(f"- {o}")
+            lines.append("")
+        if self.past_lesson_results:
+            lines.append("### Past lesson outcomes on this topic:")
+            for r in self.past_lesson_results:
+                lines.append(f"- {r}")
+            lines.append("")
+        if self.relevant_students:
+            lines.append("### Students with specific needs for this lesson:")
+            for s in self.relevant_students:
+                lines.append(f"- {s}")
+            lines.append("")
+        lines.append(
+            "Use this context to personalize the lesson. Reference what "
+            "worked before. Anticipate misconceptions you've seen. "
+            "Build scaffolds for students you KNOW struggle with this."
+        )
+        return "\n".join(lines)
+
+
 class VocabularyEntry(BaseModel):
     """A vocabulary term with definition, context sentence, and optional image."""
 
@@ -219,6 +307,16 @@ class MasterContent(BaseModel):
             "socratic_seminar, jigsaw, gallery_walk, gradual_release, "
             "simulation, lecture_discussion"
         ),
+    )
+
+    # v4.10: Brain context and source attribution
+    brain_context: BrainContext | None = Field(
+        default=None,
+        description="Context pulled from the brain before generation (not serialized to prompt JSON)",
+    )
+    source_attributions: list[Citation] = Field(
+        default_factory=list,
+        description="All sources consulted during lesson generation",
     )
 
     # v4.8: Optional enrichment fields (don't break existing generation)

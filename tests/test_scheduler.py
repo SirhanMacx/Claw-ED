@@ -50,6 +50,7 @@ class TestDefaultTasks:
             "morning-prep", "weekly-plan", "feedback-digest",
             "memory-compress", "student-digest",
             "gap-detection", "curriculum-watch", "self-distill",
+            "dream-cycle",
         }
         assert set(DEFAULT_TASKS.keys()) == expected
 
@@ -67,9 +68,9 @@ class TestDefaultTasks:
 
     def test_core_tasks_enabled_by_default(self):
         """Core tasks (morning-prep, weekly-plan, gap-detection, curriculum-watch,
-        self-distill) are enabled by default. Others start disabled."""
+        self-distill, dream-cycle) are enabled by default. Others start disabled."""
         core = {"morning-prep", "weekly-plan", "gap-detection",
-                "curriculum-watch", "self-distill"}
+                "curriculum-watch", "self-distill", "dream-cycle"}
         for name, task in DEFAULT_TASKS.items():
             if name in core:
                 assert task["enabled"] is True, f"{name} should be enabled"

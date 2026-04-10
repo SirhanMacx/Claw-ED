@@ -437,6 +437,29 @@ async def generate_master_content(
     except Exception:
         pass
 
+    # v4.10: Brain-first lookup — inject brain context before generation
+    brain_ctx_obj = None
+    try:
+        from clawed.brain.context import build_brain_context
+        from clawed.brain.store import BrainStore
+        brain_store = BrainStore()
+        brain_ctx_obj = build_brain_context(
+            topic=lesson_brief.topic,
+            unit_title=unit.title,
+            store=brain_store,
+        )
+        brain_prompt = brain_ctx_obj.render_for_prompt()
+        if brain_prompt:
+            prompt = brain_prompt + "\n\n" + prompt
+            logger.info(
+                "Brain context injected: %d students, %d originals, %d past lessons",
+                len(brain_ctx_obj.relevant_students),
+                len(brain_ctx_obj.related_originals),
+                len(brain_ctx_obj.past_lesson_results),
+            )
+    except Exception as exc:
+        logger.debug("Brain context lookup skipped: %s", exc)
+
     system = _build_system_prompt(persona, config, subject=unit.subject)
 
     if task_type and config:
@@ -450,6 +473,11 @@ async def generate_master_content(
         temperature=0.6,
         max_tokens=12000,
     )
+
+    # v4.10: Attach brain context and citations to the generated master
+    if brain_ctx_obj is not None:
+        master.brain_context = brain_ctx_obj
+        master.source_attributions = list(brain_ctx_obj.citations)
 
     # ── Quality gate with auto-retry ──────────────────────────────────
     for attempt in range(_MAX_QUALITY_RETRIES):
@@ -513,6 +541,25 @@ async def generate_master_content(
                 logger.info("Teaching Constitution critic flagged issues:\n%s", critic_response[:500])
     except Exception as exc:
         logger.debug("Teaching Constitution critic skipped: %s", exc)
+
+    # v4.10: Post-generation brain writes — capture learnings
+    try:
+        from clawed.brain.store import BrainStore
+        from clawed.brain.writer import write_lesson_to_brain
+        written = write_lesson_to_brain(
+            master=master,
+            unit_title=unit.title,
+            lesson_number=lesson_number,
+            store=BrainStore(),
+        )
+        logger.info(
+            "Brain updated: %d lesson, %d topic, %d concept pages",
+            len(written.get("lessons", [])),
+            len(written.get("topics", [])),
+            len(written.get("concepts", [])),
+        )
+    except Exception as exc:
+        logger.debug("Brain writer skipped: %s", exc)
 
     return master
 

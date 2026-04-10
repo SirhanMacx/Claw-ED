@@ -73,6 +73,15 @@ DEFAULT_TASKS: dict[str, dict[str, Any]] = {
         "cron": {"day_of_week": "sun", "hour": "20", "minute": "0"},
         "enabled": True,
     },
+    "dream-cycle": {
+        "description": (
+            "Overnight brain enrichment — consolidates timeline entries "
+            "into compiled truth, detects gaps, cross-links pages. "
+            "Makes the brain smarter while the teacher sleeps."
+        ),
+        "cron": {"hour": "3", "minute": "15"},
+        "enabled": True,
+    },
 }
 
 
@@ -600,6 +609,33 @@ async def _task_self_distill() -> str:
 
 
 TASK_IMPLEMENTATIONS["self-distill"] = _task_self_distill
+
+
+async def _task_dream_cycle() -> str:
+    """Run the overnight brain enrichment cycle."""
+    from clawed.workspace import append_daily_note
+
+    try:
+        from clawed.brain.dream import dream_cycle
+        report = await dream_cycle(consolidate=True, dry_run=False)
+        summary = (
+            f"Dream cycle: scanned {report.pages_scanned} pages, "
+            f"consolidated {report.pages_consolidated}, "
+            f"added {report.cross_links_added} cross-links"
+        )
+        if report.gaps_detected:
+            summary += f" ({len(report.gaps_detected)} gaps flagged)"
+        if report.errors:
+            summary += f" ({len(report.errors)} errors)"
+    except Exception as exc:
+        summary = f"Dream cycle failed: {exc}"
+
+    append_daily_note(summary, category="dream-cycle")
+    logger.info("dream-cycle: %s", summary)
+    return summary
+
+
+TASK_IMPLEMENTATIONS["dream-cycle"] = _task_dream_cycle
 
 
 # ── Manual run ─────────────────────────────────────────────────────────
