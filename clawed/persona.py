@@ -152,7 +152,24 @@ def merge_persona(existing: TeacherPersona, new: TeacherPersona) -> TeacherPerso
 
 
 def save_persona(persona: TeacherPersona, output_dir: Path) -> Path:
-    """Save a persona to disk as JSON."""
+    """Save a persona to disk as JSON.
+
+    Enriches the persona name from the teacher profile in config (if
+    available) since the LLM extraction doesn't reliably detect the
+    teacher's actual name from documents.
+    """
+    # Enrich name from config teacher_profile if still default
+    if persona.name == "My Teaching Persona":
+        try:
+            from clawed.models import AppConfig
+            cfg = AppConfig.load()
+            if cfg.teacher_profile and cfg.teacher_profile.name:
+                persona = persona.model_copy(
+                    update={"name": f"{cfg.teacher_profile.name}'s Teaching Style"}
+                )
+        except Exception:
+            pass
+
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "persona.json"
     path.write_text(persona.model_dump_json(indent=2), encoding="utf-8")

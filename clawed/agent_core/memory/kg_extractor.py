@@ -36,6 +36,17 @@ def extract_entities_from_document(
         clean = name.strip()
         if len(clean) < 3 or clean.lower() in _STOP_WORDS:
             return
+        # Filter out OCR/formatting garbage
+        if "\n" in clean or "\t" in clean:
+            return
+        if clean.count("_") > len(clean) * 0.3:  # fill-in-the-blank
+            return
+        if len(clean) > 100:  # OCR dump, not a real entity
+            return
+        if clean[0] in ",:;.!?|/\\" or clean[-1] in ",:;":
+            return
+        if re.match(r"^[\d\s.,:;/\-]+$", clean):  # only numbers/punctuation
+            return
         key = clean.lower()
         if key in seen_names:
             return

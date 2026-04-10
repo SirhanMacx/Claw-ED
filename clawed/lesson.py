@@ -517,6 +517,109 @@ async def generate_master_content(
     return master
 
 
+async def generate_and_compile(
+    lesson_number: int,
+    unit: UnitPlan,
+    persona: TeacherPersona,
+    output_dir: str | Path,
+    include_homework: bool = True,
+    config: AppConfig | None = None,
+    state: str = "",
+    teacher_materials: str = "",
+    fetch_images: bool = True,
+) -> dict:
+    """Generate a lesson AND compile all output files in one call.
+
+    This is the recommended entry point for batch generation. It:
+    1. Generates MasterContent via LLM
+    2. Fetches images from teacher assets + web (if fetch_images=True)
+    3. Compiles teacher DOCX, student DOCX
+    4. Records the generation in state.db
+
+    Returns a dict with keys: master, teacher_path, student_path, images.
+    """
+    from pathlib import Path as _Path
+
+    from clawed.compile_student import compile_student_view
+    from clawed.compile_teacher import compile_teacher_view
+
+    output_dir = _Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Step 1: Generate MasterContent
+    master = await generate_master_content(
+        lesson_number=lesson_number,
+        unit=unit,
+        persona=persona,
+        include_homework=include_homework,
+        config=config,
+        state=state,
+        teacher_materials=teacher_materials,
+    )
+
+    # Step 2: Fetch images (teacher assets first, then web)
+    images: dict[str, Path] = {}
+    if fetch_images:
+        try:
+            from clawed.agent_core.identity import get_teacher_id
+            from clawed.image_pipeline import fetch_all_images
+
+            cfg = config or AppConfig.load()
+            tid = get_teacher_id()
+            images = await fetch_all_images(master, cfg, teacher_id=tid)
+            logger.info("Images resolved: %d", len(images))
+        except Exception as exc:
+            logger.debug("Image fetching skipped: %s", exc)
+
+    # Step 3: Compile DOCX outputs
+    teacher_path = await compile_teacher_view(master, images, output_dir)
+    student_path = await compile_student_view(master, images, output_dir)
+
+    # Step 4: Record in state DB
+    try:
+        _record_generation(master, unit, lesson_number)
+    except Exception as exc:
+        logger.debug("State recording failed: %s", exc)
+
+    return {
+        "master": master,
+        "teacher_path": teacher_path,
+        "student_path": student_path,
+        "images": images,
+    }
+
+
+def _record_generation(
+    master: MasterContent,
+    unit: UnitPlan,
+    lesson_number: int,
+) -> None:
+    """Record a generated lesson in state.db for tracking."""
+    import sqlite3
+
+    from clawed.config import _BASE_DIR
+
+    db_path = _BASE_DIR / "state.db"
+    if not db_path.exists():
+        return
+
+    with sqlite3.connect(str(db_path)) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO generated_lessons "
+            "(title, subject, grade_level, topic, unit_title, "
+            "lesson_number, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
+            (
+                master.title,
+                master.subject,
+                master.grade_level,
+                master.topic,
+                unit.title,
+                lesson_number,
+            ),
+        )
+
+
 async def generate_lesson(
     lesson_number: int,
     unit: UnitPlan,
