@@ -119,6 +119,43 @@ def _render_persona_voice_hint(persona) -> str:
     return ""
 
 
+def _build_slim_system_prompt(persona, subject: str) -> str:
+    """Build a SLIM system prompt (~500-800 chars) for phase calls.
+
+    GLM 5.1 Cloud breaks down with prompts over ~3KB total. The full
+    _build_system_prompt() from clawed.lesson produces ~5KB of persona
+    context alone. We extract only the essentials.
+    """
+    if persona is None:
+        return (
+            f"You are a master {subject} teacher generating high-quality "
+            "lesson plans. Write in a warm, direct tone with exact scripted "
+            "dialogue. Respond with ONLY valid JSON — no markdown, no "
+            "commentary, no XML tags."
+        )
+
+    style = getattr(persona, "teaching_style", None)
+    style_str = str(style).split(".")[-1].lower().replace("_", " ") if style else "direct instruction"
+
+    tone = (getattr(persona, "tone", "") or "")[:150]
+    framework = (getattr(persona, "writing_framework", "") or "").split(":")[0][:60]
+
+    parts = [
+        f"You are a master {subject} teacher generating high-quality "
+        f"lesson plans with a {style_str} style.",
+    ]
+    if tone:
+        parts.append(f"Tone: {tone}.")
+    if framework:
+        parts.append(f"Writing framework: {framework}.")
+
+    parts.append(
+        "Respond with ONLY valid JSON — no markdown, no commentary, "
+        "no XML tags. Never truncate output."
+    )
+    return " ".join(parts)
+
+
 # ══════════════════════════════════════════════════════════════════════
 # Phase execution
 # ══════════════════════════════════════════════════════════════════════
@@ -173,36 +210,36 @@ async def _run_phase(
 async def _phase1_skeleton(
     unit: "UnitPlan",
     lesson_brief: "LessonBrief",
-    total_lessons: int,
-    persona: "TeacherPersona",
     standards_text: str,
-    standards_framework: str,
     teacher_materials: str,
-    few_shot_context: str,
     system: str,
     client,
     task_type: str,
     brain_prompt: str = "",
 ) -> Phase1Skeleton:
-    """Generate Phase 1: skeleton + primary sources."""
+    """Generate Phase 1: skeleton + primary sources.
+
+    Slim prompt — target <3KB total input to stay reliable on
+    GLM 5.1 Cloud and other smaller cloud models.
+    """
     template = _load_prompt("phase1_skeleton.txt")
-    prompt = _fill_template(template,
-        unit_title=unit.title,
-        unit_overview=unit.overview,
+    # Cap teacher_materials to keep prompt size down
+    tm = teacher_materials[:800] if teacher_materials else ""
+    prompt = _fill_template(
+        template,
+        unit_title=unit.title[:200],
         subject=unit.subject,
         grade_level=unit.grade_level,
         topic=lesson_brief.topic,
-        objective=lesson_brief.description or unit.overview,
-        lesson_number=lesson_brief.lesson_number,
-        total_lessons=total_lessons,
-        duration_minutes=45,  # Default; Phase 1 can override in its output
-        standards=standards_text,
-        standards_framework=standards_framework,
-        few_shot_context=few_shot_context,
-        teacher_materials=teacher_materials,
+        objective=(lesson_brief.description or unit.overview)[:300],
+        duration_minutes=45,
+        standards=standards_text[:500],
+        teacher_materials=tm,
     )
+    # Cap brain_prompt contribution to keep total <3KB
     if brain_prompt:
-        prompt = brain_prompt + "\n\n" + prompt
+        prompt = brain_prompt[:1000] + "\n\n" + prompt
+    logger.info("Phase 1 prompt size: %d chars", len(prompt))
 
     return await _run_phase(
         "1-skeleton",
@@ -240,8 +277,9 @@ async def _phase2_instruction(
         vocabulary_list=_render_vocabulary_list(phase1.vocabulary),
         primary_sources_block=_render_primary_sources_block(phase1.primary_sources),
         misconceptions_list=_render_misconceptions_list(phase1.misconceptions),
-        persona_voice_hint=_render_persona_voice_hint(persona),
+        persona_voice_hint="",  # Omit — slim system prompt has persona already
     )
+    logger.info("Phase 2 prompt size: %d chars", len(prompt))
 
     return await _run_phase(
         "2-instruction",
@@ -275,6 +313,7 @@ async def _phase3_activities(
         primary_sources_block=_render_primary_sources_block(phase1.primary_sources),
         direct_instruction_block=_render_direct_instruction_block(phase2.direct_instruction),
     )
+    logger.info("Phase 3 prompt size: %d chars", len(prompt))
 
     return await _run_phase(
         "3-activities",
@@ -312,6 +351,7 @@ async def _phase4_assessment(
         vocabulary_terms=_render_vocabulary_terms(phase1.vocabulary),
         direct_instruction_headings=_render_direct_instruction_headings(phase2.direct_instruction),
     )
+    logger.info("Phase 4 prompt size: %d chars", len(prompt))
 
     return await _run_phase(
         "4-assessment",
@@ -401,8 +441,6 @@ async def generate_master_content_phased(
     - Sequential context flow — downstream phases reference upstream output
     - Smaller prompts per phase → less token pressure
     """
-    from clawed.corpus import get_few_shot_context
-    from clawed.lesson import _build_system_prompt
     from clawed.llm import LLMClient
     from clawed.model_router import route as route_model
 
@@ -426,15 +464,9 @@ async def generate_master_content_phased(
     except Exception:
         standards_text = "\n".join(f"- {s}" for s in unit.standards)
 
-    # Few-shot context (smaller than single-call — just 1-2 best examples)
-    try:
-        few_shot_context = get_few_shot_context(
-            content_type="lesson_plan",
-            subject=unit.subject.lower(),
-            grade_level=unit.grade_level,
-        )
-    except Exception:
-        few_shot_context = ""
+    # Phase calls skip few-shot context entirely — the phase prompts have
+    # concrete examples baked in, and GLM 5.1 Cloud chokes on prompts > ~3KB.
+    # This keeps Phase 1 input at ~3-4KB instead of 10KB+.
 
     # Build brain context (for Phase 1 prompt injection)
     brain_prompt = ""
@@ -452,8 +484,9 @@ async def generate_master_content_phased(
     except Exception as exc:
         logger.debug("Brain context lookup skipped: %s", exc)
 
-    # System prompt + LLM client
-    system = _build_system_prompt(persona, config, subject=unit.subject)
+    # SLIM system prompt for phase calls — keep it under 1KB so total
+    # input stays reasonable. We extract just the essential persona bits.
+    system = _build_slim_system_prompt(persona, unit.subject)
     if task_type and config:
         config = route_model(task_type, config)
     client = LLMClient(config)
@@ -475,20 +508,11 @@ async def generate_master_content_phased(
         logger.debug("Warmup ping failed (non-blocking): %s", exc)
 
     # ── Phase 1: Skeleton ─────────────────────────────────────────
-    standards_framework = getattr(
-        getattr(config, "teacher_profile", None),
-        "standards_framework", "",
-    ) if config else ""
-
     phase1 = await _phase1_skeleton(
         unit=unit,
         lesson_brief=lesson_brief,
-        total_lessons=len(unit.daily_lessons),
-        persona=persona,
         standards_text=standards_text,
-        standards_framework=standards_framework,
         teacher_materials=teacher_materials,
-        few_shot_context=few_shot_context,
         system=system,
         client=client,
         task_type=task_type,

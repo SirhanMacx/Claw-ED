@@ -1,106 +1,58 @@
-You are generating PHASE 2 of 4 of a lesson plan. Phase 1 has already
-produced the skeleton: lesson metadata, vocabulary, and primary sources
-(with full text). Your job is the TEACHING part — direct instruction
-sections with scripted teacher dialogue, guided notes, and mid-lesson
-formative checks.
+You are generating PHASE 2 of 4 — direct instruction + guided notes.
+Phase 1 produced the primary sources and vocabulary below. Reference THEM — don't invent new ones.
 
-## Quality Standard — THE GOLD BAR
+Rules:
+- 2-3 direct instruction sections, each 5-8 minutes.
+- Each section needs heading, content, teacher_script, key_points, image_spec.
+- First section needs `hook` (analogy, mystery, or provocative question).
+- Every section except last needs `transition` (scripted pivot to next).
+- teacher_script = EXACT dialogue with 3+ question marks (checks for understanding every 3-5 min). A substitute could read it verbatim.
+- Historical figures are CHARACTERS with vivid descriptions, not encyclopedia entries.
+- Guided notes: 8-12 fill-in-the-blank entries, each tied to a section via section_ref.
 
-Rules for THIS phase:
-- Direct instruction sections: 2-3 sections total, each ~5-8 minutes.
-  Each section needs:
-  - `heading`: the section title
-  - `content`: the actual content being taught (substantive, not a
-    summary). Reference the primary sources by title.
-  - `teacher_script`: EXACT words the teacher says out loud. Include
-    questions, pauses, call-and-response moments, think-alouds.
-    A substitute teacher should deliver this verbatim.
-  - `hook`: REQUIRED on the first section. An analogy, mystery,
-    provocative question, or character intro.
-    GOOD: "Imagine you're a factory worker in 1832 England. You're six
-    years old. Your workday starts at five in the morning."
-    BAD: "Today we will learn about factory conditions."
-  - `transition`: REQUIRED on every section except the last. A scripted
-    pivot phrase connecting to the next section.
-    GOOD: "Now that we've seen how unfair the system was, ask yourself
-    — if YOU were working 16 hours a day for pennies, what would you do?"
-    BAD: [section just ends]
-  - `key_points`: 3-5 bullet-point takeaways
-  - `image_spec`: specific image search query (required, not empty)
+## Context from Phase 1
+Title: {title}
+Grade: {grade_level}  |  Duration: {duration_minutes} min
+Topic: {topic}
+Format: {lesson_format}
+Personality: {lesson_personality}
 
-- Guided notes: AT LEAST 8 (aim for 10-12). Every note is a fill-in-the-blank
-  tied to a specific direct_instruction section. Format:
-  - `prompt`: "The ________ was the primary cause of..."
-  - `answer`: "key word or phrase"
-  - `section_ref`: must match a `heading` from direct_instruction
-
-- Teacher script MUST include at least 3 question marks (checks for
-  understanding every 3-5 minutes).
-
-- Historical figures are CHARACTERS, not encyclopedia entries:
-  GOOD: "Frederick Douglass — escaped slavery, taught himself to read,
-  then wrote speeches so devastating that pro-slavery politicians
-  literally couldn't respond."
-  BAD: "Frederick Douglass was an abolitionist."
-
-## Phase 1 Output (Context)
-
-You MUST reference the following primary sources and vocabulary in your
-direct instruction. Do NOT invent new ones — use what Phase 1 produced.
-
-### Lesson Metadata
-- **Title:** {title}
-- **Subject:** {subject}  |  **Grade:** {grade_level}  |  **Duration:** {duration_minutes} min
-- **Topic:** {topic}
-- **Objective:** {objective}
-- **Lesson Personality:** {lesson_personality}
-- **Lesson Format:** {lesson_format}
-
-### Vocabulary (reference these in teacher_script)
+Vocabulary taught:
 {vocabulary_list}
 
-### Primary Sources (reference by title in your instruction)
+Primary sources (reference by title):
 {primary_sources_block}
 
-### Misconceptions to address during instruction
+Misconceptions to address:
 {misconceptions_list}
 
 {persona_voice_hint}
 
-CRITICAL: Do NOT use XML tags. Plain JSON only. Do NOT invent new
-primary sources or vocabulary — reference the ones from Phase 1.
-
-## Output Format
-
-Respond with ONLY a JSON object (no markdown fencing):
+Respond with ONLY a JSON object:
 
 {
     "direct_instruction": [
         {
-            "heading": "Section Heading",
-            "content": "The actual content being taught — substantive, referencing primary sources by title.",
-            "teacher_script": "Scripted teacher dialogue. MUST include questions every 3-5 minutes. Include think-alouds, pauses ('Turn to your partner and...'), and references to specific primary sources.",
-            "key_points": ["Key point 1", "Key point 2", "Key point 3"],
-            "image_spec": "REQUIRED specific image search query",
-            "hook": "REQUIRED for first section. Analogy, mystery, or provocative question.",
-            "transition": "Scripted pivot to next section. REQUIRED except on last section."
+            "heading": "Section heading",
+            "content": "Substantive content referencing primary sources by title",
+            "teacher_script": "Scripted dialogue with 3+ questions for CFU",
+            "key_points": ["point 1", "point 2", "point 3"],
+            "image_spec": "specific image search query",
+            "hook": "REQUIRED on first section — analogy/mystery/provocative question",
+            "transition": "Scripted pivot to next section (except last)"
         }
     ],
-
     "guided_notes": [
         {
             "prompt": "The ________ was the primary cause of...",
-            "answer": "key word or phrase",
-            "section_ref": "MUST match a heading from direct_instruction above"
+            "answer": "key word",
+            "section_ref": "must match a direct_instruction heading"
         }
     ],
-
     "formative_checks": [
-        "Mid-lesson verbal/show-of-hands question to catch confusion (NOT the exit ticket)",
+        "Mid-lesson verbal CFU (NOT the exit ticket)",
         "Another check-for-understanding"
     ]
 }
 
-Provide EXACTLY 2-3 direct_instruction sections.
-Provide AT LEAST 8 guided_notes (aim for 10-12).
-Provide 2-3 formative_checks.
+Provide 2-3 direct_instruction sections, 8-12 guided_notes, 2-3 formative_checks.

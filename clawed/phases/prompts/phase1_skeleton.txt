@@ -1,113 +1,56 @@
-You are generating PHASE 1 of 4 of a lesson plan. This phase establishes
-the foundation: metadata, vocabulary, primary sources, and the lesson's
-voice. Downstream phases will build on what you produce here.
+You are generating PHASE 1 of 4 of a lesson — skeleton + primary sources.
 
-## Quality Standard — THE GOLD BAR
+Rules:
+- Primary sources need REAL 3-8 sentence quotes with attribution. Never "see handout".
+- Each primary source needs image_spec and 2+ scaffolding_questions.
+- Vocabulary: 4-8 terms with definition + context_sentence.
+- lesson_personality: one-line theme (e.g. "Today you're detectives investigating Seneca Falls").
+- lesson_format: station_rotation | document_analysis | jigsaw | gallery_walk | socratic_seminar | gradual_release | simulation | lecture_discussion
 
-Your output must be so good a teacher prints it and teaches from it
-today without editing a word. Not "close enough" — print-ready.
-
-Rules for THIS phase:
-- Primary sources MUST contain REAL text excerpts from historical
-  documents. 3-8 complete sentences quoted verbatim with attribution.
-  NEVER write "See handout" or "Teacher will provide" — the text MUST
-  be self-contained.
-- For political cartoons: write a detailed visual description (characters,
-  symbols, captions) so someone who can't see the image understands it.
-- Each primary source needs image_spec — a specific image search query
-  naming person/event/date (e.g. "Frederick Douglass portrait 1852")
-  NOT a generic topic.
-- Each primary source needs 2+ scaffolding_questions that build from
-  identification to analysis.
-- Vocabulary terms must be integrated — not a generic word list. Each
-  entry needs: term, definition, context_sentence using the term.
-- lesson_personality: one-line theme or character for this lesson.
-  GOOD: "Today you're detectives investigating who started the French
-  Revolution." BAD: "Today we will learn about the French Revolution."
-- lesson_format: choose ONE from: document_analysis, station_rotation,
-  socratic_seminar, jigsaw, gallery_walk, gradual_release, simulation,
-  lecture_discussion.
-- Align to the teacher's state standards framework ({standards_framework}).
-- For NY state: use Enduring Issues framework (Inequality, Power, Human
-  Rights, Conflict, etc.)
-
-## Unit Context
-- **Unit Title:** {unit_title}
-- **Unit Overview:** {unit_overview}
-
-## Lesson Parameters
-- **Subject:** {subject}
-- **Grade Level:** {grade_level}
-- **Topic:** {topic}
-- **Objective:** {objective}
-- **Lesson Number:** {lesson_number} of {total_lessons}
-- **Duration:** {duration_minutes} minutes
-
-## Standards
-{standards}
-
-{few_shot_context}
+## Lesson
+- Unit: {unit_title}
+- Subject: {subject} | Grade: {grade_level}
+- Topic: {topic}
+- Objective: {objective}
+- Duration: {duration_minutes} min
+- Standards: {standards}
 
 {teacher_materials}
 
-CRITICAL: Do NOT use XML tags or pseudo-markup. Plain JSON only.
-
-## Output Format
-
-Respond with ONLY a JSON object (no markdown fencing):
+Respond with ONLY a JSON object (no markdown):
 
 {
     "title": "Lesson Title",
-    "subject": "Subject name",
-    "grade_level": "Grade level (e.g., 8th Grade)",
-    "topic": "Specific lesson topic",
-    "standards": ["Standard code 1", "Standard code 2"],
-    "objective": "Students will be able to... (SWBAT format, observable verb)",
-    "duration_minutes": 45,
-
+    "subject": "{subject}",
+    "grade_level": "{grade_level}",
+    "topic": "{topic}",
+    "standards": ["standard 1", "standard 2"],
+    "objective": "SWBAT ... (observable verb)",
+    "duration_minutes": {duration_minutes},
     "vocabulary": [
         {
             "term": "Term",
-            "definition": "Clear, student-friendly definition (1 sentence)",
-            "context_sentence": "A sentence using the term in the context of this lesson",
-            "image_spec": "Specific image search query (may be empty for abstract terms)"
+            "definition": "Student-friendly definition",
+            "context_sentence": "Sentence using the term in context",
+            "image_spec": "specific image search query"
         }
     ],
-
     "primary_sources": [
         {
             "id": "source_a",
             "title": "Document Title",
-            "source_type": "text_excerpt | political_cartoon | map | data_table | photograph | diagram",
-            "content_text": "The COMPLETE source excerpt — 3-8 sentences of real quoted text with attribution. For political cartoons: detailed visual description of characters/symbols/captions. NEVER write 'See handout'.",
-            "attribution": "Author, Title, Date/Year",
-            "image_spec": "REQUIRED — specific image search query naming person/event/date",
-            "scaffolding_questions": [
-                "Identification-level question?",
-                "Analysis-level question?"
-            ]
+            "source_type": "text_excerpt",
+            "content_text": "REAL 3-8 sentence quote from the actual document.",
+            "attribution": "Author, Year",
+            "image_spec": "Author document year search query",
+            "scaffolding_questions": ["Identification question?", "Analysis question?"]
         }
     ],
-
-    "misconceptions": [
-        "Common misunderstanding 1 — what students THINK vs what's actually true",
-        "Common misunderstanding 2"
-    ],
-
-    "prerequisite_skills": [
-        "Skill or concept students need before this lesson",
-        "Prior knowledge that today's lesson builds on"
-    ],
-
-    "lesson_format": "document_analysis | station_rotation | jigsaw | gallery_walk | socratic_seminar | gradual_release | simulation | lecture_discussion",
-
-    "lesson_personality": "One-line theme or character for this lesson. Example: 'Today you're putting Hammurabi on trial — you're the jury.'",
-
-    "materials_needed": [
-        "Item 1 — specific enough that a teacher can gather everything before class",
-        "Item 2"
-    ]
+    "misconceptions": ["What students THINK vs what's true"],
+    "prerequisite_skills": ["Skill students need before this lesson"],
+    "lesson_format": "station_rotation",
+    "lesson_personality": "One-line theme for this lesson",
+    "materials_needed": ["Item 1", "Item 2"]
 }
 
-Provide AT LEAST 2 primary sources (3-4 if the lesson uses station rotation or jigsaw).
-Provide AT LEAST 4 vocabulary terms (6-8 for vocabulary-heavy lessons).
+Provide 2-4 primary sources and 4-8 vocabulary terms.
