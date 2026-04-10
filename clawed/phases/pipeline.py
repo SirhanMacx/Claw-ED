@@ -28,6 +28,14 @@ _PROMPT_DIR = Path(__file__).parent / "prompts"
 _PHASE_TIMEOUT_SEC = 240  # 4 minutes per phase (5x shorter than monolith)
 _PHASE_MAX_RETRIES = 2
 
+# Ollama Cloud model fallback chain. When a phase fails repeatedly on the
+# configured model, we rotate through these alternatives automatically.
+# Override with CLAWED_PHASE_MODELS env var (comma-separated).
+_FALLBACK_MODEL_CHAIN = [
+    "glm-5.1:cloud",
+    "minimax-m2.7:cloud",
+]
+
 
 # ══════════════════════════════════════════════════════════════════════
 # Prompt rendering helpers
@@ -182,37 +190,85 @@ async def _run_phase(
     client,
     task_type: str,
 ):
-    """Run a single phase with retries and timeout."""
+    """Run a single phase with multi-model fallback.
+
+    Tries the configured model first. If it times out or returns empty,
+    automatically rotates through _FALLBACK_MODEL_CHAIN (or the
+    CLAWED_PHASE_MODELS env override). This handles Ollama Cloud
+    flakiness gracefully — when GLM 5.1 is down, minimax picks up.
+    """
     import asyncio
+    import os as _os
+
+    # Build the model chain: configured model first, then fallbacks
+    configured_model = getattr(client.config, "ollama_model", "") or ""
+    env_chain = _os.environ.get("CLAWED_PHASE_MODELS", "")
+    if env_chain:
+        chain = [m.strip() for m in env_chain.split(",") if m.strip()]
+    else:
+        chain = list(_FALLBACK_MODEL_CHAIN)
+        # Move the configured model to the front if it's in the list,
+        # otherwise prepend it
+        if configured_model in chain:
+            chain.remove(configured_model)
+        if configured_model:
+            chain.insert(0, configured_model)
 
     last_error = None
-    for attempt in range(_PHASE_MAX_RETRIES):
-        try:
-            logger.info(
-                "Phase %s attempt %d/%d",
-                phase_name, attempt + 1, _PHASE_MAX_RETRIES,
-            )
-            result = await asyncio.wait_for(
-                client.safe_generate_json(
-                    prompt=prompt,
-                    model_class=model_class,
-                    system=system,
-                    temperature=0.6,
-                    max_tokens=4000,  # ~3K tokens per phase
-                ),
-                timeout=_PHASE_TIMEOUT_SEC,
-            )
-            return result
-        except asyncio.TimeoutError:
-            last_error = f"Phase {phase_name} timed out after {_PHASE_TIMEOUT_SEC}s"
-            logger.warning(last_error)
-        except Exception as e:
-            last_error = f"Phase {phase_name} failed: {type(e).__name__}: {e}"
-            logger.warning(last_error)
-            if attempt < _PHASE_MAX_RETRIES - 1:
-                await asyncio.sleep(2 ** attempt)
+    for model_idx, model_name in enumerate(chain):
+        # Swap the client's model for this attempt
+        original_model = client.config.ollama_model
+        client.config.ollama_model = model_name
 
-    raise RuntimeError(last_error)
+        try:
+            for attempt in range(_PHASE_MAX_RETRIES):
+                try:
+                    logger.info(
+                        "Phase %s model=%s attempt %d/%d",
+                        phase_name, model_name, attempt + 1, _PHASE_MAX_RETRIES,
+                    )
+                    result = await asyncio.wait_for(
+                        client.safe_generate_json(
+                            prompt=prompt,
+                            model_class=model_class,
+                            system=system,
+                            temperature=0.6,
+                            max_tokens=4000,
+                        ),
+                        timeout=_PHASE_TIMEOUT_SEC,
+                    )
+                    if model_idx > 0:
+                        logger.info(
+                            "Phase %s succeeded on fallback model %s",
+                            phase_name, model_name,
+                        )
+                    return result
+                except asyncio.TimeoutError:
+                    last_error = (
+                        f"Phase {phase_name} timed out on {model_name} "
+                        f"after {_PHASE_TIMEOUT_SEC}s"
+                    )
+                    logger.warning(last_error)
+                    # On timeout, move to next model immediately (no retry)
+                    break
+                except Exception as e:
+                    last_error = (
+                        f"Phase {phase_name} failed on {model_name}: "
+                        f"{type(e).__name__}: {e}"
+                    )
+                    logger.warning(last_error)
+                    if attempt < _PHASE_MAX_RETRIES - 1:
+                        await asyncio.sleep(2 ** attempt)
+        finally:
+            client.config.ollama_model = original_model
+
+        if model_idx < len(chain) - 1:
+            logger.info(
+                "Phase %s: falling back from %s to %s",
+                phase_name, model_name, chain[model_idx + 1],
+            )
+
+    raise RuntimeError(last_error or f"Phase {phase_name} exhausted all models")
 
 
 # ══════════════════════════════════════════════════════════════════════
