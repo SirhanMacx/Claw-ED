@@ -157,6 +157,8 @@ async def fetch_all_images(
         master: The MasterContent object with image_spec fields.
         config: Optional config for timeout settings.
         teacher_id: Teacher ID for looking up their extracted images.
+            If empty, auto-detected via clawed.agent_core.identity.get_teacher_id()
+            and falls back to "default" (which matches ingestion).
 
     Returns:
         A dict mapping image_spec strings to local file Paths.
@@ -172,15 +174,24 @@ async def fetch_all_images(
 
     subject = getattr(master, "subject", "")
 
+    # Auto-detect teacher_id if not provided
+    if not teacher_id:
+        try:
+            from clawed.agent_core.identity import get_teacher_id
+            teacher_id = get_teacher_id()
+        except Exception:
+            teacher_id = "default"
+
     # Phase 1: Try teacher's own images first (instant, no network)
-    images: dict[str, Path] = {}
-    if teacher_id:
-        images = _resolve_from_teacher_assets(spec_map, teacher_id)
-        if images:
-            logger.info(
-                "Found %d/%d images from teacher's own materials",
-                len(images), len(spec_map),
-            )
+    # Try the configured teacher_id first, fall back to "default"
+    images: dict[str, Path] = _resolve_from_teacher_assets(spec_map, teacher_id)
+    if not images and teacher_id != "default":
+        images = _resolve_from_teacher_assets(spec_map, "default")
+    if images:
+        logger.info(
+            "Found %d/%d images from teacher's own materials",
+            len(images), len(spec_map),
+        )
 
     # Remove already-resolved specs from the fetch list
     remaining = {s: c for s, c in spec_map.items() if s not in images}

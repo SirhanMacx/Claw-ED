@@ -100,50 +100,105 @@ def cleanup_kg(dry_run: bool = False) -> dict:
     return stats
 
 
+_GENERIC_STOPWORDS = {
+    # Single common words that aren't curriculum entities
+    "things", "stuff", "people", "person", "place", "time", "way", "day",
+    "year", "thing", "way", "world", "life", "work", "ways", "years", "days",
+    "first", "second", "third", "next", "last", "new", "old", "big", "small",
+    "many", "few", "some", "any", "all", "every", "each", "other", "another",
+    "what", "when", "where", "why", "how", "who", "which",
+    "this", "that", "these", "those",
+    "good", "bad", "right", "wrong", "true", "false",
+    # Generic education terms (not curriculum-specific)
+    "lesson", "lessons", "class", "classes", "students", "student",
+    "teacher", "teachers", "school", "schools", "homework", "test", "quiz",
+    "worksheet", "handout", "notes", "note", "page", "pages",
+    "chapter", "section", "unit", "units", "review", "reviews",
+    "today", "tomorrow", "yesterday", "week", "weeks", "month",
+    # Verbs that aren't entities
+    "read", "write", "complete", "answer", "answers", "explain", "describe",
+    "list", "identify", "discuss", "compare", "contrast", "analyze",
+    # Phrases without entities
+    "key terms", "key words", "key vocabulary", "key concepts",
+    "all societies", "modern world", "present day",
+    "important", "main idea", "main ideas",
+}
+
+
 def _is_garbage(name: str) -> bool:
-    """Detect garbage entity names from OCR/formatting artifacts."""
+    """Detect garbage entity names from OCR/formatting artifacts.
+
+    Aggressive: catches OCR junk, fill-in-the-blank artifacts, generic
+    stopwords, single-word common nouns, and entities that don't represent
+    real curriculum concepts.
+    """
     if not name or not name.strip():
         return True
 
     clean = name.strip()
+    clean_lower = clean.lower()
 
     # Too short (single chars, punctuation)
-    if len(clean) < 3:
+    if len(clean) < 4:
+        return True
+
+    # Generic stopword (single common word)
+    if clean_lower in _GENERIC_STOPWORDS:
         return True
 
     # Contains newlines or tabs (OCR artifact)
-    if "\n" in clean or "\t" in clean:
+    if "\n" in clean or "\t" in clean or "\r" in clean:
         return True
 
     # Mostly underscores (fill-in-the-blank formatting)
-    if clean.count("_") > len(clean) * 0.3:
+    if clean.count("_") > len(clean) * 0.25:
         return True
 
     # Starts/ends with punctuation (formatting artifact)
-    if clean[0] in ",:;.!?|/\\" or clean[-1] in ",:;":
+    if clean[0] in ",:;.!?|/\\#@$%^&*()[]{}" or clean[-1] in ",:;|/\\":
         return True
 
     # Contains only numbers and punctuation
     if re.match(r"^[\d\s.,:;/\-]+$", clean):
         return True
 
-    # Very long (likely OCR dump, not a real entity name)
-    if len(clean) > 100:
+    # Very long (OCR dump)
+    if len(clean) > 80:
         return True
 
-    # Looks like a filename or path
-    if any(ext in clean.lower() for ext in [".pptx", ".docx", ".pdf", ".jpg", ".png"]):
+    # Looks like a filename
+    if any(
+        ext in clean_lower for ext in [".pptx", ".docx", ".pdf", ".jpg", ".png", ".gif", ".mp4"]
+    ):
         return True
 
     # Contains HTML/XML fragments
     if "<" in clean and ">" in clean:
         return True
 
-    # Multiple words jammed together (e.g., "AztecsRenaissanceHumanism")
-    # Heuristic: 3+ capital letters in sequence without spaces
+    # URL-like
+    if "://" in clean or clean_lower.startswith(("www.", "http")):
+        return True
+
+    # Multiple words jammed together (CamelCase OCR fail)
     capitals_no_space = re.findall(r"[A-Z][a-z]+[A-Z]", clean)
     if len(capitals_no_space) > 2:
         return True
+
+    # Single word that's overly generic (e.g. "consequences", "things")
+    if " " not in clean and len(clean) < 15:
+        # Common single-word stopword family
+        generic_singles = [
+            "consequences", "results", "outcomes", "effects", "causes",
+            "examples", "instances", "items", "options", "choices",
+            "parts", "pieces", "sections", "groups", "teams",
+            "ideas", "concepts", "topics", "subjects", "areas",
+            "facts", "statements", "claims", "points",
+            "questions", "problems", "issues", "matters",
+            "details", "elements", "features", "aspects",
+        ]
+        if clean_lower in generic_singles:
+            return True
 
     # Common formatting artifacts
     garbage_patterns = [
@@ -152,13 +207,33 @@ def _is_garbage(name: str) -> bool:
         r"^period\b",  # "period:____"
         r"^page\s*\d",  # "page 1"
         r"^directions?\b",  # "directions:"
-        r"^answer\b",  # "answer key"
+        r"^answer\s*key",  # "answer key"
+        r"^answer\b\s*$",  # just "answer"
         r"^\d+\s*\.\s*$",  # "1. " (numbered list artifact)
-        r"^key\s*(words?|terms?|vocabulary)\b",  # "key words", "key terms"
-        r"^(true|false)\b",  # "true/false"
-        r"^(yes|no)\b",  # "yes/no"
-        r"^none\b",  # "none"
-        r"^n/?a\b",  # "n/a"
+        r"^key\s*(words?|terms?|vocabulary|concepts?|points?|ideas?)\b",
+        r"^(true|false)\b",
+        r"^(yes|no)\b",
+        r"^none\b",
+        r"^n/?a\b",
+        r"^all\s+",  # "all things", "all of them"
+        r"^the\s+(thing|stuff|way|idea|main)\b",
+        r"^[a-z]\s*$",  # single letter
+        r"^\d+\s*$",  # just a number
+        r"^q\d",  # "q1", "q2"
+        r"^homework$|^class\s*work$|^classwork$",
+        r"^chapter\s*\d",  # "chapter 1"
+        r"^unit\s*\d",  # "unit 1"
+        r"^lesson\s*\d",  # "lesson 1"
+        r"^week\s*\d",
+        r"^day\s*\d",
+        r"^step\s*\d",
+        r"^part\s*\d",
+        r"^figure\s*\d",
+        r"^table\s*\d",
+        r"^item\s*\d",
+        r"^section\s*\d",
+        r"^\.\.\.+$",  # ellipsis
+        r"^[ivx]+\s*$",  # roman numerals alone
     ]
     for pattern in garbage_patterns:
         if re.match(pattern, clean, re.IGNORECASE):

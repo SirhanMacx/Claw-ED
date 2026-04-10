@@ -169,3 +169,69 @@ def extract_standard_codes(text: str) -> list[str]:
                 seen.add(code)
                 codes.append(code)
     return codes
+
+
+def infer_lesson_ordering_relationships(
+    docs: list,
+) -> list[dict]:
+    """Infer prerequisite_for / builds_on relationships from lesson ordering.
+
+    Looks at document titles for patterns like "Lesson 1", "Day 2", "Unit 3"
+    and infers that Lesson N+1 builds_on Lesson N (and Lesson N is a
+    prerequisite_for Lesson N+1).
+
+    Args:
+        docs: list of Document objects with title attribute
+
+    Returns:
+        list of {"subject": ..., "predicate": ..., "object": ..., "confidence": ...}
+    """
+    relationships: list[dict] = []
+
+    # Group documents by inferred unit/sequence
+    sequence_pat = re.compile(
+        r"(?:lesson|day|class|session|part)\s*(\d+)",
+        re.IGNORECASE,
+    )
+
+    # Bucket: {unit_key: [(seq_num, doc_title)]}
+    buckets: dict[str, list[tuple[int, str]]] = {}
+    for doc in docs:
+        title = getattr(doc, "title", "") or ""
+        if not title:
+            continue
+        m = sequence_pat.search(title)
+        if not m:
+            continue
+        seq_num = int(m.group(1))
+        # Unit key = title with the sequence number stripped
+        unit_key = sequence_pat.sub("", title).strip().lower()
+        # Normalize whitespace
+        unit_key = re.sub(r"\s+", " ", unit_key)
+        if not unit_key:
+            unit_key = "unsorted"
+        buckets.setdefault(unit_key, []).append((seq_num, title))
+
+    # For each unit bucket, infer prerequisite chains
+    for unit_key, items in buckets.items():
+        # Sort by sequence number
+        items.sort(key=lambda x: x[0])
+        for i in range(len(items) - 1):
+            current_title = items[i][1]
+            next_title = items[i + 1][1]
+            # Lesson N+1 builds_on Lesson N
+            relationships.append({
+                "subject": next_title,
+                "predicate": "builds_on",
+                "object": current_title,
+                "confidence": 0.85,
+            })
+            # Lesson N is prerequisite_for Lesson N+1
+            relationships.append({
+                "subject": current_title,
+                "predicate": "prerequisite_for",
+                "object": next_title,
+                "confidence": 0.85,
+            })
+
+    return relationships

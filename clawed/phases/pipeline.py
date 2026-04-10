@@ -140,12 +140,19 @@ def _render_persona_voice_hint(persona) -> str:
     return ""
 
 
-def _build_slim_system_prompt(persona, subject: str) -> str:
-    """Build a SLIM system prompt (~500-800 chars) for phase calls.
+def _build_slim_system_prompt(persona, subject: str, rich: bool = False) -> str:
+    """Build a system prompt for phase calls.
 
-    GLM 5.1 Cloud breaks down with prompts over ~3KB total. The full
-    _build_system_prompt() from clawed.lesson produces ~5KB of persona
-    context alone. We extract only the essentials.
+    Two modes:
+    - slim (rich=False): ~500-800 chars. For Phase 3/4 where the
+      persona influence matters less.
+    - rich (rich=True): ~1500-2000 chars. Includes voice_sample,
+      signature_moves, scaffolding_moves, and pedagogical fingerprint.
+      For Phase 1 (skeleton sets the voice) and Phase 2 (direct
+      instruction needs the teacher's actual scripted style).
+
+    Both fit within GLM 5.1 Cloud's reliable input range (<3KB total
+    after prompt is added).
     """
     if persona is None:
         return (
@@ -170,8 +177,41 @@ def _build_slim_system_prompt(persona, subject: str) -> str:
     if framework:
         parts.append(f"Writing framework: {framework}.")
 
+    if rich:
+        # Voice sample — the teacher's actual writing
+        voice = (getattr(persona, "voice_sample", "") or "").strip()
+        if voice:
+            parts.append(
+                f"\n\nYour voice sounds like this — match this exact style: "
+                f'"{voice[:400]}"'
+            )
+
+        # Signature moves — distinctive patterns
+        sig_moves = getattr(persona, "signature_moves", []) or []
+        if sig_moves:
+            parts.append("\nSignature moves you ALWAYS use:")
+            for m in sig_moves[:3]:
+                parts.append(f"- {m[:200]}")
+
+        # Scaffolding moves
+        scaffold = getattr(persona, "scaffolding_moves", []) or []
+        if scaffold:
+            parts.append("\nScaffolding strategies you favor:")
+            for s in scaffold[:2]:
+                parts.append(f"- {s[:200]}")
+
+        # Do Now style preference
+        do_now_style = getattr(persona, "do_now_style", "") or ""
+        if do_now_style:
+            parts.append(f"\nYour Do Nows: {do_now_style[:200]}")
+
+        # Activity patterns
+        activity = getattr(persona, "activity_patterns", []) or []
+        if activity:
+            parts.append(f"\nActivity pattern you use: {activity[0][:200]}")
+
     parts.append(
-        "Respond with ONLY valid JSON — no markdown, no commentary, "
+        "\n\nRespond with ONLY valid JSON — no markdown, no commentary, "
         "no XML tags. Never truncate output."
     )
     return " ".join(parts)
@@ -365,6 +405,33 @@ async def _phase2_instruction(
 # ══════════════════════════════════════════════════════════════════════
 
 
+def _validate_phase3(phase3: Phase3Activities, num_sources: int) -> list[str]:
+    """Quality validator for Phase 3 output. Returns list of issues."""
+    issues: list[str] = []
+    # Stations: should match number of sources (3-4 typical)
+    expected_stations = max(3, min(num_sources, 4))
+    if len(phase3.stations) < expected_stations:
+        issues.append(
+            f"Only {len(phase3.stations)} stations — need {expected_stations}+ "
+            f"(one per primary source)"
+        )
+    # Creative activity is REQUIRED
+    if phase3.creative_activity is None:
+        issues.append("creative_activity is null — REQUIRED for every lesson")
+    elif not phase3.creative_activity.title or not phase3.creative_activity.scenario:
+        issues.append("creative_activity missing title or scenario")
+    # Minute-by-minute must be populated
+    if not phase3.minute_by_minute or len(phase3.minute_by_minute) < 4:
+        issues.append(
+            f"minute_by_minute has {len(phase3.minute_by_minute)} blocks — "
+            f"need 5+ (Do Now, Direct Instruction, Activity, Exit Ticket, Closing)"
+        )
+    # Independent work
+    if phase3.independent_work is None:
+        issues.append("independent_work is null — should be set")
+    return issues
+
+
 async def _phase3_activities(
     phase1: Phase1Skeleton,
     phase2: Phase2Instruction,
@@ -372,9 +439,13 @@ async def _phase3_activities(
     client,
     task_type: str,
 ) -> Phase3Activities:
-    """Generate Phase 3 using Phase 1+2 context."""
+    """Generate Phase 3 with quality validation and retry.
+
+    If validation fails, retries once with an enhanced prompt that
+    explicitly enumerates the missing/insufficient fields.
+    """
     template = _load_prompt("phase3_activities.txt")
-    prompt = _fill_template(template,
+    base_prompt = _fill_template(template,
         title=phase1.title,
         duration_minutes=phase1.duration_minutes,
         lesson_format=phase1.lesson_format,
@@ -382,15 +453,86 @@ async def _phase3_activities(
         primary_sources_block=_render_primary_sources_mini(phase1.primary_sources),
         direct_instruction_block=_render_direct_instruction_block(phase2.direct_instruction),
     )
+    num_sources = len(phase1.primary_sources)
+    expected_stations = max(3, min(num_sources, 4))
+
+    # Add explicit minimum requirements at the top
+    quality_header = (
+        f"## STRICT MINIMUMS (must be met or output will be rejected)\n"
+        f"- stations: EXACTLY {expected_stations} entries "
+        f"(one per primary source, source_ref must match a Phase 1 id)\n"
+        f"- creative_activity: REQUIRED, must have title + scenario + roles + "
+        f"deliverable. NEVER null.\n"
+        f"- minute_by_minute: AT LEAST 5 time blocks summing to "
+        f"{phase1.duration_minutes} min\n"
+        f"- independent_work: REQUIRED with task + rubric_snippet + exemplar\n"
+        f"\n"
+    )
+    prompt = quality_header + base_prompt
     logger.info("Phase 3 prompt size: %d chars", len(prompt))
 
-    return await _run_phase(
+    phase3 = await _run_phase(
         "3-activities",
         prompt,
         system,
         Phase3Activities,
         client,
         task_type,
+    )
+
+    # Validate and retry if quality is insufficient
+    issues = _validate_phase3(phase3, num_sources)
+    if issues:
+        logger.warning(
+            "Phase 3 quality issues — retrying:\n%s",
+            "\n".join(f"- {i}" for i in issues),
+        )
+        # Build a stricter retry prompt that lists exact issues
+        retry_prompt = (
+            quality_header
+            + "## YOUR PREVIOUS ATTEMPT FAILED THESE CHECKS:\n"
+            + "\n".join(f"- {i}" for i in issues)
+            + "\n\nFix ALL of these issues. Do not omit ANY required field.\n\n"
+            + base_prompt
+        )
+        logger.info("Phase 3 retry prompt size: %d chars", len(retry_prompt))
+        phase3_retry = await _run_phase(
+            "3-activities-retry",
+            retry_prompt,
+            system,
+            Phase3Activities,
+            client,
+            task_type,
+        )
+        retry_issues = _validate_phase3(phase3_retry, num_sources)
+        if not retry_issues:
+            logger.info("Phase 3 retry succeeded — quality issues resolved")
+            return phase3_retry
+        # Retry still failed — merge: use retry's better fields where available
+        logger.warning(
+            "Phase 3 retry still has issues, merging best of both attempts",
+        )
+        return _merge_phase3_attempts(phase3, phase3_retry)
+
+    return phase3
+
+
+def _merge_phase3_attempts(
+    a: Phase3Activities,
+    b: Phase3Activities,
+) -> Phase3Activities:
+    """Take the better-populated version of each field across two attempts."""
+    return Phase3Activities(
+        do_now=a.do_now if a.do_now else b.do_now,
+        stations=a.stations if len(a.stations) >= len(b.stations) else b.stations,
+        jigsaw=a.jigsaw or b.jigsaw,
+        creative_activity=a.creative_activity or b.creative_activity,
+        independent_work=a.independent_work or b.independent_work,
+        minute_by_minute=(
+            a.minute_by_minute
+            if len(a.minute_by_minute) >= len(b.minute_by_minute)
+            else b.minute_by_minute
+        ),
     )
 
 
@@ -553,9 +695,11 @@ async def generate_master_content_phased(
     except Exception as exc:
         logger.debug("Brain context lookup skipped: %s", exc)
 
-    # SLIM system prompt for phase calls — keep it under 1KB so total
-    # input stays reasonable. We extract just the essential persona bits.
-    system = _build_slim_system_prompt(persona, unit.subject)
+    # Two system prompts:
+    # - RICH for Phase 1-2 (sets the lesson voice with full pedagogical fingerprint)
+    # - SLIM for Phase 3-4 (tasks where voice matters less, keeping latency low)
+    system_rich = _build_slim_system_prompt(persona, unit.subject, rich=True)
+    system_slim = _build_slim_system_prompt(persona, unit.subject, rich=False)
     if task_type and config:
         config = route_model(task_type, config)
     client = LLMClient(config)
@@ -576,13 +720,13 @@ async def generate_master_content_phased(
     except Exception as exc:
         logger.debug("Warmup ping failed (non-blocking): %s", exc)
 
-    # ── Phase 1: Skeleton ─────────────────────────────────────────
+    # ── Phase 1: Skeleton (RICH system prompt — sets the voice) ──
     phase1 = await _phase1_skeleton(
         unit=unit,
         lesson_brief=lesson_brief,
         standards_text=standards_text,
         teacher_materials=teacher_materials,
-        system=system,
+        system=system_rich,
         client=client,
         task_type=task_type,
         brain_prompt=brain_prompt,
@@ -592,11 +736,11 @@ async def generate_master_content_phased(
         len(phase1.primary_sources), len(phase1.vocabulary),
     )
 
-    # ── Phase 2: Instruction ──────────────────────────────────────
+    # ── Phase 2: Instruction (RICH system prompt — teacher_script needs voice) ──
     phase2 = await _phase2_instruction(
         phase1=phase1,
         persona=persona,
-        system=system,
+        system=system_rich,
         client=client,
         task_type=task_type,
     )
@@ -605,11 +749,11 @@ async def generate_master_content_phased(
         len(phase2.direct_instruction), len(phase2.guided_notes),
     )
 
-    # ── Phase 3: Activities ───────────────────────────────────────
+    # ── Phase 3: Activities (SLIM system prompt — structured tasks) ──
     phase3 = await _phase3_activities(
         phase1=phase1,
         phase2=phase2,
-        system=system,
+        system=system_slim,
         client=client,
         task_type=task_type,
     )
@@ -620,12 +764,12 @@ async def generate_master_content_phased(
         bool(phase3.jigsaw),
     )
 
-    # ── Phase 4: Assessment ───────────────────────────────────────
+    # ── Phase 4: Assessment (SLIM system prompt — exit ticket structure) ──
     phase4 = await _phase4_assessment(
         phase1=phase1,
         phase2=phase2,
         persona=persona,
-        system=system,
+        system=system_slim,
         client=client,
         task_type=task_type,
     )
