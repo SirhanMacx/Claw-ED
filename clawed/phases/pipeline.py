@@ -39,6 +39,20 @@ def _load_prompt(name: str) -> str:
     return (_PROMPT_DIR / name).read_text(encoding="utf-8")
 
 
+def _fill_template(template: str, **kwargs) -> str:
+    """Replace {variable} placeholders in a template.
+
+    Unlike str.format(), this does NOT interpret unrelated braces (like
+    the literal JSON braces in the output-format examples) as format
+    specifiers. It only replaces exact matches of {key} for each key
+    in kwargs.
+    """
+    result = template
+    for key, value in kwargs.items():
+        result = result.replace("{" + key + "}", str(value))
+    return result
+
+
 def _render_vocabulary_list(vocab: list) -> str:
     """Render Phase 1 vocabulary as a bullet list for Phase 2 context."""
     if not vocab:
@@ -172,7 +186,7 @@ async def _phase1_skeleton(
 ) -> Phase1Skeleton:
     """Generate Phase 1: skeleton + primary sources."""
     template = _load_prompt("phase1_skeleton.txt")
-    prompt = template.format(
+    prompt = _fill_template(template,
         unit_title=unit.title,
         unit_overview=unit.overview,
         subject=unit.subject,
@@ -214,7 +228,7 @@ async def _phase2_instruction(
 ) -> Phase2Instruction:
     """Generate Phase 2 using Phase 1 as context."""
     template = _load_prompt("phase2_instruction.txt")
-    prompt = template.format(
+    prompt = _fill_template(template,
         title=phase1.title,
         subject=phase1.subject,
         grade_level=phase1.grade_level,
@@ -253,7 +267,7 @@ async def _phase3_activities(
 ) -> Phase3Activities:
     """Generate Phase 3 using Phase 1+2 context."""
     template = _load_prompt("phase3_activities.txt")
-    prompt = template.format(
+    prompt = _fill_template(template,
         title=phase1.title,
         duration_minutes=phase1.duration_minutes,
         lesson_format=phase1.lesson_format,
@@ -288,7 +302,7 @@ async def _phase4_assessment(
     """Generate Phase 4 using Phase 1+2 context."""
     writing_framework = getattr(persona, "writing_framework", "") or "Claim and Evidence"
     template = _load_prompt("phase4_assessment.txt")
-    prompt = template.format(
+    prompt = _fill_template(template,
         title=phase1.title,
         subject=phase1.subject,
         grade_level=phase1.grade_level,

@@ -17,6 +17,7 @@ from clawed.phases.models import (
     Phase4Assessment,
 )
 from clawed.phases.pipeline import (
+    _fill_template,
     _render_direct_instruction_block,
     _render_direct_instruction_headings,
     _render_primary_sources_block,
@@ -306,6 +307,35 @@ def test_render_direct_instruction_headings():
     rendered = _render_direct_instruction_headings(sections)
     assert "Part 1" in rendered
     assert "Part 2" in rendered
+
+
+def test_fill_template_handles_literal_json_braces():
+    """Regression test: template with literal JSON {} must not break."""
+    template = (
+        "Topic: {topic}\n\n"
+        "Respond with JSON like:\n"
+        '{"title": "X", "standards": ["Y"]}\n'
+    )
+    result = _fill_template(template, topic="Reform Movements")
+    assert "Reform Movements" in result
+    assert '"title"' in result
+    assert '"standards"' in result
+
+
+def test_fill_template_only_replaces_named_keys():
+    template = "{name}: {value} — {note}"
+    result = _fill_template(template, name="A", value="1")
+    # Unreplaced {note} stays as-is (not a KeyError)
+    assert "A: 1" in result
+    assert "{note}" in result
+
+
+def test_fill_template_ignores_unknown_braces():
+    template = "Hello {name}, use {dict_var} format: {key: value}"
+    result = _fill_template(template, name="World")
+    assert "Hello World" in result
+    assert "{dict_var}" in result
+    assert "{key: value}" in result
 
 
 def test_render_vocabulary_terms_comma_separated():
