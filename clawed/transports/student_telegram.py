@@ -23,11 +23,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 # Error log path (separate from teacher bot)
 def _student_error_log() -> Path:
     import os as _os
+
     base = Path(_os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
     return base / "student_errors.log"
+
 
 _ERROR_LOG = _student_error_log()
 
@@ -117,9 +120,7 @@ class StudentTelegramBot:
         bot = StudentBot()
 
         # Register commands with Telegram
-        self.api.set_my_commands(
-            [{"command": cmd, "description": desc} for cmd, desc in STUDENT_BOT_COMMANDS]
-        )
+        self.api.set_my_commands([{"command": cmd, "description": desc} for cmd, desc in STUDENT_BOT_COMMANDS])
 
         me = self.api.get_me()
         bot_name = me.get("username", "unknown")
@@ -222,9 +223,7 @@ class StudentTelegramBot:
         topic = class_info.topic or "today's lesson"
         self.api.send_message(
             chat_id,
-            f"You joined {class_info.name or code}! "
-            f"{teacher_name} is teaching {topic}. "
-            f"Go ahead and ask me anything!",
+            f"You joined {class_info.name or code}! {teacher_name} is teaching {topic}. Go ahead and ask me anything!",
         )
 
     def _cmd_topic(self, chat_id: int, bot: Any) -> None:
@@ -232,9 +231,7 @@ class StudentTelegramBot:
         code = session.get("class_code")
 
         if not code:
-            self.api.send_message(
-                chat_id, "You haven't joined a class yet. Use /join CODE to connect to your class."
-            )
+            self.api.send_message(chat_id, "You haven't joined a class yet. Use /join CODE to connect to your class.")
             return
 
         class_info = bot.get_class(code)
@@ -282,9 +279,7 @@ class StudentTelegramBot:
             except Exception as retry_err:
                 _log_error(retry_err)
                 logger.error("Retry also failed: %s", retry_err)
-                self.api.send_message(
-                    chat_id, "Hmm, I'm having trouble right now. Try asking again in a moment!"
-                )
+                self.api.send_message(chat_id, "Hmm, I'm having trouble right now. Try asking again in a moment!")
                 return
 
         self.api.send_message(chat_id, answer)

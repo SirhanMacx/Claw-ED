@@ -1,4 +1,5 @@
 """Tests for the rewritten gateway — the brain of Claw-ED."""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -10,6 +11,7 @@ from clawed.models import AppConfig
 class TestGatewayHandle:
     def setup_method(self):
         from clawed.gateway import Gateway
+
         # Explicitly use legacy gateway for these tests
         self.gw = Gateway(config=AppConfig(agent_gateway=False))
         # Ensure clean onboard state (no leakage from prior tests)
@@ -57,6 +59,7 @@ class TestGatewayHandle:
 class TestGatewayStats:
     def setup_method(self):
         from clawed.gateway import Gateway
+
         self.gw = Gateway(config=AppConfig(agent_gateway=False))
 
     @pytest.mark.asyncio
@@ -78,6 +81,7 @@ class TestGatewayStats:
 class TestGatewayEventBus:
     def setup_method(self):
         from clawed.gateway import Gateway
+
         self.gw = Gateway(config=AppConfig(agent_gateway=False))
 
     @pytest.mark.asyncio

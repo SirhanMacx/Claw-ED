@@ -1,4 +1,5 @@
 """Tool: update_soul — append observations to SOUL.md."""
+
 from __future__ import annotations
 
 import logging
@@ -80,18 +81,14 @@ class UpdateSoulTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         section_key = params["section"].lower().strip()
         content = params["content"].strip()
 
         header = SECTION_MAP.get(section_key)
         if not header:
             valid = ", ".join(sorted(SECTION_MAP.keys()))
-            return ToolResult(
-                text=f"Unknown section '{section_key}'. Valid sections: {valid}"
-            )
+            return ToolResult(text=f"Unknown section '{section_key}'. Valid sections: {valid}")
 
         from clawed.workspace import SOUL_PATH
 
@@ -109,6 +106,7 @@ class UpdateSoulTool:
             content = content[:500] + "..."
 
         import logging
+
         audit_logger = logging.getLogger("clawed.audit")
         audit_logger.info("SOUL.md update: header=%s, content=%s", header, content[:200])
 

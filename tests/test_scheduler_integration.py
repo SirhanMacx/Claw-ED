@@ -1,4 +1,5 @@
 """Tests for proactive scheduler integration."""
+
 from __future__ import annotations
 
 import pytest
@@ -120,6 +121,7 @@ class TestHandleSystemEvent:
 class TestScheduleTaskTool:
     def test_schema_valid(self):
         from clawed.agent_core.tools.schedule_task import ScheduleTaskTool
+
         tool = ScheduleTaskTool()
         s = tool.schema()
         assert s["function"]["name"] == "schedule_task"
@@ -131,11 +133,15 @@ class TestScheduleTaskTool:
         from clawed.agent_core.context import AgentContext
         from clawed.agent_core.tools.schedule_task import ScheduleTaskTool
         from clawed.models import AppConfig
+
         tool = ScheduleTaskTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"action": "list"}, ctx)
         assert "morning-prep" in result.text

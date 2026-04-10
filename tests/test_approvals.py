@@ -1,4 +1,5 @@
 """Tests for the approval gate persistence and lifecycle."""
+
 from clawed.agent_core.approvals import ApprovalManager, PendingApproval
 
 
@@ -20,8 +21,11 @@ class TestPendingApproval:
 
     def test_auto_generates_id(self):
         pa = PendingApproval(
-            teacher_id="t1", action_description="test",
-            action_payload={}, agent_state={}, transport="cli",
+            teacher_id="t1",
+            action_description="test",
+            action_payload={},
+            agent_state={},
+            transport="cli",
         )
         assert len(pa.id) > 0
 
@@ -43,8 +47,11 @@ class TestApprovalManager:
     def test_approve(self, tmp_path):
         mgr = ApprovalManager(base_dir=tmp_path)
         pa = mgr.create(
-            teacher_id="t1", action_description="test",
-            action_payload={}, agent_state={}, transport="cli",
+            teacher_id="t1",
+            action_description="test",
+            action_payload={},
+            agent_state={},
+            transport="cli",
         )
         mgr.approve(pa.id)
         loaded = mgr.load(pa.id)
@@ -53,8 +60,11 @@ class TestApprovalManager:
     def test_reject(self, tmp_path):
         mgr = ApprovalManager(base_dir=tmp_path)
         pa = mgr.create(
-            teacher_id="t1", action_description="test",
-            action_payload={}, agent_state={}, transport="cli",
+            teacher_id="t1",
+            action_description="test",
+            action_payload={},
+            agent_state={},
+            transport="cli",
         )
         mgr.reject(pa.id)
         loaded = mgr.load(pa.id)
@@ -66,20 +76,20 @@ class TestApprovalManager:
 
     def test_pending_for_teacher(self, tmp_path):
         mgr = ApprovalManager(base_dir=tmp_path)
-        mgr.create(teacher_id="t1", action_description="a",
-                    action_payload={}, agent_state={}, transport="cli")
-        mgr.create(teacher_id="t1", action_description="b",
-                    action_payload={}, agent_state={}, transport="cli")
-        mgr.create(teacher_id="t2", action_description="c",
-                    action_payload={}, agent_state={}, transport="cli")
+        mgr.create(teacher_id="t1", action_description="a", action_payload={}, agent_state={}, transport="cli")
+        mgr.create(teacher_id="t1", action_description="b", action_payload={}, agent_state={}, transport="cli")
+        mgr.create(teacher_id="t2", action_description="c", action_payload={}, agent_state={}, transport="cli")
         pending = mgr.pending_for_teacher("t1")
         assert len(pending) == 2
 
     def test_expire_old(self, tmp_path):
         mgr = ApprovalManager(base_dir=tmp_path)
         pa = mgr.create(
-            teacher_id="t1", action_description="old",
-            action_payload={}, agent_state={}, transport="cli",
+            teacher_id="t1",
+            action_description="old",
+            action_payload={},
+            agent_state={},
+            transport="cli",
             timeout_hours=0,  # expires immediately
         )
         expired = mgr.expire_old()

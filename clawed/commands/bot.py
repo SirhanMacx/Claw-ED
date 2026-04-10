@@ -21,15 +21,9 @@ bot_app = typer.Typer()
 
 @bot_app.command()
 def tui(
-    teacher_id: str = typer.Option(
-        "local-teacher", "--id", help="Teacher session ID"
-    ),
-    port: int = typer.Option(
-        8000, "--port", "-p", help="Gateway server port"
-    ),
-    host: str = typer.Option(
-        "127.0.0.1", "--host", "-h", help="Gateway server host"
-    ),
+    teacher_id: str = typer.Option("local-teacher", "--id", help="Teacher session ID"),
+    port: int = typer.Option(8000, "--port", "-p", help="Gateway server port"),
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Gateway server host"),
 ) -> None:
     """Start the full-screen TUI chat — connects to a running gateway.
 
@@ -62,9 +56,7 @@ def tui(
 
 @bot_app.command()
 def chat(
-    teacher_id: str = typer.Option(
-        "local-teacher", "--id", help="Teacher session ID"
-    ),
+    teacher_id: str = typer.Option("local-teacher", "--id", help="Teacher session ID"),
 ) -> None:
     """Start an interactive chat session with Claw-ED in the terminal."""
     from clawed.onboarding import check_first_run
@@ -81,12 +73,8 @@ def chat(
 
 @bot_app.command(name="student-chat")
 def student_chat(
-    class_code: str = typer.Option(
-        ..., "--class-code", help="Class code from your teacher"
-    ),
-    student_id: str = typer.Option(
-        "student-001", "--student-id", help="Your student ID"
-    ),
+    class_code: str = typer.Option(..., "--class-code", help="Class code from your teacher"),
+    student_id: str = typer.Option("student-001", "--student-id", help="Your student ID"),
 ) -> None:
     """Start a student chat session — ask questions about today's lesson."""
     from rich.live import Live
@@ -98,17 +86,11 @@ def student_chat(
     bot = StudentBot()
     class_info = bot.get_class(class_code)
     if not class_info:
-        console.print(
-            f"[red]Class code '{class_code}' not found.[/red]"
-            " Check with your teacher."
-        )
+        console.print(f"[red]Class code '{class_code}' not found.[/red] Check with your teacher.")
         raise typer.Exit(1)
 
     if not class_info.active_lesson_json:
-        console.print(
-            "[yellow]Your teacher hasn't activated a lesson yet."
-            " Check back soon![/yellow]"
-        )
+        console.print("[yellow]Your teacher hasn't activated a lesson yet. Check back soon![/yellow]")
         raise typer.Exit(1)
 
     import json as _json
@@ -118,13 +100,8 @@ def student_chat(
 
     console.print(
         Panel(
-            f"*{lesson_title}*\n\n"
-            f"Ask me anything about today's lesson!\n"
-            f"Type '/quit' to exit.\n",
-            title=(
-                f"[bold green]Student Chat"
-                f" — {class_code}[/bold green]"
-            ),
+            f"*{lesson_title}*\n\nAsk me anything about today's lesson!\nType '/quit' to exit.\n",
+            title=(f"[bold green]Student Chat — {class_code}[/bold green]"),
             border_style="green",
             padding=(1, 2),
         )
@@ -154,9 +131,7 @@ def student_chat(
             transient=True,
         ):
             try:
-                response = _run_async(
-                    bot.handle_message(text, student_id, class_code)
-                )
+                response = _run_async(bot.handle_message(text, student_id, class_code))
             except Exception as e:
                 response = f"Oops, something went wrong: {e}"
 
@@ -211,8 +186,7 @@ def _first_run_setup() -> None:
 
     console.print(
         Panel(
-            "[bold]Welcome to Claw-ED![/bold]\n\n"
-            "Let's get you set up in 2 minutes.",
+            "[bold]Welcome to Claw-ED![/bold]\n\nLet's get you set up in 2 minutes.",
             title="Setup",
             border_style="blue",
         )
@@ -248,14 +222,8 @@ def _first_run_setup() -> None:
     if result.get("connected"):
         console.print(f"[green]Connected to {model}[/green]")
     else:
-        console.print(
-            f"[yellow]Could not connect:"
-            f" {result.get('error', 'unknown')}[/yellow]"
-        )
-        console.print(
-            "[dim]You can update settings later at"
-            " http://localhost:8000/settings[/dim]"
-        )
+        console.print(f"[yellow]Could not connect: {result.get('error', 'unknown')}[/yellow]")
+        console.print("[dim]You can update settings later at http://localhost:8000/settings[/dim]")
 
     # Subject and grades
     subject = Prompt.ask("What subject do you teach?", default="Science")
@@ -264,9 +232,7 @@ def _first_run_setup() -> None:
     cfg.save()
 
     console.print("\n[green]Configuration saved![/green]")
-    console.print(
-        f"[dim]Subject: {subject}, Grades: {grades}[/dim]\n"
-    )
+    console.print(f"[dim]Subject: {subject}, Grades: {grades}[/dim]\n")
 
 
 # ── Serve command ──────────────────────────────────────────────────────
@@ -274,12 +240,8 @@ def _first_run_setup() -> None:
 
 @bot_app.command()
 def serve(
-    port: int = typer.Option(
-        8000, "--port", "-p", help="Port to listen on"
-    ),
-    host: str = typer.Option(
-        "127.0.0.1", "--host", "-h", help="Host to bind to"
-    ),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to listen on"),
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind to"),
     token: Optional[str] = typer.Option(
         None,
         "--token",
@@ -287,15 +249,9 @@ def serve(
         envvar="TELEGRAM_BOT_TOKEN",
         help="Telegram bot token",
     ),
-    tui: bool = typer.Option(
-        False, "--tui", help="Launch the live TUI dashboard"
-    ),
-    skip_setup: bool = typer.Option(
-        False, "--skip-setup", help="Skip first-run setup wizard"
-    ),
-    reload: bool = typer.Option(
-        False, "--reload", help="Enable auto-reload for development"
-    ),
+    tui: bool = typer.Option(False, "--tui", help="Launch the live TUI dashboard"),
+    skip_setup: bool = typer.Option(False, "--skip-setup", help="Skip first-run setup wizard"),
+    reload: bool = typer.Option(False, "--reload", help="Enable auto-reload for development"),
 ):
     """Start the Claw-ED server.
 
@@ -316,6 +272,7 @@ def serve(
 
     # Print auth token for API access
     from clawed.api.deps import get_api_token
+
     api_token = get_api_token()
     console.print(f"API token: [bold]{api_token}[/bold]")
 
@@ -323,6 +280,7 @@ def serve(
 
     # Warn if no AI provider is configured
     from clawed.config import get_api_key, has_config
+
     if not has_config():
         console.print(
             "[yellow]No configuration found.[/yellow] Run [bold]clawed setup[/bold] first,\n"
@@ -340,13 +298,9 @@ def serve(
         token = cfg.telegram_bot_token
 
     if tui:
-        _serve_with_tui(
-            token=token or None, host=host, port=port, config=cfg
-        )
+        _serve_with_tui(token=token or None, host=host, port=port, config=cfg)
     elif token:
-        _serve_gateway_headless(
-            token=token, host=host, port=port, config=cfg
-        )
+        _serve_gateway_headless(token=token, host=host, port=port, config=cfg)
     else:
         import uvicorn
 
@@ -373,9 +327,7 @@ def serve(
                 edu_scheduler.start()
                 console.print("[dim]Proactive scheduler started[/dim]")
             except Exception as e:
-                console.print(
-                    f"[dim]Scheduler not started: {e}[/dim]"
-                )
+                console.print(f"[dim]Scheduler not started: {e}[/dim]")
         uvicorn.run(
             "clawed.api.server:app",
             host=host,
@@ -497,9 +449,7 @@ def _serve_gateway_headless(
                 edu_scheduler.start()
                 console.print("[dim]Proactive scheduler started[/dim]")
             except Exception as e:
-                console.print(
-                    f"[dim]Scheduler not started: {e}[/dim]"
-                )
+                console.print(f"[dim]Scheduler not started: {e}[/dim]")
 
         # Run the web server — this blocks until shutdown
         uv_config = uvicorn.Config(
@@ -539,10 +489,7 @@ def student_bot_cmd(
     from clawed.transports.student_telegram import StudentTelegramBot
 
     if not token:
-        console.print(
-            "[red]Error: provide --token or set"
-            " STUDENT_BOT_TOKEN[/red]"
-        )
+        console.print("[red]Error: provide --token or set STUDENT_BOT_TOKEN[/red]")
         raise typer.Exit(1)
 
     console.print("[green]Starting student bot...[/green]")
@@ -552,11 +499,7 @@ def student_bot_cmd(
         console.print("\n[yellow]Student bot stopped.[/yellow]")
     except ImportError as e:
         console.print(f"[red]Missing dependency:[/red] {e}")
-        console.print(
-            "\nInstall Telegram support with:"
-            "\n  [cyan]pip install"
-            " 'python-telegram-bot>=20.0'[/cyan]"
-        )
+        console.print("\nInstall Telegram support with:\n  [cyan]pip install 'python-telegram-bot>=20.0'[/cyan]")
         raise typer.Exit(1)
 
 
@@ -604,6 +547,7 @@ def bot(
     # Handle --kill: find and kill any existing bot process, then exit
     if kill:
         from clawed.transports.telegram import kill_bot_process
+
         if kill_bot_process():
             console.print("[green]Killed existing bot process.[/green]")
         else:
@@ -631,9 +575,7 @@ def bot(
         )
         raise typer.Exit(1)
 
-    data_path = (
-        Path(data_dir).expanduser().resolve() if data_dir else None
-    )
+    data_path = Path(data_dir).expanduser().resolve() if data_dir else None
 
     from clawed.paths import data_dir as _data_dir_fn
     from clawed.transports.telegram import run_bot as run_new_bot

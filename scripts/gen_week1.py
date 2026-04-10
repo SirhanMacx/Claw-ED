@@ -3,6 +3,7 @@
 Run on Windows with:
   C:\\Users\\jonan\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -X utf8 gen_week1.py
 """
+
 import asyncio
 import json
 import os
@@ -67,8 +68,7 @@ UNITS = [
         ),
         essential_questions=[
             "What does it mean to 'reform' a society, and who gets to decide what needs changing?",
-            "How did movements like Women's Suffrage and Abolitionism use "
-            "'Claim and Evidence' to change laws?",
+            "How did movements like Women's Suffrage and Abolitionism use 'Claim and Evidence' to change laws?",
         ],
         standards=["NYS K-8 SS Framework 8.7c", "C3 Framework D2.His.1.8-12"],
         daily_lessons=[
@@ -160,10 +160,10 @@ async def generate_one(unit, lesson_num, persona, output_dir):
 
     label = f"{unit.grade_level} {unit.subject}"
     lesson_brief = unit.daily_lessons[lesson_num - 1]
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"GENERATING: {label}")
     print(f"  Topic: {lesson_brief.topic}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     try:
         master = await generate_master_content(
@@ -199,6 +199,7 @@ async def generate_one(unit, lesson_num, persona, output_dir):
     except Exception as e:
         print(f"  ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -219,9 +220,9 @@ async def main():
         results.append((unit, r))
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("GENERATION COMPLETE")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for unit, r in results:
         status = "OK" if r else "FAIL"
         title = r.title if r else "?"

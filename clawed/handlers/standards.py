@@ -1,4 +1,5 @@
 """Standards lookup handler. Extracted from tg.py lines 916-945."""
+
 from __future__ import annotations
 
 import logging
@@ -7,9 +8,12 @@ from clawed.gateway_response import GatewayResponse
 
 logger = logging.getLogger(__name__)
 
+
 def get_standards(subject, grade):
     from clawed.standards import get_standards as _get_standards
+
     return _get_standards(subject, grade)
+
 
 class StandardsHandler:
     async def lookup(self, subject: str, grade: str, limit: int = 15) -> GatewayResponse:

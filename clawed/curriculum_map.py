@@ -65,8 +65,7 @@ class CurriculumMapper:
 
         prompt_template = (PROMPT_DIR / "year_map.txt").read_text(encoding="utf-8")
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{subject}", subject)
             .replace("{grade_level}", grade_level)
             .replace("{standards}", ", ".join(standards) if standards else "Use appropriate grade-level standards")
@@ -81,8 +80,7 @@ class CurriculumMapper:
             prompt=prompt,
             model_class=YearMap,
             system=(
-                "You are an expert curriculum designer. "
-                "Respond only with valid JSON matching the specified format."
+                "You are an expert curriculum designer. Respond only with valid JSON matching the specified format."
             ),
             temperature=0.5,
             max_tokens=8192,
@@ -111,9 +109,7 @@ class CurriculumMapper:
         # Build a summary of the year map for the prompt
         unit_lines = []
         for u in year_map.units:
-            unit_lines.append(
-                f"  Unit {u.unit_number}: {u.title} ({u.duration_weeks} weeks) — {u.description}"
-            )
+            unit_lines.append(f"  Unit {u.unit_number}: {u.title} ({u.duration_weeks} weeks) — {u.description}")
         year_map_summary = "\n".join(unit_lines)
 
         # Format calendar events
@@ -130,8 +126,7 @@ class CurriculumMapper:
 
         prompt_template = (PROMPT_DIR / "pacing_guide.txt").read_text(encoding="utf-8")
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{year_map_summary}", year_map_summary)
             .replace("{start_date}", start_date)
             .replace("{calendar_events}", calendar_events)
@@ -175,8 +170,7 @@ class CurriculumMapper:
 
         prompt_template = (PROMPT_DIR / "curriculum_gaps.txt").read_text(encoding="utf-8")
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{standards}", "\n".join(f"  - {s}" for s in standards))
             .replace("{materials_summary}", materials_summary)
         )

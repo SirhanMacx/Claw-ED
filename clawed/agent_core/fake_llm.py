@@ -1,4 +1,5 @@
 """Fake LLM for deterministic testing of the agent loop."""
+
 from __future__ import annotations
 
 from typing import Any

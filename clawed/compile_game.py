@@ -101,8 +101,7 @@ def _extract_game_content(master: MasterContent) -> str:
         parts.append("\nVOCABULARY:")
         for v in master.vocabulary:
             parts.append(
-                f"  - {v.term}: {v.definition}"
-                + (f" (context: {v.context_sentence})" if v.context_sentence else "")
+                f"  - {v.term}: {v.definition}" + (f" (context: {v.context_sentence})" if v.context_sentence else "")
             )
 
     guided_notes = getattr(master, "guided_notes", None)
@@ -168,28 +167,20 @@ def _repair_html_structure(html: str) -> str:
         html = "<!DOCTYPE" + parts[1]  # keep first occurrence + content
         for extra in parts[2:]:
             # Append content after stripping the duplicate preamble
-            extra_content = re.sub(
-                r"^[^>]*>\s*<html[^>]*>\s*", "", extra, flags=re.IGNORECASE
-            )
+            extra_content = re.sub(r"^[^>]*>\s*<html[^>]*>\s*", "", extra, flags=re.IGNORECASE)
             html += extra_content
         html_lower = html.lower()
 
     # Check for bare JS not wrapped in <script> tags
     has_script_tags = "<script" in html_lower
-    has_js_code = bool(re.search(
-        r"(?:function\s+\w+|const\s+\w+\s*=|let\s+\w+\s*=|document\.|addEventListener)",
-        html
-    ))
+    has_js_code = bool(re.search(r"(?:function\s+\w+|const\s+\w+\s*=|let\s+\w+\s*=|document\.|addEventListener)", html))
     if not has_script_tags and has_js_code:
         # Find where JS starts (after the last </div> or after CSS)
         # Look for first function/const/let/document line
-        js_start = re.search(
-            r"\n((?:function |const |let |var |document\.|//\s*[-=]|class\s+\w+\s*\{))",
-            html
-        )
+        js_start = re.search(r"\n((?:function |const |let |var |document\.|//\s*[-=]|class\s+\w+\s*\{))", html)
         if js_start:
-            before_js = html[:js_start.start()]
-            js_code = html[js_start.start():]
+            before_js = html[: js_start.start()]
+            js_code = html[js_start.start() :]
             # Strip trailing </body></html> from JS if present
             js_code = re.sub(r"\s*</body>\s*</html>\s*$", "", js_code, flags=re.IGNORECASE)
             html = before_js + "\n<script>\n" + js_code + "\n</script>\n</body>\n</html>"
@@ -216,15 +207,15 @@ def _repair_html_structure(html: str) -> str:
         title_match = re.search(r"^([^\n<@{]+)", html.strip())
         title_text = title_match.group(1).strip() if title_match else "Learning Game"
         return (
-            f"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
-            f"<meta charset=\"UTF-8\">\n"
-            f"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+            f'<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+            f'<meta charset="UTF-8">\n'
+            f'<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
             f"<title>{title_text}</title>\n"
             f"<style>\n{html}\n</style>\n</head>\n<body></body>\n</html>"
         )
 
-    _preamble = html[:html_tag_end + 1]  # noqa: F841  # everything up to and including <html ...>
-    rest = html[html_tag_end + 1:].strip()
+    _preamble = html[: html_tag_end + 1]  # noqa: F841  # everything up to and including <html ...>
+    rest = html[html_tag_end + 1 :].strip()
 
     # Extract bare title text (first non-tag, non-CSS line after <html>)
     # This catches lines like "Age of Exploration: Chart Your Course" emitted before the CSS
@@ -235,7 +226,7 @@ def _repair_html_structure(html: str) -> str:
         # Accept as title if it looks like a human-readable title (not CSS)
         if not candidate.startswith(("@", "{", ".", "#", "*", ":", "/")):
             title_text = candidate
-            rest = rest[title_match.end():]
+            rest = rest[title_match.end() :]
 
     # Split: CSS/meta goes in <head>, script/div/etc goes in <body>
     head_parts: list[str] = []
@@ -273,9 +264,9 @@ def _repair_html_structure(html: str) -> str:
         body_html += "\n</html>"
 
     repaired = (
-        f"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n"
-        f"<meta charset=\"UTF-8\">\n"
-        f"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n"
+        f'<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+        f'<meta charset="UTF-8">\n'
+        f'<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">\n'
         f"<title>{title_text}</title>\n"
         f"{head_html}\n"
         f"</head>\n<body>\n"
@@ -313,16 +304,12 @@ def _validate_game_html(html: str, master: MasterContent) -> list[str]:
     html_lower = html.lower()
     found_topic = any(w in html_lower for w in topic_words if len(w) > 3)
     if not found_topic:
-        issues.append(
-            f"Topic words ({', '.join(topic_words)}) not found in game"
-        )
+        issues.append(f"Topic words ({', '.join(topic_words)}) not found in game")
 
     if master.vocabulary:
         first_term = master.vocabulary[0].term.lower()
         if first_term not in html_lower:
-            issues.append(
-                f"First vocabulary term '{first_term}' not in game"
-            )
+            issues.append(f"First vocabulary term '{first_term}' not in game")
 
     return issues
 
@@ -355,6 +342,7 @@ async def compile_game(
     """
     if output_dir is None:
         from clawed.io import output_dir as get_output_dir
+
         output_dir = get_output_dir()
     else:
         output_dir = Path(output_dir)
@@ -385,8 +373,7 @@ async def compile_game(
     content = _extract_game_content(master)
 
     prompt_parts = [
-        "Design and code a COMPLETE, UNIQUE, single-file HTML learning "
-        "game for this lesson.\n",
+        "Design and code a COMPLETE, UNIQUE, single-file HTML learning game for this lesson.\n",
         content,
     ]
 
@@ -399,10 +386,7 @@ async def compile_game(
         )
 
     if game_style:
-        prompt_parts.append(
-            f"\nREQUESTED STYLE: {game_style}\n"
-            "Use this style as inspiration but make it your own."
-        )
+        prompt_parts.append(f"\nREQUESTED STYLE: {game_style}\nUse this style as inspiration but make it your own.")
     else:
         prompt_parts.append(
             "\nNo specific style requested — surprise me. Be creative. "

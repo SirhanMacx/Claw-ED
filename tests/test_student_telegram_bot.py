@@ -105,9 +105,7 @@ class TestJoinInvalidCode:
 
             class_info = mock_bot.get_class(code)
             if not class_info:
-                await update.message.reply_text(
-                    "That class code is not valid. Ask your teacher for a new one."
-                )
+                await update.message.reply_text("That class code is not valid. Ask your teacher for a new one.")
 
         asyncio.run(_test())
         reply = update.message.reply_text.call_args[0][0]

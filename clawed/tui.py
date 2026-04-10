@@ -25,9 +25,7 @@ try:
     from textual.widgets import DataTable, Footer, Static
 except ImportError:
     raise ImportError(
-        "textual is required for the TUI dashboard.\n"
-        "Install with: pip install 'clawed[tui]'\n"
-        "Or: pip install textual"
+        "textual is required for the TUI dashboard.\nInstall with: pip install 'clawed[tui]'\nOr: pip install textual"
     )
 
 if TYPE_CHECKING:
@@ -72,8 +70,7 @@ class TeacherHeader(Static):
         provider = cfg.provider.value.title()
 
         self.update(
-            f"  \U0001f393 {name}  \u00b7  {school}  \u00b7  {subjects}{grades}\n"
-            f"  \U0001f916 {provider} / {model}"
+            f"  \U0001f393 {name}  \u00b7  {school}  \u00b7  {subjects}{grades}\n  \U0001f916 {provider} / {model}"
         )
 
 

@@ -3,6 +3,7 @@
 Uses a self-contained canvas renderer with zero external dependencies.
 Works in any browser including Telegram's in-app browser.
 """
+
 from __future__ import annotations
 
 import json
@@ -45,9 +46,7 @@ class CurriculumVisualizerTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         max_nodes = params.get("max_nodes", 150)
 
         try:
@@ -60,8 +59,7 @@ class CurriculumVisualizerTool:
 
         if stats["entity_count"] == 0:
             return ToolResult(
-                text="No curriculum data in the knowledge graph yet. "
-                "Ingest your materials first with /ingest."
+                text="No curriculum data in the knowledge graph yet. Ingest your materials first with /ingest."
             )
 
         # Build graph data with aggressive noise filtering
@@ -71,14 +69,8 @@ class CurriculumVisualizerTool:
             conn.row_factory = sqlite3.Row
 
             # Ensure indexes exist for performance
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_kg_triple_subj_fast "
-                "ON kg_triples(subject)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_kg_triple_obj_fast "
-                "ON kg_triples(object)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_kg_triple_subj_fast ON kg_triples(subject)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_kg_triple_obj_fast ON kg_triples(object)")
 
             entities_raw = conn.execute(
                 "SELECT e.id, e.name, e.entity_type, "
@@ -115,8 +107,7 @@ class CurriculumVisualizerTool:
             entity_ids = {e["id"] for e in entities}
 
             triples = conn.execute(
-                "SELECT subject, predicate, object FROM kg_triples "
-                "WHERE teacher_id = ? AND valid_to IS NULL",
+                "SELECT subject, predicate, object FROM kg_triples WHERE teacher_id = ? AND valid_to IS NULL",
                 (context.teacher_id,),
             ).fetchall()
 
@@ -151,7 +142,9 @@ class CurriculumVisualizerTool:
 
         # Build self-contained HTML with canvas renderer
         html = _build_canvas_html(
-            nodes, edges, teacher_name,
+            nodes,
+            edges,
+            teacher_name,
         )
 
         # Save
@@ -185,7 +178,7 @@ def _build_canvas_html(
     # strict parsers (iOS Safari, Telegram in-app browser).
     data_json_str = json.dumps(json.dumps({"nodes": nodes, "edges": edges}))
 
-    return f'''<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -369,4 +362,4 @@ setTimeout(resize,500);
 setTimeout(resize,1000);
 </script>
 </body>
-</html>'''
+</html>"""

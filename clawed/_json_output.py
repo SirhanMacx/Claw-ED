@@ -3,6 +3,7 @@
 Every command that supports --json uses this module to produce
 a standard envelope: {status, command, data, files, warnings, errors}.
 """
+
 from __future__ import annotations
 
 import json

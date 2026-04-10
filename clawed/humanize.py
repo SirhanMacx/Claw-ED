@@ -11,6 +11,7 @@ Three tiers:
 - Tier 2: Flagged when clustered (2+ in same paragraph)
 - Tier 3: Flagged only at high density (>3 per 500 words)
 """
+
 from __future__ import annotations
 
 import re
@@ -133,52 +134,127 @@ TIER1_REPLACEMENTS: dict[str, str] = {
 
 EDUCATION_WHITELIST: set[str] = {
     # Science vocabulary
-    "catalyst", "optimize", "optimizes", "optimization",
-    "synthesis", "synthesize", "integral", "integrate",
-    "fundamental", "essential", "vital", "dynamic",
-    "equilibrium", "momentum", "vector", "matrix",
+    "catalyst",
+    "optimize",
+    "optimizes",
+    "optimization",
+    "synthesis",
+    "synthesize",
+    "integral",
+    "integrate",
+    "fundamental",
+    "essential",
+    "vital",
+    "dynamic",
+    "equilibrium",
+    "momentum",
+    "vector",
+    "matrix",
     # Math vocabulary
-    "function", "variable", "coefficient", "parameter",
-    "significant", "derivative", "transformation",
+    "function",
+    "variable",
+    "coefficient",
+    "parameter",
+    "significant",
+    "derivative",
+    "transformation",
     # Social studies / humanities
-    "paradigm", "revolution", "reform", "progressive",
+    "paradigm",
+    "revolution",
+    "reform",
+    "progressive",
     "catalyst",  # e.g., "catalyst for change" in history
     "cornerstone",  # e.g., "cornerstone of democracy"
     # General academic vocabulary
-    "analyze", "evaluate", "synthesize", "compare",
-    "contrast", "distinguish", "identify", "examine",
+    "analyze",
+    "evaluate",
+    "synthesize",
+    "compare",
+    "contrast",
+    "distinguish",
+    "identify",
+    "examine",
 }
 
 # ── Tier 2: Flag when 2+ appear in same paragraph ───────────────────
 
 TIER2_WORDS: set[str] = {
-    "streamline", "streamlines", "streamlining",
-    "bolster", "bolsters", "bolstering",
-    "augment", "augments", "augmenting",
-    "amplify", "amplifies", "amplifying",
+    "streamline",
+    "streamlines",
+    "streamlining",
+    "bolster",
+    "bolsters",
+    "bolstering",
+    "augment",
+    "augments",
+    "augmenting",
+    "amplify",
+    "amplifies",
+    "amplifying",
     "linchpin",
-    "underpinning", "bedrock", "hallmark",
-    "epitome", "quintessential", "seminal",
-    "groundbreaking", "trailblazing", "cutting-edge",
-    "state-of-the-art", "best-in-class", "world-class",
-    "game-changer", "transformative", "revolutionary",
-    "seamless", "seamlessly", "effortless", "effortlessly",
-    "meticulous", "meticulously", "intricate", "intricately",
+    "underpinning",
+    "bedrock",
+    "hallmark",
+    "epitome",
+    "quintessential",
+    "seminal",
+    "groundbreaking",
+    "trailblazing",
+    "cutting-edge",
+    "state-of-the-art",
+    "best-in-class",
+    "world-class",
+    "game-changer",
+    "transformative",
+    "revolutionary",
+    "seamless",
+    "seamlessly",
+    "effortless",
+    "effortlessly",
+    "meticulous",
+    "meticulously",
+    "intricate",
+    "intricately",
 }
 
 # ── Tier 3: Flag at high density (>3 per 500 words) ─────────────────
 
 TIER3_WORDS: set[str] = {
-    "innovative", "dynamic", "strategic", "impactful",
-    "significant", "substantial", "remarkable", "notable",
-    "compelling", "engaging", "insightful", "thoughtful",
-    "meaningful", "profound", "pivotal", "crucial",
-    "essential", "fundamental", "integral", "vital",
-    "ensure", "ensures", "ensuring",
-    "empower", "empowers", "empowering",
-    "enable", "enables", "enabling",
-    "drive", "drives", "driving",
-    "align", "aligns", "aligning",
+    "innovative",
+    "dynamic",
+    "strategic",
+    "impactful",
+    "significant",
+    "substantial",
+    "remarkable",
+    "notable",
+    "compelling",
+    "engaging",
+    "insightful",
+    "thoughtful",
+    "meaningful",
+    "profound",
+    "pivotal",
+    "crucial",
+    "essential",
+    "fundamental",
+    "integral",
+    "vital",
+    "ensure",
+    "ensures",
+    "ensuring",
+    "empower",
+    "empowers",
+    "empowering",
+    "enable",
+    "enables",
+    "enabling",
+    "drive",
+    "drives",
+    "driving",
+    "align",
+    "aligns",
+    "aligning",
 }
 
 # ── Structure patterns (AI formatting tells) ────────────────────────
@@ -246,9 +322,7 @@ def humanize(text: str, aggressive: bool = False) -> str:
     words = text.split()
     word_count = len(words)
     if word_count > 0:
-        t3_count = sum(
-            1 for w in words if w.lower().strip(".,!?;:") in TIER3_WORDS
-        )
+        t3_count = sum(1 for w in words if w.lower().strip(".,!?;:") in TIER3_WORDS)
         density = t3_count / max(word_count / 500, 1)
         if density > 3:
             for word in TIER3_WORDS:
@@ -287,11 +361,13 @@ def detect(text: str) -> list[dict[str, str]]:
             idx = text.lower().index(ai_phrase.lower())
             start = max(0, idx - 30)
             end = min(len(text), idx + len(ai_phrase) + 30)
-            findings.append({
-                "pattern": ai_phrase,
-                "tier": "1",
-                "context": text[start:end],
-            })
+            findings.append(
+                {
+                    "pattern": ai_phrase,
+                    "tier": "1",
+                    "context": text[start:end],
+                }
+            )
 
     para_lower = text.lower()
     for word in TIER2_WORDS:

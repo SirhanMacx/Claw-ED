@@ -45,6 +45,7 @@ _CONFIRMATION_THRESHOLD = 2
 
 # ── Candidate file path ────────────────────────────────────────────
 
+
 def _candidates_path() -> Path:
     base = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
     return base / "persona_candidates.json"
@@ -69,6 +70,7 @@ def _save_candidates(candidates: list[dict[str, Any]]) -> None:
 
 # ── Serialization helper ───────────────────────────────────────────
 
+
 def _serialize(value: Any) -> Any:
     """Convert a persona field value into a JSON-safe representation."""
     if isinstance(value, Enum):
@@ -79,6 +81,7 @@ def _serialize(value: Any) -> Any:
 
 
 # ── Core comparison logic ──────────────────────────────────────────
+
 
 def _compare_personas(
     old: TeacherPersona,
@@ -94,11 +97,13 @@ def _compare_personas(
         old_val = _serialize(getattr(old, field, None))
         new_val = _serialize(getattr(new, field, None))
         if old_val != new_val:
-            changes.append({
-                "field": field,
-                "old_value": old_val,
-                "new_value": new_val,
-            })
+            changes.append(
+                {
+                    "field": field,
+                    "old_value": old_val,
+                    "new_value": new_val,
+                }
+            )
     return changes
 
 
@@ -112,19 +117,22 @@ def _build_candidate_changes(
     now_iso = datetime.now(timezone.utc).isoformat()
     candidates: list[dict[str, Any]] = []
     for change in raw_changes:
-        candidates.append({
-            "field": change["field"],
-            "old_value": change["old_value"],
-            "new_value": change["new_value"],
-            "source": source,
-            "first_seen": now_iso,
-            "last_seen": now_iso,
-            "confirmations": 1,
-        })
+        candidates.append(
+            {
+                "field": change["field"],
+                "old_value": change["old_value"],
+                "new_value": change["new_value"],
+                "source": source,
+                "first_seen": now_iso,
+                "last_seen": now_iso,
+                "confirmations": 1,
+            }
+        )
     return candidates
 
 
 # ── Rating pattern analysis ────────────────────────────────────────
+
 
 def _analyze_rating_patterns(
     ratings: list[tuple[int, str]],
@@ -149,12 +157,14 @@ def _analyze_rating_patterns(
 
     if abs(second_avg - first_avg) >= 0.5:
         direction = "improving" if second_avg > first_avg else "declining"
-        signals.append({
-            "type": "rating_trend",
-            "direction": direction,
-            "first_half_avg": round(first_avg, 2),
-            "second_half_avg": round(second_avg, 2),
-        })
+        signals.append(
+            {
+                "type": "rating_trend",
+                "direction": direction,
+                "first_half_avg": round(first_avg, 2),
+                "second_half_avg": round(second_avg, 2),
+            }
+        )
 
     # Look for keyword patterns in notes
     all_notes = " ".join(n.lower() for _, n in ratings if n)
@@ -167,17 +177,20 @@ def _analyze_rating_patterns(
     }
     for keyword, style in style_keywords.items():
         if all_notes.count(keyword) >= 3:
-            signals.append({
-                "type": "style_keyword",
-                "keyword": keyword,
-                "suggested_style": style,
-                "occurrences": all_notes.count(keyword),
-            })
+            signals.append(
+                {
+                    "type": "style_keyword",
+                    "keyword": keyword,
+                    "suggested_style": style,
+                    "occurrences": all_notes.count(keyword),
+                }
+            )
 
     return signals
 
 
 # ── Public API ─────────────────────────────────────────────────────
+
 
 def record_ingestion_changes(
     old_persona: TeacherPersona,
@@ -262,7 +275,8 @@ def apply_confirmed_changes(
     # Remove applied candidates from the file
     candidates = _load_candidates()
     remaining = [
-        c for c in candidates
+        c
+        for c in candidates
         if not (c["field"] in applied_fields and c.get("confirmations", 0) >= _CONFIRMATION_THRESHOLD)
     ]
     _save_candidates(remaining)

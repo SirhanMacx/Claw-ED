@@ -1,5 +1,6 @@
 # clawed/agent_core/prompt.py
 """System prompt assembly for the agent core."""
+
 from __future__ import annotations
 
 
@@ -129,9 +130,7 @@ def build_system_prompt(
 
     # Curriculum KB context (retrieved evidence -- show raw, don't summarize)
     if curriculum_kb_context:
-        sections.append(
-            f"\n## Retrieved from this teacher's files\n{curriculum_kb_context}"
-        )
+        sections.append(f"\n## Retrieved from this teacher's files\n{curriculum_kb_context}")
 
     # Reading report (what we learned from their files)
     if reading_report:
@@ -149,9 +148,7 @@ def build_system_prompt(
 
     # Tools
     if tool_names:
-        sections.append(
-            f"\n## Tools\n{len(tool_names)} available: {', '.join(tool_names)}."
-        )
+        sections.append(f"\n## Tools\n{len(tool_names)} available: {', '.join(tool_names)}.")
 
     # Behavioral instructions — agentic
     sections.append(
@@ -325,9 +322,7 @@ def build_system_prompt(
     ]
 
     if not is_new_user:
-        guidelines.append(
-            "- ALWAYS export as files. A lesson without its handout and slides is incomplete."
-        )
+        guidelines.append("- ALWAYS export as files. A lesson without its handout and slides is incomplete.")
 
     sections.append("\n## Guidelines\n" + "\n".join(guidelines))
 

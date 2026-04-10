@@ -87,6 +87,7 @@ class TestIngestDriveFolder:
 class TestDriveAuth:
     def test_token_save_and_load(self, tmp_path):
         from clawed.agent_core.drive.auth import load_token, save_token
+
         token_data = {
             "access_token": "ya29.abc",
             "refresh_token": "1//xyz",
@@ -98,11 +99,13 @@ class TestDriveAuth:
 
     def test_load_token_missing(self, tmp_path):
         from clawed.agent_core.drive.auth import load_token
+
         result = load_token(token_path=tmp_path / "nonexistent.json")
         assert result is None
 
     def test_is_authenticated(self, tmp_path):
         from clawed.agent_core.drive.auth import is_authenticated, save_token
+
         assert not is_authenticated(token_path=tmp_path / "nope.json")
         save_token(
             {"access_token": "test", "refresh_token": "test"},
@@ -114,11 +117,13 @@ class TestDriveAuth:
 class TestRateLimiter:
     def test_allows_initial(self):
         from clawed.agent_core.drive.client import RateLimiter
+
         rl = RateLimiter(max_per_hour=100)
         assert rl.allow()
 
     def test_blocks_excess(self):
         from clawed.agent_core.drive.client import RateLimiter
+
         rl = RateLimiter(max_per_hour=2)
         assert rl.allow()
         assert rl.allow()
@@ -129,6 +134,7 @@ class TestDriveClient:
     @pytest.mark.asyncio
     async def test_not_authenticated(self, tmp_path):
         from clawed.agent_core.drive.client import DriveClient
+
         client = DriveClient(token_path=tmp_path / "nope.json")
         with pytest.raises(RuntimeError, match="not authenticated"):
             await client.list_files()
@@ -137,9 +143,9 @@ class TestDriveClient:
     async def test_rate_limit_exceeded(self, tmp_path):
         from clawed.agent_core.drive.auth import save_token
         from clawed.agent_core.drive.client import DriveClient
+
         # Create a token so auth check passes
-        save_token({"access_token": "test", "refresh_token": "test"},
-                   token_path=tmp_path / "token.json")
+        save_token({"access_token": "test", "refresh_token": "test"}, token_path=tmp_path / "token.json")
         client = DriveClient(token_path=tmp_path / "token.json", max_per_hour=0)
         with pytest.raises(RuntimeError, match="rate limit"):
             await client.list_files()
@@ -148,6 +154,7 @@ class TestDriveClient:
 class TestDriveTools:
     def test_drive_upload_schema(self):
         from clawed.agent_core.tools.drive_upload import DriveUploadTool
+
         tool = DriveUploadTool()
         s = tool.schema()
         assert s["function"]["name"] == "drive_upload"
@@ -155,18 +162,21 @@ class TestDriveTools:
 
     def test_drive_list_schema(self):
         from clawed.agent_core.tools.drive_list import DriveListTool
+
         tool = DriveListTool()
         s = tool.schema()
         assert s["function"]["name"] == "drive_list"
 
     def test_drive_organize_schema(self):
         from clawed.agent_core.tools.drive_organize import DriveOrganizeTool
+
         tool = DriveOrganizeTool()
         s = tool.schema()
         assert s["function"]["name"] == "drive_organize"
 
     def test_auto_discovery_finds_drive_tools(self):
         from clawed.agent_core.tools.base import ToolRegistry
+
         reg = ToolRegistry()
         reg.discover(Path(__file__).parent.parent / "clawed" / "agent_core" / "tools")
         names = reg.tool_names()
@@ -183,23 +193,23 @@ class TestDriveTools:
 
         tool = DriveUploadTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         # Should return error ToolResult, not crash
         result = await tool.execute({"file_path": "/tmp/nonexistent.pdf"}, ctx)
         text = result.text.lower()
-        assert (
-            "not authenticated" in text
-            or "error" in text
-            or "failed" in text
-        )
+        assert "not authenticated" in text or "error" in text or "failed" in text
 
 
 class TestDriveIngestTool:
     def test_schema_valid(self):
         from clawed.agent_core.tools.drive_ingest import DriveIngestTool
+
         tool = DriveIngestTool()
         schema = tool.schema()
         assert schema["function"]["name"] == "drive_ingest"
@@ -210,11 +220,15 @@ class TestDriveIngestTool:
         from clawed.agent_core.context import AgentContext
         from clawed.agent_core.tools.drive_ingest import DriveIngestTool
         from clawed.models import AppConfig
+
         tool = DriveIngestTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"folder_id": "abc123"}, ctx)
         text = result.text.lower()
@@ -224,31 +238,37 @@ class TestDriveIngestTool:
 class TestExtractFolderIdCommand:
     def test_plain_id(self):
         from clawed.commands.drive import _extract_folder_id
+
         assert _extract_folder_id("1abc2def3ghi") == "1abc2def3ghi"
 
     def test_standard_url(self):
         from clawed.commands.drive import _extract_folder_id
+
         assert _extract_folder_id("https://drive.google.com/drive/folders/1abc2def") == "1abc2def"
 
     def test_url_with_user(self):
         from clawed.commands.drive import _extract_folder_id
+
         assert _extract_folder_id("https://drive.google.com/drive/u/0/folders/1abc2def") == "1abc2def"
 
 
 class TestDriveExtendedTools:
     def test_drive_create_slides_schema(self):
         from clawed.agent_core.tools.drive_create_slides import DriveCreateSlidesTool
+
         s = DriveCreateSlidesTool().schema()
         assert s["function"]["name"] == "drive_create_slides"
         assert "title" in s["function"]["parameters"]["properties"]
 
     def test_drive_create_doc_schema(self):
         from clawed.agent_core.tools.drive_create_doc import DriveCreateDocTool
+
         s = DriveCreateDocTool().schema()
         assert s["function"]["name"] == "drive_create_doc"
 
     def test_drive_read_schema(self):
         from clawed.agent_core.tools.drive_read import DriveReadTool
+
         s = DriveReadTool().schema()
         assert s["function"]["name"] == "drive_read"
         assert "file_id" in s["function"]["parameters"]["properties"]
@@ -258,11 +278,15 @@ class TestDriveExtendedTools:
         from clawed.agent_core.context import AgentContext
         from clawed.agent_core.tools.drive_create_slides import DriveCreateSlidesTool
         from clawed.models import AppConfig
+
         tool = DriveCreateSlidesTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"title": "Test Slides", "content": "Hello"}, ctx)
         assert "not authenticated" in result.text.lower() or "failed" in result.text.lower()
@@ -272,11 +296,15 @@ class TestDriveExtendedTools:
         from clawed.agent_core.context import AgentContext
         from clawed.agent_core.tools.drive_create_doc import DriveCreateDocTool
         from clawed.models import AppConfig
+
         tool = DriveCreateDocTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"title": "Test Doc", "content": "Hello"}, ctx)
         assert "not authenticated" in result.text.lower() or "failed" in result.text.lower()
@@ -286,11 +314,15 @@ class TestDriveExtendedTools:
         from clawed.agent_core.context import AgentContext
         from clawed.agent_core.tools.drive_read import DriveReadTool
         from clawed.models import AppConfig
+
         tool = DriveReadTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"file_id": "abc123"}, ctx)
         assert "not authenticated" in result.text.lower() or "failed" in result.text.lower()

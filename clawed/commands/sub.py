@@ -52,27 +52,17 @@ def _sub_json(*, class_name, grade, subject, date, topic, context, teacher, scho
 
 @sub_app.command(name="sub")
 def sub(
-    class_name: str = typer.Option(
-        ..., "--class", "-c", help="Class name (e.g. 'Period 3 Global Studies')"
-    ),
+    class_name: str = typer.Option(..., "--class", "-c", help="Class name (e.g. 'Period 3 Global Studies')"),
     grade: str = typer.Option(..., "--grade", "-g", help="Grade level"),
     subject: str = typer.Option(..., "--subject", "-s", help="Subject"),
     date: str = typer.Option(..., "--date", "-d", help="Date (e.g. 'March 25, 2026')"),
-    topic: Optional[str] = typer.Option(
-        None, "--topic", "-t", help="Lesson topic"
-    ),
-    context: Optional[str] = typer.Option(
-        None, "--context", help="What unit are we in?"
-    ),
+    topic: Optional[str] = typer.Option(None, "--topic", "-t", help="Lesson topic"),
+    context: Optional[str] = typer.Option(None, "--context", help="What unit are we in?"),
     teacher: Optional[str] = typer.Option(
         None, "--teacher", help="Teacher name (auto-detected from profile if omitted)"
     ),
-    school: Optional[str] = typer.Option(
-        None, "--school", help="School name (auto-detected from profile if omitted)"
-    ),
-    period: str = typer.Option(
-        "", "--period", "-p", help="Period or time slot"
-    ),
+    school: Optional[str] = typer.Option(None, "--school", help="School name (auto-detected from profile if omitted)"),
+    period: str = typer.Option("", "--period", "-p", help="Period or time slot"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Generate a complete substitute teacher packet."""
@@ -163,9 +153,7 @@ def _parent_comm_json(*, comm_type, student_desc, context, tone, notes):
 
     resolved_type = type_map.get(comm_type.lower())
     if resolved_type is None:
-        raise ValueError(
-            f"Unknown type: {comm_type}. Choose from: {', '.join(type_map.keys())}"
-        )
+        raise ValueError(f"Unknown type: {comm_type}. Choose from: {', '.join(type_map.keys())}")
 
     request = ParentCommRequest(
         comm_type=resolved_type,
@@ -195,18 +183,10 @@ def parent_comm(
     comm_type: str = typer.Option(
         ..., "--type", "-t", help="Type: progress, behavior, positive, unit, permission, general"
     ),
-    student_desc: str = typer.Option(
-        ..., "--student-desc", "-s", help="Student description (no real names)"
-    ),
-    context: str = typer.Option(
-        ..., "--context", "-c", help="Class context (e.g. 'Unit 4 WWI')"
-    ),
-    tone: str = typer.Option(
-        "professional and warm", "--tone", help="Tone of the communication"
-    ),
-    notes: Optional[str] = typer.Option(
-        None, "--notes", "-n", help="Additional notes"
-    ),
+    student_desc: str = typer.Option(..., "--student-desc", "-s", help="Student description (no real names)"),
+    context: str = typer.Option(..., "--context", "-c", help="Class context (e.g. 'Unit 4 WWI')"),
+    tone: str = typer.Option("professional and warm", "--tone", help="Tone of the communication"),
+    notes: Optional[str] = typer.Option(None, "--notes", "-n", help="Additional notes"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Generate a professional parent communication email."""
@@ -242,10 +222,7 @@ def parent_comm(
 
     resolved_type = type_map.get(comm_type.lower())
     if resolved_type is None:
-        console.print(
-            f"[red]Unknown type:[/red] {comm_type}. "
-            f"Choose from: {', '.join(type_map.keys())}"
-        )
+        console.print(f"[red]Unknown type:[/red] {comm_type}. Choose from: {', '.join(type_map.keys())}")
         raise typer.Exit(1)
 
     request = ParentCommRequest(
@@ -258,8 +235,7 @@ def parent_comm(
 
     console.print(
         Panel(
-            f"Generating [bold]{resolved_type.value.replace('_', ' ').title()}[/bold] "
-            f"for: {student_desc}",
+            f"Generating [bold]{resolved_type.value.replace('_', ' ').title()}[/bold] for: {student_desc}",
             title="[bold green]Parent Communication[/bold green]",
             border_style="green",
         )

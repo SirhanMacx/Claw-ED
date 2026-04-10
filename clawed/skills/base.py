@@ -31,9 +31,7 @@ class SubjectSkill:
 
     def to_system_context(self) -> str:
         """Serialize skill into a block suitable for LLM system prompt injection."""
-        strategies = "\n".join(
-            f"  - {name}: {desc}" for name, desc in self.example_strategies.items()
-        )
+        strategies = "\n".join(f"  - {name}: {desc}" for name, desc in self.example_strategies.items())
         return (
             f"## Subject Pedagogy: {self.display_name}\n\n"
             f"{self.system_prompt}\n\n"

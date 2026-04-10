@@ -1,4 +1,5 @@
 """Tests for the tool protocol, registry, individual tools, and auto-discovery."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -107,9 +108,7 @@ class TestGenerateLessonTool:
             (),
             {"model_dump": lambda self: {"title": "Fractions", "sections": []}},
         )()
-        with patch(
-            "clawed.lesson.generate_lesson", new_callable=AsyncMock
-        ) as mock_gen:
+        with patch("clawed.lesson.generate_lesson", new_callable=AsyncMock) as mock_gen:
             mock_gen.return_value = mock_lesson
             result = await tool.execute({"topic": "fractions"}, _ctx())
         assert isinstance(result, ToolResult)
@@ -167,9 +166,7 @@ class TestGenerateMaterialsTool:
 
         tool = GenerateMaterialsTool()
         mock_item = type("Item", (), {"model_dump": lambda self: {"q": "What?"}})()
-        with patch(
-            "clawed.materials.generate_worksheet", new_callable=AsyncMock
-        ) as mock_ws:
+        with patch("clawed.materials.generate_worksheet", new_callable=AsyncMock) as mock_ws:
             mock_ws.return_value = [mock_item, mock_item]
             result = await tool.execute({"topic": "fractions"}, _ctx())
         assert isinstance(result, ToolResult)
@@ -232,9 +229,7 @@ class TestSearchStandardsTool:
 
         tool = SearchStandardsTool()
         with patch("clawed.standards.get_standards") as mock_gs:
-            mock_gs.return_value = [
-                ("CCSS.MATH.8.EE.1", "Integer exponents", "8")
-            ]
+            mock_gs.return_value = [("CCSS.MATH.8.EE.1", "Integer exponents", "8")]
             result = await tool.execute({"subject": "math", "grade": "8"}, _ctx())
         assert isinstance(result, ToolResult)
         assert "CCSS" in result.text
@@ -293,8 +288,10 @@ class TestIngestMaterialsTool:
         tool = IngestMaterialsTool()
         mock_doc = MagicMock()
         # Patch home check to allow tmp_path
-        with patch("clawed.agent_core.tools.ingest_materials.Path") as mock_path, \
-             patch("clawed.ingestor.ingest_path") as mock_ip:
+        with (
+            patch("clawed.agent_core.tools.ingest_materials.Path") as mock_path,
+            patch("clawed.ingestor.ingest_path") as mock_ip,
+        ):
             mock_path.home.return_value.resolve.return_value = tmp_path.parent
             mock_path.side_effect = lambda p: Path(p)
             mock_ip.return_value = [mock_doc, mock_doc]
@@ -330,9 +327,7 @@ class TestExportDocumentTool:
         out_file = tmp_path / "lesson_01.pdf"
         out_file.touch()
         with (
-            patch(
-                "clawed.lesson.generate_lesson", new_callable=AsyncMock
-            ) as mock_gen,
+            patch("clawed.lesson.generate_lesson", new_callable=AsyncMock) as mock_gen,
             patch("clawed.export_pdf.export_lesson_pdf") as mock_pdf,
         ):
             mock_gen.return_value = mock_lesson
@@ -369,9 +364,7 @@ class TestConfigureProfileTool:
         ):
             mock_session = MagicMock()
             mock_load.return_value = mock_session
-            result = await tool.execute(
-                {"teacher_name": "Ms. Smith", "subject": "Math"}, _ctx()
-            )
+            result = await tool.execute({"teacher_name": "Ms. Smith", "subject": "Math"}, _ctx())
         assert isinstance(result, ToolResult)
         assert "Ms. Smith" in result.text
 
@@ -425,8 +418,9 @@ class TestSearchLessonsTool:
         from clawed.agent_core.tools.search_lessons import SearchLessonsTool
 
         tool = SearchLessonsTool()
-        with patch("clawed.database.Database.__init__", return_value=None), patch(
-            "clawed.database.Database.list_lessons", return_value=[]
+        with (
+            patch("clawed.database.Database.__init__", return_value=None),
+            patch("clawed.database.Database.list_lessons", return_value=[]),
         ):
             result = await tool.execute({"unit_id": "unit-xyz"}, _ctx())
         assert isinstance(result, ToolResult)
@@ -459,9 +453,7 @@ class TestCurriculumMapTool:
             new_callable=AsyncMock,
         ) as mock_gen:
             mock_gen.return_value = mock_map
-            result = await tool.execute(
-                {"subject": "Math", "grade": "8"}, _ctx()
-            )
+            result = await tool.execute({"subject": "Math", "grade": "8"}, _ctx())
         assert isinstance(result, ToolResult)
         assert "curriculum map" in result.text.lower() or "Math" in result.text
 
@@ -524,12 +516,8 @@ class TestSubPacketTool:
             "overview": "Continue chapter 5",
         }
         with (
-            patch(
-                "clawed.sub_packet.generate_sub_packet", new_callable=AsyncMock
-            ) as mock_gen,
-            patch(
-                "clawed.sub_packet.sub_packet_to_markdown", return_value="# Sub Packet"
-            ),
+            patch("clawed.sub_packet.generate_sub_packet", new_callable=AsyncMock) as mock_gen,
+            patch("clawed.sub_packet.sub_packet_to_markdown", return_value="# Sub Packet"),
         ):
             mock_gen.return_value = mock_packet
             result = await tool.execute(
@@ -570,9 +558,7 @@ class TestParentCommTool:
         mock_comm.email_body = "Dear Parent..."
         mock_comm.follow_up_suggestions = ["Schedule a conference"]
         with (
-            patch(
-                "clawed.parent_comm.generate_parent_comm", new_callable=AsyncMock
-            ) as mock_gen,
+            patch("clawed.parent_comm.generate_parent_comm", new_callable=AsyncMock) as mock_gen,
             patch(
                 "clawed.parent_comm.parent_comm_to_text",
                 return_value="Subject: Progress Update\n\nDear Parent...",
@@ -601,25 +587,27 @@ class TestAutoDiscovery:
         tools_dir = Path(__file__).resolve().parent.parent / "clawed" / "agent_core" / "tools"
         reg.discover(tools_dir)
         names = sorted(reg.tool_names())
-        expected = sorted([
-            "generate_lesson",
-            "generate_unit",
-            "generate_materials",
-            "generate_assessment",
-            "search_standards",
-            "ingest_materials",
-            "export_document",
-            "configure_profile",
-            "request_approval",
-            "search_lessons",
-            "curriculum_map",
-            "gap_analysis",
-            "sub_packet",
-            "parent_comm",
-            "drive_upload",
-            "drive_list",
-            "drive_organize",
-        ])
+        expected = sorted(
+            [
+                "generate_lesson",
+                "generate_unit",
+                "generate_materials",
+                "generate_assessment",
+                "search_standards",
+                "ingest_materials",
+                "export_document",
+                "configure_profile",
+                "request_approval",
+                "search_lessons",
+                "curriculum_map",
+                "gap_analysis",
+                "sub_packet",
+                "parent_comm",
+                "drive_upload",
+                "drive_list",
+                "drive_organize",
+            ]
+        )
         # Verify all expected tools are present (may have more from new features)
         for name in expected:
             assert name in names, f"Missing expected tool: {name}"
@@ -640,6 +628,7 @@ class TestAutoDiscovery:
             "        return ToolResult(text='ok')\n"
         )
         import sys
+
         # Insert tmp_path parent so import works
         sys.path.insert(0, str(tmp_path.parent))
         try:

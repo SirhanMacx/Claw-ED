@@ -14,7 +14,10 @@ class TestReviewFailsClosed:
         client = LLMClient.__new__(LLMClient)
         client.generate = AsyncMock(side_effect=ConnectionError("network down"))
         result = await client.review_lesson_package(
-            "lesson json", True, True, True,
+            "lesson json",
+            True,
+            True,
+            True,
         )
         assert result["passed"] is False
         assert any("ConnectionError" in i for i in result["issues"])
@@ -27,7 +30,10 @@ class TestReviewFailsClosed:
         client = LLMClient.__new__(LLMClient)
         client.generate = AsyncMock(return_value='{"result": "ok"}')
         result = await client.review_lesson_package(
-            "lesson json", True, True, True,
+            "lesson json",
+            True,
+            True,
+            True,
         )
         assert result["passed"] is False
         assert any("missing" in i.lower() for i in result["issues"])
@@ -42,6 +48,9 @@ class TestReviewFailsClosed:
             return_value='{"passed": true, "issues": []}',
         )
         result = await client.review_lesson_package(
-            "lesson json", True, True, True,
+            "lesson json",
+            True,
+            True,
+            True,
         )
         assert result["passed"] is True

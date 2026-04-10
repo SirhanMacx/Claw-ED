@@ -1,4 +1,5 @@
 """Tests for the JSON output infrastructure."""
+
 import json
 import subprocess
 import sys
@@ -9,6 +10,7 @@ import pytest
 def test_json_envelope_success():
     """JSON output wraps successful results in standard envelope."""
     from clawed._json_output import json_envelope
+
     result = json_envelope("gen.lesson", data={"title": "WWI"}, files=["/tmp/out.docx"])
     assert result["status"] == "success"
     assert result["command"] == "gen.lesson"
@@ -21,6 +23,7 @@ def test_json_envelope_success():
 def test_json_envelope_error():
     """JSON output wraps errors properly."""
     from clawed._json_output import json_envelope
+
     result = json_envelope("gen.lesson", status="error", errors=["API key missing"])
     assert result["status"] == "error"
     assert result["errors"] == ["API key missing"]
@@ -29,6 +32,7 @@ def test_json_envelope_error():
 def test_json_envelope_serializable():
     """Envelope is JSON-serializable."""
     from clawed._json_output import json_envelope
+
     result = json_envelope("test", data={"nested": {"key": "val"}})
     serialized = json.dumps(result)
     assert isinstance(serialized, str)
@@ -41,10 +45,21 @@ def test_lesson_json_flag_error_without_config():
     try:
         result = subprocess.run(
             [
-                sys.executable, "-m", "clawed", "--python",
-                "lesson", "Test Topic", "-g", "8", "-s", "US History", "--json",
+                sys.executable,
+                "-m",
+                "clawed",
+                "--python",
+                "lesson",
+                "Test Topic",
+                "-g",
+                "8",
+                "-s",
+                "US History",
+                "--json",
             ],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.stdout.strip():
             try:
@@ -63,6 +78,7 @@ def test_lesson_json_flag_error_without_config():
 def test_emit_json_writes_to_stdout(capsys):
     """emit_json writes JSON to stdout followed by newline."""
     from clawed._json_output import emit_json, json_envelope
+
     envelope = json_envelope("test.cmd", data={"key": "value"})
     emit_json(envelope)
     captured = capsys.readouterr()
@@ -76,6 +92,7 @@ def test_emit_json_handles_non_serializable(capsys):
     from datetime import datetime
 
     from clawed._json_output import emit_json, json_envelope
+
     envelope = json_envelope("test", data={"ts": datetime(2025, 1, 1)})
     emit_json(envelope)
     captured = capsys.readouterr()
@@ -132,6 +149,7 @@ def test_run_json_command_handles_none_return(capsys):
 def test_json_envelope_defaults():
     """json_envelope provides sensible defaults."""
     from clawed._json_output import json_envelope
+
     result = json_envelope("test")
     assert result["status"] == "success"
     assert result["data"] is None
@@ -143,6 +161,7 @@ def test_json_envelope_defaults():
 def test_json_envelope_with_nested_data():
     """json_envelope handles deeply nested data structures."""
     from clawed._json_output import json_envelope
+
     data = {"level1": {"level2": {"level3": [1, 2, 3]}}}
     result = json_envelope("test.nested", data=data)
     serialized = json.dumps(result)
@@ -153,5 +172,6 @@ def test_json_envelope_with_nested_data():
 def test_json_envelope_with_warnings():
     """json_envelope includes warnings when provided."""
     from clawed._json_output import json_envelope
+
     result = json_envelope("test", warnings=["low confidence", "missing data"])
     assert result["warnings"] == ["low confidence", "missing data"]

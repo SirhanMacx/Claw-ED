@@ -66,12 +66,8 @@ def _ingest_json(*, path):
 
 @generate_app.command()
 def ingest(
-    path: str = typer.Argument(
-        ..., help="Path to directory, ZIP file, or single file to ingest"
-    ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", help="Show what would be processed without actually processing"
-    ),
+    path: str = typer.Argument(..., help="Path to directory, ZIP file, or single file to ingest"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be processed without actually processing"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """Ingest teaching materials and extract a teacher persona."""
@@ -107,16 +103,12 @@ def ingest(
         table.add_column("Type")
         table.add_column("Path", style="dim")
         for i, doc in enumerate(documents, 1):
-            table.add_row(
-                str(i), doc.title, doc.doc_type.value.upper(), doc.source_path or ""
-            )
+            table.add_row(str(i), doc.title, doc.doc_type.value.upper(), doc.source_path or "")
         console.print(table)
         console.print(f"\n[green]{len(documents)} files would be processed.[/green]")
         return
 
-    console.print(
-        Panel(f"Ingesting materials from [bold]{source}[/bold]", title="Claw-ED")
-    )
+    console.print(Panel(f"Ingesting materials from [bold]{source}[/bold]", title="Claw-ED"))
 
     # Scan once — reuse the file list for both summary and ingestion
     if source.is_dir():
@@ -128,7 +120,8 @@ def ingest(
 
     with _safe_progress(console=console) as progress:
         task = progress.add_task(
-            f"Ingesting {file_count} files...", total=file_count if file_count > 1 else None,
+            f"Ingesting {file_count} files...",
+            total=file_count if file_count > 1 else None,
         )
 
         def _update_progress(current: int, total: int) -> None:
@@ -191,9 +184,11 @@ def ingest(
     # Also check identity.md
     try:
         from clawed.paths import workspace_dir
+
         identity_path = workspace_dir() / "identity.md"
         if identity_path.exists():
             import re
+
             content = identity_path.read_text(encoding="utf-8")
             name_match = re.match(r"^#\s+(.+)", content)
             if name_match:
@@ -208,6 +203,7 @@ def ingest(
     # Track persona changes for evolution
     try:
         from clawed.persona_evolution import record_ingestion_changes
+
         record_ingestion_changes(old_persona=old_persona, new_persona=persona)
     except Exception:
         pass
@@ -221,22 +217,18 @@ def ingest(
 
         tid = get_teacher_id()
         ingest_result = full_ingest(
-            source, teacher_id=tid,
+            source,
+            teacher_id=tid,
             progress_callback=lambda msg: console.print(f"  [dim]{msg}[/dim]"),
         )
-        kb_msg = (
-            f"[bold]Knowledge base:[/bold] {ingest_result['chunks_indexed']} chunks"
-        )
+        kb_msg = f"[bold]Knowledge base:[/bold] {ingest_result['chunks_indexed']} chunks"
         if ingest_result["images_extracted"]:
             asset_msg = (
                 f"[bold]Assets:[/bold] {ingest_result['assets_registered']} files, "
                 f"{ingest_result['images_extracted']} images extracted"
             )
         if ingest_result["kg_entities"]:
-            kb_msg += (
-                f" · KG: {ingest_result['kg_entities']} concepts, "
-                f"{ingest_result['kg_triples']} relationships"
-            )
+            kb_msg += f" · KG: {ingest_result['kg_entities']} concepts, {ingest_result['kg_triples']} relationships"
         if ingest_result["wiki_articles"]:
             kb_msg += f" · Wiki: {ingest_result['wiki_articles']} articles"
     except Exception:
@@ -262,9 +254,7 @@ def ingest(
 
 @generate_app.command()
 def transcribe(
-    audio_file: str = typer.Argument(
-        ..., help="Path to audio file (ogg/wav/mp3/m4a)"
-    ),
+    audio_file: str = typer.Argument(..., help="Path to audio file (ogg/wav/mp3/m4a)"),
 ) -> None:
     """Transcribe a voice note to text using Whisper."""
     from clawed.voice import is_audio_file, transcribe_audio
@@ -276,9 +266,7 @@ def transcribe(
 
     if not is_audio_file(source):
         console.print(f"[red]Unsupported format:[/red] {source.suffix}")
-        console.print(
-            "[dim]Supported: ogg, wav, mp3, m4a, flac, webm, opus[/dim]"
-        )
+        console.print("[dim]Supported: ogg, wav, mp3, m4a, flac, webm, opus[/dim]")
         raise typer.Exit(1)
 
     with _safe_progress(console=console) as progress:

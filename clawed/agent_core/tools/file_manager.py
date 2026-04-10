@@ -30,8 +30,7 @@ class FileListTool:
             "function": {
                 "name": "list_output_files",
                 "description": (
-                    "List files in the teacher's output directory. "
-                    "Can filter by subject, unit, date, or file type."
+                    "List files in the teacher's output directory. Can filter by subject, unit, date, or file type."
                 ),
                 "parameters": {
                     "type": "object",
@@ -49,9 +48,7 @@ class FileListTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         output_dir = _get_output_dir(context)
         subpath = params.get("path", "")
         pattern = params.get("pattern", "*")
@@ -120,9 +117,7 @@ class FileOrganizeTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         output_dir = _get_output_dir(context)
         action = params.get("action", "")
         source = params.get("source", "")
@@ -148,6 +143,7 @@ class FileOrganizeTool:
             elif action == "archive_old":
                 # Move files older than 30 days to archive/
                 import time
+
                 archive_dir = output_dir / "archive"
                 archive_dir.mkdir(exist_ok=True)
                 cutoff = time.time() - (30 * 86400)
@@ -186,12 +182,8 @@ class WorkspaceStatusTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
-        data_dir = os.environ.get(
-            "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-        )
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
+        data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
         base = Path(data_dir)
 
         parts = ["Workspace Status:\n"]

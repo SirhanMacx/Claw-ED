@@ -40,5 +40,6 @@ class TestChatCommand:
         result = runner.invoke(app, ["chat", "--help"])
         # Strip ANSI escape codes before checking
         import re
+
         clean = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
         assert "--id" in clean

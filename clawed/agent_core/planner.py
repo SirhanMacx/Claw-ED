@@ -1,17 +1,35 @@
 """Multi-step request planning — system prompt enhancement for complex tasks."""
+
 from __future__ import annotations
 
 _PLANNING_KEYWORDS = [
-    "prepare my week", "prep my week", "plan my week",
-    "create a full", "generate everything", "do everything",
-    "prepare next week", "get ready for",
-    "unit with materials", "unit plan with",
-    "full unit", "complete unit",
-    "plan a unit", "plan a full", "plan the unit",
-    "year-long", "year long", "yearlong",
-    "curriculum map", "pacing guide", "scope and sequence",
-    "plan the semester", "plan the year", "plan next month",
-    "prepare all", "generate all", "build a unit",
+    "prepare my week",
+    "prep my week",
+    "plan my week",
+    "create a full",
+    "generate everything",
+    "do everything",
+    "prepare next week",
+    "get ready for",
+    "unit with materials",
+    "unit plan with",
+    "full unit",
+    "complete unit",
+    "plan a unit",
+    "plan a full",
+    "plan the unit",
+    "year-long",
+    "year long",
+    "yearlong",
+    "curriculum map",
+    "pacing guide",
+    "scope and sequence",
+    "plan the semester",
+    "plan the year",
+    "plan next month",
+    "prepare all",
+    "generate all",
+    "build a unit",
 ]
 
 _PLANNING_ADDITION = """

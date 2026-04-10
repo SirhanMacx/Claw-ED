@@ -1,4 +1,5 @@
 """Tool: schedule_task — list, enable, disable, and reschedule agent tasks."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -31,10 +32,7 @@ class ScheduleTaskTool:
                         },
                         "task_name": {
                             "type": "string",
-                            "description": (
-                                "Name of the task (required for enable, "
-                                "disable, and set_schedule)."
-                            ),
+                            "description": ("Name of the task (required for enable, disable, and set_schedule)."),
                         },
                         "schedule": {
                             "type": "string",
@@ -50,9 +48,7 @@ class ScheduleTaskTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.scheduler import AgentScheduler
 
         action = params.get("action", "list")
@@ -65,9 +61,7 @@ class ScheduleTaskTool:
             return self._list_tasks(scheduler)
 
         if action in ("enable", "disable", "set_schedule") and not task_name:
-            return ToolResult(
-                text=f"Action '{action}' requires a 'task_name' parameter."
-            )
+            return ToolResult(text=f"Action '{action}' requires a 'task_name' parameter.")
 
         if action == "enable":
             return self._enable_task(scheduler, task_name)
@@ -77,9 +71,7 @@ class ScheduleTaskTool:
 
         if action == "set_schedule":
             if not schedule:
-                return ToolResult(
-                    text="Action 'set_schedule' requires a 'schedule' parameter."
-                )
+                return ToolResult(text="Action 'set_schedule' requires a 'schedule' parameter.")
             return self._set_schedule(scheduler, task_name, schedule)
 
         return ToolResult(text=f"Unknown action: {action}")
@@ -97,9 +89,7 @@ class ScheduleTaskTool:
             status = "enabled" if t["enabled"] else "disabled"
             cron = t.get("schedule", {})
             cron_str = " ".join(f"{k}={v}" for k, v in cron.items()) if cron else "—"
-            lines.append(
-                f"  {t['name']} [{status}] cron: {cron_str}"
-            )
+            lines.append(f"  {t['name']} [{status}] cron: {cron_str}")
             if t.get("description"):
                 lines.append(f"    {t['description']}")
         return ToolResult(text="\n".join(lines), data={"tasks": tasks})
@@ -127,9 +117,7 @@ class ScheduleTaskTool:
             return ToolResult(text=f"Failed to disable task '{task_name}': {e}")
 
     @staticmethod
-    def _set_schedule(
-        scheduler: Any, task_name: str, schedule: str
-    ) -> ToolResult:
+    def _set_schedule(scheduler: Any, task_name: str, schedule: str) -> ToolResult:
         try:
             scheduler.set_schedule(task_name, schedule)
             return ToolResult(
@@ -137,6 +125,4 @@ class ScheduleTaskTool:
                 side_effects=[f"rescheduled-task:{task_name}"],
             )
         except Exception as e:
-            return ToolResult(
-                text=f"Failed to update schedule for '{task_name}': {e}"
-            )
+            return ToolResult(text=f"Failed to update schedule for '{task_name}': {e}")

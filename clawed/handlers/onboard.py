@@ -3,6 +3,7 @@
 State machine: ask_subject → ask_grade → ask_name → done.
 Extracted from tg.py lines 1156-1263.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,13 +35,13 @@ def _parse_grade_and_subject(text: str) -> tuple[str, str]:
     subject = text
 
     grade_match = re.search(
-        r'(?:(\d{1,2})(?:st|nd|rd|th)?\s*grade)|(?:grade\s*(\d{1,2}))',
+        r"(?:(\d{1,2})(?:st|nd|rd|th)?\s*grade)|(?:grade\s*(\d{1,2}))",
         text,
         re.IGNORECASE,
     )
     if grade_match:
         grade = grade_match.group(1) or grade_match.group(2)
-        subject = text[:grade_match.start()] + text[grade_match.end():]
+        subject = text[: grade_match.start()] + text[grade_match.end() :]
         subject = subject.strip().strip("-,. ")
 
     if subject:
@@ -99,10 +100,7 @@ class OnboardHandler:
                 if grade and grade not in grades:
                     grades.append(grade)
 
-            state["subject"] = (
-                ", ".join(subjects) if subjects
-                else text.strip().title()
-            )[:200]
+            state["subject"] = (", ".join(subjects) if subjects else text.strip().title())[:200]
             state["all_subjects"] = subjects
             state["all_grades"] = grades
 
@@ -118,10 +116,7 @@ class OnboardHandler:
                     )
                 )
             state["step"] = OnboardState.ASK_GRADE
-            return GatewayResponse(
-                text=f"Great — {state['subject']}!\n\n"
-                "What grade level(s) do you teach?"
-            )
+            return GatewayResponse(text=f"Great — {state['subject']}!\n\nWhat grade level(s) do you teach?")
 
         if current == OnboardState.ASK_GRADE:
             grade_match = re.search(r"(\d{1,2})", text)
@@ -131,22 +126,15 @@ class OnboardHandler:
                 state["grade"] = "K"
             else:
                 # Invalid grade — re-prompt
-                return GatewayResponse(
-                    text="I didn't catch that — what grade level? (K, 1-12, or Pre-K)"
-                )
+                return GatewayResponse(text="I didn't catch that — what grade level? (K, 1-12, or Pre-K)")
             state["step"] = OnboardState.ASK_NAME
-            return GatewayResponse(
-                text=f"Grade {state['grade']} — got it.\n\nWhat's your name?"
-            )
+            return GatewayResponse(text=f"Grade {state['grade']} — got it.\n\nWhat's your name?")
 
         if current == OnboardState.ASK_NAME:
             name = text.strip()[:100]
-            name = re.sub(r'[^\w\s\'-]', '', name).strip()
+            name = re.sub(r"[^\w\s\'-]", "", name).strip()
             if not name:
-                return GatewayResponse(
-                    text="I need a name to personalize your lessons. "
-                    "What should I call you?"
-                )
+                return GatewayResponse(text="I need a name to personalize your lessons. What should I call you?")
             state["name"] = name
             state["step"] = OnboardState.ASK_STATE
             return GatewayResponse(
@@ -160,11 +148,20 @@ class OnboardHandler:
             state_text = text.strip().upper()
             # Common state abbreviations and names
             state_map = {
-                "NEW YORK": "NY", "TEXAS": "TX", "CALIFORNIA": "CA",
-                "FLORIDA": "FL", "MASSACHUSETTS": "MA", "VIRGINIA": "VA",
-                "OHIO": "OH", "ILLINOIS": "IL", "NEW JERSEY": "NJ",
-                "CONNECTICUT": "CT", "MARYLAND": "MD", "PENNSYLVANIA": "PA",
-                "GEORGIA": "GA", "NORTH CAROLINA": "NC",
+                "NEW YORK": "NY",
+                "TEXAS": "TX",
+                "CALIFORNIA": "CA",
+                "FLORIDA": "FL",
+                "MASSACHUSETTS": "MA",
+                "VIRGINIA": "VA",
+                "OHIO": "OH",
+                "ILLINOIS": "IL",
+                "NEW JERSEY": "NJ",
+                "CONNECTICUT": "CT",
+                "MARYLAND": "MD",
+                "PENNSYLVANIA": "PA",
+                "GEORGIA": "GA",
+                "NORTH CAROLINA": "NC",
             }
             us_state = state_map.get(state_text, "")
             if not us_state and len(state_text) == 2:
@@ -178,9 +175,7 @@ class OnboardHandler:
             state["us_state"] = us_state or state_text[:2]
             return self._complete_onboarding(teacher_id)
 
-        return GatewayResponse(
-            text="Something went wrong with setup. Try /start again."
-        )
+        return GatewayResponse(text="Something went wrong with setup. Try /start again.")
 
     def _complete_onboarding(self, teacher_id: str) -> GatewayResponse:
         """Finalize onboarding: create TeacherProfile + AppConfig, save, clean up."""
@@ -202,12 +197,14 @@ class OnboardHandler:
         # Reset identity cache so get_teacher_id() picks up the new name
         try:
             from clawed.agent_core.identity import reset_cache
+
             reset_cache()
         except Exception:
             pass
 
         try:
             from clawed.workspace import init_workspace
+
             persona = TeacherPersona(name=state["name"], subject_area=state["subject"])
             init_workspace(persona, config)
         except Exception as e:
@@ -223,19 +220,23 @@ class OnboardHandler:
                 load_recent,
                 save_turn,
             )
+
             new_tid = get_teacher_id()
 
             # Copy turns from "default" (where onboarding steps were saved)
             old_turns = load_recent("default", limit=20)
             for turn in old_turns:
                 save_turn(
-                    new_tid, turn["role"], turn["content"],
+                    new_tid,
+                    turn["role"],
+                    turn["content"],
                     transport=turn.get("transport", "system"),
                 )
 
             # Add completion summary
             save_turn(
-                new_tid, "assistant",
+                new_tid,
+                "assistant",
                 f"Onboarding complete for {state['name']}. "
                 f"Teaches {state['subject']}, grade {state['grade']}"
                 f"{', ' + us_state if us_state else ''}.",

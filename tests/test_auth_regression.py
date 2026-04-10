@@ -37,6 +37,7 @@ class TestExtensionAuthRegression:
         from fastapi.testclient import TestClient
 
         from clawed.api.server import create_app
+
         app = create_app()
         return TestClient(app)
 
@@ -80,6 +81,7 @@ class TestClassroomStudentRoutes:
         from fastapi.testclient import TestClient
 
         from clawed.api.server import create_app
+
         app = create_app()
         return TestClient(app)
 
@@ -162,7 +164,9 @@ class TestStandingApprovalPath:
 
     @pytest.mark.asyncio
     async def test_registry_allows_tool_with_standing_approval(
-        self, tmp_path, monkeypatch,
+        self,
+        tmp_path,
+        monkeypatch,
     ):
         """Integration: registry executes a gated tool when approval exists."""
         monkeypatch.setenv("CLAWED_AUTO_APPROVE", "0")
@@ -185,11 +189,14 @@ class TestStandingApprovalPath:
             risk_level = RISK_WRITE_LOCAL
 
             def schema(self):
-                return {"type": "function", "function": {
-                    "name": "approved_write",
-                    "description": "t",
-                    "parameters": {"type": "object", "properties": {}},
-                }}
+                return {
+                    "type": "function",
+                    "function": {
+                        "name": "approved_write",
+                        "description": "t",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                }
 
             async def execute(self, params, context):
                 return ToolResult(text="executed")
@@ -218,11 +225,13 @@ class TestPageAuthBootstrap:
         from fastapi.testclient import TestClient
 
         from clawed.api.server import create_app
+
         app = create_app()
         return TestClient(app)
 
     def test_valid_token_sets_cookie_and_redirects(self, client):
         from clawed.api.deps import get_api_token
+
         token = get_api_token()
 
         resp = client.post(
@@ -244,6 +253,7 @@ class TestPageAuthBootstrap:
 
     def test_cookie_grants_page_access(self, client):
         from clawed.api.deps import get_api_token
+
         token = get_api_token()
 
         # First: bootstrap to get cookie

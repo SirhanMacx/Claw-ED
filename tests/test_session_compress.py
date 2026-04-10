@@ -1,4 +1,5 @@
 """Tests for session compression."""
+
 import json
 import sqlite3
 
@@ -11,6 +12,7 @@ def _session_db(tmp_path, monkeypatch):
     monkeypatch.setenv("EDUAGENT_DATA_DIR", str(tmp_path))
     # Reset module state so it picks up the new path
     import clawed.agent_core.memory.sessions as sess
+
     monkeypatch.setattr(sess, "_initialized", False)
 
     # Create sessions table
@@ -37,8 +39,7 @@ def _insert_turns(db_path, teacher_id, count, prefix="Turn"):
             role = "user" if i % 2 == 0 else "assistant"
             content = f"{prefix} {i}: Make me a lesson on Topic {i // 2}"
             conn.execute(
-                "INSERT INTO sessions (teacher_id, transport, role, content, timestamp) "
-                "VALUES (?, 'cli', ?, ?, ?)",
+                "INSERT INTO sessions (teacher_id, transport, role, content, timestamp) VALUES (?, 'cli', ?, ?, ?)",
                 (teacher_id, role, content, f"2026-04-07T{10 + i // 60:02d}:{i % 60:02d}:00Z"),
             )
 
@@ -46,6 +47,7 @@ def _insert_turns(db_path, teacher_id, count, prefix="Turn"):
 class TestExtractStructuredFields:
     def test_extracts_topics(self):
         from clawed.agent_core.memory.session_compress import extract_structured_fields
+
         turns = [
             {"role": "user", "content": "Make me a lesson on the American Revolution"},
             {"role": "assistant", "content": "Building your lesson now."},
@@ -55,6 +57,7 @@ class TestExtractStructuredFields:
 
     def test_extracts_materials(self):
         from clawed.agent_core.memory.session_compress import extract_structured_fields
+
         turns = [
             {"role": "assistant", "content": "Generated: Revolution_slides.pptx"},
         ]
@@ -63,6 +66,7 @@ class TestExtractStructuredFields:
 
     def test_extracts_decisions(self):
         from clawed.agent_core.memory.session_compress import extract_structured_fields
+
         turns = [
             {"role": "user", "content": "I prefer shorter lessons with more visuals"},
         ]
@@ -71,6 +75,7 @@ class TestExtractStructuredFields:
 
     def test_handles_empty(self):
         from clawed.agent_core.memory.session_compress import extract_structured_fields
+
         fields = extract_structured_fields([])
         assert fields["topics"] == []
         assert fields["materials_generated"] == []
@@ -82,6 +87,7 @@ class TestHeuristicSummary:
             _heuristic_summary,
             extract_structured_fields,
         )
+
         turns = [
             {"role": "user", "content": "Make a lesson on Civil War"},
             {"role": "assistant", "content": "Generated: civil_war.pptx"},
@@ -96,18 +102,21 @@ class TestHeuristicSummary:
 class TestCompressOldSessions:
     def test_no_compression_below_threshold(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 30)
         result = compress_old_sessions("t1")
         assert result == 0
 
     def test_compresses_at_threshold(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 50)
         result = compress_old_sessions("t1")
         assert result == 20  # COMPRESS_BATCH
 
     def test_keeps_recent_turns(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 50)
         compress_old_sessions("t1")
 
@@ -120,6 +129,7 @@ class TestCompressOldSessions:
 
     def test_creates_summary_record(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 50)
         compress_old_sessions("t1")
 
@@ -131,6 +141,7 @@ class TestCompressOldSessions:
 
     def test_summary_has_turn_count(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 50)
         compress_old_sessions("t1")
 
@@ -144,14 +155,15 @@ class TestCompressOldSessions:
 
     def test_deletes_compressed_turns(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 50)
 
         # Get IDs of oldest 20
         with sqlite3.connect(str(_session_db)) as conn:
             old_ids = [
-                r[0] for r in conn.execute(
-                    "SELECT id FROM sessions WHERE teacher_id = 't1' "
-                    "ORDER BY timestamp ASC LIMIT 20",
+                r[0]
+                for r in conn.execute(
+                    "SELECT id FROM sessions WHERE teacher_id = 't1' ORDER BY timestamp ASC LIMIT 20",
                 ).fetchall()
             ]
 
@@ -160,12 +172,14 @@ class TestCompressOldSessions:
         with sqlite3.connect(str(_session_db)) as conn:
             for oid in old_ids:
                 row = conn.execute(
-                    "SELECT 1 FROM sessions WHERE id = ?", (oid,),
+                    "SELECT 1 FROM sessions WHERE id = ?",
+                    (oid,),
                 ).fetchone()
                 assert row is None, f"Turn {oid} should have been deleted"
 
     def test_teacher_isolation(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 50)
         _insert_turns(_session_db, "t2", 50)
         compress_old_sessions("t1")
@@ -179,6 +193,7 @@ class TestCompressOldSessions:
 
     def test_idempotent(self, _session_db):
         from clawed.agent_core.memory.session_compress import compress_old_sessions
+
         _insert_turns(_session_db, "t1", 42)  # Just above threshold
         r1 = compress_old_sessions("t1")
         r2 = compress_old_sessions("t1")
@@ -189,12 +204,14 @@ class TestCompressOldSessions:
 class TestMaybeCompressSessions:
     def test_triggers(self, _session_db):
         from clawed.agent_core.memory.session_compress import maybe_compress_sessions
+
         _insert_turns(_session_db, "t1", 50)
         result = maybe_compress_sessions("t1")
         assert result == 20
 
     def test_no_trigger_below(self, _session_db):
         from clawed.agent_core.memory.session_compress import maybe_compress_sessions
+
         _insert_turns(_session_db, "t1", 30)
         result = maybe_compress_sessions("t1")
         assert result == 0
@@ -206,6 +223,7 @@ class TestGetFullSessionTimeline:
             compress_old_sessions,
             get_full_session_timeline,
         )
+
         _insert_turns(_session_db, "t1", 50)
         compress_old_sessions("t1")
         timeline = get_full_session_timeline("t1")
@@ -216,5 +234,6 @@ class TestGetFullSessionTimeline:
 
     def test_empty_for_new_teacher(self, _session_db):
         from clawed.agent_core.memory.session_compress import get_full_session_timeline
+
         timeline = get_full_session_timeline("new_teacher")
         assert timeline == []

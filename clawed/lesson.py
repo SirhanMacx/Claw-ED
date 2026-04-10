@@ -17,17 +17,37 @@ logger = logging.getLogger(__name__)
 # Phrases that indicate lazy, generic differentiation. If any differentiation
 # item contains one of these, the quality gate rejects the lesson for retry.
 
-_GENERIC_DIFF_PHRASES = frozenset({
-    "provide extra time", "provide extra support", "provide additional support",
-    "modify as needed", "adjust as necessary", "provide accommodations",
-    "offer assistance", "give extra help", "provide scaffolding",
-    "allow extra time", "provide support", "offer support",
-    "simplify the task", "reduce complexity", "provide modifications",
-    "additional practice", "extra practice", "more time",
-    "work at their own pace", "extended time", "preferential seating",
-    "check for understanding", "monitor progress", "provide feedback",
-    "modify assessment", "reduce number of", "shorten the assignment",
-})
+_GENERIC_DIFF_PHRASES = frozenset(
+    {
+        "provide extra time",
+        "provide extra support",
+        "provide additional support",
+        "modify as needed",
+        "adjust as necessary",
+        "provide accommodations",
+        "offer assistance",
+        "give extra help",
+        "provide scaffolding",
+        "allow extra time",
+        "provide support",
+        "offer support",
+        "simplify the task",
+        "reduce complexity",
+        "provide modifications",
+        "additional practice",
+        "extra practice",
+        "more time",
+        "work at their own pace",
+        "extended time",
+        "preferential seating",
+        "check for understanding",
+        "monitor progress",
+        "provide feedback",
+        "modify assessment",
+        "reduce number of",
+        "shorten the assignment",
+    }
+)
 
 
 def _validate_quality(master: MasterContent) -> list[str]:
@@ -62,8 +82,7 @@ def _validate_quality(master: MasterContent) -> list[str]:
     for di in master.direct_instruction:
         if not di.image_spec.strip():
             issues.append(
-                f"Direct instruction '{di.heading}' has empty image_spec — "
-                "visual aids are required for every section"
+                f"Direct instruction '{di.heading}' has empty image_spec — visual aids are required for every section"
             )
         if "?" not in di.teacher_script:
             issues.append(
@@ -82,10 +101,7 @@ def _validate_quality(master: MasterContent) -> list[str]:
 
     # ── Guided notes minimum (Jon's lessons have 8-12) ─────────────────
     if len(master.guided_notes) < 8:
-        issues.append(
-            f"Only {len(master.guided_notes)} guided notes — minimum 8 required "
-            f"(aim for 10-12)"
-        )
+        issues.append(f"Only {len(master.guided_notes)} guided notes — minimum 8 required (aim for 10-12)")
 
     # ── Differentiation ban list ──────────────────────────────────────
     for field_name in ("struggling", "advanced", "ell"):
@@ -95,37 +111,38 @@ def _validate_quality(master: MasterContent) -> list[str]:
             for phrase in _GENERIC_DIFF_PHRASES:
                 if phrase in lower:
                     issues.append(
-                        f"Differentiation '{field_name}' contains generic "
-                        f"phrase '{phrase}' — use SPECIFIC scaffolds"
+                        f"Differentiation '{field_name}' contains generic phrase '{phrase}' — use SPECIFIC scaffolds"
                     )
                     break
 
     # ── Self-contained check ──────────────────────────────────────────
     banned_phrases = [
-        "teacher will provide", "refer to textbook", "see page",
-        "open your book", "use the handout", "worksheet attached",
-        "see attached", "distribute the provided", "refer to class notes",
+        "teacher will provide",
+        "refer to textbook",
+        "see page",
+        "open your book",
+        "use the handout",
+        "worksheet attached",
+        "see attached",
+        "distribute the provided",
+        "refer to class notes",
     ]
-    all_text = " ".join([
-        master.do_now.stimulus,
-        *[di.content for di in master.direct_instruction],
-        *[ps.content_text for ps in master.primary_sources],
-        *[s.student_directions for s in master.stations],
-    ]).lower()
+    all_text = " ".join(
+        [
+            master.do_now.stimulus,
+            *[di.content for di in master.direct_instruction],
+            *[ps.content_text for ps in master.primary_sources],
+            *[s.student_directions for s in master.stations],
+        ]
+    ).lower()
     for phrase in banned_phrases:
         if phrase in all_text:
-            issues.append(
-                f"Lesson contains banned phrase '{phrase}' — all materials "
-                "must be self-contained"
-            )
+            issues.append(f"Lesson contains banned phrase '{phrase}' — all materials must be self-contained")
 
     # ── Station answer keys ─────────────────────────────────────────
     for station in master.stations:
         if not station.teacher_answer_key.strip():
-            issues.append(
-                f"Station '{station.title}' missing teacher_answer_key — "
-                "provide complete expected responses"
-            )
+            issues.append(f"Station '{station.title}' missing teacher_answer_key — provide complete expected responses")
         elif len(station.teacher_answer_key.strip()) < 20:
             issues.append(
                 f"Station '{station.title}' answer key is only "
@@ -135,18 +152,14 @@ def _validate_quality(master: MasterContent) -> list[str]:
     # ── Bloom's Enforcer ─────────────────────────────────────────────
     # Research: 98% of AI lessons stuck at recall. Require cognitive progression.
     if len(master.exit_ticket) >= 3:
-        levels = [
-            getattr(et, "cognitive_level", "").lower()
-            for et in master.exit_ticket
-        ]
+        levels = [getattr(et, "cognitive_level", "").lower() for et in master.exit_ticket]
         has_recall = any(lv in ("recall", "remember", "identify") for lv in levels)
         has_apply = any(lv in ("application", "apply", "explain") for lv in levels)
         has_analyze = any(lv in ("analysis", "analyze", "evaluate", "create") for lv in levels)
         if not (has_recall and has_apply and has_analyze):
             issues.append(
                 "Exit ticket must have Bloom's progression: recall → "
-                "application → analysis. Current levels: "
-                + ", ".join(levels or ["none set"])
+                "application → analysis. Current levels: " + ", ".join(levels or ["none set"])
             )
 
     # ── Voice & personality checks ───────────────────────────────────
@@ -161,8 +174,7 @@ def _validate_quality(master: MasterContent) -> list[str]:
         hook = getattr(first_di, "hook", "")
         if not hook:
             issues.append(
-                "First direct_instruction section has no hook — "
-                "open with an analogy, mystery, or provocative question"
+                "First direct_instruction section has no hook — open with an analogy, mystery, or provocative question"
             )
 
     # ── Creative activity enforcement ──────────────────────────────────
@@ -187,24 +199,27 @@ def _validate_quality(master: MasterContent) -> list[str]:
     # Exclude primary source quotes — historical documents contain period
     # language by design (e.g. "all men" in the Declaration of Sentiments).
     _bias_flags = [
-        "the orient", "third world", "primitive",
-        "savage", "uncivilized",
+        "the orient",
+        "third world",
+        "primitive",
+        "savage",
+        "uncivilized",
     ]
-    lesson_text = " ".join([
-        master.objective,
-        *[di.content for di in master.direct_instruction],
-        *[di.teacher_script for di in master.direct_instruction],
-    ]).lower()
+    lesson_text = " ".join(
+        [
+            master.objective,
+            *[di.content for di in master.direct_instruction],
+            *[di.teacher_script for di in master.direct_instruction],
+        ]
+    ).lower()
     # Strip out quoted text (anything between single or double quotes)
     # so we don't flag historical primary source language
     import re as _re
+
     cleaned_text = _re.sub(r"['\"].*?['\"]", "", lesson_text)
     for flag in _bias_flags:
         if flag in cleaned_text:
-            issues.append(
-                f"Diversity check: lesson contains '{flag}' — consider "
-                "more inclusive language"
-            )
+            issues.append(f"Diversity check: lesson contains '{flag}' — consider more inclusive language")
 
     return issues
 
@@ -245,9 +260,8 @@ def _build_system_prompt(
     soul_context = ""
     try:
         import os
-        data_dir = os.environ.get(
-            "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-        )
+
+        data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
         soul_path = Path(data_dir) / "workspace" / "soul.md"
         if soul_path.exists():
             soul_context = soul_path.read_text(encoding="utf-8")[:2000]
@@ -268,6 +282,7 @@ def _build_system_prompt(
     if effective_subject:
         try:
             from clawed.skills import SkillLibrary
+
             library = SkillLibrary()
             skill = library.get(effective_subject)
             if skill:
@@ -286,9 +301,13 @@ def _build_system_prompt(
     )
 
     # NYS Regents assessment format for Social Studies
-    if (config and hasattr(config, "teacher_profile") and config.teacher_profile
-            and getattr(config.teacher_profile, "state", "") == "NY"
-            and "social studies" in effective_subject.lower()):
+    if (
+        config
+        and hasattr(config, "teacher_profile")
+        and config.teacher_profile
+        and getattr(config.teacher_profile, "state", "") == "NY"
+        and "social studies" in effective_subject.lower()
+    ):
         system_parts.append(
             "NYS Regents Assessment Format Requirements:\n"
             "- Exit ticket questions MUST use Stimulus-Based Multiple "
@@ -345,10 +364,7 @@ async def generate_master_content(
             break
 
     if lesson_brief is None:
-        raise ValueError(
-            f"Lesson {lesson_number} not found in unit plan. "
-            f"Unit has {len(unit.daily_lessons)} lessons."
-        )
+        raise ValueError(f"Lesson {lesson_number} not found in unit plan. Unit has {len(unit.daily_lessons)} lessons.")
 
     # Auto-populate unit standards from teacher profile if missing
     if not unit.standards:
@@ -356,10 +372,9 @@ async def generate_master_content(
             config = config or AppConfig.load()
             if config.teacher_profile and config.teacher_profile.state:
                 from clawed.standards import get_standards
+
                 results = get_standards(unit.subject, unit.grade_level)
-                unit.standards = [
-                    f"{code}: {desc}" for code, desc, _ in results[:5]
-                ]
+                unit.standards = [f"{code}: {desc}" for code, desc, _ in results[:5]]
         except Exception:
             pass
 
@@ -389,8 +404,7 @@ async def generate_master_content(
 
     prompt_template = MASTER_PROMPT_PATH.read_text(encoding="utf-8")
     prompt = (
-        prompt_template
-        .replace("{unit_title}", unit.title)
+        prompt_template.replace("{unit_title}", unit.title)
         .replace("{unit_overview}", unit.overview[:1500])
         .replace("{subject}", unit.subject)
         .replace("{grade_level}", unit.grade_level)
@@ -402,21 +416,17 @@ async def generate_master_content(
         .replace("{standards}", standards_text)
         .replace("{few_shot_context}", few_shot_context)
         .replace("{teacher_materials}", teacher_materials)
-        .replace("{standards_framework}", (
-            config.teacher_profile.standards_framework
-            if config and config.teacher_profile
-            else "state standards"
-        ))
-        .replace("{state}", (
-            config.teacher_profile.state
-            if config and config.teacher_profile
-            else ""
-        ))
+        .replace(
+            "{standards_framework}",
+            (config.teacher_profile.standards_framework if config and config.teacher_profile else "state standards"),
+        )
+        .replace("{state}", (config.teacher_profile.state if config and config.teacher_profile else ""))
     )
 
     # Inject classroom profile context into system prompt
     try:
         from clawed.classroom_profile import profile_to_prompt_context
+
         classroom_ctx = profile_to_prompt_context()
         if classroom_ctx:
             prompt = classroom_ctx + "\n\n" + prompt
@@ -427,6 +437,7 @@ async def generate_master_content(
     try:
         from clawed.agent_core.identity import get_teacher_id
         from clawed.lesson_connections import inject_connections_into_prompt
+
         _tid = get_teacher_id()
         kg_ctx = inject_connections_into_prompt(
             lesson_brief.topic,
@@ -501,10 +512,7 @@ async def generate_master_content(
                 lesson_json = lesson_json[:6000] + "\n... (truncated)"
 
             critic_response = await client.generate(
-                prompt=(
-                    f"Review this lesson plan:\n\n{lesson_json}\n\n"
-                    "Apply the Teaching Constitution above."
-                ),
+                prompt=(f"Review this lesson plan:\n\n{lesson_json}\n\nApply the Teaching Constitution above."),
                 system=critic_prompt,
                 temperature=0.2,
                 max_tokens=500,
@@ -586,10 +594,7 @@ async def generate_all_lessons(
                 "The following lessons have already been taught. Build on this "
                 "foundation — do NOT re-introduce vocabulary or sources that "
                 "students have already worked with. Reference prior learning "
-                "where appropriate.\n\n"
-                + prior_context
-                + "\n---\n\n"
-                + teacher_materials
+                "where appropriate.\n\n" + prior_context + "\n---\n\n" + teacher_materials
             )
 
         master = await generate_master_content(
@@ -633,9 +638,7 @@ async def generate_project_arc(
     curated databases, 4-point rubrics, gallery walks, debates).
     """
 
-    topics_covered = ", ".join(
-        brief.topic for brief in unit.daily_lessons
-    ) if unit.daily_lessons else unit.topic
+    topics_covered = ", ".join(brief.topic for brief in unit.daily_lessons) if unit.daily_lessons else unit.topic
 
     essential_question = (
         unit.essential_questions[0]
@@ -645,8 +648,7 @@ async def generate_project_arc(
 
     prompt_template = PROJECT_ARC_PROMPT_PATH.read_text(encoding="utf-8")
     prompt = (
-        prompt_template
-        .replace("{unit_title}", unit.title)
+        prompt_template.replace("{unit_title}", unit.title)
         .replace("{subject}", unit.subject)
         .replace("{grade_level}", unit.grade_level)
         .replace("{duration_days}", str(duration_days))

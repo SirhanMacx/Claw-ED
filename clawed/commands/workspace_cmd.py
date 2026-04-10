@@ -79,11 +79,13 @@ def workspace_regenerate(
         # Check the data dir directly
         import os
         from pathlib import Path as _Path
+
         data_dir = _Path(os.environ.get("EDUAGENT_DATA_DIR", str(_Path.home() / ".eduagent")))
         alt_path = data_dir / "persona.json"
         if alt_path.exists():
             try:
                 from clawed.persona import load_persona
+
                 persona = load_persona(alt_path)
                 console.print(f"[dim]Loaded persona from {alt_path}[/dim]")
             except Exception:
@@ -131,10 +133,7 @@ def workspace_edit(
 
     path = file_map.get(file.lower())
     if path is None:
-        console.print(
-            f"[red]Unknown file '{file}'. Choose from: "
-            f"{', '.join(file_map.keys())}[/red]"
-        )
+        console.print(f"[red]Unknown file '{file}'. Choose from: {', '.join(file_map.keys())}[/red]")
         raise typer.Exit(1)
 
     editor = os.environ.get("EDITOR", os.environ.get("VISUAL", "nano"))
@@ -232,14 +231,15 @@ def workspace_students(
 
     if json_output:
         from clawed._json_output import run_json_command
+
         def _students_json():
             return {"data": {"profiles": profiles or []}, "files": []}
+
         run_json_command("workspace.students", _students_json)
         return
     if not profiles:
         console.print(
-            "[dim]No student profiles yet. They are created automatically"
-            " from student bot interactions.[/dim]"
+            "[dim]No student profiles yet. They are created automatically from student bot interactions.[/dim]"
         )
         return
 

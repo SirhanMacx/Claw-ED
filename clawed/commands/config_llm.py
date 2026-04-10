@@ -15,21 +15,14 @@ from clawed.models import AppConfig, LLMProvider
 
 @config_app.command("set-model")
 def config_set_model(
-    provider: str = typer.Argument(
-        ..., help="LLM provider: anthropic, openai, ollama, google, or openrouter"
-    ),
-    model: Optional[str] = typer.Option(
-        None, "--model", "-m", help="Model name override"
-    ),
+    provider: str = typer.Argument(..., help="LLM provider: anthropic, openai, ollama, google, or openrouter"),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Model name override"),
 ):
     """Configure the LLM backend."""
     try:
         llm_provider = LLMProvider(provider.lower())
     except ValueError:
-        console.print(
-            f"[red]Unknown provider: {provider}[/red]."
-            " Use: anthropic, openai, ollama, google, openrouter"
-        )
+        console.print(f"[red]Unknown provider: {provider}[/red]. Use: anthropic, openai, ollama, google, openrouter")
         raise typer.Exit(1)
 
     cfg = AppConfig.load()
@@ -44,16 +37,18 @@ def config_set_model(
             cfg.ollama_model = model
 
     cfg.save()
-    model_name = model or {
-        LLMProvider.ANTHROPIC: cfg.anthropic_model,
-        LLMProvider.OPENAI: cfg.openai_model,
-        LLMProvider.OLLAMA: cfg.ollama_model,
-    }[llm_provider]
+    model_name = (
+        model
+        or {
+            LLMProvider.ANTHROPIC: cfg.anthropic_model,
+            LLMProvider.OPENAI: cfg.openai_model,
+            LLMProvider.OLLAMA: cfg.ollama_model,
+        }[llm_provider]
+    )
 
     console.print(
         Panel(
-            f"[bold]Provider:[/bold] {llm_provider.value}\n"
-            f"[bold]Model:[/bold] {model_name}",
+            f"[bold]Provider:[/bold] {llm_provider.value}\n[bold]Model:[/bold] {model_name}",
             title="Configuration Updated",
         )
     )
@@ -92,10 +87,7 @@ def config_set_model(
                 version = resp.json().get("version", "unknown")
                 console.print(f"[green]Connected to Ollama v{version}[/green]")
             except Exception:
-                console.print(
-                    "[yellow]Warning: Can't reach Ollama at "
-                    f"{cfg.ollama_base_url}. Is it running?[/yellow]"
-                )
+                console.print(f"[yellow]Warning: Can't reach Ollama at {cfg.ollama_base_url}. Is it running?[/yellow]")
     elif llm_provider == LLMProvider.ANTHROPIC:
         from clawed.config import get_api_key
 
@@ -114,6 +106,7 @@ def config_set_model(
             )
     elif llm_provider == LLMProvider.OPENAI:
         from clawed.config import get_api_key as _get_key
+
         key = _get_key("openai")
         if key and key.startswith("sk-"):
             console.print("[green]API key format looks valid.[/green]")
@@ -128,9 +121,7 @@ def config_set_model(
 
 @config_app.command("set-token")
 def config_set_token(
-    token: str = typer.Argument(
-        ..., help="Telegram bot token from @BotFather"
-    ),
+    token: str = typer.Argument(..., help="Telegram bot token from @BotFather"),
 ):
     """Save your Telegram bot token so you don't need to pass it every time.
 
@@ -143,9 +134,7 @@ def config_set_token(
     cfg = AppConfig.load()
     cfg.telegram_bot_token = token
     cfg.save()
-    masked = (
-        token[:5] + "..." + token[-4:] if len(token) > 12 else "***"
-    )
+    masked = token[:5] + "..." + token[-4:] if len(token) > 12 else "***"
     console.print(
         Panel(
             f"[bold green]Token saved![/bold green]\n\n"
@@ -160,9 +149,7 @@ def config_set_token(
 @config_app.command("set-search-key")
 def config_set_search_key(
     key: str = typer.Argument(..., help="Web search API key"),
-    provider: str = typer.Option(
-        "brave", help="Search provider: brave, duckduckgo, or tavily"
-    ),
+    provider: str = typer.Option("brave", help="Search provider: brave, duckduckgo, or tavily"),
 ):
     """Set a web search API key for research-powered lessons.
 
@@ -202,11 +189,7 @@ def config_show(
     search_key = get_api_key("search_brave") or get_api_key("search_tavily")
     search_display = "Not set"
     if search_key:
-        search_display = (
-            search_key[:5] + "..." + search_key[-4:]
-            if len(search_key) > 12
-            else "***"
-        )
+        search_display = search_key[:5] + "..." + search_key[-4:] if len(search_key) > 12 else "***"
     console.print(
         Panel(
             f"[bold]Provider:[/bold] {cfg.provider.value}\n"

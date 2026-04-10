@@ -24,14 +24,18 @@ from clawed.models import (
 
 def _mc() -> MasterContent:
     return MasterContent(
-        title="Test", subject="History", grade_level="8", topic="Revolution",
+        title="Test",
+        subject="History",
+        grade_level="8",
+        topic="Revolution",
         objective="SWBAT analyze",
         vocabulary=[VocabularyEntry(term="T", definition="D.", context_sentence="C.")],
         primary_sources=[],
         do_now=DoNow(stimulus="S", stimulus_type="t", questions=["Q"], answers=["A"]),
         direct_instruction=[
             InstructionSection(
-                heading="H", content="C",
+                heading="H",
+                content="C",
                 teacher_script="Ask: why?",
                 key_points=["KP1", "KP2"],
                 image_spec="t",
@@ -40,12 +44,17 @@ def _mc() -> MasterContent:
         guided_notes=[GuidedNote(prompt="P", answer="A", section_ref="H")] * 5,
         exit_ticket=[
             StimulusQuestion(
-                stimulus="S" * 60, stimulus_type="text",
-                question="Q", answer="A", cognitive_level="recall",
+                stimulus="S" * 60,
+                stimulus_type="text",
+                question="Q",
+                answer="A",
+                cognitive_level="recall",
             ),
         ],
         differentiation=DifferentiationNotes(
-            struggling=["x"], advanced=["y"], ell=["z"],
+            struggling=["x"],
+            advanced=["y"],
+            ell=["z"],
         ),
     )
 
@@ -57,14 +66,16 @@ def _project() -> ProjectArc:
         duration_days=5,
         phases=[
             ProjectPhase(
-                day_number=1, title="Day 1: Selection",
+                day_number=1,
+                title="Day 1: Selection",
                 objective="Choose topic and format",
                 activities=["Review options", "Submit choice"],
                 student_deliverable="Selection form",
                 checkpoint="Teacher reviews",
             ),
             ProjectPhase(
-                day_number=2, title="Day 2: Research",
+                day_number=2,
+                title="Day 2: Research",
                 objective="Find sources",
                 activities=["Database search", "Fill organizer"],
                 student_deliverable="Graphic organizer",
@@ -92,12 +103,7 @@ def _project() -> ProjectArc:
             evaluation_criteria=["Uses evidence", "Clear presentation"],
             debrief_protocol="Closing reflection",
         ),
-        debate_prep_template=(
-            "My Position: ___\n"
-            "Evidence 1: ___\n"
-            "Counter-argument: ___\n"
-            "Rebuttal: ___"
-        ),
+        debate_prep_template=("My Position: ___\nEvidence 1: ___\nCounter-argument: ___\nRebuttal: ___"),
     )
 
 
@@ -196,8 +202,10 @@ class TestAdaptive:
         from clawed.adaptive import generate_adjustment_context
 
         perf = {
-            "mastery_rate": 0.3, "total_students": 20,
-            "weak_areas": ["analysis"], "recommendation": "full_reteach",
+            "mastery_rate": 0.3,
+            "total_students": 20,
+            "weak_areas": ["analysis"],
+            "recommendation": "full_reteach",
         }
         ctx = generate_adjustment_context(perf, "French Revolution")
         assert "ACTION REQUIRED" in ctx
@@ -228,6 +236,7 @@ class TestClassroomProfile:
             load_profile,
             save_profile,
         )
+
         p = ClassroomProfile(student_count=28, ell_count=6, school_name="GN South")
         save_profile(p)
         loaded = load_profile()
@@ -259,8 +268,11 @@ class TestClassroomProfile:
         )
 
         p = ClassroomProfile(
-            student_count=28, school_name="GN South",
-            ell_count=6, iep_count=4, has_ipads=True,
+            student_count=28,
+            school_name="GN South",
+            ell_count=6,
+            iep_count=4,
+            has_ipads=True,
         )
         save_profile(p)
         ctx = profile_to_prompt_context()

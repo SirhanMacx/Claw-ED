@@ -1,4 +1,5 @@
 """Tests for GatewayResponse — the transport-agnostic response type."""
+
 from pathlib import Path
 
 from clawed.gateway_response import Button, GatewayResponse
@@ -45,8 +46,10 @@ class TestGatewayResponse:
 
     def test_button_rows(self):
         """Buttons can be grouped into rows for keyboard layout."""
-        row1 = [Button(label="Slides", callback_data="export:slides"),
-                Button(label="Handout", callback_data="export:handout")]
+        row1 = [
+            Button(label="Slides", callback_data="export:slides"),
+            Button(label="Handout", callback_data="export:handout"),
+        ]
         row2 = [Button(label="Rate", callback_data="rate:prompt")]
         r = GatewayResponse(text="Done!", button_rows=[row1, row2])
         assert len(r.button_rows) == 2

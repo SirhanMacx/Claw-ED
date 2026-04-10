@@ -1,4 +1,5 @@
 """Pedagogical quality validation — stimulus, notes, sources, differentiation."""
+
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ class TestPedagogicalQuality:
     @pytest.fixture
     def master_content(self):
         from clawed.master_content import MasterContent
+
         fixture_path = DEMO_DIR / "demo_master_content.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         return MasterContent.model_validate(data)
@@ -28,13 +30,11 @@ class TestPedagogicalQuality:
     def test_exit_ticket_questions_have_stimulus(self, master_content):
         """Every exit ticket question has a non-empty stimulus."""
         for i, q in enumerate(master_content.exit_ticket):
-            assert q.stimulus.strip(), f"Exit ticket question {i+1} has empty stimulus"
+            assert q.stimulus.strip(), f"Exit ticket question {i + 1} has empty stimulus"
 
     def test_guided_notes_minimum_count(self, master_content):
         """At least 5 guided notes per lesson (fill-in-the-blank)."""
-        assert len(master_content.guided_notes) >= 5, (
-            f"Only {len(master_content.guided_notes)} guided notes, need >= 5"
-        )
+        assert len(master_content.guided_notes) >= 5, f"Only {len(master_content.guided_notes)} guided notes, need >= 5"
 
     def test_primary_sources_minimum_count(self, master_content):
         """At least 1 primary source per lesson."""
@@ -47,6 +47,7 @@ class TestPedagogicalQuality:
     def test_no_delegation_phrases(self, master_content):
         """No delegation phrases in any text field."""
         from clawed.validation import check_self_contained
+
         all_text = master_content.title + " " + master_content.objective
         for section in master_content.direct_instruction:
             all_text += " " + section.content + " " + " ".join(section.key_points)

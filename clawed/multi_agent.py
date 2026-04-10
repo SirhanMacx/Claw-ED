@@ -36,6 +36,7 @@ REVIEWER_PROMPT_PATH = _PROMPTS_DIR / "multi_agent_reviewer.txt"
 # Review result schema
 # ---------------------------------------------------------------------------
 
+
 class ReviewResult(BaseModel):
     """Structured output from the REVIEWER agent."""
 
@@ -50,6 +51,7 @@ class ReviewResult(BaseModel):
 # Helper — load a prompt file
 # ---------------------------------------------------------------------------
 
+
 def _load_prompt(path: Path) -> str:
     """Read a prompt template from disk. Returns empty string on failure."""
     try:
@@ -62,6 +64,7 @@ def _load_prompt(path: Path) -> str:
 # ---------------------------------------------------------------------------
 # Agent 1: RESEARCHER
 # ---------------------------------------------------------------------------
+
 
 async def _run_researcher(
     topic: str,
@@ -76,11 +79,7 @@ async def _run_researcher(
         logger.warning("Researcher system prompt missing — skipping research step")
         return None
 
-    user_prompt = (
-        f"Topic: {topic}\n"
-        f"Grade Level: {grade}\n"
-        f"Subject: {subject}\n"
-    )
+    user_prompt = f"Topic: {topic}\nGrade Level: {grade}\nSubject: {subject}\n"
     if unit_context:
         user_prompt += f"\nUnit Context:\n{unit_context}\n"
 
@@ -107,6 +106,7 @@ async def _run_researcher(
 # Agent 2: WRITER
 # ---------------------------------------------------------------------------
 
+
 async def _run_writer(
     topic: str,
     grade: str,
@@ -127,20 +127,14 @@ async def _run_writer(
     # Build the user prompt with research context prepended
     parts: list[str] = []
     if research_brief:
-        parts.append(
-            "## Research Brief (from Research Agent)\n\n"
-            f"{research_brief}\n\n---\n"
-        )
+        parts.append(f"## Research Brief (from Research Agent)\n\n{research_brief}\n\n---\n")
     if revision_notes:
         parts.append(
             "## Revision Notes (from Reviewer)\n\n"
             f"{revision_notes}\n\n"
             "Please address the above revision notes while regenerating.\n\n---\n"
         )
-    parts.append(
-        f"Topic: {topic}\nGrade Level: {grade}\nSubject: {subject}\n\n"
-        f"{master_template}"
-    )
+    parts.append(f"Topic: {topic}\nGrade Level: {grade}\nSubject: {subject}\n\n{master_template}")
     user_prompt = "\n".join(parts)
 
     try:
@@ -161,6 +155,7 @@ async def _run_writer(
 # ---------------------------------------------------------------------------
 # Agent 3: REVIEWER
 # ---------------------------------------------------------------------------
+
 
 async def _run_reviewer(
     master_content: MasterContent,
@@ -208,6 +203,7 @@ async def _run_reviewer(
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
+
 
 async def multi_agent_generate_master_content(
     topic: str,
@@ -268,8 +264,7 @@ async def multi_agent_generate_master_content(
 
     # --- Step 3b: One revision if review failed -----------------------------
     logger.info(
-        "Multi-agent pipeline: review FAILED — attempting one revision. "
-        "Notes: %s",
+        "Multi-agent pipeline: review FAILED — attempting one revision. Notes: %s",
         review.revision_notes,
     )
     revised_content = await _run_writer(
@@ -294,8 +289,5 @@ async def multi_agent_generate_master_content(
 
     # Even if second review fails, return the revised content — it is likely
     # an improvement over the original
-    logger.warning(
-        "Multi-agent pipeline: still did not pass after revision — "
-        "returning revised content anyway"
-    )
+    logger.warning("Multi-agent pipeline: still did not pass after revision — returning revised content anyway")
     return revised_content

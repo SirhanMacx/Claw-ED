@@ -72,25 +72,18 @@ def sub_packet(
         "-d",
         help="Date for the sub packet (e.g. '2026-03-24' or 'tomorrow')",
     ),
-    class_name: str = typer.Option(
-        "My Class", "--class", "-c", help="Class name"
-    ),
+    class_name: str = typer.Option("My Class", "--class", "-c", help="Class name"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    subject: Optional[str] = typer.Option(
-        None, "--subject", "-s", help="Subject (reads from your profile if not set)"
-    ),
-    topic: Optional[str] = typer.Option(
-        None, "--topic", "-t", help="Lesson topic"
-    ),
-    fmt: str = typer.Option(
-        "text", "--format", "-f", help="Output format: text, json"
-    ),
+    subject: Optional[str] = typer.Option(None, "--subject", "-s", help="Subject (reads from your profile if not set)"),
+    topic: Optional[str] = typer.Option(None, "--topic", "-t", help="Lesson topic"),
+    fmt: str = typer.Option("text", "--format", "-f", help="Output format: text, json"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Generate a complete substitute teacher packet."""
     # Resolve subject from teacher profile if not provided
     if subject is None:
         from clawed.commands._helpers import get_default_subject
+
         subject = get_default_subject()
 
     if json_output:
@@ -119,9 +112,7 @@ def sub_packet(
 
     resolved_date = date.strip().lower()
     if resolved_date == "tomorrow":
-        resolved_date = (datetime.now() + timedelta(days=1)).strftime(
-            "%Y-%m-%d"
-        )
+        resolved_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
     elif resolved_date == "today":
         resolved_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -164,9 +155,7 @@ def sub_packet(
     if fmt == "text":
         text = sub_packet_to_markdown(packet)
         console.print()
-        console.print(
-            Panel(text, title="Sub Packet Preview", border_style="blue")
-        )
+        console.print(Panel(text, title="Sub Packet Preview", border_style="blue"))
     else:
         console.print(
             Panel(
@@ -195,12 +184,8 @@ def _parent_note_json(*, student, topic, strengths, growth, teacher_id):
     session = _TeacherSession.load(teacher_id)
     persona = session.persona
 
-    strength_list = (
-        [s.strip() for s in strengths.split(",")] if strengths else []
-    )
-    growth_list = (
-        [g.strip() for g in growth.split(",")] if growth else []
-    )
+    strength_list = [s.strip() for s in strengths.split(",")] if strengths else []
+    growth_list = [g.strip() for g in growth.split(",")] if growth else []
 
     update = _run_async(
         generate_progress_update(
@@ -223,24 +208,16 @@ def _parent_note_json(*, student, topic, strengths, growth, teacher_id):
 
 @generate_app.command(name="parent-note")
 def parent_note(
-    student: str = typer.Option(
-        ..., "--student", "-s", help="Student's name"
-    ),
+    student: str = typer.Option(..., "--student", "-s", help="Student's name"),
     topic: str = typer.Option(
         "general progress",
         "--topic",
         "-t",
         help="Note context (e.g. 'midterm', 'behavior')",
     ),
-    strengths: Optional[str] = typer.Option(
-        None, "--strengths", help="Comma-separated strengths"
-    ),
-    growth: Optional[str] = typer.Option(
-        None, "--growth", help="Comma-separated growth areas"
-    ),
-    teacher_id: str = typer.Option(
-        "local-teacher", "--id", help="Teacher session ID"
-    ),
+    strengths: Optional[str] = typer.Option(None, "--strengths", help="Comma-separated strengths"),
+    growth: Optional[str] = typer.Option(None, "--growth", help="Comma-separated growth areas"),
+    teacher_id: str = typer.Option("local-teacher", "--id", help="Teacher session ID"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Generate a parent progress update in the teacher's voice."""
@@ -268,26 +245,19 @@ def parent_note(
     session = _TeacherSession.load(teacher_id)
     persona = session.persona
 
-    strength_list = (
-        [s.strip() for s in strengths.split(",")] if strengths else []
-    )
-    growth_list = (
-        [g.strip() for g in growth.split(",")] if growth else []
-    )
+    strength_list = [s.strip() for s in strengths.split(",")] if strengths else []
+    growth_list = [g.strip() for g in growth.split(",")] if growth else []
 
     console.print(
         Panel(
-            f"Generating progress update for"
-            f" [bold]{student}[/bold]\nTopic: {topic}",
+            f"Generating progress update for [bold]{student}[/bold]\nTopic: {topic}",
             title="[bold green]Parent Communication[/bold green]",
             border_style="green",
         )
     )
 
     with _safe_progress(console=console) as progress:
-        task = progress.add_task(
-            "Writing progress update...", total=None
-        )
+        task = progress.add_task("Writing progress update...", total=None)
         try:
             update = _run_async(
                 generate_progress_update(

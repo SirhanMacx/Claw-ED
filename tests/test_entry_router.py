@@ -1,4 +1,5 @@
 """Tests for the entry point router."""
+
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -29,6 +30,7 @@ def test_find_bundled_cli_js_returns_none_when_nothing_exists(tmp_path):
     fake_file.write_text("# placeholder")
 
     import clawed._entry_router as mod
+
     original_file = mod.__file__
 
     try:
@@ -50,6 +52,7 @@ def test_find_bundled_cli_js_finds_bundled(tmp_path):
     cli_js.write_text("// bundle")
 
     import clawed._entry_router as mod
+
     original_file = mod.__file__
 
     try:
@@ -72,6 +75,7 @@ def test_find_daemon_entry_returns_none_when_nothing_exists(tmp_path):
     fake_file.write_text("# placeholder")
 
     import clawed._entry_router as mod
+
     original_file = mod.__file__
 
     try:

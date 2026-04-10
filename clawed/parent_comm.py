@@ -103,14 +103,8 @@ async def generate_parent_comm(
     llm: LLMClient,
 ) -> ParentComm:
     """Generate a complete parent communication email via LLM."""
-    comm_type_label = _COMM_TYPE_LABELS.get(
-        request.comm_type, request.comm_type.value.replace("_", " ").title()
-    )
-    additional_line = (
-        f"Additional notes: {request.additional_notes}\n"
-        if request.additional_notes
-        else ""
-    )
+    comm_type_label = _COMM_TYPE_LABELS.get(request.comm_type, request.comm_type.value.replace("_", " ").title())
+    additional_line = f"Additional notes: {request.additional_notes}\n" if request.additional_notes else ""
 
     prompt = _USER_PROMPT_TEMPLATE.format(
         comm_type_label=comm_type_label,
@@ -185,8 +179,7 @@ async def generate_progress_update(
 
     prompt_template = PROMPT_PATH.read_text(encoding="utf-8")
     prompt = (
-        prompt_template
-        .replace("{persona}", persona_context)
+        prompt_template.replace("{persona}", persona_context)
         .replace("{student_name}", student_name)
         .replace("{topic}", topic)
         .replace("{strengths}", ", ".join(strengths) if strengths else "general positive observations")

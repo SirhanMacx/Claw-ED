@@ -27,11 +27,7 @@ class TestDeduplicateEntrySubstringMatch:
         assert _deduplicate_entry(content, new_entry, "## Agent Observations") is True
 
     def test_detects_substring_with_date_in_new_entry(self):
-        content = (
-            "## Agent Observations\n"
-            "\n"
-            "*(2026-03-01)* Voice patterns: calls students 'friends'\n"
-        )
+        content = "## Agent Observations\n\n*(2026-03-01)* Voice patterns: calls students 'friends'\n"
         # New entry also has a date prefix — should still be caught
         new_entry = "(2026-03-15) Voice patterns: calls students 'friends'"
         assert _deduplicate_entry(content, new_entry, "## Agent Observations") is True
@@ -41,11 +37,7 @@ class TestDeduplicateEntryAllowsNew:
     """Genuinely new content is allowed through."""
 
     def test_allows_new_content(self):
-        content = (
-            "## Agent Observations\n"
-            "\n"
-            "*(2026-03-01)* Voice patterns: calls students 'friends'\n"
-        )
+        content = "## Agent Observations\n\n*(2026-03-01)* Voice patterns: calls students 'friends'\n"
         new_entry = "Prefers exit tickets with open-ended reflection prompts"
         assert _deduplicate_entry(content, new_entry, "## Agent Observations") is False
 
@@ -59,21 +51,13 @@ class TestDeduplicateEntryWordOverlap:
     """>70% word overlap with any existing line is caught."""
 
     def test_detects_high_word_overlap(self):
-        content = (
-            "## Agent Observations\n"
-            "\n"
-            "*(2026-03-01)* Voice patterns: teacher calls students 'friends' often\n"
-        )
+        content = "## Agent Observations\n\n*(2026-03-01)* Voice patterns: teacher calls students 'friends' often\n"
         # Rephrased but >70% word overlap
         new_entry = "Voice patterns: teacher calls students 'friends' frequently"
         assert _deduplicate_entry(content, new_entry, "## Agent Observations") is True
 
     def test_allows_low_word_overlap(self):
-        content = (
-            "## Agent Observations\n"
-            "\n"
-            "*(2026-03-01)* Voice patterns: calls students 'friends'\n"
-        )
+        content = "## Agent Observations\n\n*(2026-03-01)* Voice patterns: calls students 'friends'\n"
         # Only a few shared words, not enough for >70%
         new_entry = "Assessment approach: uses rubric-based grading with detailed feedback criteria"
         assert _deduplicate_entry(content, new_entry, "## Agent Observations") is False

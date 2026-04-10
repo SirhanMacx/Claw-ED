@@ -1,4 +1,5 @@
 """Tool: ingest_materials — wraps clawed.ingestor.ingest_path."""
+
 from __future__ import annotations
 
 import logging
@@ -29,10 +30,7 @@ class IngestMaterialsTool:
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": (
-                                "Path to a folder or file to ingest "
-                                "(PDF, DOCX, PPTX, TXT, MD)"
-                            ),
+                            "description": ("Path to a folder or file to ingest (PDF, DOCX, PPTX, TXT, MD)"),
                         },
                     },
                     "required": ["path"],
@@ -42,9 +40,7 @@ class IngestMaterialsTool:
 
     MAX_INGEST_FILES = 500
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.ingestor import ingest_path
 
         raw_path = params["path"]
@@ -53,21 +49,16 @@ class IngestMaterialsTool:
         # Security: only allow ingesting files from the user's home directory
         home = Path.home().resolve()
         if not str(resolved).startswith(str(home)):
-            return ToolResult(
-                text="Access denied: can only ingest files from your home directory."
-            )
+            return ToolResult(text="Access denied: can only ingest files from your home directory.")
 
         if not resolved.exists():
-            return ToolResult(
-                text=f"Path not found: {raw_path}. Check the path and try again."
-            )
+            return ToolResult(text=f"Path not found: {raw_path}. Check the path and try again.")
 
         try:
             docs = ingest_path(resolved, max_files=self.MAX_INGEST_FILES)
             if not docs:
                 return ToolResult(
-                    text=f"No supported files found in {raw_path}. "
-                    "Supported formats: PDF, DOCX, PPTX, TXT, MD."
+                    text=f"No supported files found in {raw_path}. Supported formats: PDF, DOCX, PPTX, TXT, MD."
                 )
 
             # Try to extract persona from ingested docs
@@ -84,9 +75,11 @@ class IngestMaterialsTool:
                     pass
                 try:
                     from clawed.paths import workspace_dir
+
                     _id_path = workspace_dir() / "identity.md"
                     if _id_path.exists():
                         import re as _re
+
                         _id_content = _id_path.read_text(encoding="utf-8")
                         _name_match = _re.match(r"^#\s+(.+)", _id_content)
                         if _name_match:
@@ -96,10 +89,12 @@ class IngestMaterialsTool:
                 except Exception:
                     pass
                 from clawed.paths import data_dir
+
                 save_persona(persona, data_dir())
                 # Track persona changes for evolution
                 try:
                     from clawed.persona_evolution import record_ingestion_changes
+
                     record_ingestion_changes(old_persona=None, new_persona=persona)
                 except Exception:
                     pass
@@ -121,6 +116,7 @@ class IngestMaterialsTool:
                     # Store the report for future system prompts
 
                     from clawed.paths import data_dir as _data_dir_fn
+
                     data_dir = _data_dir_fn()
                     report_path = data_dir / "workspace" / "reading_report.md"
                     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -148,21 +144,13 @@ class IngestMaterialsTool:
                 )
                 parts = []
                 if ingest_result["chunks_indexed"]:
-                    parts.append(
-                        f"{ingest_result['chunks_indexed']} searchable sections"
-                    )
+                    parts.append(f"{ingest_result['chunks_indexed']} searchable sections")
                 if ingest_result["images_extracted"]:
-                    parts.append(
-                        f"{ingest_result['images_extracted']} images extracted"
-                    )
+                    parts.append(f"{ingest_result['images_extracted']} images extracted")
                 if ingest_result["kg_entities"]:
-                    parts.append(
-                        f"{ingest_result['kg_entities']} concepts mapped"
-                    )
+                    parts.append(f"{ingest_result['kg_entities']} concepts mapped")
                 if ingest_result["wiki_articles"]:
-                    parts.append(
-                        f"{ingest_result['wiki_articles']} wiki articles"
-                    )
+                    parts.append(f"{ingest_result['wiki_articles']} wiki articles")
                 if parts:
                     summary += "\n\n" + " · ".join(parts)
             except Exception as e:
@@ -171,6 +159,7 @@ class IngestMaterialsTool:
             # Update soul.md with what we learned
             try:
                 import os as _os
+
                 _data = _os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
                 soul_path = Path(_data) / "workspace" / "soul.md"
                 soul_path.parent.mkdir(parents=True, exist_ok=True)
@@ -178,25 +167,15 @@ class IngestMaterialsTool:
                 # Build soul updates from reading report
                 soul_updates = []
                 if report.get("teacher_details", {}).get("name_used"):
-                    soul_updates.append(
-                        f"Students know me as {report['teacher_details']['name_used']}"
-                    )
+                    soul_updates.append(f"Students know me as {report['teacher_details']['name_used']}")
                 if report.get("voice_patterns"):
-                    soul_updates.append(
-                        "Voice patterns: " + "; ".join(report["voice_patterns"][:3])
-                    )
+                    soul_updates.append("Voice patterns: " + "; ".join(report["voice_patterns"][:3]))
                 if report.get("favorite_strategies"):
-                    soul_updates.append(
-                        "Go-to strategies: " + ", ".join(report["favorite_strategies"][:4])
-                    )
+                    soul_updates.append("Go-to strategies: " + ", ".join(report["favorite_strategies"][:4]))
                 if report.get("signature_moves"):
-                    soul_updates.append(
-                        "Signature moves: " + ", ".join(report["signature_moves"][:3])
-                    )
+                    soul_updates.append("Signature moves: " + ", ".join(report["signature_moves"][:3]))
                 if report.get("assessment_patterns"):
-                    soul_updates.append(
-                        "Assessment style: " + "; ".join(report["assessment_patterns"][:2])
-                    )
+                    soul_updates.append("Assessment style: " + "; ".join(report["assessment_patterns"][:2]))
 
                 if soul_updates:
                     from datetime import date
@@ -230,14 +209,12 @@ class IngestMaterialsTool:
             # Auto-populate teacher profile from reading report (pending confirmation)
             try:
                 from clawed.models import AppConfig
+
                 config = AppConfig.load()
                 details = report.get("teacher_details", {})
                 pending = {}
 
-                if details.get("name_used") and (
-                    not config.teacher_profile.name
-                    or config.teacher_profile.name == ""
-                ):
+                if details.get("name_used") and (not config.teacher_profile.name or config.teacher_profile.name == ""):
                     pending["name"] = details["name_used"]
 
                 if details.get("school") and not config.teacher_profile.school:
@@ -249,10 +226,7 @@ class IngestMaterialsTool:
                 if pending:
                     # Don't write directly — store as pending for confirmation
                     items = ", ".join(f"{k}: '{v}'" for k, v in pending.items())
-                    profile_update = (
-                        f"\n\nI extracted these details from your files: {items}. "
-                        "Reply 'yes' to confirm."
-                    )
+                    profile_update = f"\n\nI extracted these details from your files: {items}. Reply 'yes' to confirm."
                 else:
                     profile_update = ""
             except Exception as e:

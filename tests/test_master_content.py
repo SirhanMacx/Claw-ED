@@ -19,6 +19,7 @@ from clawed.models import DailyLesson, DifferentiationNotes
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
+
 def _make_master_content(**overrides) -> MasterContent:
     """Return a minimal but fully-valid MasterContent instance."""
     defaults = dict(
@@ -99,6 +100,7 @@ def _make_master_content(**overrides) -> MasterContent:
 
 # ── test 1: minimal valid MasterContent ───────────────────────────────────
 
+
 def test_minimal_valid_master_content():
     mc = _make_master_content()
     assert mc.title == "The Industrial Revolution"
@@ -114,6 +116,7 @@ def test_minimal_valid_master_content():
 
 
 # ── test 2: empty stimulus raises ValidationError ─────────────────────────
+
 
 def test_stimulus_question_requires_stimulus():
     with pytest.raises(ValidationError) as exc_info:
@@ -137,6 +140,7 @@ def test_stimulus_question_whitespace_only_raises():
 
 
 # ── test 3: to_daily_lesson backwards compat ──────────────────────────────
+
 
 def test_to_daily_lesson_backwards_compat():
     mc = _make_master_content()
@@ -167,6 +171,7 @@ def test_to_daily_lesson_no_independent_work():
 
 def test_to_daily_lesson_with_independent_work():
     from clawed.master_content import IndependentWork
+
     mc = _make_master_content(
         independent_work=IndependentWork(
             task="Write a paragraph comparing factory and farm work.",
@@ -178,6 +183,7 @@ def test_to_daily_lesson_with_independent_work():
 
 
 # ── test 4: vocabulary entry fields ───────────────────────────────────────
+
 
 def test_vocabulary_entry_fields():
     entry = VocabularyEntry(
@@ -203,6 +209,7 @@ def test_vocabulary_entry_image_spec_defaults_empty():
 
 # ── test 5: primary source fields ─────────────────────────────────────────
 
+
 def test_primary_source_fields():
     ps = PrimarySource(
         id="ps2",
@@ -220,6 +227,7 @@ def test_primary_source_fields():
 
 # ── test 6: station document fields ───────────────────────────────────────
 
+
 def test_station_document_fields():
     station = StationDocument(
         title="Station B: Transportation Revolution",
@@ -234,6 +242,7 @@ def test_station_document_fields():
 
 
 # ── test 7: guided note count ─────────────────────────────────────────────
+
 
 def test_guided_note_count():
     notes = [

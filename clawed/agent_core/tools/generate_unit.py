@@ -1,4 +1,5 @@
 """Tool: generate_unit — wraps clawed.planner.plan_unit."""
+
 from __future__ import annotations
 
 import json
@@ -50,9 +51,7 @@ class GenerateUnitTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.models import TeacherPersona
         from clawed.planner import plan_unit
 

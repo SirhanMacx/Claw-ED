@@ -36,14 +36,11 @@ def _make_console() -> Console:
         # Force UTF-8 encoding on the output stream so Rich can render
         # Unicode content (→, —, ", etc.) even on cp1252 terminals.
         import io
+
         if hasattr(sys.stdout, "buffer"):
-            sys.stdout = io.TextIOWrapper(
-                sys.stdout.buffer, encoding="utf-8", errors="replace"
-            )
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
         if hasattr(sys.stderr, "buffer"):
-            sys.stderr = io.TextIOWrapper(
-                sys.stderr.buffer, encoding="utf-8", errors="replace"
-            )
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
     kwargs: dict = {
         "highlight": False,
@@ -123,7 +120,7 @@ def check_api_key_or_exit() -> None:
         )
         raise typer.Exit(1)
 
-    provider = cfg.provider.value if hasattr(cfg.provider, 'value') else str(cfg.provider)
+    provider = cfg.provider.value if hasattr(cfg.provider, "value") else str(cfg.provider)
     if provider == "ollama":
         return  # Ollama doesn't need an API key
 
@@ -177,16 +174,12 @@ def load_persona_or_exit() -> TeacherPersona:
         if subjects:
             persona = get_starter_persona(subjects[0])
             if persona:
-                console.print(
-                    f"[cyan]Using starter persona for {persona.subject_area}.[/cyan]"
-                )
+                console.print(f"[cyan]Using starter persona for {persona.subject_area}.[/cyan]")
                 return persona
     except Exception:
         pass
 
     # Default starter
     persona = get_starter_persona("social_studies")
-    console.print(
-        f"[cyan]Using default starter persona ({persona.subject_area}).[/cyan]"
-    )
+    console.print(f"[cyan]Using default starter persona ({persona.subject_area}).[/cyan]")
     return persona

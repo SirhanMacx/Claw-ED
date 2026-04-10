@@ -370,26 +370,32 @@ class TestAssessmentGeneratorClass:
 
 
 class TestPromptTemplates:
-    @pytest.mark.parametrize("template", [
-        "formative_assessment.txt",
-        "summative_assessment.txt",
-        "dbq_assessment.txt",
-        "quiz.txt",
-        "rubric.txt",
-    ])
+    @pytest.mark.parametrize(
+        "template",
+        [
+            "formative_assessment.txt",
+            "summative_assessment.txt",
+            "dbq_assessment.txt",
+            "quiz.txt",
+            "rubric.txt",
+        ],
+    )
     def test_prompt_template_exists(self, template):
         path = Path(__file__).parent.parent / "clawed" / "prompts" / template
         assert path.exists(), f"Missing prompt template: {template}"
         content = path.read_text()
         assert len(content) > 100, f"Template {template} seems too short"
 
-    @pytest.mark.parametrize("template,placeholders", [
-        ("formative_assessment.txt", ["{persona}", "{lesson_title}", "{objective}"]),
-        ("summative_assessment.txt", ["{persona}", "{unit_title}", "{objectives}"]),
-        ("dbq_assessment.txt", ["{persona}", "{topic}", "{grade_level}"]),
-        ("quiz.txt", ["{persona}", "{topic}", "{question_count}"]),
-        ("rubric.txt", ["{persona}", "{task_description}", "{criteria_count}"]),
-    ])
+    @pytest.mark.parametrize(
+        "template,placeholders",
+        [
+            ("formative_assessment.txt", ["{persona}", "{lesson_title}", "{objective}"]),
+            ("summative_assessment.txt", ["{persona}", "{unit_title}", "{objectives}"]),
+            ("dbq_assessment.txt", ["{persona}", "{topic}", "{grade_level}"]),
+            ("quiz.txt", ["{persona}", "{topic}", "{question_count}"]),
+            ("rubric.txt", ["{persona}", "{task_description}", "{criteria_count}"]),
+        ],
+    )
     def test_prompt_template_has_placeholders(self, template, placeholders):
         path = Path(__file__).parent.parent / "clawed" / "prompts" / template
         content = path.read_text()

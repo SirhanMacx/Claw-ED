@@ -9,6 +9,7 @@ curriculum_kb.db alongside chunks and assets. Entities are auto-created on
 triple insertion for fast ingestion. Temporal windows track when topics were
 taught and when alignments are valid.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -22,20 +23,39 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 def _get_default_db() -> Path:
     import os as _os
+
     base = Path(_os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
     return base / "memory" / "curriculum_kb.db"
 
-VALID_ENTITY_TYPES = frozenset({
-    "topic", "standard", "skill", "figure", "term", "unit",
-})
 
-VALID_PREDICATES = frozenset({
-    "prerequisite_for", "builds_on", "covers_standard", "related_to",
-    "contrasts_with", "taught_in", "assessed_by", "includes_vocab",
-    "aligned_to", "part_of",
-})
+VALID_ENTITY_TYPES = frozenset(
+    {
+        "topic",
+        "standard",
+        "skill",
+        "figure",
+        "term",
+        "unit",
+    }
+)
+
+VALID_PREDICATES = frozenset(
+    {
+        "prerequisite_for",
+        "builds_on",
+        "covers_standard",
+        "related_to",
+        "contrasts_with",
+        "taught_in",
+        "assessed_by",
+        "includes_vocab",
+        "aligned_to",
+        "part_of",
+    }
+)
 
 
 def _normalize_id(name: str) -> str:
@@ -51,11 +71,13 @@ def _normalize_id(name: str) -> str:
 
 def _embed_to_blob(vec: list[float]) -> bytes:
     import struct
+
     return struct.pack(f"<{len(vec)}f", *vec)
 
 
 def _blob_to_embed(blob: bytes) -> list[float]:
     import struct
+
     n = len(blob) // 4
     return list(struct.unpack(f"<{n}f", blob))
 
@@ -135,6 +157,7 @@ class CurriculumKG:
         if embed:
             try:
                 from clawed.agent_core.memory.embeddings import get_embedder
+
                 vec = get_embedder().embed(name)
                 embedding_blob = _embed_to_blob(vec)
             except Exception:
@@ -150,9 +173,14 @@ class CurriculumKG:
                 "updated_at=excluded.updated_at, "
                 "embedding=COALESCE(excluded.embedding, kg_entities.embedding)",
                 (
-                    eid, teacher_id, name, entity_type,
+                    eid,
+                    teacher_id,
+                    name,
+                    entity_type,
                     json.dumps(properties or {}),
-                    embedding_blob, now, now,
+                    embedding_blob,
+                    now,
+                    now,
                 ),
             )
         return eid
@@ -204,8 +232,17 @@ class CurriculumKG:
                 "valid_from, valid_to, confidence, source, source_path, created_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    triple_id, teacher_id, subj_id, pred, obj_id,
-                    valid_from, valid_to, confidence, source, source_path, now,
+                    triple_id,
+                    teacher_id,
+                    subj_id,
+                    pred,
+                    obj_id,
+                    valid_from,
+                    valid_to,
+                    confidence,
+                    source,
+                    source_path,
+                    now,
                 ),
             )
         return triple_id
@@ -215,8 +252,7 @@ class CurriculumKG:
         now = datetime.now().isoformat()[:10]
         with sqlite3.connect(self._db_path) as conn:
             cur = conn.execute(
-                "UPDATE kg_triples SET valid_to = ? "
-                "WHERE id = ? AND teacher_id = ? AND valid_to IS NULL",
+                "UPDATE kg_triples SET valid_to = ? WHERE id = ? AND teacher_id = ? AND valid_to IS NULL",
                 (now, triple_id, teacher_id),
             )
             return cur.rowcount > 0
@@ -239,13 +275,11 @@ class CurriculumKG:
             if not row:
                 return None
             out_count = conn.execute(
-                "SELECT COUNT(*) FROM kg_triples "
-                "WHERE teacher_id = ? AND subject = ? AND valid_to IS NULL",
+                "SELECT COUNT(*) FROM kg_triples WHERE teacher_id = ? AND subject = ? AND valid_to IS NULL",
                 (teacher_id, eid),
             ).fetchone()[0]
             in_count = conn.execute(
-                "SELECT COUNT(*) FROM kg_triples "
-                "WHERE teacher_id = ? AND object = ? AND valid_to IS NULL",
+                "SELECT COUNT(*) FROM kg_triples WHERE teacher_id = ? AND object = ? AND valid_to IS NULL",
                 (teacher_id, eid),
             ).fetchone()[0]
             return {
@@ -288,16 +322,18 @@ class CurriculumKG:
                     params,
                 ).fetchall()
                 for r in rows:
-                    results.append({
-                        "direction": "outgoing",
-                        "predicate": r["predicate"],
-                        "entity": r["target_name"],
-                        "entity_type": r["target_type"],
-                        "confidence": r["confidence"],
-                        "valid_from": r["valid_from"],
-                        "valid_to": r["valid_to"],
-                        "triple_id": r["id"],
-                    })
+                    results.append(
+                        {
+                            "direction": "outgoing",
+                            "predicate": r["predicate"],
+                            "entity": r["target_name"],
+                            "entity_type": r["target_type"],
+                            "confidence": r["confidence"],
+                            "valid_from": r["valid_from"],
+                            "valid_to": r["valid_to"],
+                            "triple_id": r["id"],
+                        }
+                    )
 
             if direction in ("incoming", "both"):
                 pred_clause = " AND t.predicate = ?" if predicate else ""
@@ -314,16 +350,18 @@ class CurriculumKG:
                     params,
                 ).fetchall()
                 for r in rows:
-                    results.append({
-                        "direction": "incoming",
-                        "predicate": r["predicate"],
-                        "entity": r["source_name"],
-                        "entity_type": r["source_type"],
-                        "confidence": r["confidence"],
-                        "valid_from": r["valid_from"],
-                        "valid_to": r["valid_to"],
-                        "triple_id": r["id"],
-                    })
+                    results.append(
+                        {
+                            "direction": "incoming",
+                            "predicate": r["predicate"],
+                            "entity": r["source_name"],
+                            "entity_type": r["source_type"],
+                            "confidence": r["confidence"],
+                            "valid_from": r["valid_from"],
+                            "valid_to": r["valid_to"],
+                            "triple_id": r["id"],
+                        }
+                    )
 
         return results
 
@@ -334,12 +372,16 @@ class CurriculumKG:
     ) -> list[dict[str, Any]]:
         """Get prerequisite topics for a given topic."""
         prereqs = self.query_related(
-            teacher_id, topic_name,
-            predicate="prerequisite_for", direction="incoming",
+            teacher_id,
+            topic_name,
+            predicate="prerequisite_for",
+            direction="incoming",
         )
         builds = self.query_related(
-            teacher_id, topic_name,
-            predicate="builds_on", direction="outgoing",
+            teacher_id,
+            topic_name,
+            predicate="builds_on",
+            direction="outgoing",
         )
         seen = set()
         result = []
@@ -472,8 +514,7 @@ class CurriculumKG:
         with sqlite3.connect(self._db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                "SELECT id, name FROM kg_entities "
-                "WHERE teacher_id = ? AND embedding IS NULL",
+                "SELECT id, name FROM kg_entities WHERE teacher_id = ? AND embedding IS NULL",
                 (teacher_id,),
             ).fetchall()
 
@@ -510,22 +551,21 @@ class CurriculumKG:
                 (teacher_id,),
             ).fetchone()[0]
             current_count = conn.execute(
-                "SELECT COUNT(*) FROM kg_triples "
-                "WHERE teacher_id = ? AND valid_to IS NULL",
+                "SELECT COUNT(*) FROM kg_triples WHERE teacher_id = ? AND valid_to IS NULL",
                 (teacher_id,),
             ).fetchone()[0]
 
             types = [
-                r[0] for r in conn.execute(
-                    "SELECT DISTINCT entity_type FROM kg_entities "
-                    "WHERE teacher_id = ?",
+                r[0]
+                for r in conn.execute(
+                    "SELECT DISTINCT entity_type FROM kg_entities WHERE teacher_id = ?",
                     (teacher_id,),
                 ).fetchall()
             ]
             preds = [
-                r[0] for r in conn.execute(
-                    "SELECT DISTINCT predicate FROM kg_triples "
-                    "WHERE teacher_id = ?",
+                r[0]
+                for r in conn.execute(
+                    "SELECT DISTINCT predicate FROM kg_triples WHERE teacher_id = ?",
                     (teacher_id,),
                 ).fetchall()
             ]

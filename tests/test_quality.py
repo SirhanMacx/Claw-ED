@@ -18,7 +18,11 @@ def _isolate_quality(tmp_path, monkeypatch):
 class TestRecordGeneration:
     def test_record_and_retrieve_stats(self):
         gen_id = quality.record_generation(
-            "t1", "lesson", topic="WW2", subject="History", grade="10",
+            "t1",
+            "lesson",
+            topic="WW2",
+            subject="History",
+            grade="10",
             scores={"voice_match": 0.8, "standards": 0.9},
         )
         assert gen_id > 0

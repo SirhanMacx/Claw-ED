@@ -29,6 +29,7 @@ _TRAINING_DIR = Path("~/.eduagent/training").expanduser()
 
 # ── Persona refinement helper ───────────────────────────────────────────
 
+
 async def _refine_persona(documents: list) -> None:
     """Extract persona traits from new documents and merge into existing."""
     from clawed.commands._helpers import persona_path
@@ -51,6 +52,7 @@ async def _refine_persona(documents: list) -> None:
 
 
 # ── Drive ingest ────────────────────────────────────────────────────────
+
 
 async def _drive_ingest() -> list:
     """Download and ingest from configured Drive URLs. Returns documents."""
@@ -84,6 +86,7 @@ async def _drive_ingest() -> list:
 
 # ── Path ingest ─────────────────────────────────────────────────────────
 
+
 def _path_ingest(path: Path) -> list:
     """Ingest local files. Returns documents."""
     from clawed.ingestor import ingest_path
@@ -98,6 +101,7 @@ def _path_ingest(path: Path) -> list:
 
 
 # ── Benchmark ───────────────────────────────────────────────────────────
+
 
 async def _run_benchmark(n: int) -> dict:
     """Generate N lessons on random topics and score them. Returns report."""
@@ -119,10 +123,18 @@ async def _run_benchmark(n: int) -> dict:
     grade = random.choice(grades)
 
     topics = [
-        "Causes of World War I", "Photosynthesis", "Linear Equations",
-        "The Civil Rights Movement", "Climate Change", "Shakespeare's Hamlet",
-        "The Water Cycle", "Fractions and Decimals", "Ancient Rome",
-        "Supply and Demand", "DNA and Genetics", "Poetry Analysis",
+        "Causes of World War I",
+        "Photosynthesis",
+        "Linear Equations",
+        "The Civil Rights Movement",
+        "Climate Change",
+        "Shakespeare's Hamlet",
+        "The Water Cycle",
+        "Fractions and Decimals",
+        "Ancient Rome",
+        "Supply and Demand",
+        "DNA and Genetics",
+        "Poetry Analysis",
     ]
     sample_topics = random.sample(topics, min(n, len(topics)))
 
@@ -139,14 +151,19 @@ async def _run_benchmark(n: int) -> dict:
                 topic=topic,
                 duration_weeks=1,
                 overview=f"Benchmark lesson on {topic}",
-                daily_lessons=[LessonBrief(
-                    lesson_number=1,
-                    topic=topic,
-                    description=f"Students will understand key aspects of {topic}",
-                )],
+                daily_lessons=[
+                    LessonBrief(
+                        lesson_number=1,
+                        topic=topic,
+                        description=f"Students will understand key aspects of {topic}",
+                    )
+                ],
             )
             mc = await generate_master_content(
-                lesson_number=1, unit=unit, persona=persona, config=config,
+                lesson_number=1,
+                unit=unit,
+                persona=persona,
+                config=config,
             )
 
             # Score voice match
@@ -159,22 +176,28 @@ async def _run_benchmark(n: int) -> dict:
             diff_score = round((voice_score + pedagogy_score) / 2, 1)
             overall = round((voice_score + pedagogy_score + diff_score) / 3, 1)
 
-            results.append({
-                "topic": topic,
-                "voice": round(voice_score, 1),
-                "pedagogy": round(pedagogy_score, 1),
-                "differentiation": diff_score,
-                "overall": overall,
-                "errors": errors,
-            })
+            results.append(
+                {
+                    "topic": topic,
+                    "voice": round(voice_score, 1),
+                    "pedagogy": round(pedagogy_score, 1),
+                    "differentiation": diff_score,
+                    "overall": overall,
+                    "errors": errors,
+                }
+            )
         except Exception as exc:
             console.print(f"  [red]Failed:[/red] {exc}")
-            results.append({
-                "topic": topic,
-                "voice": 0.0, "pedagogy": 0.0,
-                "differentiation": 0.0, "overall": 0.0,
-                "errors": [str(exc)],
-            })
+            results.append(
+                {
+                    "topic": topic,
+                    "voice": 0.0,
+                    "pedagogy": 0.0,
+                    "differentiation": 0.0,
+                    "overall": 0.0,
+                    "errors": [str(exc)],
+                }
+            )
 
     # Display table
     table = Table(title=f"Benchmark Results ({len(results)} lessons)")
@@ -199,9 +222,7 @@ async def _run_benchmark(n: int) -> dict:
         "date": str(date.today()),
         "n": len(results),
         "results": results,
-        "avg_overall": round(
-            sum(r["overall"] for r in results) / max(len(results), 1), 2
-        ),
+        "avg_overall": round(sum(r["overall"] for r in results) / max(len(results), 1), 2),
     }
     _TRAINING_DIR.mkdir(parents=True, exist_ok=True)
     report_path = _TRAINING_DIR / f"{date.today()}_train_report.json"
@@ -212,6 +233,7 @@ async def _run_benchmark(n: int) -> dict:
 
 
 # ── Main command ────────────────────────────────────────────────────────
+
 
 def _train_json(*, benchmark, n):
     """Run benchmark training and return structured result for JSON output."""
@@ -280,9 +302,6 @@ def train(
             await _run_benchmark(n)
 
         if docs:
-            console.print(
-                f"\n[bold green]Training complete.[/bold green] "
-                f"{len(docs)} documents processed."
-            )
+            console.print(f"\n[bold green]Training complete.[/bold green] {len(docs)} documents processed.")
 
     _run_async(_execute())

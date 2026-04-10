@@ -99,6 +99,7 @@ def contribute_example(
     contributor_hash = None
     if teacher_id:
         import hashlib
+
         contributor_hash = hashlib.sha256(teacher_id.encode()).hexdigest()[:16]
 
     # Strip any PII from content before storing
@@ -300,15 +301,35 @@ def seed_from_curriculum(
     for doc in docs:
         # Only contribute documents that look like lesson plans or units
         content_lower = doc.content.lower()
-        is_lesson = any(kw in content_lower for kw in [
-            "objective", "swbat", "do now", "aim", "warm up",
-            "direct instruction", "guided practice", "exit ticket",
-            "homework", "materials needed", "lesson plan"
-        ])
-        is_unit = any(kw in content_lower for kw in [
-            "unit plan", "essential question", "enduring understanding",
-            "unit overview", "unit goals", "pacing guide", "week 1", "week 2"
-        ])
+        is_lesson = any(
+            kw in content_lower
+            for kw in [
+                "objective",
+                "swbat",
+                "do now",
+                "aim",
+                "warm up",
+                "direct instruction",
+                "guided practice",
+                "exit ticket",
+                "homework",
+                "materials needed",
+                "lesson plan",
+            ]
+        )
+        is_unit = any(
+            kw in content_lower
+            for kw in [
+                "unit plan",
+                "essential question",
+                "enduring understanding",
+                "unit overview",
+                "unit goals",
+                "pacing guide",
+                "week 1",
+                "week 2",
+            ]
+        )
 
         if not (is_lesson or is_unit):
             continue
@@ -339,10 +360,11 @@ def _sanitize_content(content: dict) -> dict:
 
     # Common PII patterns to remove
     import re
+
     # Remove email addresses
-    content_str = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[email]', content_str)
+    content_str = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[email]", content_str)
     # Remove phone numbers
-    content_str = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '[phone]', content_str)
+    content_str = re.sub(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b", "[phone]", content_str)
 
     try:
         return json.loads(content_str)

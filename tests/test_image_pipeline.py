@@ -1,4 +1,5 @@
 """Tests for the image pipeline."""
+
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,7 +19,7 @@ def _make_mock_master(
 
     # vocabulary entries
     vocab = []
-    for spec in (vocab_specs or []):
+    for spec in vocab_specs or []:
         entry = MagicMock()
         entry.image_spec = spec
         vocab.append(entry)
@@ -26,7 +27,7 @@ def _make_mock_master(
 
     # primary_sources
     sources = []
-    for spec in (ps_specs or []):
+    for spec in ps_specs or []:
         ps = MagicMock()
         ps.image_spec = spec
         sources.append(ps)
@@ -34,7 +35,7 @@ def _make_mock_master(
 
     # direct_instruction sections
     sections = []
-    for spec in (di_specs or []):
+    for spec in di_specs or []:
         sec = MagicMock()
         sec.image_spec = spec
         sections.append(sec)
@@ -42,7 +43,7 @@ def _make_mock_master(
 
     # exit_ticket (StimulusQuestion with stimulus_image_spec)
     tickets = []
-    for spec in (et_specs or []):
+    for spec in et_specs or []:
         sq = MagicMock()
         sq.stimulus_image_spec = spec
         tickets.append(sq)
@@ -69,7 +70,8 @@ def test_collect_image_specs_gathers_all_sources():
     )
     specs = _collect_image_specs(mc)
     assert set(specs.keys()) == {
-        "vocab_img_1", "vocab_img_2",
+        "vocab_img_1",
+        "vocab_img_2",
         "source_img_1",
         "instruction_img_1",
         "ticket_img_1",
@@ -183,8 +185,10 @@ def test_resolve_teacher_assets_dedup():
     mock_registry.search_images_for_topic.return_value = fake_matches
 
     # All three fake paths must "exist"
-    with patch("clawed.asset_registry.AssetRegistry", return_value=mock_registry), \
-         patch("clawed.image_pipeline.Path") as mock_path_cls:
+    with (
+        patch("clawed.asset_registry.AssetRegistry", return_value=mock_registry),
+        patch("clawed.image_pipeline.Path") as mock_path_cls,
+    ):
         # Make every Path(match["path"]).exists() return True
         mock_path_inst = MagicMock()
         mock_path_inst.exists.return_value = True
@@ -239,9 +243,10 @@ def test_used_paths_tracking():
             return m
         return MagicMock()
 
-    with patch("clawed.asset_registry.AssetRegistry", return_value=mock_registry), \
-         patch("clawed.image_pipeline.Path", side_effect=path_side_effect):
-
+    with (
+        patch("clawed.asset_registry.AssetRegistry", return_value=mock_registry),
+        patch("clawed.image_pipeline.Path", side_effect=path_side_effect),
+    ):
         spec_map = {
             "spec_a": "context a",
             "spec_b": "context b",
@@ -249,6 +254,4 @@ def test_used_paths_tracking():
         resolved = _resolve_from_teacher_assets(spec_map, "teacher-1")
 
         # Only one spec can get the image — the other has no unused candidates
-        assert len(resolved) == 1, (
-            f"Expected 1 resolved (dedup should block reuse), got {len(resolved)}"
-        )
+        assert len(resolved) == 1, f"Expected 1 resolved (dedup should block reuse), got {len(resolved)}"

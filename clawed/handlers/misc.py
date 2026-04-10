@@ -1,4 +1,5 @@
 """Small handlers for demo, persona, settings, progress, model switch."""
+
 from __future__ import annotations
 
 import logging
@@ -6,6 +7,7 @@ import logging
 from clawed.gateway_response import GatewayResponse
 
 logger = logging.getLogger(__name__)
+
 
 class DemoHandler:
     async def run(self, teacher_id: str) -> GatewayResponse:
@@ -21,10 +23,12 @@ class DemoHandler:
         except Exception as e:
             return GatewayResponse(text=f"Demo failed: {e}")
 
+
 class PersonaHandler:
     async def show(self, teacher_id: str) -> GatewayResponse:
         try:
             from clawed.state import TeacherSession
+
             session = TeacherSession.load(teacher_id)
             if not session.persona:
                 return GatewayResponse(
@@ -43,10 +47,12 @@ class PersonaHandler:
         except Exception as e:
             return GatewayResponse(text=f"Could not load persona: {e}")
 
+
 class SettingsHandler:
     async def show(self, teacher_id: str) -> GatewayResponse:
         try:
             from clawed.models import AppConfig
+
             config = AppConfig.load()
             lines = [
                 "Your settings:",
@@ -64,10 +70,12 @@ class SettingsHandler:
         except Exception as e:
             return GatewayResponse(text=f"Could not load settings: {e}")
 
+
 class ProgressHandler:
     async def show(self, teacher_id: str) -> GatewayResponse:
         try:
             from clawed.analytics import get_teacher_stats
+
             stats = get_teacher_stats(teacher_id)
             lines = [
                 "Your progress:",
@@ -80,10 +88,12 @@ class ProgressHandler:
         except Exception:
             return GatewayResponse(text="No progress data yet. Generate some lessons first!")
 
+
 class ModelSwitchHandler:
     async def switch(self, teacher_id: str, text: str) -> GatewayResponse:
         try:
             from clawed.models import AppConfig, LLMProvider
+
             config = AppConfig.load()
             lower = text.lower()
             if "ollama" in lower:

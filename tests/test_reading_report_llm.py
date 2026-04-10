@@ -3,6 +3,7 @@
 Tests the excerpt selection, prompt building, LLM integration, and
 graceful fallback when the LLM call fails.
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
@@ -90,9 +91,7 @@ class TestSelectRepresentativeExcerpts:
 
         # Should include more than one doc type
         types_seen = {doc.doc_type for doc in excerpts}
-        assert len(types_seen) > 1, (
-            f"Expected multiple doc types, got only {types_seen}"
-        )
+        assert len(types_seen) > 1, f"Expected multiple doc types, got only {types_seen}"
 
     def test_respects_max_excerpts(self):
         docs = _make_docs(20)
@@ -135,10 +134,7 @@ class TestBuildLlmReadingPrompt:
         # Should mention the document count
         assert "5" in prompt
         # Should include at least one topic from coverage
-        assert any(
-            topic in prompt
-            for topic in ["American Revolution", "Civil War", "Constitution"]
-        )
+        assert any(topic in prompt for topic in ["American Revolution", "Civil War", "Constitution"])
 
     def test_includes_excerpts(self):
         """Prompt should contain actual document text."""
@@ -221,9 +217,7 @@ class TestEnhanceReadingReportWithLlm:
 
         with patch("clawed.llm.LLMClient") as mock_client:
             instance = mock_client.return_value
-            instance.generate_json = AsyncMock(
-                side_effect=ConnectionError("No API key")
-            )
+            instance.generate_json = AsyncMock(side_effect=ConnectionError("No API key"))
             await enhance_reading_report_with_llm(report)
 
         # Should be empty list (ran but got nothing), not None (not yet run)
@@ -239,9 +233,7 @@ class TestEnhanceReadingReportWithLlm:
         with patch("clawed.llm.LLMClient") as mock_client:
             instance = mock_client.return_value
             # LLM returns a dict instead of a list
-            instance.generate_json = AsyncMock(
-                return_value={"error": "unexpected format"}
-            )
+            instance.generate_json = AsyncMock(return_value={"error": "unexpected format"})
             await enhance_reading_report_with_llm(report)
 
         assert report["llm_observations"] == []

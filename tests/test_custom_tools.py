@@ -1,4 +1,5 @@
 """Tests for custom YAML prompt-template tools."""
+
 import yaml
 
 from clawed.agent_core.context import AgentContext

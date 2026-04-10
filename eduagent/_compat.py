@@ -3,6 +3,7 @@
 This allows all existing code that does ``from eduagent.X import Y``
 to transparently work after the package rename to Claw-ED (clawed).
 """
+
 from __future__ import annotations
 
 import importlib
@@ -20,7 +21,7 @@ class _EduagentRedirectFinder(MetaPathFinder):
         if fullname == "eduagent":
             return None  # Let the real eduagent/__init__.py load normally
         if fullname.startswith(self._PREFIX):
-            clawed_name = "clawed" + fullname[len("eduagent"):]
+            clawed_name = "clawed" + fullname[len("eduagent") :]
             return ModuleSpec(fullname, _EduagentRedirectLoader(clawed_name))
         return None
 

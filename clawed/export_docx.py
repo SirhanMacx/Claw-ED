@@ -45,6 +45,7 @@ def _docx_add_image(
             # Center the image
             last_para = doc.paragraphs[-1]
             from docx.enum.text import WD_ALIGN_PARAGRAPH
+
             last_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             # Add caption if provided
             if caption:
@@ -55,6 +56,7 @@ def _docx_add_image(
                 cap_run.font.italic = True
                 cap_run.font.name = "Calibri"
                 from docx.shared import RGBColor
+
                 cap_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
             return True
     except Exception:
@@ -90,6 +92,7 @@ def _docx_add_content_image(
             doc.add_picture(str(img_path), width=Inches(width_inches))
             last_para = doc.paragraphs[-1]
             from docx.enum.text import WD_ALIGN_PARAGRAPH
+
             last_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             # Build caption from key concepts
             concepts = _extract_key_concepts(content_text)
@@ -102,6 +105,7 @@ def _docx_add_content_image(
                 cap_run.font.italic = True
                 cap_run.font.name = "Calibri"
                 from docx.shared import RGBColor
+
                 cap_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
             return True
     except Exception:
@@ -133,11 +137,14 @@ def _add_callout_box(doc, label, text, bg_hex, border_hex):
     # Set cell background
     tc = left_cell._tc
     tcPr = tc.get_or_add_tcPr()
-    shading = tcPr.makeelement(qn("w:shd"), {
-        qn("w:val"): "clear",
-        qn("w:color"): "auto",
-        qn("w:fill"): border_hex,
-    })
+    shading = tcPr.makeelement(
+        qn("w:shd"),
+        {
+            qn("w:val"): "clear",
+            qn("w:color"): "auto",
+            qn("w:fill"): border_hex,
+        },
+    )
     tcPr.append(shading)
     lr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
@@ -151,11 +158,14 @@ def _add_callout_box(doc, label, text, bg_hex, border_hex):
     # Light background
     tc2 = right_cell._tc
     tcPr2 = tc2.get_or_add_tcPr()
-    shading2 = tcPr2.makeelement(qn("w:shd"), {
-        qn("w:val"): "clear",
-        qn("w:color"): "auto",
-        qn("w:fill"): bg_hex,
-    })
+    shading2 = tcPr2.makeelement(
+        qn("w:shd"),
+        {
+            qn("w:val"): "clear",
+            qn("w:color"): "auto",
+            qn("w:fill"): bg_hex,
+        },
+    )
     tcPr2.append(shading2)
 
     # Add spacing after table
@@ -206,6 +216,7 @@ def export_lesson_docx(
     else:
         try:
             from clawed.models import AppConfig as _AppConfig
+
             _cfg = _AppConfig.load()
             if _cfg.teacher_profile and _cfg.teacher_profile.name:
                 teacher_display_name = _cfg.teacher_profile.name
@@ -220,9 +231,7 @@ def export_lesson_docx(
     header_para = header.paragraphs[0]
     header_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     header_run = header_para.add_run(
-        f"{teacher_display_name}  |  "
-        f"{persona.subject_area or 'Education'}  |  "
-        f"{date.today().strftime('%B %d, %Y')}"
+        f"{teacher_display_name}  |  {persona.subject_area or 'Education'}  |  {date.today().strftime('%B %d, %Y')}"
     )
     header_run.font.name = "Calibri"
     header_run.font.size = Pt(9)
@@ -231,6 +240,7 @@ def export_lesson_docx(
     # Apply accent color as header bar background
     try:
         from docx.oxml.ns import qn as _qn
+
         _shd = header_para._p.get_or_add_pPr().makeelement(
             _qn("w:shd"),
             {
@@ -267,9 +277,7 @@ def export_lesson_docx(
     # Title
     doc.add_heading(_s_title, level=0)
     doc.add_paragraph(
-        f"Teacher: {teacher_display_name}  |  "
-        f"Lesson {lesson.lesson_number}  |  "
-        f"{date.today().strftime('%B %d, %Y')}"
+        f"Teacher: {teacher_display_name}  |  Lesson {lesson.lesson_number}  |  {date.today().strftime('%B %d, %Y')}"
     )
 
     # Try to add a header image relevant to the lesson content
@@ -285,11 +293,11 @@ def export_lesson_docx(
     if not lesson.standards:
         try:
             from clawed.models import AppConfig as _AppConfig
+
             cfg = _AppConfig.load()
             if cfg.teacher_profile.state:
                 lesson.standards = [
-                    f"Aligned to {cfg.teacher_profile.state} "
-                    f"{persona.subject_area or 'education'} standards"
+                    f"Aligned to {cfg.teacher_profile.state} {persona.subject_area or 'education'} standards"
                 ]
         except Exception:
             pass
@@ -482,6 +490,7 @@ def export_student_handout(
 
     # Sanitize AND strip answers — work on a copy so we don't mutate the caller's object
     import copy as _copy
+
     lesson = _copy.deepcopy(lesson)
     lesson.title = sanitize_text(lesson.title)
     lesson.objective = sanitize_text(lesson.objective)
@@ -522,6 +531,7 @@ def export_student_handout(
     else:
         try:
             from clawed.models import AppConfig as _AppConfig
+
             _cfg = _AppConfig.load()
             if _cfg.teacher_profile and _cfg.teacher_profile.name:
                 _handout_teacher_name = _cfg.teacher_profile.name
@@ -530,9 +540,7 @@ def export_student_handout(
     if not _handout_teacher_name:
         _handout_teacher_name = "Teacher"
 
-    meta_run = meta_para.add_run(
-        f"{_handout_teacher_name}  |  {date.today().strftime('%B %d, %Y')}"
-    )
+    meta_run = meta_para.add_run(f"{_handout_teacher_name}  |  {date.today().strftime('%B %d, %Y')}")
     meta_run.font.size = Pt(10)
     meta_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
     meta_run.font.name = "Calibri"
@@ -885,7 +893,8 @@ def _export_admin_lesson_docx(
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         shading = tcPr.makeelement(
-            qn("w:shd"), {qn("w:val"): "clear", qn("w:color"): "auto", qn("w:fill"): hex_color},
+            qn("w:shd"),
+            {qn("w:val"): "clear", qn("w:color"): "auto", qn("w:fill"): hex_color},
         )
         tcPr.append(shading)
 
@@ -942,8 +951,11 @@ def _export_admin_lesson_docx(
 
         # 5-column table: Section | Teacher Actions | Student Actions | Look-Fors | Differentiation
         col_headers = [
-            "Section & Timing", "Teacher Actions", "Student Actions",
-            "Observer Look-Fors", "Differentiation",
+            "Section & Timing",
+            "Teacher Actions",
+            "Student Actions",
+            "Observer Look-Fors",
+            "Differentiation",
         ]
         section_table = doc.add_table(rows=1 + len(sections), cols=5)
         section_table.alignment = WD_TABLE_ALIGNMENT.CENTER

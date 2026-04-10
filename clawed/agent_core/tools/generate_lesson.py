@@ -1,4 +1,5 @@
 """Tool: generate_lesson — wraps clawed.lesson.generate_lesson."""
+
 from __future__ import annotations
 
 import json
@@ -45,9 +46,7 @@ class GenerateLessonTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.lesson import generate_lesson
         from clawed.models import LessonBrief, TeacherPersona, UnitPlan
 
@@ -83,6 +82,7 @@ class GenerateLessonTool:
         kb_prompt_section = ""
         try:
             from clawed.asset_registry import AssetRegistry
+
             registry = AssetRegistry()
             assets = registry.search_assets(context.teacher_id, topic, top_k=5)
             yt_links = registry.get_youtube_links(context.teacher_id, topic, top_k=3)
@@ -93,15 +93,13 @@ class GenerateLessonTool:
 
         try:
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
             kb = CurriculumKB()
             kb_results = kb.search(context.teacher_id, topic, top_k=3)
             if kb_results:
                 kb_parts = [r for r in kb_results if r.get("similarity", 0) > 0.1]
                 if kb_parts:
-                    chunk_section = "\n\n".join(
-                        f"From \"{r['doc_title']}\":\n{r['chunk_text'][:500]}"
-                        for r in kb_parts
-                    )
+                    chunk_section = "\n\n".join(f'From "{r["doc_title"]}":\n{r["chunk_text"][:500]}' for r in kb_parts)
                     if kb_prompt_section:
                         kb_prompt_section += "\n\n" + chunk_section
                     else:
@@ -126,8 +124,7 @@ class GenerateLessonTool:
             lesson_data = lesson.model_dump()
             title = lesson_data.get("title", topic)
             return ToolResult(
-                text=f"Generated lesson: {title}\n\n"
-                f"{json.dumps(lesson_data, indent=2)[:2000]}",
+                text=f"Generated lesson: {title}\n\n{json.dumps(lesson_data, indent=2)[:2000]}",
                 data=lesson_data,
                 side_effects=[f"Generated lesson on {topic}"],
             )

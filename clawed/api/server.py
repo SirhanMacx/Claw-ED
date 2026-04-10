@@ -114,6 +114,7 @@ def create_app() -> FastAPI:
         Tokens in URLs leak through browser history, bookmarks, referrers.
         """
         from clawed.api.deps import get_api_token
+
         token = get_api_token()
         # Check cookie (primary method — set via POST /api/auth/bootstrap)
         if request.cookies.get("clawed_token") == token:
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
         leakage through browser history, bookmarks, and referrers.
         """
         from clawed.api.deps import get_api_token
+
         expected = get_api_token()
         if token != expected:
             return JSONResponse({"error": "Invalid token"}, status_code=401)
@@ -150,7 +152,8 @@ def create_app() -> FastAPI:
         is_https = os.environ.get("HTTPS", "").lower() in ("1", "true")
         response = RedirectResponse("/", status_code=303)
         response.set_cookie(
-            "clawed_token", token,
+            "clawed_token",
+            token,
             httponly=True,
             samesite="strict",
             secure=is_https,
@@ -194,14 +197,18 @@ def create_app() -> FastAPI:
             except (json.JSONDecodeError, TypeError):
                 pass
 
-        return templates.TemplateResponse(request, "index.html", {
-            "stats": stats,
-            "has_persona": has_persona,
-            "onboarding_complete": onboarding_complete,
-            "teacher_id": teacher["id"] if teacher else None,
-            "persona": persona_data,
-            "active_nav": "home",
-        })
+        return templates.TemplateResponse(
+            request,
+            "index.html",
+            {
+                "stats": stats,
+                "has_persona": has_persona,
+                "onboarding_complete": onboarding_complete,
+                "teacher_id": teacher["id"] if teacher else None,
+                "persona": persona_data,
+                "active_nav": "home",
+            },
+        )
 
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard(request: Request):
@@ -226,20 +233,24 @@ def create_app() -> FastAPI:
         # Build recent activity feed (last 10 items: units + lessons)
         recent_items: list[dict] = []
         for u in units[:10]:
-            recent_items.append({
-                "type": "unit",
-                "title": u["title"],
-                "id": u["id"],
-                "date": (u.get("created_at") or "")[:10],
-            })
+            recent_items.append(
+                {
+                    "type": "unit",
+                    "title": u["title"],
+                    "id": u["id"],
+                    "date": (u.get("created_at") or "")[:10],
+                }
+            )
         for u in units[:5]:
             for lesson in db.list_lessons(u["id"])[:3]:
-                recent_items.append({
-                    "type": "lesson",
-                    "title": lesson["title"] or f"Lesson {lesson.get('lesson_number', '')}",
-                    "id": lesson["id"],
-                    "date": (lesson.get("created_at") or "")[:10],
-                })
+                recent_items.append(
+                    {
+                        "type": "lesson",
+                        "title": lesson["title"] or f"Lesson {lesson.get('lesson_number', '')}",
+                        "id": lesson["id"],
+                        "date": (lesson.get("created_at") or "")[:10],
+                    }
+                )
         # Sort by date descending and take top 10
         recent_items.sort(key=lambda x: x["date"], reverse=True)
         recent_items = recent_items[:10]
@@ -258,21 +269,26 @@ def create_app() -> FastAPI:
         config_school = ""
         try:
             from clawed.models import AppConfig
+
             cfg = AppConfig.load()
             config_school = cfg.teacher_profile.school
         except Exception:
             pass
 
-        return templates.TemplateResponse(request, "dashboard.html", {
-            "stats": stats,
-            "units": units,
-            "persona_name": persona_name,
-            "persona": persona_data,
-            "recent_items": recent_items,
-            "active_lesson": active_lesson,
-            "config_school": config_school,
-            "active_nav": "home",
-        })
+        return templates.TemplateResponse(
+            request,
+            "dashboard.html",
+            {
+                "stats": stats,
+                "units": units,
+                "persona_name": persona_name,
+                "persona": persona_data,
+                "recent_items": recent_items,
+                "active_lesson": active_lesson,
+                "config_school": config_school,
+                "active_nav": "home",
+            },
+        )
 
     @app.get("/lessons", response_class=HTMLResponse)
     async def lessons_list_page(request: Request):
@@ -305,16 +321,18 @@ def create_app() -> FastAPI:
                         quality_score = scores.get("overall") or scores.get("total")
                     except (json.JSONDecodeError, TypeError):
                         pass
-                all_lessons.append({
-                    "id": lesson["id"],
-                    "title": lesson.get("title") or lesson_data.get("title") or "Untitled",
-                    "subject": u.get("subject", ""),
-                    "grade_level": u.get("grade_level", ""),
-                    "date": (lesson.get("created_at") or "")[:10],
-                    "quality_score": quality_score,
-                    "rating": lesson.get("rating"),
-                    "share_token": lesson.get("share_token"),
-                })
+                all_lessons.append(
+                    {
+                        "id": lesson["id"],
+                        "title": lesson.get("title") or lesson_data.get("title") or "Untitled",
+                        "subject": u.get("subject", ""),
+                        "grade_level": u.get("grade_level", ""),
+                        "date": (lesson.get("created_at") or "")[:10],
+                        "quality_score": quality_score,
+                        "rating": lesson.get("rating"),
+                        "share_token": lesson.get("share_token"),
+                    }
+                )
 
         # Sort newest first
         all_lessons.sort(key=lambda x: x["date"], reverse=True)
@@ -415,15 +433,20 @@ select {{ padding: 6px 10px; border-radius: 4px;
         if not _check_page_auth(request):
             return _auth_denied
         from clawed.standards import STANDARDS
+
         db = get_db()
         teacher = db.get_default_teacher()
         has_persona = teacher is not None
         subjects = list(STANDARDS.keys())
-        return templates.TemplateResponse(request, "generate.html", {
-            "has_persona": has_persona,
-            "subjects": subjects,
-            "active_nav": "generate",
-        })
+        return templates.TemplateResponse(
+            request,
+            "generate.html",
+            {
+                "has_persona": has_persona,
+                "subjects": subjects,
+                "active_nav": "generate",
+            },
+        )
 
     @app.get("/settings", response_class=HTMLResponse)
     async def settings_page(request: Request):
@@ -454,21 +477,25 @@ select {{ padding: 6px 10px; border-radius: 4px;
         state_frameworks = []
         if teacher_state:
             from clawed.state_standards import STATE_STANDARDS_CONFIG
+
             state_cfg = STATE_STANDARDS_CONFIG.get(teacher_state, {})
             for subj_key in ("math", "ela", "science", "social_studies"):
                 code = state_cfg.get(subj_key, "")
                 if code:
-                    state_frameworks.append({
-                        "label": subj_key.replace("_", " ").title(),
-                        "code": code,
-                        "description": get_framework_description(code),
-                    })
+                    state_frameworks.append(
+                        {
+                            "label": subj_key.replace("_", " ").title(),
+                            "code": code,
+                            "description": get_framework_description(code),
+                        }
+                    )
 
         # Get class codes for management
         class_codes_list: list[dict] = []
         try:
             from clawed.state import _get_conn as _state_conn2
             from clawed.state import init_db as _state_init2
+
             _state_init2()
             teacher_id_for_codes = teacher["id"] if teacher else "local-teacher"
             with _state_conn2() as sconn2:
@@ -480,19 +507,23 @@ select {{ padding: 6px 10px; border-radius: 4px;
         except Exception:
             pass
 
-        return templates.TemplateResponse(request, "settings.html", {
-            "config": cfg,
-            "persona": persona_data,
-            "anthropic_key_masked": mask_api_key(get_api_key("anthropic")),
-            "openai_key_masked": mask_api_key(get_api_key("openai")),
-            "states": list_states(),
-            "teacher_state": teacher_state,
-            "teacher_subjects": teacher_subjects,
-            "teacher_grades": teacher_grades,
-            "state_frameworks": state_frameworks,
-            "class_codes": class_codes_list,
-            "active_nav": "settings",
-        })
+        return templates.TemplateResponse(
+            request,
+            "settings.html",
+            {
+                "config": cfg,
+                "persona": persona_data,
+                "anthropic_key_masked": mask_api_key(get_api_key("anthropic")),
+                "openai_key_masked": mask_api_key(get_api_key("openai")),
+                "states": list_states(),
+                "teacher_state": teacher_state,
+                "teacher_subjects": teacher_subjects,
+                "teacher_grades": teacher_grades,
+                "state_frameworks": state_frameworks,
+                "class_codes": class_codes_list,
+                "active_nav": "settings",
+            },
+        )
 
     @app.get("/stats", response_class=HTMLResponse)
     async def stats_page(request: Request):
@@ -503,12 +534,17 @@ select {{ padding: 6px 10px; border-radius: 4px;
         teacher_id = teacher["id"] if teacher else "local-teacher"
 
         from clawed.analytics import get_teacher_stats
+
         stats_data = get_teacher_stats(teacher_id)
 
-        return templates.TemplateResponse(request, "stats.html", {
-            "stats": stats_data,
-            "teacher_id": teacher_id,
-        })
+        return templates.TemplateResponse(
+            request,
+            "stats.html",
+            {
+                "stats": stats_data,
+                "teacher_id": teacher_id,
+            },
+        )
 
     @app.get("/lesson/{lesson_id}", response_class=HTMLResponse)
     async def lesson_page(request: Request, lesson_id: str):
@@ -546,6 +582,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
         try:
             from clawed.state import _get_conn as _state_conn
             from clawed.state import init_db as _state_init
+
             _state_init()
             with _state_conn() as sconn:
                 cc_rows = sconn.execute(
@@ -556,16 +593,20 @@ select {{ padding: 6px 10px; border-radius: 4px;
         except Exception:
             pass
 
-        return templates.TemplateResponse(request, "lesson.html", {
-            "lesson": lesson_row,
-            "lesson_data": lesson_data,
-            "materials": materials_data,
-            "scores": scores_data,
-            "feedback_list": feedback_list,
-            "share_url": f"/shared/{lesson_row['share_token']}",
-            "embed_snippet": embed_snippet,
-            "class_codes": class_codes,
-        })
+        return templates.TemplateResponse(
+            request,
+            "lesson.html",
+            {
+                "lesson": lesson_row,
+                "lesson_data": lesson_data,
+                "materials": materials_data,
+                "scores": scores_data,
+                "feedback_list": feedback_list,
+                "share_url": f"/shared/{lesson_row['share_token']}",
+                "embed_snippet": embed_snippet,
+                "class_codes": class_codes,
+            },
+        )
 
     @app.get("/share/{token}", response_class=HTMLResponse)
     @app.get("/shared/{token}", response_class=HTMLResponse)
@@ -579,14 +620,18 @@ select {{ padding: 6px 10px; border-radius: 4px;
         except (json.JSONDecodeError, TypeError) as exc:
             logger.warning("Failed to parse shared lesson_json for token %s: %s", token, exc)
             lesson_data = {}
-        return templates.TemplateResponse(request, "lesson.html", {
-            "lesson": lesson_row,
-            "lesson_data": lesson_data,
-            "materials": None,
-            "feedback_list": [],
-            "share_url": f"/shared/{token}",
-            "is_shared": True,
-        })
+        return templates.TemplateResponse(
+            request,
+            "lesson.html",
+            {
+                "lesson": lesson_row,
+                "lesson_data": lesson_data,
+                "materials": None,
+                "feedback_list": [],
+                "share_url": f"/shared/{token}",
+                "is_shared": True,
+            },
+        )
 
     def _generate_qr_img(data: str) -> str:
         """Generate QR code locally. Falls back to plain link."""
@@ -595,6 +640,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
             import io
 
             import qrcode
+
             qr = qrcode.make(data)
             buf = io.BytesIO()
             qr.save(buf, format="PNG")
@@ -607,11 +653,10 @@ select {{ padding: 6px 10px; border-radius: 4px;
     async def student_class_page(request: Request, class_code: str):
         """Minimal student-facing page for a class code."""
         from clawed.state import _get_conn, init_db
+
         init_db()
         with _get_conn() as conn:
-            row = conn.execute(
-                "SELECT * FROM classes WHERE class_code = ?", (class_code,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM classes WHERE class_code = ?", (class_code,)).fetchone()
 
         if not row:
             return HTMLResponse("<h1>Class not found</h1>", status_code=404)
@@ -681,8 +726,8 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
 <h1>{esc_class_name}</h1>
 <p class="teacher">Teacher: {esc_teacher_name}</p>
 <div class="code">{esc_class_code}</div>
-{''.join(f'<span class="topic">{t}</span>' for t in esc_lesson_topics)}
-{f'<p><strong>Current Topic:</strong> {esc_class_topic}</p>' if class_topic else ''}
+{"".join(f'<span class="topic">{t}</span>' for t in esc_lesson_topics)}
+{f"<p><strong>Current Topic:</strong> {esc_class_topic}</p>" if class_topic else ""}
 <p style="margin-top:24px"><strong>Scan to chat on Telegram:</strong></p>
 <div class="qr">{_generate_qr_img(bot_link)}</div>
 <a href="{bot_link}" class="join-btn">Open in Telegram</a>
@@ -706,6 +751,7 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
             """Run a read query against state DB, returning list of Row dicts."""
             try:
                 from clawed.state import _get_conn, init_db
+
                 init_db()
                 with _get_conn() as conn:
                     rows = conn.execute(sql, params).fetchall()
@@ -728,11 +774,13 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
         today = datetime.now().date()
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
-            daily_lessons.append({
-                "date": d.isoformat(),
-                "label": day_names_short[d.weekday()],
-                "count": 0,
-            })
+            daily_lessons.append(
+                {
+                    "date": d.isoformat(),
+                    "label": day_names_short[d.weekday()],
+                    "count": 0,
+                }
+            )
         rows = _safe_query(
             "SELECT DATE(created_at) as day, COUNT(*) as count FROM generated_lessons"
             " WHERE teacher_id = ? AND created_at >= datetime('now', '-7 days')"
@@ -747,11 +795,13 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
         daily_questions: list[dict] = []
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
-            daily_questions.append({
-                "date": d.isoformat(),
-                "label": day_names_short[d.weekday()],
-                "count": 0,
-            })
+            daily_questions.append(
+                {
+                    "date": d.isoformat(),
+                    "label": day_names_short[d.weekday()],
+                    "count": 0,
+                }
+            )
         q_rows = _safe_query(
             "SELECT DATE(created_at) as day, COUNT(*) as count FROM chat_messages"
             " WHERE role='user' AND created_at >= datetime('now', '-7 days')"
@@ -786,15 +836,19 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
             " GROUP BY content ORDER BY count DESC LIMIT 10",
         )
 
-        return templates.TemplateResponse(request, "analytics.html", {
-            "stats": stats_data,
-            "topic_frequency": topic_frequency,
-            "daily_lessons": daily_lessons,
-            "daily_questions": daily_questions,
-            "quality_trend": quality_trend,
-            "top_questions": top_questions,
-            "active_nav": "analytics",
-        })
+        return templates.TemplateResponse(
+            request,
+            "analytics.html",
+            {
+                "stats": stats_data,
+                "topic_frequency": topic_frequency,
+                "daily_lessons": daily_lessons,
+                "daily_questions": daily_questions,
+                "quality_trend": quality_trend,
+                "top_questions": top_questions,
+                "active_nav": "analytics",
+            },
+        )
 
     @app.get("/library", response_class=HTMLResponse)
     async def library_page(request: Request):
@@ -818,20 +872,24 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
 
         recent_items: list[dict] = []
         for u in units[:10]:
-            recent_items.append({
-                "type": "unit",
-                "title": u["title"],
-                "id": u["id"],
-                "date": (u.get("created_at") or "")[:10],
-            })
+            recent_items.append(
+                {
+                    "type": "unit",
+                    "title": u["title"],
+                    "id": u["id"],
+                    "date": (u.get("created_at") or "")[:10],
+                }
+            )
         for u in units[:5]:
             for lesson in db.list_lessons(u["id"])[:3]:
-                recent_items.append({
-                    "type": "lesson",
-                    "title": lesson["title"] or f"Lesson {lesson.get('lesson_number', '')}",
-                    "id": lesson["id"],
-                    "date": (lesson.get("created_at") or "")[:10],
-                })
+                recent_items.append(
+                    {
+                        "type": "lesson",
+                        "title": lesson["title"] or f"Lesson {lesson.get('lesson_number', '')}",
+                        "id": lesson["id"],
+                        "date": (lesson.get("created_at") or "")[:10],
+                    }
+                )
         recent_items.sort(key=lambda x: x["date"], reverse=True)
         recent_items = recent_items[:10]
 
@@ -847,21 +905,26 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
         config_school = ""
         try:
             from clawed.models import AppConfig
+
             cfg = AppConfig.load()
             config_school = cfg.teacher_profile.school
         except Exception:
             pass
 
-        return templates.TemplateResponse(request, "dashboard.html", {
-            "stats": stats,
-            "units": units,
-            "persona_name": persona_name,
-            "persona": persona_data,
-            "recent_items": recent_items,
-            "active_lesson": active_lesson,
-            "config_school": config_school,
-            "active_nav": "library",
-        })
+        return templates.TemplateResponse(
+            request,
+            "dashboard.html",
+            {
+                "stats": stats,
+                "units": units,
+                "persona_name": persona_name,
+                "persona": persona_data,
+                "recent_items": recent_items,
+                "active_lesson": active_lesson,
+                "config_school": config_school,
+                "active_nav": "library",
+            },
+        )
 
     @app.get("/students", response_class=HTMLResponse)
     async def students_page(request: Request):
@@ -879,19 +942,25 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
                 history = db.get_chat_history(lesson["id"], limit=100)
                 user_msgs = [m for m in history if m.get("role") == "user"]
                 if user_msgs:
-                    lesson_chats.append({
-                        "lesson_title": lesson.get("title") or "Untitled",
-                        "lesson_id": lesson["id"],
-                        "question_count": len(user_msgs),
-                        "last_question": (user_msgs[0].get("created_at") or "")[:16] if user_msgs else "",
-                    })
+                    lesson_chats.append(
+                        {
+                            "lesson_title": lesson.get("title") or "Untitled",
+                            "lesson_id": lesson["id"],
+                            "question_count": len(user_msgs),
+                            "last_question": (user_msgs[0].get("created_at") or "")[:16] if user_msgs else "",
+                        }
+                    )
         lesson_chats.sort(key=lambda x: x["question_count"], reverse=True)
 
-        return templates.TemplateResponse(request, "students.html", {
-            "stats": stats,
-            "lesson_chats": lesson_chats[:20],
-            "active_nav": "students",
-        })
+        return templates.TemplateResponse(
+            request,
+            "students.html",
+            {
+                "stats": stats,
+                "lesson_chats": lesson_chats[:20],
+                "active_nav": "students",
+            },
+        )
 
     @app.get("/profile", response_class=HTMLResponse)
     async def profile_page(request: Request):
@@ -925,26 +994,32 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
             for subj_key in ("math", "ela", "science", "social_studies"):
                 code = state_cfg.get(subj_key, "")
                 if code:
-                    state_frameworks.append({
-                        "label": subj_key.replace("_", " ").title(),
-                        "code": code,
-                        "description": get_framework_description(code),
-                    })
+                    state_frameworks.append(
+                        {
+                            "label": subj_key.replace("_", " ").title(),
+                            "code": code,
+                            "description": get_framework_description(code),
+                        }
+                    )
 
         # Mask telegram token
         telegram_token_masked = ""
         if cfg.telegram_bot_token:
             telegram_token_masked = mask_api_key(cfg.telegram_bot_token)
 
-        return templates.TemplateResponse(request, "profile.html", {
-            "profile": profile,
-            "persona": persona_data,
-            "states": list_states(),
-            "state_frameworks": state_frameworks,
-            "anthropic_key_masked": mask_api_key(get_api_key("anthropic")),
-            "openai_key_masked": mask_api_key(get_api_key("openai")),
-            "telegram_token_masked": telegram_token_masked,
-        })
+        return templates.TemplateResponse(
+            request,
+            "profile.html",
+            {
+                "profile": profile,
+                "persona": persona_data,
+                "states": list_states(),
+                "state_frameworks": state_frameworks,
+                "anthropic_key_masked": mask_api_key(get_api_key("anthropic")),
+                "openai_key_masked": mask_api_key(get_api_key("openai")),
+                "telegram_token_masked": telegram_token_masked,
+            },
+        )
 
     return app
 

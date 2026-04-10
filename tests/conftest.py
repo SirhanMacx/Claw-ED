@@ -30,7 +30,9 @@ def _isolate_state_db(tmp_path, monkeypatch):
 
     # clawed.state
     monkeypatch.setattr(
-        "clawed.state.DEFAULT_DATA_DIR", tmp_path, raising=False,
+        "clawed.state.DEFAULT_DATA_DIR",
+        tmp_path,
+        raising=False,
     )
 
     # clawed.workspace (9 cascading paths from _BASE_DIR)
@@ -41,7 +43,8 @@ def _isolate_state_db(tmp_path, monkeypatch):
     monkeypatch.setattr("clawed.workspace.MEMORY_PATH", tmp_path / "workspace" / "memory.md", raising=False)
     monkeypatch.setattr(
         "clawed.workspace.MEMORY_SUMMARY_PATH",
-        tmp_path / "workspace" / "memory_summary.md", raising=False,
+        tmp_path / "workspace" / "memory_summary.md",
+        raising=False,
     )
     monkeypatch.setattr("clawed.workspace.HEARTBEAT_PATH", tmp_path / "workspace" / "heartbeat.md", raising=False)
     monkeypatch.setattr("clawed.workspace.NOTES_DIR", tmp_path / "workspace" / "notes", raising=False)

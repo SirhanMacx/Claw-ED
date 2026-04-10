@@ -110,10 +110,7 @@ class TestTier2ClusterDetection:
         result = humanize(text)
         # With 2+ T2 words in same paragraph, they should be cleaned
         # (removed or reduced, but paragraph should still be coherent)
-        t2_count = sum(
-            1 for w in ["groundbreaking", "seamless"]
-            if w in result.lower()
-        )
+        t2_count = sum(1 for w in ["groundbreaking", "seamless"] if w in result.lower())
         assert t2_count < 2
 
     def test_tier2_across_paragraphs_not_clustered(self):
@@ -139,11 +136,7 @@ class TestNoSentenceDestruction:
         assert "  " not in result or result == humanize(result)
 
     def test_paragraph_structure_preserved(self):
-        text = (
-            "First paragraph about history.\n\n"
-            "Second paragraph about science.\n\n"
-            "Third paragraph about art."
-        )
+        text = "First paragraph about history.\n\nSecond paragraph about science.\n\nThird paragraph about art."
         result = humanize(text)
         paragraphs = [p for p in result.split("\n\n") if p.strip()]
         assert len(paragraphs) == 3

@@ -1,4 +1,5 @@
 """Tool: drive_create_slides — create a Google Slides presentation."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -17,8 +18,7 @@ class DriveCreateSlidesTool:
             "function": {
                 "name": "drive_create_slides",
                 "description": (
-                    "Create a native Google Slides presentation in Drive. "
-                    "Returns the web link to the new presentation."
+                    "Create a native Google Slides presentation in Drive. Returns the web link to the new presentation."
                 ),
                 "parameters": {
                     "type": "object",
@@ -29,10 +29,7 @@ class DriveCreateSlidesTool:
                         },
                         "content": {
                             "type": "string",
-                            "description": (
-                                "Outline or content for the slides "
-                                "(used as initial description)"
-                            ),
+                            "description": ("Outline or content for the slides (used as initial description)"),
                         },
                         "folder_id": {
                             "type": "string",
@@ -45,9 +42,7 @@ class DriveCreateSlidesTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.drive.client import DriveClient
 
         title = params["title"]

@@ -8,6 +8,7 @@ Resolution order for a given task:
   2. config.tier_models[tier]    -- teacher's tier preference
   3. DEFAULT_TIER_MODELS[tier]   -- built-in defaults
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -31,7 +32,6 @@ TASK_TIERS: dict[str, ModelTier] = {
     "bellringer": ModelTier.FAST,
     "formatting": ModelTier.FAST,
     "image_quality": ModelTier.FAST,  # Vision quality checks use fast tier
-
     # Deep tier — maximum intelligence for everything that matters
     "lesson_plan": ModelTier.DEEP,
     "unit_plan": ModelTier.DEEP,

@@ -33,8 +33,12 @@ def _unit_json(*, topic, grade, subject, weeks, standards):
 
     unit_plan = _run_async(
         plan_unit(
-            subject=subject, grade_level=grade, topic=topic,
-            duration_weeks=weeks, persona=persona, standards=std_list,
+            subject=subject,
+            grade_level=grade,
+            topic=topic,
+            duration_weeks=weeks,
+            persona=persona,
+            standards=std_list,
         )
     )
 
@@ -57,26 +61,26 @@ def _unit_json(*, topic, grade, subject, weeks, standards):
 def unit(
     topic: str = typer.Argument(..., help="Unit topic (e.g., 'Photosynthesis')"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    subject: Optional[str] = typer.Option(
-        None, "--subject", "-s", help="Subject area (reads from profile if not set)"
-    ),
+    subject: Optional[str] = typer.Option(None, "--subject", "-s", help="Subject area (reads from profile if not set)"),
     weeks: int = typer.Option(3, "--weeks", "-w", help="Duration in weeks"),
-    standards: Optional[str] = typer.Option(
-        None, "--standards", help="Comma-separated standards"
-    ),
-    fmt: str = typer.Option(
-        "markdown", "--format", "-f", help="Export format: markdown, pdf, docx"
-    ),
+    standards: Optional[str] = typer.Option(None, "--standards", help="Comma-separated standards"),
+    fmt: str = typer.Option("markdown", "--format", "-f", help="Export format: markdown, pdf, docx"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """Plan a complete curriculum unit."""
     if subject is None:
         from clawed.commands._helpers import get_default_subject
+
         subject = get_default_subject()
     if json_output:
         run_json_command(
-            "gen.unit", _unit_json,
-            topic=topic, grade=grade, subject=subject, weeks=weeks, standards=standards,
+            "gen.unit",
+            _unit_json,
+            topic=topic,
+            grade=grade,
+            subject=subject,
+            weeks=weeks,
+            standards=standards,
         )
         return
 
@@ -137,18 +141,10 @@ def unit(
 def year_map(
     subject: str = typer.Argument(..., help="Subject area (e.g., 'Math')"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    standards: Optional[str] = typer.Option(
-        None, "--standards", help="Comma-separated standards"
-    ),
-    weeks: int = typer.Option(
-        36, "--weeks", "-w", help="Total instructional weeks"
-    ),
-    school_year: str = typer.Option(
-        "", "--school-year", help="School year label (e.g., '2025-26')"
-    ),
-    fmt: str = typer.Option(
-        "markdown", "--format", "-f", help="Export format: markdown, pdf, docx"
-    ),
+    standards: Optional[str] = typer.Option(None, "--standards", help="Comma-separated standards"),
+    weeks: int = typer.Option(36, "--weeks", "-w", help="Total instructional weeks"),
+    school_year: str = typer.Option("", "--school-year", help="School year label (e.g., '2025-26')"),
+    fmt: str = typer.Option("markdown", "--format", "-f", help="Export format: markdown, pdf, docx"),
 ):
     """Generate a full-year curriculum map with unit sequence, big ideas, and assessment calendar."""
     check_api_key_or_exit()
@@ -167,9 +163,7 @@ def year_map(
     )
 
     with _safe_progress(console=console) as progress:
-        task = progress.add_task(
-            "Generating full-year curriculum map...", total=None
-        )
+        task = progress.add_task("Generating full-year curriculum map...", total=None)
         mapper = CurriculumMapper()
         try:
             result = _run_async(
@@ -195,22 +189,14 @@ def year_map(
     console.print(f"[green]Exported:[/green] {export_path}")
 
     # Summary table
-    table = Table(
-        title=f"Year Map — {result.subject}, Grade {result.grade_level}"
-    )
+    table = Table(title=f"Year Map — {result.subject}, Grade {result.grade_level}")
     table.add_column("#", style="dim")
     table.add_column("Unit", style="bold")
     table.add_column("Weeks", justify="right")
     table.add_column("Essential Questions")
     for u in result.units:
-        eq_preview = (
-            u.essential_questions[0][:60] + "..."
-            if u.essential_questions
-            else "—"
-        )
-        table.add_row(
-            str(u.unit_number), u.title, str(u.duration_weeks), eq_preview
-        )
+        eq_preview = u.essential_questions[0][:60] + "..." if u.essential_questions else "—"
+        table.add_row(str(u.unit_number), u.title, str(u.duration_weeks), eq_preview)
     console.print(table)
 
     if result.big_ideas:
@@ -222,18 +208,10 @@ def year_map(
 
 @generate_app.command()
 def pacing(
-    year_map_file: str = typer.Option(
-        ..., "--year-map", "-y", help="Path to year map JSON"
-    ),
-    start_date: str = typer.Option(
-        ..., "--start-date", "-d", help="First instructional day (YYYY-MM-DD)"
-    ),
-    calendar_file: Optional[str] = typer.Option(
-        None, "--calendar", "-c", help="School calendar JSON file"
-    ),
-    fmt: str = typer.Option(
-        "markdown", "--format", "-f", help="Export format: markdown, pdf, docx"
-    ),
+    year_map_file: str = typer.Option(..., "--year-map", "-y", help="Path to year map JSON"),
+    start_date: str = typer.Option(..., "--start-date", "-d", help="First instructional day (YYYY-MM-DD)"),
+    calendar_file: Optional[str] = typer.Option(None, "--calendar", "-c", help="School calendar JSON file"),
+    fmt: str = typer.Option("markdown", "--format", "-f", help="Export format: markdown, pdf, docx"),
 ):
     """Generate a week-by-week pacing guide from a year map."""
     check_api_key_or_exit()
@@ -257,22 +235,17 @@ def pacing(
             import json as _json
 
             cal_data = _json.loads(cal_path.read_text(encoding="utf-8"))
-            school_cal = [
-                SchoolCalendarEvent.model_validate(e) for e in cal_data
-            ]
+            school_cal = [SchoolCalendarEvent.model_validate(e) for e in cal_data]
 
     console.print(
         Panel(
-            f"[bold]{ym.subject}[/bold] Grade {ym.grade_level}"
-            f" | Starting {start_date}",
+            f"[bold]{ym.subject}[/bold] Grade {ym.grade_level} | Starting {start_date}",
             title="Generating Pacing Guide",
         )
     )
 
     with _safe_progress(console=console) as progress:
-        task = progress.add_task(
-            "Creating week-by-week pacing guide...", total=None
-        )
+        task = progress.add_task("Creating week-by-week pacing guide...", total=None)
         mapper = CurriculumMapper()
         try:
             guide = _run_async(
@@ -296,9 +269,7 @@ def pacing(
     console.print(f"[green]Exported:[/green] {export_path}")
 
     # Summary table
-    table = Table(
-        title=f"Pacing Guide — {guide.subject}, Grade {guide.grade_level}"
-    )
+    table = Table(title=f"Pacing Guide — {guide.subject}, Grade {guide.grade_level}")
     table.add_column("Week", style="dim", justify="right")
     table.add_column("Dates")
     table.add_column("Unit", style="bold")
@@ -313,10 +284,7 @@ def pacing(
         )
     console.print(table)
     if len(guide.weeks) > 10:
-        console.print(
-            f"[dim]  ... and {len(guide.weeks) - 10} more weeks"
-            " (see exported file)[/dim]"
-        )
+        console.print(f"[dim]  ... and {len(guide.weeks) - 10} more weeks (see exported file)[/dim]")
 
 
 # ── Full pipeline ────────────────────────────────────────────────────────
@@ -326,20 +294,12 @@ def pacing(
 def full(
     topic: str = typer.Argument(..., help="Unit topic"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    subject: str = typer.Option(
-        "Science", "--subject", "-s", help="Subject area"
-    ),
+    subject: str = typer.Option("Science", "--subject", "-s", help="Subject area"),
     weeks: int = typer.Option(3, "--weeks", "-w", help="Duration in weeks"),
-    standards: Optional[str] = typer.Option(
-        None, "--standards", help="Comma-separated standards"
-    ),
-    homework: bool = typer.Option(
-        True, "--homework/--no-homework", help="Include homework"
-    ),
+    standards: Optional[str] = typer.Option(None, "--standards", help="Comma-separated standards"),
+    homework: bool = typer.Option(True, "--homework/--no-homework", help="Include homework"),
     fmt: str = typer.Option("markdown", "--format", "-f", help="Export format"),
-    max_lessons: Optional[int] = typer.Option(
-        None, "--max-lessons", help="Limit lessons generated"
-    ),
+    max_lessons: Optional[int] = typer.Option(None, "--max-lessons", help="Limit lessons generated"),
 ):
     """End-to-end generation: unit plan + all lesson plans + all materials."""
     check_api_key_or_exit()
@@ -382,10 +342,7 @@ def full(
 
     save_unit(unit_plan, out_dir)
     export_unit(unit_plan, out_dir, fmt=fmt)
-    console.print(
-        f"[green]Unit plan:[/green] {unit_plan.title}"
-        f" ({len(unit_plan.daily_lessons)} lessons)"
-    )
+    console.print(f"[green]Unit plan:[/green] {unit_plan.title} ({len(unit_plan.daily_lessons)} lessons)")
 
     # Step 2: Lesson plans
     lesson_briefs = unit_plan.daily_lessons
@@ -394,9 +351,7 @@ def full(
 
     lessons = []
     with _safe_progress(console=console) as progress:
-        task = progress.add_task(
-            "Step 2/3: Generating lessons...", total=len(lesson_briefs)
-        )
+        task = progress.add_task("Step 2/3: Generating lessons...", total=len(lesson_briefs))
         for brief in lesson_briefs:
             progress.update(
                 task,
@@ -421,15 +376,11 @@ def full(
 
     # Step 3: Materials for each lesson
     with _safe_progress(console=console) as progress:
-        task = progress.add_task(
-            "Step 3/3: Generating materials...", total=len(lessons)
-        )
+        task = progress.add_task("Step 3/3: Generating materials...", total=len(lessons))
         for daily in lessons:
             progress.update(
                 task,
-                description=(
-                    f"Materials for lesson {daily.lesson_number}"
-                ),
+                description=(f"Materials for lesson {daily.lesson_number}"),
             )
             try:
                 mats = _run_async(generate_all_materials(daily, persona))
@@ -458,21 +409,15 @@ def full(
 
 @generate_app.command()
 def course(
-    subject: str = typer.Option(
-        ..., "--subject", "-s", help="Subject area"
-    ),
-    grade: str = typer.Option(
-        ..., "--grade", "-g", help="Grade level"
-    ),
+    subject: str = typer.Option(..., "--subject", "-s", help="Subject area"),
+    grade: str = typer.Option(..., "--grade", "-g", help="Grade level"),
     topics_file: str = typer.Option(
         ...,
         "--topics-file",
         "-t",
         help="Path to a text file with one topic per line",
     ),
-    weeks_per_topic: int = typer.Option(
-        2, "--weeks", "-w", help="Weeks per topic"
-    ),
+    weeks_per_topic: int = typer.Option(2, "--weeks", "-w", help="Weeks per topic"),
     fmt: str = typer.Option("markdown", "--format", "-f", help="Export format"),
 ):
     """Generate a full course — one unit per topic from a pacing guide."""
@@ -488,19 +433,14 @@ def course(
         console.print(f"[red]File not found:[/red] {path}")
         raise typer.Exit(1)
 
-    topics = [
-        line.strip()
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    topics = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not topics:
         console.print("[red]No topics found in file.[/red]")
         raise typer.Exit(1)
 
     console.print(
         Panel(
-            f"[bold]{subject} — Grade {grade}[/bold]\n"
-            f"{len(topics)} topics, {weeks_per_topic} weeks each",
+            f"[bold]{subject} — Grade {grade}[/bold]\n{len(topics)} topics, {weeks_per_topic} weeks each",
             title="Course Generation",
         )
     )
@@ -509,13 +449,9 @@ def course(
     units = []
 
     with _safe_progress(console=console) as progress:
-        task = progress.add_task(
-            "Generating course...", total=len(topics)
-        )
+        task = progress.add_task("Generating course...", total=len(topics))
         for i, topic in enumerate(topics, 1):
-            progress.update(
-                task, description=f"Unit {i}/{len(topics)}: {topic}"
-            )
+            progress.update(task, description=f"Unit {i}/{len(topics)}: {topic}")
             try:
                 unit_plan = _run_async(
                     plan_unit(

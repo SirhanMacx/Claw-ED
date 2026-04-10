@@ -3,6 +3,7 @@
 Supports: slides (PPTX), handout, doc (DOCX), pdf.
 Extracted from tg.py lines 1623-1693.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,6 +19,7 @@ def _load_lesson(lesson_id: str, teacher_id: str) -> DailyLesson | None:
     """Load a lesson from the database by ID."""
     try:
         from clawed.state import _get_conn
+
         with _get_conn() as conn:
             row = conn.execute(
                 "SELECT lesson_json FROM generated_lessons WHERE id = ? AND teacher_id = ?",
@@ -34,6 +36,7 @@ def _load_persona(teacher_id: str) -> TeacherPersona | None:
     """Load teacher persona from session state."""
     try:
         from clawed.state import TeacherSession
+
         session = TeacherSession.load(teacher_id)
         return session.persona
     except Exception:
@@ -48,9 +51,7 @@ class ExportHandler:
     async def export(self, lesson_id: str, teacher_id: str, fmt: str) -> GatewayResponse:
         """Export a lesson in the requested format."""
         if fmt not in self.SUPPORTED_FORMATS:
-            return GatewayResponse(
-                text=f"Format '{fmt}' is not supported. Try: slides, handout, doc, or pdf."
-            )
+            return GatewayResponse(text=f"Format '{fmt}' is not supported. Try: slides, handout, doc, or pdf.")
 
         lesson = _load_lesson(lesson_id, teacher_id)
         if not lesson:
@@ -58,6 +59,7 @@ class ExportHandler:
 
         persona = _load_persona(teacher_id)
         from clawed.paths import data_dir
+
         output_dir = data_dir() / "exports"
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -81,6 +83,7 @@ class ExportHandler:
             export_lesson_pptx,
             export_student_handout,
         )
+
         if fmt == "slides":
             return export_lesson_pptx(lesson, persona, output_dir, teacher_id=teacher_id)
         elif fmt == "handout":

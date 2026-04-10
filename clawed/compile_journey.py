@@ -7,6 +7,7 @@ tracking. Inspired by DeepTutor's Guided Learning mode.
 The output is a single self-contained HTML file (no external deps)
 that students can open in any browser.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,25 +37,26 @@ async def compile_journey(
 
     # Step 1: Hook (Do Now)
     if master.do_now:
-        steps.append({
-            "title": "Warm Up",
-            "type": "question",
-            "content": master.do_now.stimulus,
-            "questions": master.do_now.questions[:2],
-        })
+        steps.append(
+            {
+                "title": "Warm Up",
+                "type": "question",
+                "content": master.do_now.stimulus,
+                "questions": master.do_now.questions[:2],
+            }
+        )
 
     # Step 2-N: Vocabulary (if any)
     if master.vocabulary:
-        vocab_items = [
-            f"<b>{v.term}</b>: {v.definition}"
-            for v in master.vocabulary[:8]
-        ]
-        steps.append({
-            "title": "Key Vocabulary",
-            "type": "reveal",
-            "content": "Learn these terms before we begin.",
-            "items": vocab_items,
-        })
+        vocab_items = [f"<b>{v.term}</b>: {v.definition}" for v in master.vocabulary[:8]]
+        steps.append(
+            {
+                "title": "Key Vocabulary",
+                "type": "reveal",
+                "content": "Learn these terms before we begin.",
+                "items": vocab_items,
+            }
+        )
 
     # Step 3-N: Direct instruction sections
     for i, section in enumerate(master.direct_instruction):
@@ -69,25 +71,24 @@ async def compile_journey(
 
     # Step N+1: Guided practice
     if master.guided_notes:
-        steps.append({
-            "title": "Check Your Understanding",
-            "type": "quiz",
-            "items": [
-                {"q": n.prompt, "a": n.answer}
-                for n in master.guided_notes[:5]
-            ],
-        })
+        steps.append(
+            {
+                "title": "Check Your Understanding",
+                "type": "quiz",
+                "items": [{"q": n.prompt, "a": n.answer} for n in master.guided_notes[:5]],
+            }
+        )
 
     # Step N+2: Exit ticket
     if master.exit_ticket:
-        steps.append({
-            "title": "Exit Ticket",
-            "type": "question",
-            "content": master.exit_ticket[0].stimulus if master.exit_ticket else "",
-            "questions": [
-                q.question for q in master.exit_ticket[:3]
-            ],
-        })
+        steps.append(
+            {
+                "title": "Exit Ticket",
+                "type": "question",
+                "content": master.exit_ticket[0].stimulus if master.exit_ticket else "",
+                "questions": [q.question for q in master.exit_ticket[:3]],
+            }
+        )
 
     if not steps:
         return None
@@ -96,7 +97,7 @@ async def compile_journey(
     steps_json = json.dumps(steps)
     safe_title = master.title.replace('"', '\\"')
 
-    html = f'''<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -223,9 +224,10 @@ document.addEventListener("keydown",function(e){{
 render();
 </script>
 </body>
-</html>'''
+</html>"""
 
     from clawed.io import safe_filename
+
     filename = safe_filename(master.title, max_len=50) + "_journey.html"
     out_path = output_dir / filename
     out_path.write_text(html, encoding="utf-8")

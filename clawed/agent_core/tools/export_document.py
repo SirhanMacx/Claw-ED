@@ -1,4 +1,5 @@
 """Tool: export_document — wraps PDF/DOCX/PPTX export functions."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,18 +46,12 @@ class ExportDocumentTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         topic = params["topic"]
         fmt = params.get("format", "pdf")
         output_dir_str = params.get("output_dir", "")
 
-        output_dir = (
-            Path(output_dir_str).expanduser().resolve()
-            if output_dir_str
-            else Path("clawed_output").resolve()
-        )
+        output_dir = Path(output_dir_str).expanduser().resolve() if output_dir_str else Path("clawed_output").resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -96,12 +91,15 @@ class ExportDocumentTool:
             # Now export in the requested format
             if fmt == "pdf":
                 from clawed.export_pdf import export_lesson_pdf
+
                 path = export_lesson_pdf(lesson, persona, output_dir)
             elif fmt == "docx":
                 from clawed.export_docx import export_lesson_docx
+
                 path = export_lesson_docx(lesson, persona, output_dir)
             elif fmt == "pptx":
                 from clawed.export_pptx import export_lesson_pptx
+
                 path = export_lesson_pptx(lesson, persona, output_dir, teacher_id=context.teacher_id)
             else:
                 return ToolResult(text=f"Unsupported format: {fmt}")

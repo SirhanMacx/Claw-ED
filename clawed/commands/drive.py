@@ -27,26 +27,21 @@ def _check_google_deps() -> bool:
         import google.auth  # noqa: F401
         import google_auth_oauthlib  # noqa: F401
         import googleapiclient  # noqa: F401
+
         return True
     except ImportError:
         console.print(
-            "[red]Google Drive dependencies not installed.[/red]\n"
-            "Run: [bold]pip install clawed[google][/bold]"
+            "[red]Google Drive dependencies not installed.[/red]\nRun: [bold]pip install clawed[google][/bold]"
         )
         return False
 
 
 @drive_app.command()
 def auth(
-    client_id: Optional[str] = typer.Option(
-        None, "--client-id", help="Google OAuth client ID"
-    ),
-    client_secret: Optional[str] = typer.Option(
-        None, "--client-secret", help="Google OAuth client secret"
-    ),
+    client_id: Optional[str] = typer.Option(None, "--client-id", help="Google OAuth client ID"),
+    client_secret: Optional[str] = typer.Option(None, "--client-secret", help="Google OAuth client secret"),
     credentials_file: Optional[str] = typer.Option(
-        None, "--credentials", "-c",
-        help="Path to Google OAuth credentials.json (from Google Cloud Console)"
+        None, "--credentials", "-c", help="Path to Google OAuth credentials.json (from Google Cloud Console)"
     ),
 ) -> None:
     """Authenticate Ed with your Google Drive.
@@ -58,6 +53,7 @@ def auth(
         raise typer.Exit(1)
 
     from clawed.agent_core.drive.auth import run_oauth_flow
+
     try:
         run_oauth_flow(
             client_id=client_id,
@@ -73,20 +69,20 @@ def auth(
 
 @drive_app.command(name="list")
 def list_files(
-    folder_id: Optional[str] = typer.Argument(
-        None, help="Drive folder ID (default: root)"
-    ),
+    folder_id: Optional[str] = typer.Argument(None, help="Drive folder ID (default: root)"),
 ) -> None:
     """List files in a Google Drive folder."""
     if not _check_google_deps():
         raise typer.Exit(1)
 
     from clawed.agent_core.drive.auth import is_authenticated
+
     if not is_authenticated():
         console.print("[red]Not authenticated. Run:[/red] clawed drive auth")
         raise typer.Exit(1)
 
     from clawed.agent_core.drive.client import DriveClient
+
     client = DriveClient()
     files = client.list_files(folder_id=folder_id or "root")
     if not files:
@@ -109,6 +105,7 @@ def ingest(
         raise typer.Exit(1)
 
     from clawed.agent_core.drive.auth import is_authenticated
+
     if not is_authenticated():
         console.print("[red]Not authenticated. Run:[/red] clawed drive auth")
         raise typer.Exit(1)
@@ -190,6 +187,7 @@ def ingest(
 def _extract_folder_id(url_or_id: str) -> str:
     """Extract folder ID from a Drive URL or return as-is if already an ID."""
     import re
+
     # Match: https://drive.google.com/drive/folders/FOLDER_ID
     match = re.search(r"folders/([a-zA-Z0-9_-]+)", url_or_id)
     if match:

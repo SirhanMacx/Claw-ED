@@ -19,9 +19,7 @@ persona_app = typer.Typer(help="Manage teacher personas.")
 standards_app = typer.Typer(help="Browse education standards (CCSS, NGSS, C3).")
 templates_app = typer.Typer(help="Browse lesson structure templates.")
 skills_app = typer.Typer(help="Browse subject-specific pedagogy skills.")
-school_app = typer.Typer(
-    help="Multi-teacher school deployment and shared curriculum."
-)
+school_app = typer.Typer(help="Multi-teacher school deployment and shared curriculum.")
 class_app = typer.Typer(help="Manage student class codes.")
 
 
@@ -65,19 +63,14 @@ def register_stats(app: typer.Typer) -> None:
         overview.add_row("Rated lessons", str(data["rated_lessons"]))
         overview.add_row("Total units", str(data["total_units"]))
         avg = data["overall_avg_rating"]
-        stars = (
-            ("*" * round(avg) + " " * (5 - round(avg)))
-            if avg
-            else "No ratings yet"
-        )
+        stars = ("*" * round(avg) + " " * (5 - round(avg))) if avg else "No ratings yet"
         overview.add_row(
             "Average rating",
             f"{stars} ({avg}/5)" if avg else stars,
         )
         overview.add_row(
             "Usage streak",
-            f"{data['streak']} day"
-            f"{'s' if data['streak'] != 1 else ''}",
+            f"{data['streak']} day{'s' if data['streak'] != 1 else ''}",
         )
         console.print(
             Panel(
@@ -90,18 +83,14 @@ def register_stats(app: typer.Typer) -> None:
         # Rating distribution
         dist = data["rating_distribution"]
         if any(dist.values()):
-            dist_table = Table(
-                show_header=True, title="Rating Distribution"
-            )
+            dist_table = Table(show_header=True, title="Rating Distribution")
             dist_table.add_column("Stars", style="yellow")
             dist_table.add_column("Count", justify="right")
             dist_table.add_column("Bar")
             max_count = max(dist.values()) or 1
             for star in range(5, 0, -1):
                 count = dist.get(star, 0)
-                bar_len = (
-                    int((count / max_count) * 20) if max_count else 0
-                )
+                bar_len = int((count / max_count) * 20) if max_count else 0
                 bar = "#" * bar_len
                 dist_table.add_row(
                     f"{'*' * star}",
@@ -113,39 +102,23 @@ def register_stats(app: typer.Typer) -> None:
         # Ratings by subject
         by_subject = data["by_subject"]
         if by_subject:
-            subj_table = Table(
-                show_header=True, title="Ratings by Subject"
-            )
+            subj_table = Table(show_header=True, title="Ratings by Subject")
             subj_table.add_column("Subject")
             subj_table.add_column("Avg Rating", justify="right")
-            for subj, avg_r in sorted(
-                by_subject.items(), key=lambda x: x[1], reverse=True
-            ):
-                color = (
-                    "green"
-                    if avg_r >= 4
-                    else "yellow" if avg_r >= 3 else "red"
-                )
-                subj_table.add_row(
-                    subj, f"[{color}]{avg_r}/5[/{color}]"
-                )
+            for subj, avg_r in sorted(by_subject.items(), key=lambda x: x[1], reverse=True):
+                color = "green" if avg_r >= 4 else "yellow" if avg_r >= 3 else "red"
+                subj_table.add_row(subj, f"[{color}]{avg_r}/5[/{color}]")
             console.print(subj_table)
 
         # Top topics
         top = data["top_topics"]
         if top:
-            top_table = Table(
-                show_header=True, title="Most Effective Topics"
-            )
+            top_table = Table(show_header=True, title="Most Effective Topics")
             top_table.add_column("Topic")
             top_table.add_column("Avg Rating", justify="right")
             top_table.add_column("Lessons", justify="right")
             for t in top:
-                color = (
-                    "green"
-                    if t["avg_rating"] >= 4
-                    else "yellow" if t["avg_rating"] >= 3 else "red"
-                )
+                color = "green" if t["avg_rating"] >= 4 else "yellow" if t["avg_rating"] >= 3 else "red"
                 top_table.add_row(
                     t["topic"],
                     f"[{color}]{t['avg_rating']}/5[/{color}]",
@@ -173,9 +146,7 @@ def register_stats(app: typer.Typer) -> None:
 
         if not data["rated_lessons"]:
             console.print(
-                "\n[dim]No ratings yet. Generate a lesson with"
-                " 'clawed chat' and rate it to see analytics"
-                " here.[/dim]"
+                "\n[dim]No ratings yet. Generate a lesson with 'clawed chat' and rate it to see analytics here.[/dim]"
             )
         console.print()
 
@@ -203,17 +174,10 @@ def register_status(app: typer.Typer) -> None:
         model = model_map.get(provider, cfg.openai_model)
 
         has_token = bool(cfg.telegram_bot_token)
-        tg_status = (
-            "[green]configured[/green]"
-            if has_token
-            else "[dim]not set[/dim]"
-        )
+        tg_status = "[green]configured[/green]" if has_token else "[dim]not set[/dim]"
 
         console.print(
-            f"[bold]{name}[/bold] | "
-            f"Model: {model} ({provider}) | "
-            f"Telegram: {tg_status} | "
-            f"Output: {cfg.output_dir}"
+            f"[bold]{name}[/bold] | Model: {model} ({provider}) | Telegram: {tg_status} | Output: {cfg.output_dir}"
         )
 
 

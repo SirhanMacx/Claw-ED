@@ -12,6 +12,7 @@ The gateway handles:
 
 Transports (Telegram, Web, CLI) just render the GatewayResponse.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -48,6 +49,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ActivityEvent:
     """A single event for the TUI activity feed."""
+
     timestamp: float
     event_type: str
     actor: str
@@ -58,6 +60,7 @@ class ActivityEvent:
 @dataclass
 class GatewayStats:
     """Live counters for the gateway dashboard."""
+
     messages_today: int = 0
     generations_today: int = 0
     errors_today: int = 0
@@ -104,18 +107,21 @@ class Gateway:
                 self._event_bus = asyncio.Queue(maxsize=500)
         return self._event_bus
 
-    async def handle(self, message: str, teacher_id: str,
-                     files: list[Path] | None = None,
-                     progress_callback=None) -> GatewayResponse:
+    async def handle(
+        self, message: str, teacher_id: str, files: list[Path] | None = None, progress_callback=None
+    ) -> GatewayResponse:
         """Process any message from any transport."""
         self._stats.messages_today += 1
         self.active_sessions[teacher_id] = {
             "last_activity": datetime.now().isoformat(),
         }
-        await self.emit("message_received", {
-            "teacher_id": teacher_id,
-            "text": message[:200],
-        })
+        await self.emit(
+            "message_received",
+            {
+                "teacher_id": teacher_id,
+                "text": message[:200],
+            },
+        )
 
         try:
             if self._onboard.is_onboarding(teacher_id):
@@ -124,8 +130,7 @@ class Gateway:
             if not has_config():
                 return await self._onboard.step(teacher_id, message)
 
-            return await self._dispatch(message, teacher_id, files,
-                                         progress_callback=progress_callback)
+            return await self._dispatch(message, teacher_id, files, progress_callback=progress_callback)
 
         except Exception as e:
             logger.warning("Gateway error: %s", e)
@@ -137,16 +142,14 @@ class Gateway:
             if "401" in err or "unauthorized" in err or "api key" in err:
                 return GatewayResponse(
                     text="Your AI provider key doesn't seem to be working. "
-                         "Run `clawed setup --reset` to reconfigure it."
+                    "Run `clawed setup --reset` to reconfigure it."
                 )
             if "connection" in err or "connect" in err or "timeout" in err:
                 return GatewayResponse(
-                    text="Can't connect to your AI provider right now. "
-                         "Check your internet connection and try again."
+                    text="Can't connect to your AI provider right now. Check your internet connection and try again."
                 )
             return GatewayResponse(
-                text="Something went wrong. Try again, or run "
-                     "`clawed setup --reset` to reconfigure."
+                text="Something went wrong. Try again, or run `clawed setup --reset` to reconfigure."
             )
 
     async def handle_callback(self, callback_data: str, teacher_id: str) -> GatewayResponse:
@@ -186,17 +189,15 @@ class Gateway:
             "active_sessions": len(self.active_sessions),
         }
 
-    async def _dispatch(self, message: str, teacher_id: str,
-                        files: list[Path] | None = None,
-                        progress_callback=None) -> GatewayResponse:
+    async def _dispatch(
+        self, message: str, teacher_id: str, files: list[Path] | None = None, progress_callback=None
+    ) -> GatewayResponse:
         """Route a message to the appropriate handler based on intent."""
         if files:
-            return await self._ingest.handle(teacher_id, files,
-                                             progress_callback=progress_callback)
+            return await self._ingest.handle(teacher_id, files, progress_callback=progress_callback)
 
         if self._looks_like_path(message):
-            return await self._ingest.handle(teacher_id, path=message.strip(),
-                                             progress_callback=progress_callback)
+            return await self._ingest.handle(teacher_id, path=message.strip(), progress_callback=progress_callback)
 
         # NOTE: parse_intent() is keyword/regex-based (zero cost).
         # When upgraded to LLM-based detection, use:
@@ -215,9 +216,14 @@ class Gateway:
             self._stats.generations_today += 1
             return await self._generate.unit(parsed.topic or message, teacher_id)
 
-        if intent in (Intent.GENERATE_MATERIALS, Intent.GENERATE_ASSESSMENT,
-                      Intent.GENERATE_BELLRINGER, Intent.GENERATE_DIFFERENTIATION,
-                      Intent.GENERATE_YEAR_MAP, Intent.GENERATE_PACING_GUIDE):
+        if intent in (
+            Intent.GENERATE_MATERIALS,
+            Intent.GENERATE_ASSESSMENT,
+            Intent.GENERATE_BELLRINGER,
+            Intent.GENERATE_DIFFERENTIATION,
+            Intent.GENERATE_YEAR_MAP,
+            Intent.GENERATE_PACING_GUIDE,
+        ):
             self._stats.generations_today += 1
             return await self._generate.lesson(message, teacher_id)
 
@@ -298,9 +304,7 @@ class Gateway:
                 )
             else:
                 persona_context = (
-                    session.persona.to_prompt_context()
-                    if session.persona
-                    else "Teacher persona not yet configured."
+                    session.persona.to_prompt_context() if session.persona else "Teacher persona not yet configured."
                 )
                 system = (
                     "You are Claw-ED, a warm and friendly AI teaching assistant. "
@@ -338,6 +342,7 @@ class Gateway:
             try:
                 from clawed.generation import generate_freeform
                 from clawed.state import TeacherSession as FallbackSession
+
                 session = FallbackSession.load(teacher_id)
                 response = await generate_freeform(message, session)
                 return GatewayResponse(text=response)
@@ -363,6 +368,7 @@ class Gateway:
         try:
             from clawed.hermes_plugin import _show_status
             from clawed.state import TeacherSession
+
             session = TeacherSession.load(teacher_id)
             return GatewayResponse(text=_show_status(session))
         except Exception as e:
@@ -372,7 +378,8 @@ class Gateway:
     def _looks_like_path(text: str) -> bool:
         stripped = text.strip()
         return (
-            stripped.startswith("/") and not stripped.startswith("/help")
+            stripped.startswith("/")
+            and not stripped.startswith("/help")
             and not stripped.startswith("/start")
             and not stripped.startswith("/status")
             and "/" in stripped[1:]
@@ -395,8 +402,7 @@ class Gateway:
         await self.event_bus.put(event)
 
     # Backward compatibility
-    async def process_message(self, text: str, teacher_id: str = "cli",
-                              teacher_name: str = "Teacher") -> str:
+    async def process_message(self, text: str, teacher_id: str = "cli", teacher_name: str = "Teacher") -> str:
         """Backward-compatible: process message and return text string."""
         r = await self.handle(text, teacher_id)
         return r.text

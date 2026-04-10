@@ -48,14 +48,14 @@ def _simulation_create_json(*, topic, grade, subject, sim_type):
         ],
     )
 
-    master = _run_async(
-        generate_master_content(lesson_number=1, unit=unit_plan, persona=persona)
-    )
+    master = _run_async(generate_master_content(lesson_number=1, unit=unit_plan, persona=persona))
 
     out_dir = _output_dir()
     sim_path = _run_async(
         compile_simulation(
-            master=master, persona=persona, output_dir=out_dir,
+            master=master,
+            persona=persona,
+            output_dir=out_dir,
             simulation_type=sim_type,
         )
     )
@@ -68,9 +68,7 @@ def _simulation_create_json(*, topic, grade, subject, sim_type):
 
 @simulation_app.command("create")
 def create(
-    topic: str = typer.Argument(
-        ..., help="Simulation topic (e.g. 'Pendulum Motion')"
-    ),
+    topic: str = typer.Argument(..., help="Simulation topic (e.g. 'Pendulum Motion')"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
     subject: Optional[str] = typer.Option(
         None, "--subject", "-s", help="Subject area (reads from your profile if not set)"
@@ -78,8 +76,7 @@ def create(
     sim_type: str = typer.Option(
         "",
         "--type",
-        help="Simulation type (e.g. 'physics', 'chemistry', 'math', "
-        "'biology'). Leave empty for AI to decide.",
+        help="Simulation type (e.g. 'physics', 'chemistry', 'math', 'biology'). Leave empty for AI to decide.",
     ),
     from_lesson: Optional[str] = typer.Option(
         None,
@@ -104,12 +101,17 @@ def create(
     # Resolve subject from teacher profile if not provided
     if subject is None:
         from clawed.commands._helpers import get_default_subject
+
         subject = get_default_subject()
 
     if json_output:
         run_json_command(
-            "simulate.create", _simulation_create_json,
-            topic=topic, grade=grade, subject=subject, sim_type=sim_type,
+            "simulate.create",
+            _simulation_create_json,
+            topic=topic,
+            grade=grade,
+            subject=subject,
+            sim_type=sim_type,
         )
         return
 
@@ -128,9 +130,7 @@ def create(
         if not lesson_path.exists():
             console.print(f"[red]File not found:[/red] {from_lesson}")
             raise typer.Exit(1)
-        master = MasterContent.model_validate_json(
-            lesson_path.read_text(encoding="utf-8")
-        )
+        master = MasterContent.model_validate_json(lesson_path.read_text(encoding="utf-8"))
     else:
         # Generate a lesson first, then make the simulation
         from clawed.lesson import generate_master_content
@@ -143,9 +143,7 @@ def create(
             topic=topic,
             duration_weeks=1,
             overview=f"A lesson on {topic} for grade {grade} {subject}.",
-            essential_questions=[
-                f"What are the key concepts of {topic}?"
-            ],
+            essential_questions=[f"What are the key concepts of {topic}?"],
             daily_lessons=[
                 LessonBrief(
                     lesson_number=1,
@@ -157,9 +155,7 @@ def create(
         )
 
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating lesson content...", total=None
-            )
+            task = progress.add_task("Generating lesson content...", total=None)
             master = _run_async(
                 generate_master_content(
                     lesson_number=1,
@@ -171,17 +167,16 @@ def create(
 
     # Warn about model capability for simulations
     from clawed.models import AppConfig as _SimConfig
+
     _sim_cfg = _SimConfig.load()
-    _sim_model = getattr(_sim_cfg, 'ollama_model', '') if _sim_cfg.provider.value == 'ollama' else ''
-    if _sim_model and any(s in _sim_model.lower() for s in ['haiku', 'flash', 'mini', 'small']):
+    _sim_model = getattr(_sim_cfg, "ollama_model", "") if _sim_cfg.provider.value == "ollama" else ""
+    if _sim_model and any(s in _sim_model.lower() for s in ["haiku", "flash", "mini", "small"]):
         console.print("[yellow]Note: Interactive simulations work best with code-capable models.[/yellow]")
 
     # Generate the simulation
     out_dir = _output_dir()
     with _safe_progress(console=console) as progress:
-        task = progress.add_task(
-            "Building your simulation (every simulation is unique)...", total=None
-        )
+        task = progress.add_task("Building your simulation (every simulation is unique)...", total=None)
         sim_path = _run_async(
             compile_simulation(
                 master=master,
@@ -193,9 +188,7 @@ def create(
         progress.update(task, description="Simulation ready!")
 
     console.print(f"\n[green]Simulation created:[/green] {sim_path}")
-    console.print(
-        f"[dim]Open in browser: [bold]open {sim_path}[/bold][/dim]"
-    )
+    console.print(f"[dim]Open in browser: [bold]open {sim_path}[/bold][/dim]")
 
     # Auto-open in browser
     try:
@@ -219,7 +212,7 @@ def gallery():
     if not sims:
         console.print(
             "[yellow]No simulations generated yet.[/yellow] "
-            "Run [bold]clawed simulate create \"Topic\"[/bold] to make one."
+            'Run [bold]clawed simulate create "Topic"[/bold] to make one.'
         )
         raise typer.Exit(0)
 
@@ -229,9 +222,5 @@ def gallery():
         size = s.stat().st_size / 1024
         console.print(f"  {i}. {name} ({size:.0f} KB)")
 
-    console.print(
-        f"\n[dim]Simulations are in: {out_dir}[/dim]"
-    )
-    console.print(
-        "[dim]Open any simulation: [bold]open path/to/simulation.html[/bold][/dim]"
-    )
+    console.print(f"\n[dim]Simulations are in: {out_dir}[/dim]")
+    console.print("[dim]Open any simulation: [bold]open path/to/simulation.html[/bold][/dim]")

@@ -45,11 +45,14 @@ class BotStateStore:
 
     def get(self, chat_id: int) -> Optional[dict]:
         """Load a chat state row, or None if not found."""
-        row = self._get_conn().execute(
-            "SELECT state, pending_topic, last_lesson_id, updated_at "
-            "FROM chat_states WHERE chat_id = ?",
-            (chat_id,),
-        ).fetchone()
+        row = (
+            self._get_conn()
+            .execute(
+                "SELECT state, pending_topic, last_lesson_id, updated_at FROM chat_states WHERE chat_id = ?",
+                (chat_id,),
+            )
+            .fetchone()
+        )
         if row is None:
             return None
         return {
@@ -76,9 +79,7 @@ class BotStateStore:
 
     def delete(self, chat_id: int) -> None:
         """Remove a chat state row."""
-        self._get_conn().execute(
-            "DELETE FROM chat_states WHERE chat_id = ?", (chat_id,)
-        )
+        self._get_conn().execute("DELETE FROM chat_states WHERE chat_id = ?", (chat_id,))
         self._get_conn().commit()
 
     def close(self) -> None:
@@ -93,6 +94,7 @@ class StudentProgressStore:
     def __init__(self, db_path: Optional[Path] = None) -> None:
         if db_path is None:
             from clawed.paths import data_dir
+
             db_path = data_dir() / "bot_state.db"
         self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -119,18 +121,15 @@ class StudentProgressStore:
                 struggle_topics_json TEXT NOT NULL DEFAULT '[]'
             )"""
         )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_sp_class ON student_progress(class_code)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sp_class ON student_progress(class_code)")
         conn.commit()
 
     def get(self, student_id: str, class_code: str) -> Optional[dict]:
         """Load a student progress row."""
         import json
+
         row_id = f"{student_id}:{class_code}"
-        row = self._get_conn().execute(
-            "SELECT * FROM student_progress WHERE id = ?", (row_id,)
-        ).fetchone()
+        row = self._get_conn().execute("SELECT * FROM student_progress WHERE id = ?", (row_id,)).fetchone()
         if row is None:
             return None
         return {
@@ -156,6 +155,7 @@ class StudentProgressStore:
     ) -> None:
         """Upsert a student progress row."""
         import json
+
         row_id = f"{student_id}:{class_code}"
         topics_json = json.dumps(topics_asked or {})
         struggle_json = json.dumps(struggle_topics or [])
@@ -170,18 +170,22 @@ class StudentProgressStore:
                 total_questions = excluded.total_questions,
                 last_active = excluded.last_active,
                 struggle_topics_json = excluded.struggle_topics_json""",
-            (row_id, student_id, class_code, student_name,
-             topics_json, total_questions, last_active, struggle_json),
+            (row_id, student_id, class_code, student_name, topics_json, total_questions, last_active, struggle_json),
         )
         self._get_conn().commit()
 
     def get_class_progress(self, class_code: str) -> list[dict]:
         """Get all student progress entries for a class."""
         import json
-        rows = self._get_conn().execute(
-            "SELECT * FROM student_progress WHERE class_code = ? ORDER BY total_questions DESC",
-            (class_code,),
-        ).fetchall()
+
+        rows = (
+            self._get_conn()
+            .execute(
+                "SELECT * FROM student_progress WHERE class_code = ? ORDER BY total_questions DESC",
+                (class_code,),
+            )
+            .fetchall()
+        )
         return [
             {
                 "student_id": r["student_id"],
@@ -207,6 +211,7 @@ class StudentBotStateStore:
     def __init__(self, db_path: Optional[Path] = None) -> None:
         if db_path is None:
             from clawed.paths import data_dir
+
             db_path = data_dir() / "bot_state.db"
         self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,11 +238,14 @@ class StudentBotStateStore:
 
     def get(self, chat_id: int) -> Optional[dict[str, str]]:
         """Load a student session row, or None if not found."""
-        row = self._get_conn().execute(
-            "SELECT class_code, student_id, updated_at "
-            "FROM student_bot_sessions WHERE chat_id = ?",
-            (chat_id,),
-        ).fetchone()
+        row = (
+            self._get_conn()
+            .execute(
+                "SELECT class_code, student_id, updated_at FROM student_bot_sessions WHERE chat_id = ?",
+                (chat_id,),
+            )
+            .fetchone()
+        )
         if row is None:
             return None
         return {
@@ -262,9 +270,7 @@ class StudentBotStateStore:
 
     def delete(self, chat_id: int) -> None:
         """Remove a student session row."""
-        self._get_conn().execute(
-            "DELETE FROM student_bot_sessions WHERE chat_id = ?", (chat_id,)
-        )
+        self._get_conn().execute("DELETE FROM student_bot_sessions WHERE chat_id = ?", (chat_id,))
         self._get_conn().commit()
 
     def close(self) -> None:

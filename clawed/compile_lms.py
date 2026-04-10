@@ -53,11 +53,14 @@ def compile_common_cartridge(master: "MasterContent", output_dir: Path) -> Path:
     imscc_path = output_dir / f"{safe}.imscc"
 
     # Build manifest
-    manifest = Element("manifest", {
-        "identifier": f"clawed_{uuid.uuid4().hex[:12]}",
-        "xmlns": "http://www.imsglobal.org/xsd/imsccv1p3/imscp_v1p1",
-        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-    })
+    manifest = Element(
+        "manifest",
+        {
+            "identifier": f"clawed_{uuid.uuid4().hex[:12]}",
+            "xmlns": "http://www.imsglobal.org/xsd/imsccv1p3/imscp_v1p1",
+            "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        },
+    )
 
     metadata = SubElement(manifest, "metadata")
     schema = SubElement(metadata, "schema")
@@ -66,10 +69,14 @@ def compile_common_cartridge(master: "MasterContent", output_dir: Path) -> Path:
     schema_ver.text = "1.3.0"
 
     organizations = SubElement(manifest, "organizations")
-    org = SubElement(organizations, "organization", {
-        "identifier": "org_1",
-        "structure": "rooted-hierarchy",
-    })
+    org = SubElement(
+        organizations,
+        "organization",
+        {
+            "identifier": "org_1",
+            "structure": "rooted-hierarchy",
+        },
+    )
 
     resources = SubElement(manifest, "resources")
 
@@ -86,11 +93,15 @@ def compile_common_cartridge(master: "MasterContent", output_dir: Path) -> Path:
     title_el.text = master.title
     SubElement(item, "resource", {"identifierref": overview_id})
 
-    res = SubElement(resources, "resource", {
-        "identifier": overview_id,
-        "type": "webcontent",
-        "href": f"{overview_id}.html",
-    })
+    res = SubElement(
+        resources,
+        "resource",
+        {
+            "identifier": overview_id,
+            "type": "webcontent",
+            "href": f"{overview_id}.html",
+        },
+    )
     SubElement(res, "file", {"href": f"{overview_id}.html"})
 
     # Student handout page
@@ -103,11 +114,15 @@ def compile_common_cartridge(master: "MasterContent", output_dir: Path) -> Path:
     title_el2.text = f"{master.title} — Student Handout"
     SubElement(item2, "resource", {"identifierref": handout_id})
 
-    res2 = SubElement(resources, "resource", {
-        "identifier": handout_id,
-        "type": "webcontent",
-        "href": f"{handout_id}.html",
-    })
+    res2 = SubElement(
+        resources,
+        "resource",
+        {
+            "identifier": handout_id,
+            "type": "webcontent",
+            "href": f"{handout_id}.html",
+        },
+    )
     SubElement(res2, "file", {"href": f"{handout_id}.html"})
 
     # Write the ZIP
@@ -133,17 +148,12 @@ def _build_overview_html(master: "MasterContent") -> str:
     ]
 
     if master.standards:
-        sections.append(
-            "<p><strong>Standards:</strong> "
-            + ", ".join(master.standards) + "</p>"
-        )
+        sections.append("<p><strong>Standards:</strong> " + ", ".join(master.standards) + "</p>")
 
     if master.vocabulary:
         sections.append("<h2>Vocabulary</h2><ul>")
         for v in master.vocabulary:
-            sections.append(
-                f"<li><strong>{v.term}</strong>: {v.definition}</li>"
-            )
+            sections.append(f"<li><strong>{v.term}</strong>: {v.definition}</li>")
         sections.append("</ul>")
 
     sections.append("<h2>Do Now</h2>")
@@ -199,9 +209,7 @@ def _build_handout_html(master: "MasterContent") -> str:
             sections.append(f"<p>{et.question}</p>")
             starters = getattr(et, "sentence_starters", [])
             if starters:
-                sections.append(
-                    "<p><em>Use: " + " / ".join(starters) + "</em></p>"
-                )
+                sections.append("<p><em>Use: " + " / ".join(starters) + "</em></p>")
             sections.append("<p>_______________________________</p>")
 
     return (
@@ -261,8 +269,7 @@ async def post_to_google_classroom(
 
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                f"https://classroom.googleapis.com/v1/courses/"
-                f"{course_id}/courseWork",
+                f"https://classroom.googleapis.com/v1/courses/{course_id}/courseWork",
                 headers=headers,
                 json=coursework,
             )
@@ -271,7 +278,8 @@ async def post_to_google_classroom(
 
         logger.info(
             "Posted to Google Classroom: %s (id: %s)",
-            master.title, result.get("id"),
+            master.title,
+            result.get("id"),
         )
         return result
 
@@ -332,8 +340,7 @@ def generate_udl_tiers(master: "MasterContent") -> dict[str, dict]:
     if enriched.get("exit_ticket"):
         last_et = enriched["exit_ticket"][-1]
         last_et["question"] = (
-            last_et["question"] + " Additionally, evaluate whether "
-            "this historical argument is still relevant today."
+            last_et["question"] + " Additionally, evaluate whether this historical argument is still relevant today."
         )
 
     # Add challenge task to independent work

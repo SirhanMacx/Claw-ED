@@ -47,10 +47,8 @@ def _log_error(error: Exception) -> None:
         _ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
         with open(_ERROR_LOG, "a") as f:
             import datetime
-            f.write(
-                f"[{datetime.datetime.now(datetime.timezone.utc).isoformat()}] "
-                f"{type(error).__name__}: {error}\n"
-            )
+
+            f.write(f"[{datetime.datetime.now(datetime.timezone.utc).isoformat()}] {type(error).__name__}: {error}\n")
     except Exception:
         pass
 
@@ -62,9 +60,12 @@ def _is_clawed_process(pid: int) -> bool:
     try:
         if sys.platform == "win32":
             import subprocess
+
             result = subprocess.run(
                 ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             output = result.stdout.lower()
             return "python" in output or "clawed" in output
@@ -73,9 +74,12 @@ def _is_clawed_process(pid: int) -> bool:
             os.kill(pid, 0)  # Raises OSError if process doesn't exist
             try:
                 import subprocess
+
                 result = subprocess.run(
                     ["ps", "-p", str(pid), "-o", "comm="],
-                    capture_output=True, text=True, timeout=5,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 output = result.stdout.lower()
                 return "python" in output or "clawed" in output
@@ -103,6 +107,7 @@ def kill_bot_process() -> bool:
         # Kill the process
         if sys.platform == "win32":
             import subprocess
+
             subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True, timeout=10)
         else:
             os.kill(pid, signal.SIGTERM)
@@ -179,15 +184,14 @@ class TelegramAPI:
         for attempt in range(3):
             try:
                 resp = self._session.post(
-                    url, json=data, timeout=self._timeout,
+                    url,
+                    json=data,
+                    timeout=self._timeout,
                 )
                 result = resp.json()
                 if result.get("ok"):
                     return result.get("result", {})
-                raise RuntimeError(
-                    f"Telegram API error: "
-                    f"{result.get('description', 'Unknown error')}"
-                )
+                raise RuntimeError(f"Telegram API error: {result.get('description', 'Unknown error')}")
             except (
                 _requests.ConnectionError,
                 _requests.Timeout,
@@ -195,10 +199,12 @@ class TelegramAPI:
                 OSError,
             ) as e:
                 last_err = e
-                wait = 2 ** attempt
+                wait = 2**attempt
                 logger.warning(
                     "Network error on attempt %d: %s. Retrying in %ds...",
-                    attempt + 1, e, wait,
+                    attempt + 1,
+                    e,
+                    wait,
                 )
                 time.sleep(wait)
             except Exception as e:
@@ -217,7 +223,9 @@ class TelegramAPI:
     def get_updates(self, offset: int = 0, timeout: int = 30) -> list[dict]:
         """Long-poll for updates."""
         result = self._call(
-            "getUpdates", offset=offset, timeout=timeout,
+            "getUpdates",
+            offset=offset,
+            timeout=timeout,
         )
         return result if isinstance(result, list) else []
 
@@ -312,7 +320,10 @@ class TelegramAPI:
                     if caption:
                         data["caption"] = caption
                     resp = self._session.post(
-                        url, data=data, files=files, timeout=120,
+                        url,
+                        data=data,
+                        files=files,
+                        timeout=120,
                     )
                     result = resp.json()
                     if result.get("ok"):
@@ -327,10 +338,12 @@ class TelegramAPI:
                 _requests.Timeout,
             ) as e:
                 last_err = e
-                wait = 2 ** attempt
+                wait = 2**attempt
                 logger.warning(
                     "File send attempt %d: %s. Retrying in %ds...",
-                    attempt + 1, e, wait,
+                    attempt + 1,
+                    e,
+                    wait,
                 )
                 time.sleep(wait)
             except Exception as e:
@@ -346,7 +359,9 @@ class TelegramAPI:
         return self._call("sendChatAction", chat_id=chat_id, action=action)
 
     def answer_callback_query(
-        self, callback_query_id: str, text: str | None = None,
+        self,
+        callback_query_id: str,
+        text: str | None = None,
     ) -> dict:
         return self._call(
             "answerCallbackQuery",
@@ -383,10 +398,12 @@ class TelegramAPI:
                 local_path.write_bytes(resp.content)
                 return True
             except (_requests.ConnectionError, _requests.Timeout) as e:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 logger.warning(
                     "Network error downloading file (attempt %d): %s. Retrying in %ds...",
-                    attempt + 1, e, wait,
+                    attempt + 1,
+                    e,
+                    wait,
                 )
                 time.sleep(wait)
             except Exception as e:
@@ -424,6 +441,7 @@ class EduAgentTelegramBot:
     def __init__(self, token: str, data_dir: Path | None = None):
         self.token = token
         from clawed.paths import data_dir as _data_dir
+
         self.data_dir = data_dir or _data_dir()
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.api = TelegramAPI(token)
@@ -431,6 +449,7 @@ class EduAgentTelegramBot:
         self._chat_ids: set[int] = set()  # Track active teacher chat IDs
 
         from clawed.gateway import Gateway
+
         self.gateway = Gateway()
         self._loop = asyncio.new_event_loop()
 
@@ -441,6 +460,7 @@ class EduAgentTelegramBot:
         if not token:
             try:
                 from clawed.models import AppConfig
+
                 cfg = AppConfig.load()
                 token = cfg.telegram_bot_token
             except Exception:
@@ -458,10 +478,12 @@ class EduAgentTelegramBot:
         _check_bot_lock(force=force)
 
         import atexit
+
         atexit.register(_release_bot_lock)
 
         def _signal_handler(sig, frame):
             self._running = False
+
         signal.signal(signal.SIGINT, _signal_handler)
         signal.signal(signal.SIGTERM, _signal_handler)
 
@@ -476,9 +498,7 @@ class EduAgentTelegramBot:
         bot_name = me.get("username", "unknown")
         logger.info("Bot @%s started, entering polling loop", bot_name)
         print(
-            f"\nClaw-ED Telegram bot is running!\n"
-            f"Send a message to @{bot_name} to start.\n"
-            f"Press Ctrl+C to stop.\n",
+            f"\nClaw-ED Telegram bot is running!\nSend a message to @{bot_name} to start.\nPress Ctrl+C to stop.\n",
             flush=True,
         )
 
@@ -506,9 +526,9 @@ class EduAgentTelegramBot:
                 try:
                     from datetime import date
                     from datetime import datetime as _dt
+
                     now = _dt.now()
-                    if (now.hour == 6 and now.minute < 5
-                            and _morning_prep_date != date.today()):
+                    if now.hour == 6 and now.minute < 5 and _morning_prep_date != date.today():
                         _morning_prep_date = date.today()
                         self._send_morning_prep()
                 except Exception:
@@ -535,6 +555,7 @@ class EduAgentTelegramBot:
             import json
 
             from clawed.paths import data_dir as _data_dir_fn
+
             cfg_path = _data_dir_fn() / "config.json"
             name = "there"
             if cfg_path.exists():
@@ -571,9 +592,7 @@ class EduAgentTelegramBot:
                 teacher_id = str(cb["from"]["id"])
                 data = cb.get("data", "")
                 self.api.answer_callback_query(cb["id"])
-                response = self._loop.run_until_complete(
-                    self.gateway.handle_callback(data, teacher_id)
-                )
+                response = self._loop.run_until_complete(self.gateway.handle_callback(data, teacher_id))
                 self._send_response(self.api, chat_id, response)
 
             elif "message" in update:
@@ -616,7 +635,8 @@ class EduAgentTelegramBot:
                 try:
                     response = self._loop.run_until_complete(
                         self.gateway.handle(
-                            text, teacher_id,
+                            text,
+                            teacher_id,
                             files=files or None,
                             progress_callback=_progress_cb,
                             transport="telegram",
@@ -645,8 +665,7 @@ class EduAgentTelegramBot:
             try:
                 self.api.send_message(
                     chat_id,
-                    "Something went wrong processing that. "
-                    "Try again or rephrase your request.",
+                    "Something went wrong processing that. Try again or rephrase your request.",
                 )
             except Exception:
                 pass
@@ -686,13 +705,15 @@ class EduAgentTelegramBot:
         if rows:
             keyboard = []
             for row in rows:
-                keyboard.append([
-                    {
-                        "text": b.label,
-                        **({"url": b.url} if b.url else {"callback_data": b.callback_data}),
-                    }
-                    for b in row
-                ])
+                keyboard.append(
+                    [
+                        {
+                            "text": b.label,
+                            **({"url": b.url} if b.url else {"callback_data": b.callback_data}),
+                        }
+                        for b in row
+                    ]
+                )
             reply_markup = {"inline_keyboard": keyboard}
 
         if response.text:

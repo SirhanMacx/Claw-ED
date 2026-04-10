@@ -49,7 +49,8 @@ def _test_master() -> MasterContent:
         ],
         primary_sources=[
             PrimarySource(
-                id="source_a", title="Test Source",
+                id="source_a",
+                title="Test Source",
                 source_type="text_excerpt",
                 content_text="A" * 120,
                 attribution="Test Author, 2026",

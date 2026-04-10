@@ -56,15 +56,17 @@ async def compile_project_packet(
     def _shaded_cell(cell, fill_hex: str) -> None:
         tc = cell._tc
         tc_pr = tc.get_or_add_tcPr()
-        shd = tc_pr.makeelement(qn("w:shd"), {
-            qn("w:val"): "clear",
-            qn("w:color"): "auto",
-            qn("w:fill"): fill_hex,
-        })
+        shd = tc_pr.makeelement(
+            qn("w:shd"),
+            {
+                qn("w:val"): "clear",
+                qn("w:color"): "auto",
+                qn("w:fill"): fill_hex,
+            },
+        )
         tc_pr.append(shd)
 
-    def _para(text: str, bold: bool = False, italic: bool = False,
-              size_pt: int = 11) -> None:
+    def _para(text: str, bold: bool = False, italic: bool = False, size_pt: int = 11) -> None:
         p = doc.add_paragraph()
         run = p.add_run(text)
         run.bold = bold
@@ -194,10 +196,7 @@ async def compile_project_packet(
         doc.add_heading("Grading Rubric", level=1)
         # Parse markdown table into real DOCX table
         raw_lines = project.rubric_text.strip().split("\n")
-        lines = [
-            ln for ln in raw_lines
-            if ln.strip() and not ln.strip().startswith("|---")
-        ]
+        lines = [ln for ln in raw_lines if ln.strip() and not ln.strip().startswith("|---")]
         if lines:
             rows_data = []
             for line in lines:
@@ -228,8 +227,7 @@ async def compile_project_packet(
         doc.add_page_break()
         doc.add_heading(f"Culminating Event: {perf.title}", level=1)
         if perf.format:
-            _para(f"Format: {perf.format.replace('_', ' ').title()}  |  "
-                  f"Duration: {perf.duration_minutes} minutes")
+            _para(f"Format: {perf.format.replace('_', ' ').title()}  |  Duration: {perf.duration_minutes} minutes")
         if perf.setup_instructions:
             _para("Setup:", bold=True)
             _para(perf.setup_instructions)

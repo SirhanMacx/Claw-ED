@@ -1,4 +1,5 @@
 """Test --json flag on all commands that support it."""
+
 import json
 import subprocess
 import sys
@@ -26,7 +27,9 @@ def test_json_flag_produces_valid_envelope(args, expected_command):
     """Commands that don't need an API key return valid JSON envelopes."""
     result = subprocess.run(
         [sys.executable, "-m", "clawed", "--python"] + args,
-        capture_output=True, text=True, timeout=15,
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     output = json.loads(result.stdout)
     assert output["command"] == expected_command
@@ -41,7 +44,9 @@ def test_generation_json_flag(args, expected_command):
     try:
         result = subprocess.run(
             [sys.executable, "-m", "clawed", "--python"] + args,
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if not result.stdout.strip():
             return  # Empty output — acceptable (no config/key)

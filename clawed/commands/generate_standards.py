@@ -38,18 +38,12 @@ def _gap_analyze_json(*, subject, grade, standards, materials_dir):
     if standards:
         p = Path(standards).expanduser()
         if p.exists():
-            standards_list = [
-                line.strip()
-                for line in p.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            ]
+            standards_list = [line.strip() for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
         else:
             standards_list = [s.strip() for s in standards.split(",") if s.strip()]
 
     if not standards_list:
-        standards_list = [
-            f"Grade {grade} {subject} — Core Standards (auto-inferred from materials)"
-        ]
+        standards_list = [f"Grade {grade} {subject} — Core Standards (auto-inferred from materials)"]
 
     # Collect existing materials
     mat_path: Path | None = None
@@ -58,6 +52,7 @@ def _gap_analyze_json(*, subject, grade, standards, materials_dir):
     else:
         cfg = AppConfig.load()
         from clawed.paths import data_dir
+
         corpus_base = data_dir()
         if getattr(cfg, "active_teacher_id", None):
             corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
@@ -69,9 +64,7 @@ def _gap_analyze_json(*, subject, grade, standards, materials_dir):
     materials_list: list[str] = []
     if mat_path and mat_path.is_dir():
         exts = {".txt", ".md", ".pdf", ".docx", ".json"}
-        files = [
-            f for f in mat_path.rglob("*") if f.suffix.lower() in exts and f.is_file()
-        ]
+        files = [f for f in mat_path.rglob("*") if f.suffix.lower() in exts and f.is_file()]
         materials_list = [f.name for f in files[:200]]
 
     if not materials_list:
@@ -161,11 +154,7 @@ def gap_analyze(
     if standards:
         p = Path(standards).expanduser()
         if p.exists():
-            standards_list = [
-                line.strip()
-                for line in p.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            ]
+            standards_list = [line.strip() for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
         else:
             standards_list = [s.strip() for s in standards.split(",") if s.strip()]
 
@@ -182,6 +171,7 @@ def gap_analyze(
     else:
         cfg = AppConfig.load()
         from clawed.paths import data_dir
+
         corpus_base = data_dir()
         if getattr(cfg, "active_teacher_id", None):
             corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
@@ -236,8 +226,8 @@ def gap_analyze(
 
     # ── Severity counts ────────────────────────────────────────────────
     high = [g for g in gaps if g.severity.lower() == "high"]
-    med  = [g for g in gaps if g.severity.lower() == "medium"]
-    low  = [g for g in gaps if g.severity.lower() == "low"]
+    med = [g for g in gaps if g.severity.lower() == "medium"]
+    low = [g for g in gaps if g.severity.lower() == "low"]
 
     # ── Display summary table ──────────────────────────────────────────
     table = Table(title=f"Curriculum Gaps — {subject} Grade {grade}")
@@ -257,9 +247,7 @@ def gap_analyze(
             g.suggestion[:60] + ("..." if len(g.suggestion) > 60 else ""),
         )
     console.print(table)
-    console.print(
-        f"\n[bold]Summary:[/bold] {len(high)} HIGH  |  {len(med)} MEDIUM  |  {len(low)} LOW"
-    )
+    console.print(f"\n[bold]Summary:[/bold] {len(high)} HIGH  |  {len(med)} MEDIUM  |  {len(low)} LOW")
 
     # ── Export ─────────────────────────────────────────────────────────
     out_dir = _output_dir() / "gap-reports"

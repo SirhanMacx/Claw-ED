@@ -10,8 +10,14 @@ skill = SubjectSkill(
         "(concrete-representational-abstract), problem-based learning."
     ),
     aliases=(
-        "mathematics", "algebra", "geometry", "calculus", "statistics",
-        "pre-algebra", "pre-calculus", "trigonometry",
+        "mathematics",
+        "algebra",
+        "geometry",
+        "calculus",
+        "statistics",
+        "pre-algebra",
+        "pre-calculus",
+        "trigonometry",
     ),
     system_prompt=(
         "You are an expert mathematics educator. Prioritize conceptual understanding "

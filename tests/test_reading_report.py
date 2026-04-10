@@ -1,4 +1,5 @@
 """Tests for clawed.reading_report — document analysis and report generation."""
+
 from clawed.models import DocType, Document
 from clawed.reading_report import format_reading_report, generate_reading_report
 

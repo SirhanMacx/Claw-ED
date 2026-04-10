@@ -1,4 +1,5 @@
 """Tool: configure_profile — wraps teacher profile configuration."""
+
 from __future__ import annotations
 
 import logging
@@ -56,19 +57,12 @@ class ConfigureProfileTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.models import TeacherPersona, TeacherProfile
         from clawed.state import TeacherSession
 
         # Accept both "teacher_name" and "name" — LLMs sometimes use either key
-        teacher_name = (
-            params.get("teacher_name")
-            or params.get("name")
-            or params.get("teacher")
-            or ""
-        )
+        teacher_name = params.get("teacher_name") or params.get("name") or params.get("teacher") or ""
         subject = params.get("subject", "")
         grade_levels_str = params.get("grade_levels", params.get("grades", ""))
         state = params.get("state", "")
@@ -76,14 +70,14 @@ class ConfigureProfileTool:
 
         if not teacher_name:
             return ToolResult(
-                text="I need the teacher's name to save the profile. "
-                     "Please ask the teacher their name first."
+                text="I need the teacher's name to save the profile. Please ask the teacher their name first."
             )
 
         grades = [g.strip() for g in grade_levels_str.split(",") if g.strip()]
 
         try:
             import os as _os
+
             config = context.config
 
             if agent_name:
@@ -108,15 +102,14 @@ class ConfigureProfileTool:
             if state:
                 try:
                     from clawed.state_standards import get_standards_context_for_prompt
+
                     standards_context = get_standards_context_for_prompt(
                         state,
                         [subject] if subject else [],
                         grades,
                     )
                     if standards_context:
-                        side_effects.append(
-                            f"Loaded {state} state standards for {subject}"
-                        )
+                        side_effects.append(f"Loaded {state} state standards for {subject}")
                 except Exception:
                     pass
 
@@ -127,6 +120,7 @@ class ConfigureProfileTool:
 
             try:
                 from clawed.workspace import init_workspace
+
                 init_workspace(persona, config)
             except Exception:
                 pass
@@ -149,9 +143,7 @@ class ConfigureProfileTool:
                 if soul_path.exists():
                     current = soul_path.read_text(encoding="utf-8")
                     if "## Who I Am" in current:
-                        current = current.replace(
-                            "## Who I Am", f"## Who I Am{identity_text}", 1
-                        )
+                        current = current.replace("## Who I Am", f"## Who I Am{identity_text}", 1)
                     else:
                         current = f"## Who I Am{identity_text}\n" + current
                     soul_path.write_text(current, encoding="utf-8")
@@ -167,8 +159,7 @@ class ConfigureProfileTool:
                 logger.debug("SOUL.md identity update failed: %s", e)
 
             return ToolResult(
-                text=f"Profile saved: {teacher_name}, {subject}"
-                f"{', grades ' + grade_levels_str if grades else ''}.",
+                text=f"Profile saved: {teacher_name}, {subject}{', grades ' + grade_levels_str if grades else ''}.",
                 data={
                     "teacher_name": teacher_name,
                     "subject": subject,

@@ -1,4 +1,5 @@
 """Approval gate — persistence and lifecycle for pending teacher approvals."""
+
 from __future__ import annotations
 
 import json
@@ -11,9 +12,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 def _default_dir():
     from clawed.paths import data_dir
+
     return data_dir() / "approvals"
+
 
 _DEFAULT_DIR = None  # resolved lazily via _default_dir()
 
@@ -130,7 +134,9 @@ class ApprovalManager:
         return expired
 
     def get_standing_approval(
-        self, teacher_id: str, tool_name: str,
+        self,
+        teacher_id: str,
+        tool_name: str,
     ) -> PendingApproval | None:
         """Check for an existing approved record for this tool.
 

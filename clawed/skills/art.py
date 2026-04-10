@@ -10,9 +10,19 @@ skill = SubjectSkill(
         "National Core Arts Standards — creating, presenting, responding, connecting."
     ),
     aliases=(
-        "visual arts", "fine arts", "studio art", "art history",
-        "drawing", "painting", "sculpture", "ceramics", "printmaking",
-        "photography", "digital art", "graphic design", "art appreciation",
+        "visual arts",
+        "fine arts",
+        "studio art",
+        "art history",
+        "drawing",
+        "painting",
+        "sculpture",
+        "ceramics",
+        "printmaking",
+        "photography",
+        "digital art",
+        "graphic design",
+        "art appreciation",
     ),
     system_prompt=(
         "You are an expert visual arts educator grounded in the National Core "

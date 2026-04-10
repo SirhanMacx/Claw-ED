@@ -1,4 +1,5 @@
 """Tests for differentiation helpers (pure functions, no LLM calls)."""
+
 import json
 from unittest.mock import MagicMock
 

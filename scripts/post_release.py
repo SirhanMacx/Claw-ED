@@ -19,18 +19,22 @@ from datetime import datetime
 def get_last_commit_message() -> str:
     result = subprocess.run(
         ["git", "log", "-1", "--format=%s"],
-        capture_output=True, text=True,
-        cwd="/Users/mind_uploaded_crustacean/Projects/eduagent"
+        capture_output=True,
+        text=True,
+        cwd="/Users/mind_uploaded_crustacean/Projects/eduagent",
     )
     return result.stdout.strip()
+
 
 def get_changed_files() -> list[str]:
     result = subprocess.run(
         ["git", "diff", "HEAD~1", "--name-only"],
-        capture_output=True, text=True,
-        cwd="/Users/mind_uploaded_crustacean/Projects/eduagent"
+        capture_output=True,
+        text=True,
+        cwd="/Users/mind_uploaded_crustacean/Projects/eduagent",
     )
     return [f.strip() for f in result.stdout.strip().split("\n") if f.strip()]
+
 
 def format_release_tweet(commit_msg: str, date: str) -> str:
     """Format commit message as OpenClaw-style release tweet."""
@@ -76,17 +80,19 @@ def format_release_tweet(commit_msg: str, date: str) -> str:
 
     return tweet
 
+
 def post_to_x(tweet: str) -> bool:
     """Post to X using the browser automation approach."""
     try:
         # This would use the browser automation
         # For now, print and return True (manual posting)
-        print(f"\nREADY TO POST:\n{'-'*40}\n{tweet}\n{'-'*40}")
+        print(f"\nREADY TO POST:\n{'-' * 40}\n{tweet}\n{'-' * 40}")
         print(f"Length: {len(tweet)}/280")
         return True
     except Exception as e:
         print(f"Error posting: {e}")
         return False
+
 
 if __name__ == "__main__":
     commit_msg = sys.argv[1] if len(sys.argv) > 1 else get_last_commit_message()

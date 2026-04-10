@@ -1,4 +1,5 @@
 """Shared async utility for running coroutines from sync or async contexts."""
+
 from __future__ import annotations
 
 import asyncio
@@ -15,6 +16,7 @@ def run_async_safe(coro):
         asyncio.get_running_loop()
         # We're inside an event loop — run in a worker thread
         import concurrent.futures
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
             return pool.submit(asyncio.run, coro).result(timeout=30)
     except RuntimeError:

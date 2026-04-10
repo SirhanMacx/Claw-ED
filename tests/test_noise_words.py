@@ -31,11 +31,7 @@ def test_slide_markers_in_noise():
     """Slide-related markers are in the noise set to filter document artifacts."""
     slide_markers = {"[slide", "slide]", "slide 1", "slide 2", "slide 3"}
     for marker in slide_markers:
-        assert marker in EDUCATION_NOISE, (
-            f"Expected slide marker '{marker}' in EDUCATION_NOISE"
-        )
+        assert marker in EDUCATION_NOISE, f"Expected slide marker '{marker}' in EDUCATION_NOISE"
     # Also verify they propagate to ALL_NOISE
     for marker in slide_markers:
-        assert marker in ALL_NOISE, (
-            f"Expected slide marker '{marker}' in ALL_NOISE"
-        )
+        assert marker in ALL_NOISE, f"Expected slide marker '{marker}' in ALL_NOISE"

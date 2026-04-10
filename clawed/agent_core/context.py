@@ -1,4 +1,5 @@
 """Core data types for the agent system."""
+
 from __future__ import annotations
 
 import logging

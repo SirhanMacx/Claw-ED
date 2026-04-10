@@ -52,9 +52,7 @@ def _materials_json(*, lesson_file):
 
 @generate_app.command()
 def materials(
-    lesson_file: str = typer.Option(
-        ..., "--lesson-file", "-l", help="Path to lesson plan JSON"
-    ),
+    lesson_file: str = typer.Option(..., "--lesson-file", "-l", help="Path to lesson plan JSON"),
     fmt: str = typer.Option("markdown", "--format", "-f", help="Export format"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
@@ -79,9 +77,7 @@ def materials(
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
             raise typer.Exit(1)
-        progress.update(
-            task, completed=4, description="All materials generated!"
-        )
+        progress.update(task, completed=4, description="All materials generated!")
 
     out_dir = _output_dir()
     json_path = save_materials(mats, out_dir)
@@ -114,9 +110,7 @@ def assess(
     ),
     topic: str = typer.Option("", "--topic", help="Topic for quiz or DBQ"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    questions: int = typer.Option(
-        10, "--questions", "-q", help="Number of questions (quiz only)"
-    ),
+    questions: int = typer.Option(10, "--questions", "-q", help="Number of questions (quiz only)"),
     question_types: str = typer.Option(
         "mixed",
         "--question-types",
@@ -134,9 +128,7 @@ def assess(
         "-u",
         help="Unit JSON for summative assessment",
     ),
-    context: str = typer.Option(
-        "", "--context", "-c", help="Additional context (DBQ)"
-    ),
+    context: str = typer.Option("", "--context", "-c", help="Additional context (DBQ)"),
 ):
     """Generate intelligent assessments — DBQ, summative, formative, or quiz."""
     check_api_key_or_exit()
@@ -150,24 +142,19 @@ def assess(
 
     if type == "formative":
         if not lesson_file:
-            console.print(
-                "[red]--lesson-file required for formative assessment.[/red]"
-            )
+            console.print("[red]--lesson-file required for formative assessment.[/red]")
             raise typer.Exit(1)
         from clawed.lesson import load_lesson
 
         daily = load_lesson(Path(lesson_file))
         console.print(
             Panel(
-                f"[bold]{daily.title}[/bold]"
-                " — exit ticket for today's objective",
+                f"[bold]{daily.title}[/bold] — exit ticket for today's objective",
                 title="Formative Assessment",
             )
         )
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating exit ticket...", total=None
-            )
+            task = progress.add_task("Generating exit ticket...", total=None)
             try:
                 result = _run_async(gen.generate_formative(daily, persona))
             except (RuntimeError, ValueError) as e:
@@ -188,9 +175,7 @@ def assess(
 
     elif type == "summative":
         if not unit_file:
-            console.print(
-                "[red]--unit-file required for summative assessment.[/red]"
-            )
+            console.print("[red]--unit-file required for summative assessment.[/red]")
             raise typer.Exit(1)
         from clawed.planner import load_unit
 
@@ -202,9 +187,7 @@ def assess(
             )
         )
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating unit test...", total=None
-            )
+            task = progress.add_task("Generating unit test...", total=None)
             try:
                 result = _run_async(gen.generate_summative(unit_plan, persona))
             except (RuntimeError, ValueError) as e:
@@ -226,27 +209,18 @@ def assess(
 
     elif type == "dbq":
         if not topic:
-            console.print(
-                "[red]--topic required for DBQ assessment.[/red]"
-            )
+            console.print("[red]--topic required for DBQ assessment.[/red]")
             raise typer.Exit(1)
         console.print(
             Panel(
-                f"[bold]{topic}[/bold]"
-                f" — NYS Regents-style DBQ | Grade {grade}",
+                f"[bold]{topic}[/bold] — NYS Regents-style DBQ | Grade {grade}",
                 title="Document-Based Question",
             )
         )
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating DBQ with documents...", total=None
-            )
+            task = progress.add_task("Generating DBQ with documents...", total=None)
             try:
-                result = _run_async(
-                    gen.generate_dbq(
-                        topic, persona, grade_level=grade, context=context
-                    )
-                )
+                result = _run_async(gen.generate_dbq(topic, persona, grade_level=grade, context=context))
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
                 raise typer.Exit(1)
@@ -271,8 +245,7 @@ def assess(
             raise typer.Exit(1)
         console.print(
             Panel(
-                f"[bold]{topic}[/bold] | Grade {grade}"
-                f" | {questions} questions ({question_types})",
+                f"[bold]{topic}[/bold] | Grade {grade} | {questions} questions ({question_types})",
                 title="Quiz",
             )
         )
@@ -305,21 +278,14 @@ def assess(
         )
 
     else:
-        console.print(
-            f"[red]Unknown assessment type '{type}'."
-            " Use: formative, summative, dbq, quiz[/red]"
-        )
+        console.print(f"[red]Unknown assessment type '{type}'. Use: formative, summative, dbq, quiz[/red]")
         raise typer.Exit(1)
 
 
 @generate_app.command()
 def rubric(
-    task: str = typer.Option(
-        ..., "--task", help="Description of the task to build a rubric for"
-    ),
-    criteria: int = typer.Option(
-        4, "--criteria", "-c", help="Number of rubric criteria"
-    ),
+    task: str = typer.Option(..., "--task", help="Description of the task to build a rubric for"),
+    criteria: int = typer.Option(4, "--criteria", "-c", help="Number of rubric criteria"),
     grade: str = typer.Option("", "--grade", "-g", help="Grade level"),
 ):
     """Generate a detailed scoring rubric for any written task."""
@@ -340,11 +306,7 @@ def rubric(
     with _safe_progress(console=console) as progress:
         prog_task = progress.add_task("Generating rubric...", total=None)
         try:
-            result = _run_async(
-                gen.generate_rubric(
-                    task, persona, criteria_count=criteria, grade_level=grade
-                )
-            )
+            result = _run_async(gen.generate_rubric(task, persona, criteria_count=criteria, grade_level=grade))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
             raise typer.Exit(1)
@@ -362,9 +324,7 @@ def rubric(
     table.add_column("Developing (2)", style="yellow")
     table.add_column("Beginning (1)", style="red")
     for c in result.criteria:
-        table.add_row(
-            c.criterion, c.excellent, c.proficient, c.developing, c.beginning
-        )
+        table.add_row(c.criterion, c.excellent, c.proficient, c.developing, c.beginning)
     console.print(table)
     console.print(f"\n[bold]Total Points:[/bold] {result.total_points}")
 
@@ -374,9 +334,7 @@ def rubric(
 
 @generate_app.command()
 def score(
-    lesson_file: str = typer.Option(
-        ..., "--lesson-file", "-l", help="Path to a saved lesson JSON file"
-    ),
+    lesson_file: str = typer.Option(..., "--lesson-file", "-l", help="Path to a saved lesson JSON file"),
 ):
     """Score a lesson plan on quality dimensions (1-5 per dimension)."""
     check_api_key_or_exit()
@@ -422,9 +380,7 @@ def score(
     console.print(table)
     overall = scores.get("overall", 0)
     color = "green" if overall >= 4 else ("yellow" if overall >= 3 else "red")
-    console.print(
-        f"\n[bold]Overall Score:[/bold] [{color}]{overall}/5[/{color}]"
-    )
+    console.print(f"\n[bold]Overall Score:[/bold] [{color}]{overall}/5[/{color}]")
 
 
 # ── Improve command ───────────────────────────────────────────────────
@@ -432,15 +388,9 @@ def score(
 
 @generate_app.command()
 def improve(
-    days: int = typer.Option(
-        7, "--days", "-d", help="Feedback window in days"
-    ),
-    analyze: bool = typer.Option(
-        False, "--analyze", help="Run full analysis of feedback and update memory"
-    ),
-    reset: bool = typer.Option(
-        False, "--reset", help="Clear all learned patterns (with confirmation)"
-    ),
+    days: int = typer.Option(7, "--days", "-d", help="Feedback window in days"),
+    analyze: bool = typer.Option(False, "--analyze", help="Run full analysis of feedback and update memory"),
+    reset: bool = typer.Option(False, "--reset", help="Clear all learned patterns (with confirmation)"),
 ):
     """Show improvement stats, recent patterns, and memory contents.
 
@@ -452,9 +402,7 @@ def improve(
 
     # Handle --reset
     if reset:
-        confirm = typer.confirm(
-            "This will clear ALL learned patterns from memory.md. Are you sure?"
-        )
+        confirm = typer.confirm("This will clear ALL learned patterns from memory.md. Are you sure?")
         if confirm:
             reset_memory(confirm=True)
             console.print("[yellow]Memory reset to default template.[/yellow]")
@@ -472,9 +420,7 @@ def improve(
         db = Database()
 
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Analyzing feedback and improving prompts...", total=None
-            )
+            task = progress.add_task("Analyzing feedback and improving prompts...", total=None)
             try:
                 result = _run_async(improve_prompts(db, feedback_window_days=days))
             except (RuntimeError, ValueError) as e:
@@ -540,8 +486,7 @@ def improve(
 
     if stats["total_patterns"] == 0:
         console.print(
-            "\n[dim]No patterns learned yet. "
-            "Generate and rate some lessons to start the feedback loop.[/dim]"
+            "\n[dim]No patterns learned yet. Generate and rate some lessons to start the feedback loop.[/dim]"
         )
 
 
@@ -550,15 +495,9 @@ def improve(
 
 @generate_app.command()
 def evaluate(
-    lessons: int = typer.Option(
-        5, "--lessons", "-n", help="Number of lessons to generate and evaluate"
-    ),
-    topic: str = typer.Option(
-        "", "--topic", "-t", help="Topic for generated lessons (default: from persona)"
-    ),
-    grade: str = typer.Option(
-        "", "--grade", "-g", help="Grade level (default: from persona)"
-    ),
+    lessons: int = typer.Option(5, "--lessons", "-n", help="Number of lessons to generate and evaluate"),
+    topic: str = typer.Option("", "--topic", "-t", help="Topic for generated lessons (default: from persona)"),
+    grade: str = typer.Option("", "--grade", "-g", help="Grade level (default: from persona)"),
 ) -> None:
     """Generate lessons and evaluate voice consistency against your persona.
 

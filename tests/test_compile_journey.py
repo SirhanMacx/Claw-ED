@@ -1,4 +1,5 @@
 """Tests for clawed.compile_journey — interactive learning journey HTML generation."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -133,10 +134,12 @@ class TestStepCountMatchesContent:
         We parse the JSON array to count them.
         """
         import re
+
         # The JS variable is: var steps=<json>;
-        match = re.search(r'var steps=(\[.*?\]);\s*var current', html, re.DOTALL)
+        match = re.search(r"var steps=(\[.*?\]);\s*var current", html, re.DOTALL)
         assert match is not None, "Could not find steps JSON in HTML"
         import json
+
         steps_data = json.loads(match.group(1))
         return len(steps_data)
 
@@ -199,7 +202,7 @@ class TestProgressBarPresent:
         result = await compile_journey(mc, output_dir=tmp_path)
         html = result.read_text(encoding="utf-8")
 
-        assert 'width:0%' in html
+        assert "width:0%" in html
 
     @pytest.mark.asyncio
     async def test_progress_bar_has_aria_attributes(self, tmp_path):
@@ -209,9 +212,9 @@ class TestProgressBarPresent:
         html = result.read_text(encoding="utf-8")
 
         assert 'role="progressbar"' in html
-        assert 'aria-valuenow' in html
-        assert 'aria-valuemin' in html
-        assert 'aria-valuemax' in html
+        assert "aria-valuenow" in html
+        assert "aria-valuemin" in html
+        assert "aria-valuemax" in html
 
 
 # ── Empty master content ──────────────────────────────────────────────

@@ -53,10 +53,7 @@ def main(
     # Validate the class code
     class_info = bot.get_class(class_code)
     if not class_info:
-        console.print(
-            f"[red]Class code '{class_code}' not found.[/red] "
-            "Double-check with your teacher and try again."
-        )
+        console.print(f"[red]Class code '{class_code}' not found.[/red] Double-check with your teacher and try again.")
         sys.exit(1)
 
     # Auto-register first-time student
@@ -67,10 +64,7 @@ def main(
 
     # Check for active lesson
     if not class_info.active_lesson_json:
-        console.print(
-            "[yellow]Your teacher hasn't activated a lesson yet. "
-            "Check back soon![/yellow]"
-        )
+        console.print("[yellow]Your teacher hasn't activated a lesson yet. Check back soon![/yellow]")
         sys.exit(1)
 
     import json
@@ -113,9 +107,7 @@ def main(
             transient=True,
         ):
             try:
-                response = _run_async(
-                    bot.handle_message(text, student_id, class_code)
-                )
+                response = _run_async(bot.handle_message(text, student_id, class_code))
             except Exception as e:
                 response = f"Oops, something went wrong: {e}"
 
@@ -134,9 +126,7 @@ def cli_entry() -> None:
     """Entry point when run as ``python -m clawed.student_cli``."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Claw-ED Student Chat \u2014 ask your teacher bot anything"
-    )
+    parser = argparse.ArgumentParser(description="Claw-ED Student Chat \u2014 ask your teacher bot anything")
     parser.add_argument(
         "--class-code",
         required=True,

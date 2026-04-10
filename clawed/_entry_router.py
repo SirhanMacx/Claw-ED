@@ -10,6 +10,7 @@ Usage:
     clawed --python ...     → Force Python CLI (skip Node.js check)
     clawed daemon start     → Start background Telegram daemon
 """
+
 from __future__ import annotations
 
 import os
@@ -172,7 +173,9 @@ def _maybe_start_bot_background() -> None:
             if sys.platform == "win32":
                 result = subprocess.run(
                     ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
-                    capture_output=True, text=True, timeout=5,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 if str(pid) in result.stdout:
                     return  # Bot already running
@@ -238,6 +241,7 @@ def _check_telegram_token() -> bool:
     # 3. Check keyring (slower, may not be installed)
     try:
         from clawed.config import get_api_key
+
         token = get_api_key("telegram")
         if token and token.strip():
             return True
@@ -286,6 +290,7 @@ def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
     # 3. Keyring
     try:
         import keyring
+
         val = keyring.get_password("eduagent", f"{provider}_api_key")
         if val:
             return val
@@ -457,16 +462,57 @@ def main() -> None:
     # Python CLI subcommands — these are typer commands that should NEVER
     # go through the Node CLI (which would interpret them as chat prompts)
     python_commands = {
-        "setup", "debug", "config", "ingest", "lesson", "unit", "full",
-        "course", "materials", "assess", "rubric", "score", "improve",
-        "evaluate", "differentiate", "sub-packet", "parent-note",
-        "gap-analyze", "export", "share", "import", "demo", "train",
-        "tui", "chat", "student-chat", "mcp-server", "serve", "bot",
-        "student-bot", "sub", "parent-comm", "stats", "status",
-        "persona", "standards", "templates", "skills", "school",
-        "class", "queue", "workspace", "kb", "schedule", "game",
-        "simulate", "generate-landing", "landing", "transcribe",
-        "pacing", "year-map",
+        "setup",
+        "debug",
+        "config",
+        "ingest",
+        "lesson",
+        "unit",
+        "full",
+        "course",
+        "materials",
+        "assess",
+        "rubric",
+        "score",
+        "improve",
+        "evaluate",
+        "differentiate",
+        "sub-packet",
+        "parent-note",
+        "gap-analyze",
+        "export",
+        "share",
+        "import",
+        "demo",
+        "train",
+        "tui",
+        "chat",
+        "student-chat",
+        "mcp-server",
+        "serve",
+        "bot",
+        "student-bot",
+        "sub",
+        "parent-comm",
+        "stats",
+        "status",
+        "persona",
+        "standards",
+        "templates",
+        "skills",
+        "school",
+        "class",
+        "queue",
+        "workspace",
+        "kb",
+        "schedule",
+        "game",
+        "simulate",
+        "generate-landing",
+        "landing",
+        "transcribe",
+        "pacing",
+        "year-map",
     }
 
     # Route known subcommands to Python CLI directly
@@ -480,6 +526,7 @@ def main() -> None:
     if args and ("-p" in args or "--print" in args):
         try:
             import json as _json
+
             _cfg_path = Path(_data_dir()) / "config.json"
             if _cfg_path.exists():
                 _cfg = _json.loads(_cfg_path.read_text())
@@ -503,6 +550,7 @@ def main() -> None:
 
                         from clawed.llm import LLMClient
                         from clawed.models import AppConfig
+
                         cfg = AppConfig.load()
                         client = LLMClient(config=cfg)
                         response = asyncio.run(client.generate(prompt))
@@ -525,6 +573,7 @@ def main() -> None:
         import time as _time
 
         from clawed import __version__
+
         print()
         print("  \033[32m🍎 C L A W - E D\033[0m")
         print(f"  \033[1mYour AI co-teacher\033[0m  v{__version__}")
@@ -532,6 +581,7 @@ def main() -> None:
         _time.sleep(1)
         try:
             from clawed.onboarding import quick_model_setup
+
             result = quick_model_setup()
             if result == "telegram":
                 sys.argv = [sys.argv[0], "bot"]
@@ -549,11 +599,11 @@ def main() -> None:
     cli_js = _find_bundled_cli_js()
 
     if node and cli_js:
-        os.environ['CLAWED_MODE'] = '1'
+        os.environ["CLAWED_MODE"] = "1"
         # Increase Node.js heap for large curriculum ingestion (default 4GB is too small)
-        existing = os.environ.get('NODE_OPTIONS', '')
-        if '--max-old-space-size' not in existing:
-            os.environ['NODE_OPTIONS'] = f'{existing} --max-old-space-size=8192'.strip()
+        existing = os.environ.get("NODE_OPTIONS", "")
+        if "--max-old-space-size" not in existing:
+            os.environ["NODE_OPTIONS"] = f"{existing} --max-old-space-size=8192".strip()
         try:
             _inject_config_env()
         except Exception:
@@ -564,16 +614,19 @@ def main() -> None:
         # or auto_approve_tools=true in config.json.
         # When bypassed, only read_only tools skip confirmation.
         import os as _os
+
         _auto = _os.environ.get("CLAWED_AUTO_APPROVE", "").lower() in ("1", "true", "yes")
         if not _auto:
             try:
                 from clawed.models import AppConfig
+
                 _auto = getattr(AppConfig.load(), "auto_approve_tools", False)
             except Exception:
                 _auto = False
         if _auto and "--dangerously-skip-permissions" not in args:
             args = ["--dangerously-skip-permissions"] + args
             import sys as _sys
+
             print(
                 "\u26a0\ufe0f  Permission bypass ACTIVE (CLAWED_AUTO_APPROVE=1). "
                 "Sensitive tools still require approval via the central policy layer.",
@@ -611,6 +664,7 @@ def _run_python_cli() -> None:
     or the command is a known Python subcommand (setup, lesson, etc.).
     """
     from clawed.cli import app
+
     app()
 
 

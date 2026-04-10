@@ -1,4 +1,5 @@
 """Layer 3: Episodic memory — embedding-based semantic search over interactions."""
+
 from __future__ import annotations
 
 import json
@@ -13,9 +14,12 @@ from clawed.agent_core.memory.embeddings import get_embedder
 
 logger = logging.getLogger(__name__)
 
+
 def _default_db():
     from clawed.paths import episodes_db_path
+
     return episodes_db_path()
+
 
 _DEFAULT_DB = None  # resolved lazily via _default_db()
 
@@ -42,9 +46,7 @@ class EpisodicMemory:
                     created_at TEXT NOT NULL
                 )
             """)
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_episodes_teacher ON episodes(teacher_id)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_episodes_teacher ON episodes(teacher_id)")
 
     def store(
         self,
@@ -57,8 +59,7 @@ class EpisodicMemory:
         blob = _embed_to_blob(embedding)
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(
-                "INSERT INTO episodes (teacher_id, text, embedding, metadata, created_at) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO episodes (teacher_id, text, embedding, metadata, created_at) VALUES (?, ?, ?, ?, ?)",
                 (
                     teacher_id,
                     text,
@@ -93,17 +94,16 @@ class EpisodicMemory:
         scored = []
         for row in rows:
             raw = row["embedding"]
-            stored_embedding = (
-                _blob_to_embed(raw) if isinstance(raw, bytes)
-                else json.loads(raw)
-            )
+            stored_embedding = _blob_to_embed(raw) if isinstance(raw, bytes) else json.loads(raw)
             sim = self._embedder.cosine_similarity(query_embedding, stored_embedding)
-            scored.append({
-                "text": row["text"],
-                "metadata": json.loads(row["metadata"]),
-                "created_at": row["created_at"],
-                "similarity": sim,
-            })
+            scored.append(
+                {
+                    "text": row["text"],
+                    "metadata": json.loads(row["metadata"]),
+                    "created_at": row["created_at"],
+                    "similarity": sim,
+                }
+            )
 
         scored.sort(key=lambda x: x["similarity"], reverse=True)
         return scored[:top_k]
@@ -113,8 +113,7 @@ class EpisodicMemory:
         with sqlite3.connect(self._db_path) as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(
-                "SELECT text, metadata, created_at FROM episodes "
-                "WHERE teacher_id = ? ORDER BY created_at DESC LIMIT 1",
+                "SELECT text, metadata, created_at FROM episodes WHERE teacher_id = ? ORDER BY created_at DESC LIMIT 1",
                 (teacher_id,),
             ).fetchone()
         if not row:

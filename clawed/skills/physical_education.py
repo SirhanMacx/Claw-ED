@@ -10,9 +10,17 @@ skill = SubjectSkill(
         "standards — motor skills, movement concepts, fitness, responsibility, and value."
     ),
     aliases=(
-        "pe", "phys ed", "physical ed", "health", "fitness",
-        "health education", "wellness", "adaptive pe",
-        "health and pe", "physical fitness", "gym",
+        "pe",
+        "phys ed",
+        "physical ed",
+        "health",
+        "fitness",
+        "health education",
+        "wellness",
+        "adaptive pe",
+        "health and pe",
+        "physical fitness",
+        "gym",
     ),
     system_prompt=(
         "You are an expert physical education and health educator grounded in "

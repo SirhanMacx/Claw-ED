@@ -30,8 +30,7 @@ _ADDRESS_TERMS: tuple[str, ...] = (
 
 # Pre-compiled case-insensitive word-boundary patterns for each term.
 _ADDRESS_TERM_RES: dict[str, re.Pattern[str]] = {
-    term: re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE)
-    for term in _ADDRESS_TERMS
+    term: re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE) for term in _ADDRESS_TERMS
 }
 
 # ── Do Now style classifiers ─────────────────────────────────────────────
@@ -143,15 +142,9 @@ def check_voice_match(
             expected_str = ", ".join(sorted(expected_terms))
             if found_terms:
                 found_str = ", ".join(sorted(found_terms))
-                result.issues.append(
-                    f"Expected address term '{expected_str}' but found "
-                    f"'{found_str}' instead"
-                )
+                result.issues.append(f"Expected address term '{expected_str}' but found '{found_str}' instead")
             else:
-                result.issues.append(
-                    f"Expected address term '{expected_str}' but none found "
-                    f"in generated text"
-                )
+                result.issues.append(f"Expected address term '{expected_str}' but none found in generated text")
 
     # ── Check 2: Do Now style ─────────────────────────────────────────
     if has_do_now_style and do_now:
@@ -160,9 +153,7 @@ def check_voice_match(
 
         # If the teacher says "scenario" or "analogy" but the Do Now is
         # classified as "recall", that is a mismatch.
-        expects_scenario = any(
-            kw in style_lower for kw in ("scenario", "analogy")
-        )
+        expects_scenario = any(kw in style_lower for kw in ("scenario", "analogy"))
         if expects_scenario and detected_type == "recall":
             result.do_now_style_ok = False
             result.issues.append(
@@ -172,9 +163,7 @@ def check_voice_match(
             )
 
         # Symmetric check: teacher expects recall but we generated scenario.
-        expects_recall = bool(
-            re.search(r"\b(?:recall|review|prior\s+knowledge)\b", style_lower)
-        )
+        expects_recall = bool(re.search(r"\b(?:recall|review|prior\s+knowledge)\b", style_lower))
         if expects_recall and detected_type == "scenario":
             result.do_now_style_ok = False
             result.issues.append(
@@ -184,9 +173,5 @@ def check_voice_match(
             )
 
     # ── Final verdict ─────────────────────────────────────────────────
-    result.passed = (
-        result.address_term_ok
-        and result.do_now_style_ok
-        and result.structure_ok
-    )
+    result.passed = result.address_term_ok and result.do_now_style_ok and result.structure_ok
     return result

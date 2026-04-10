@@ -1,4 +1,5 @@
 """Layer 1: Teacher identity — slow-changing profile and persona."""
+
 from __future__ import annotations
 
 import json
@@ -31,6 +32,7 @@ def load_identity_from_db(teacher_id: str) -> dict[str, Any]:
     result: dict[str, Any] = {"name": "", "persona": None, "profile": {}}
     try:
         from clawed.database import Database
+
         db = Database()
         teacher = db.get_default_teacher()
         if teacher:

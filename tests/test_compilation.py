@@ -187,12 +187,8 @@ def test_student_view_has_blanks(tmp_path):
     assert "_____________" in full_text, "Student view must contain blank lines for guided notes"
 
     # The actual guided note answers must NOT appear
-    assert "ANSWER_BRITAIN_UNIQUE" not in full_text, (
-        "Guided note answer must not appear in student view"
-    )
-    assert "ANSWER_WATT_UNIQUE" not in full_text, (
-        "Guided note answer must not appear in student view"
-    )
+    assert "ANSWER_BRITAIN_UNIQUE" not in full_text, "Guided note answer must not appear in student view"
+    assert "ANSWER_WATT_UNIQUE" not in full_text, "Guided note answer must not appear in student view"
 
 
 # ── test 5: teacher view has answers filled in ────────────────────────────
@@ -210,22 +206,14 @@ def test_teacher_view_has_answers(tmp_path):
     full_text = "\n".join(p.text for p in doc.paragraphs)
 
     # Both guided note answers must appear
-    assert "ANSWER_BRITAIN_UNIQUE" in full_text, (
-        "Teacher view must contain guided note answer"
-    )
-    assert "ANSWER_WATT_UNIQUE" in full_text, (
-        "Teacher view must contain guided note answer"
-    )
+    assert "ANSWER_BRITAIN_UNIQUE" in full_text, "Teacher view must contain guided note answer"
+    assert "ANSWER_WATT_UNIQUE" in full_text, "Teacher view must contain guided note answer"
 
     # Teacher script must appear
-    assert "Imagine a world without machines" in full_text, (
-        "Teacher view must include teacher scripts"
-    )
+    assert "Imagine a world without machines" in full_text, "Teacher view must include teacher scripts"
 
     # Station answer key must appear
-    assert "Children worked long hours" in full_text, (
-        "Teacher view must include station answer keys"
-    )
+    assert "Children worked long hours" in full_text, "Teacher view must include station answer keys"
 
 
 # ── test 6: slide count ───────────────────────────────────────────────────
@@ -253,11 +241,9 @@ def test_slide_count(tmp_path):
     expected = (
         1  # title
         + 1  # vocabulary (2 terms on one slide, threshold is 5)
-        + len(mc.direct_instruction)       # 2
-        + len(mc.primary_sources)          # 1
-        + (1 if mc.stations else 0)        # 1
-        + (1 if mc.exit_ticket else 0)     # 1
+        + len(mc.direct_instruction)  # 2
+        + len(mc.primary_sources)  # 1
+        + (1 if mc.stations else 0)  # 1
+        + (1 if mc.exit_ticket else 0)  # 1
     )
-    assert slide_count == expected, (
-        f"Expected {expected} slides, got {slide_count}"
-    )
+    assert slide_count == expected, f"Expected {expected} slides, got {slide_count}"

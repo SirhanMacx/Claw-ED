@@ -59,13 +59,13 @@ async def ingest_files(files: list[UploadFile] = File(...)):
                     if file_size > _MAX_FILE_SIZE:
                         dest.unlink(missing_ok=True)
                         return JSONResponse(
-                            {"error": f"File '{raw_name}' exceeds {_MAX_FILE_SIZE // (1024*1024)}MB limit."},
+                            {"error": f"File '{raw_name}' exceeds {_MAX_FILE_SIZE // (1024 * 1024)}MB limit."},
                             status_code=413,
                         )
                     total_size += len(chunk)
                     if total_size > _MAX_REQUEST_SIZE:
                         return JSONResponse(
-                            {"error": f"Total upload exceeds {_MAX_REQUEST_SIZE // (1024*1024)}MB limit."},
+                            {"error": f"Total upload exceeds {_MAX_REQUEST_SIZE // (1024 * 1024)}MB limit."},
                             status_code=413,
                         )
                     out.write(chunk)

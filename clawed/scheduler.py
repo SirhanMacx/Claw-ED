@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 
 # ── Config paths ───────────────────────────────────────────────────────
 
-SCHEDULE_CONFIG_PATH = Path(
-    os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-) / "schedule.json"
+SCHEDULE_CONFIG_PATH = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))) / "schedule.json"
 
 
 # ── Built-in task definitions ──────────────────────────────────────────
@@ -206,6 +204,7 @@ def get_job_status() -> dict[str, dict]:
 
 def _record_job_start(name: str) -> None:
     from datetime import datetime
+
     _job_status[name] = {
         "status": "running",
         "last_run": datetime.now().isoformat(),
@@ -259,15 +258,11 @@ async def _task_morning_prep() -> str:
 
         unit = session.current_unit
         generated_ids = set(session.config.get("generated_lesson_ids", []))
-        missing = [
-            b for b in unit.daily_lessons
-            if b.lesson_number not in generated_ids
-        ]
+        missing = [b for b in unit.daily_lessons if b.lesson_number not in generated_ids]
 
         if not missing:
             summary = (
-                f"Morning prep: all {len(unit.daily_lessons)} lessons in "
-                f"'{unit.title}' are generated. You're set!"
+                f"Morning prep: all {len(unit.daily_lessons)} lessons in '{unit.title}' are generated. You're set!"
             )
             append_daily_note(summary, category="morning-prep")
             return summary
@@ -296,6 +291,7 @@ async def _task_morning_prep() -> str:
         # Notify via Telegram if bot is configured
         try:
             from clawed.transports.telegram import send_notification
+
             send_notification(
                 f"\U0001f305 Good morning! I generated today's lesson:\n"
                 f"Lesson {next_brief.lesson_number}: {next_brief.topic}\n\n"
@@ -344,10 +340,7 @@ async def _task_weekly_plan() -> str:
 
         unit = session.current_unit
         generated_ids = set(session.config.get("generated_lesson_ids", []))
-        missing = [
-            b for b in unit.daily_lessons
-            if b.lesson_number not in generated_ids
-        ]
+        missing = [b for b in unit.daily_lessons if b.lesson_number not in generated_ids]
 
         # Generate up to 5 lessons for next week
         to_generate = missing[:5]
@@ -373,7 +366,8 @@ async def _task_weekly_plan() -> str:
             except Exception as exc:
                 logger.warning(
                     "Weekly plan: failed to generate lesson %d: %s",
-                    brief.lesson_number, exc,
+                    brief.lesson_number,
+                    exc,
                 )
 
         session.config["generated_lesson_ids"] = list(generated_ids)
@@ -387,6 +381,7 @@ async def _task_weekly_plan() -> str:
 
         try:
             from clawed.transports.telegram import send_notification
+
             topics = ", ".join(b.topic for b in to_generate[:generated_count])
             send_notification(
                 f"\U0001f4c5 Weekly plan ready!\n"
@@ -584,10 +579,7 @@ async def _task_self_distill() -> str:
         result = self_distill(teacher_id)
 
         if result:
-            summary = (
-                f"Self-distillation: analyzed outputs, "
-                f"distilled {result.count(chr(10))} insights into soul.md"
-            )
+            summary = f"Self-distillation: analyzed outputs, distilled {result.count(chr(10))} insights into soul.md"
         else:
             summary = "Self-distillation: not enough data yet"
 
@@ -640,6 +632,7 @@ class EduScheduler:
         """Lazy-init the APScheduler instance."""
         if self._scheduler is None:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
             self._scheduler = AsyncIOScheduler()
         return self._scheduler
 

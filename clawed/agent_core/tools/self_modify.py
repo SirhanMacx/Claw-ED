@@ -34,10 +34,7 @@ class SelfModifyConfigTool:
                     "properties": {
                         "key": {
                             "type": "string",
-                            "description": (
-                                "Config key to change (e.g., "
-                                "'max_agent_iterations', 'output_dir')"
-                            ),
+                            "description": ("Config key to change (e.g., 'max_agent_iterations', 'output_dir')"),
                         },
                         "value": {
                             "type": "string",
@@ -49,9 +46,7 @@ class SelfModifyConfigTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         key = params.get("key", "").strip()
         value = params.get("value", "").strip()
 
@@ -59,14 +54,23 @@ class SelfModifyConfigTool:
             return ToolResult(text="ERROR: key and value are required")
 
         # Safety: block dangerous fields
-        blocked = {"provider", "anthropic_model", "openai_model", "google_model",
-                    "ollama_model", "openrouter_model", "telegram_bot_token",
-                    "ollama_api_key", "dashboard_password"}
+        blocked = {
+            "provider",
+            "anthropic_model",
+            "openai_model",
+            "google_model",
+            "ollama_model",
+            "openrouter_model",
+            "telegram_bot_token",
+            "ollama_api_key",
+            "dashboard_password",
+        }
         if key in blocked:
             return ToolResult(text=f"Cannot modify '{key}' — use switch_model or configure_profile for auth settings.")
 
         try:
             from clawed.models import AppConfig
+
             config = AppConfig.load()
 
             if not hasattr(config, key):
@@ -138,9 +142,7 @@ class WriteFileTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         rel_path = params.get("path", "").strip()
         content = params.get("content", "")
         append = params.get("append", False)
@@ -149,33 +151,32 @@ class WriteFileTool:
             return ToolResult(text="ERROR: path is required")
 
         # Resolve to absolute path within allowed directories
-        data_dir = Path(os.environ.get(
-            "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-        ))
+        data_dir = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
         output_dir = Path(getattr(context.config, "output_dir", "~/clawed_output")).expanduser()
 
         # Security: only allow writes to workspace subdirs or output (P0-5 audit fix)
         # DENY writes to sensitive files — even within data_dir
         denied_files = {
-            "config.json", "secrets.json", "api_token", "schedule.json",
-            "bot.lock", "bot_state.db", "approvals.db", "state.db",
-            "classroom_profile.json", "drive_token.json",
+            "config.json",
+            "secrets.json",
+            "api_token",
+            "schedule.json",
+            "bot.lock",
+            "bot_state.db",
+            "approvals.db",
+            "state.db",
+            "classroom_profile.json",
+            "drive_token.json",
         }
         denied_dirs = {"memory", "corpus", "cache"}
 
         basename = Path(rel_path).name.lower()
         if basename in denied_files:
-            return ToolResult(
-                text=f"BLOCKED: cannot write to '{basename}' — "
-                     f"this is a protected system file."
-            )
+            return ToolResult(text=f"BLOCKED: cannot write to '{basename}' — this is a protected system file.")
 
         first_dir = rel_path.split("/")[0] if "/" in rel_path else ""
         if first_dir in denied_dirs:
-            return ToolResult(
-                text=f"BLOCKED: cannot write to '{first_dir}/' — "
-                     f"this is a protected system directory."
-            )
+            return ToolResult(text=f"BLOCKED: cannot write to '{first_dir}/' — this is a protected system directory.")
 
         if rel_path.startswith("workspace/") or rel_path == "workspace":
             full_path = data_dir / rel_path
@@ -188,8 +189,10 @@ class WriteFileTool:
         # Block path traversal
         try:
             full_path = full_path.resolve()
-            if not (str(full_path).startswith(str(data_dir.resolve())) or
-                    str(full_path).startswith(str(output_dir.resolve()))):
+            if not (
+                str(full_path).startswith(str(data_dir.resolve()))
+                or str(full_path).startswith(str(output_dir.resolve()))
+            ):
                 return ToolResult(text="ERROR: path must be within workspace or output directory")
         except Exception:
             return ToolResult(text="ERROR: invalid path")
@@ -238,16 +241,12 @@ class ReadFileTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         rel_path = params.get("path", "").strip()
         if not rel_path:
             return ToolResult(text="ERROR: path is required")
 
-        data_dir = Path(os.environ.get(
-            "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-        ))
+        data_dir = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
         output_dir = Path(getattr(context.config, "output_dir", "~/clawed_output")).expanduser()
 
         # Try workspace first, then output

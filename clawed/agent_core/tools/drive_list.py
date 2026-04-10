@@ -1,4 +1,5 @@
 """Tool: drive_list — list files in a Google Drive folder."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -17,8 +18,7 @@ class DriveListTool:
             "function": {
                 "name": "drive_list",
                 "description": (
-                    "List files in a Google Drive folder. "
-                    "Returns file names, IDs, and modification times."
+                    "List files in a Google Drive folder. Returns file names, IDs, and modification times."
                 ),
                 "parameters": {
                     "type": "object",
@@ -39,9 +39,7 @@ class DriveListTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.drive.client import DriveClient
 
         folder_id = params.get("folder_id", "root")

@@ -18,6 +18,7 @@ def _get_tavily_key() -> Optional[str]:
     if key:
         return key
     from clawed.paths import data_dir
+
     config_path = data_dir() / "config.json"
     if config_path.exists():
         try:
@@ -92,12 +93,8 @@ async def _search_duckduckgo(query: str, max_results: int = 3) -> list[dict]:
     results: list[dict] = []
     # Parse result blocks: <a class="result__a" href="...">title</a>
     # and <a class="result__snippet">snippet</a>
-    link_pattern = re.compile(
-        r'<a\s+[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>', re.DOTALL
-    )
-    snippet_pattern = re.compile(
-        r'<a\s+[^>]*class="result__snippet"[^>]*>(.*?)</a>', re.DOTALL
-    )
+    link_pattern = re.compile(r'<a\s+[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>', re.DOTALL)
+    snippet_pattern = re.compile(r'<a\s+[^>]*class="result__snippet"[^>]*>(.*?)</a>', re.DOTALL)
 
     links = link_pattern.findall(html)
     snippets = snippet_pattern.findall(html)

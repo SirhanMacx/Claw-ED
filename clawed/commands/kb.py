@@ -63,9 +63,7 @@ def kb_stats() -> None:
             corpus_count = row["cnt"] if row else 0
             for r in conn.execute("SELECT DISTINCT subject FROM corpus_examples"):
                 corpus_subjects.add(r["subject"])
-            for r in conn.execute(
-                "SELECT content_type, COUNT(*) as cnt FROM corpus_examples GROUP BY content_type"
-            ):
+            for r in conn.execute("SELECT content_type, COUNT(*) as cnt FROM corpus_examples GROUP BY content_type"):
                 corpus_types[r["content_type"]] = r["cnt"]
             conn.close()
         except Exception:
@@ -190,15 +188,17 @@ def kb_search(
                 (f"%{query_lower}%", f"%{query_lower}%", f"%{query_lower}%", limit),
             ).fetchall()
             for r in rows:
-                results.append({
-                    "source": "corpus",
-                    "type": r["content_type"],
-                    "subject": r["subject"],
-                    "grade": r["grade_level"],
-                    "topic": r["topic"] or "",
-                    "quality": r["quality_score"],
-                    "created": r["created_at"] or "",
-                })
+                results.append(
+                    {
+                        "source": "corpus",
+                        "type": r["content_type"],
+                        "subject": r["subject"],
+                        "grade": r["grade_level"],
+                        "topic": r["topic"] or "",
+                        "quality": r["quality_score"],
+                        "created": r["created_at"] or "",
+                    }
+                )
             conn.close()
         except Exception:
             pass
@@ -213,27 +213,29 @@ def kb_search(
         all_units = course.get("units_completed", []) + course.get("units_remaining", [])
         for unit in all_units:
             if query_lower in unit.lower():
-                results.append({
+                results.append(
+                    {
+                        "source": "curriculum",
+                        "type": "unit",
+                        "subject": course_name,
+                        "grade": course.get("grade", ""),
+                        "topic": unit,
+                        "quality": 0,
+                        "created": "",
+                    }
+                )
+        if query_lower in searchable and not any(r["subject"] == course_name for r in results):
+            results.append(
+                {
                     "source": "curriculum",
-                    "type": "unit",
+                    "type": "course",
                     "subject": course_name,
                     "grade": course.get("grade", ""),
-                    "topic": unit,
+                    "topic": current,
                     "quality": 0,
                     "created": "",
-                })
-        if query_lower in searchable and not any(
-            r["subject"] == course_name for r in results
-        ):
-            results.append({
-                "source": "curriculum",
-                "type": "course",
-                "subject": course_name,
-                "grade": course.get("grade", ""),
-                "topic": current,
-                "quality": 0,
-                "created": "",
-            })
+                }
+            )
 
     # 3. Search file names in curriculum cache
     if _CURRICULUM_CACHE.exists():
@@ -242,15 +244,17 @@ def kb_search(
                 continue
             for f in subject_dir.iterdir():
                 if query_lower in f.name.lower():
-                    results.append({
-                        "source": "files",
-                        "type": f.suffix.lstrip(".") or "file",
-                        "subject": subject_dir.name.replace("_", " ").title(),
-                        "grade": "",
-                        "topic": f.name,
-                        "quality": 0,
-                        "created": "",
-                    })
+                    results.append(
+                        {
+                            "source": "files",
+                            "type": f.suffix.lstrip(".") or "file",
+                            "subject": subject_dir.name.replace("_", " ").title(),
+                            "grade": "",
+                            "topic": f.name,
+                            "quality": 0,
+                            "created": "",
+                        }
+                    )
 
     if not results:
         console.print(f"[yellow]No results found for '{query}'.[/yellow]")
@@ -302,9 +306,7 @@ def kb_browse() -> None:
         )
         return
 
-    subjects = sorted(
-        d for d in _CURRICULUM_CACHE.iterdir() if d.is_dir()
-    )
+    subjects = sorted(d for d in _CURRICULUM_CACHE.iterdir() if d.is_dir())
 
     if not subjects:
         console.print("[dim]No subject folders found in curriculum cache.[/dim]")
@@ -327,13 +329,8 @@ def kb_browse() -> None:
 
     console.print(tree)
 
-    total_files = sum(
-        sum(1 for f in d.iterdir() if f.is_file())
-        for d in subjects
-    )
-    console.print(
-        f"\n[dim]{len(subjects)} subjects, {total_files} files total.[/dim]"
-    )
+    total_files = sum(sum(1 for f in d.iterdir() if f.is_file()) for d in subjects)
+    console.print(f"\n[dim]{len(subjects)} subjects, {total_files} files total.[/dim]")
 
 
 # ── Wiki compilation commands ────────────────────────────────────────
@@ -342,7 +339,9 @@ def kb_browse() -> None:
 @kb_app.command("compile")
 def kb_compile(
     force: bool = typer.Option(
-        False, "--force", "-f",
+        False,
+        "--force",
+        "-f",
         help="Recompile all articles, even unchanged ones.",
     ),
 ) -> None:
@@ -417,8 +416,7 @@ def kb_query(
 
     if not INDEX_PATH.exists():
         console.print(
-            "[yellow]No wiki found.[/yellow] Compile your curriculum first:\n"
-            "  [bold]clawed kb compile[/bold]"
+            "[yellow]No wiki found.[/yellow] Compile your curriculum first:\n  [bold]clawed kb compile[/bold]"
         )
         raise typer.Exit(1)
 
@@ -434,10 +432,7 @@ def kb_query(
     # Display answer
     console.print(Markdown(result.answer))
     if result.sources:
-        console.print(
-            f"\n[dim]Sources: {', '.join(result.sources)} "
-            f"({result.articles_read} articles read)[/dim]"
-        )
+        console.print(f"\n[dim]Sources: {', '.join(result.sources)} ({result.articles_read} articles read)[/dim]")
 
 
 @kb_app.command("lint")
@@ -447,8 +442,7 @@ def kb_lint() -> None:
 
     if not ARTICLES_DIR.exists():
         console.print(
-            "[yellow]No wiki found.[/yellow] Compile your curriculum first:\n"
-            "  [bold]clawed kb compile[/bold]"
+            "[yellow]No wiki found.[/yellow] Compile your curriculum first:\n  [bold]clawed kb compile[/bold]"
         )
         raise typer.Exit(1)
 
@@ -457,8 +451,7 @@ def kb_lint() -> None:
     if result.healthy:
         console.print(
             Panel(
-                "[green]All articles are up to date.[/green]\n"
-                "No stale, uncovered, or orphaned articles found.",
+                "[green]All articles are up to date.[/green]\nNo stale, uncovered, or orphaned articles found.",
                 title="[bold green]Wiki Health: Clean[/bold green]",
                 border_style="green",
             )

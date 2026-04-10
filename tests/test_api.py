@@ -55,7 +55,7 @@ class TestDatabase:
         assert default is not None
 
     def test_insert_and_get_unit(self, db):
-        tid = db.upsert_teacher("T", '{}')
+        tid = db.upsert_teacher("T", "{}")
         uid = db.insert_unit(tid, "Test Unit", "Science", "8", "Cells", '{"title": "Test Unit"}')
         assert len(uid) == 12
         unit = db.get_unit(uid)
@@ -63,15 +63,15 @@ class TestDatabase:
         assert unit["subject"] == "Science"
 
     def test_list_units(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        db.insert_unit(tid, "Unit A", "Math", "5", "Fractions", '{}')
-        db.insert_unit(tid, "Unit B", "Science", "8", "Cells", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        db.insert_unit(tid, "Unit A", "Math", "5", "Fractions", "{}")
+        db.insert_unit(tid, "Unit B", "Science", "8", "Cells", "{}")
         units = db.list_units()
         assert len(units) == 2
 
     def test_insert_and_get_lesson(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lid = db.insert_lesson(uid, 1, "Lesson 1", '{"title": "Lesson 1"}')
         lesson = db.get_lesson(lid)
         assert lesson is not None
@@ -79,17 +79,17 @@ class TestDatabase:
         assert lesson["share_token"] is not None
 
     def test_lesson_share_token(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         lesson = db.get_lesson(lid)
         by_token = db.get_lesson_by_token(lesson["share_token"])
         assert by_token is not None
         assert by_token["id"] == lid
 
     def test_update_lesson_json(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lid = db.insert_lesson(uid, 1, "L1", '{"v": 1}')
         db.update_lesson_json(lid, '{"v": 2}')
         lesson = db.get_lesson(lid)
@@ -97,9 +97,9 @@ class TestDatabase:
         assert lesson["edit_count"] == 1
 
     def test_feedback_crud(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         fid = db.insert_feedback(lid, 4, "Great!", '["objective"]')
         assert len(fid) == 12
         feedback = db.get_feedback_for_lesson(lid)
@@ -122,9 +122,9 @@ class TestDatabase:
         assert active["id"] == p2
 
     def test_chat_messages(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         db.insert_chat_message(lid, "user", "What is photosynthesis?")
         db.insert_chat_message(lid, "assistant", "It's a process...")
         history = db.get_chat_history(lid)
@@ -205,23 +205,23 @@ class TestAPIRoutes:
         assert resp.json()["units"] == []
 
     def test_list_units_with_data(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        db.insert_unit(tid, "Unit A", "Math", "5", "Fractions", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        db.insert_unit(tid, "Unit A", "Math", "5", "Fractions", "{}")
         resp = client.get("/api/units")
         assert resp.status_code == 200
         assert len(resp.json()["units"]) == 1
 
     def test_list_lessons_empty(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         resp = client.get(f"/api/lessons/{uid}")
         assert resp.status_code == 200
         assert resp.json()["lessons"] == []
 
     def test_feedback_invalid_rating(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         resp = client.post("/api/feedback", json={"lesson_id": lid, "rating": 0})
         assert resp.status_code == 400
 
@@ -230,17 +230,17 @@ class TestAPIRoutes:
         assert resp.status_code == 404
 
     def test_feedback_success(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         resp = client.post("/api/feedback", json={"lesson_id": lid, "rating": 4, "notes": "Good!"})
         assert resp.status_code == 200
         assert "feedback_id" in resp.json()
 
     def test_get_feedback(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         db.insert_feedback(lid, 5, "Awesome")
         resp = client.get(f"/api/feedback/{lid}")
         assert resp.status_code == 200
@@ -260,8 +260,8 @@ class TestAPIRoutes:
     def test_export_lesson_markdown(self, client, db):
         from clawed.models import DailyLesson
 
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lesson = DailyLesson(title="Test", lesson_number=1, objective="Learn things")
         lid = db.insert_lesson(uid, 1, "Test", lesson.model_dump_json())
         resp = client.get(f"/api/export/{lid}?fmt=markdown")
@@ -271,8 +271,8 @@ class TestAPIRoutes:
     def test_export_unsupported_format(self, client, db):
         from clawed.models import DailyLesson
 
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lesson = DailyLesson(title="Test", lesson_number=1, objective="Learn things")
         lid = db.insert_lesson(uid, 1, "Test", lesson.model_dump_json())
         resp = client.get(f"/api/export/{lid}?fmt=xml")
@@ -285,8 +285,8 @@ class TestAPIRoutes:
         assert "error" in data
 
     def test_share_api_success(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lid = db.insert_lesson(uid, 1, "L1", '{"title": "Hello"}')
         lesson = db.get_lesson(lid)
         token = lesson["share_token"]
@@ -313,8 +313,8 @@ class TestAPIRoutes:
 
     def test_chat_no_persona(self, client, db):
         tid = db.upsert_teacher("T", None)  # No persona JSON
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         resp = client.post("/api/chat", json={"lesson_id": lid, "question": "What?"})
         assert resp.status_code == 400
 
@@ -327,7 +327,7 @@ class TestLessonPage:
         from clawed.models import DailyLesson
 
         tid = db.upsert_teacher("T", '{"name": "T"}')
-        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", '{}')
+        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", "{}")
         lesson = DailyLesson(
             title="Cell Structure",
             lesson_number=1,
@@ -347,7 +347,7 @@ class TestLessonPage:
         from clawed.models import DailyLesson
 
         tid = db.upsert_teacher("T", '{"name": "T"}')
-        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", '{}')
+        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", "{}")
         lesson = DailyLesson(title="Shared Lesson", lesson_number=1, objective="Test")
         lid = db.insert_lesson(uid, 1, "Shared Lesson", lesson.model_dump_json())
         row = db.get_lesson(lid)
@@ -363,9 +363,9 @@ class TestDatabaseScores:
     """Test the scores_json column in lessons table."""
 
     def test_update_and_get_scores(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         scores = {"overall": 4.2, "objective_clarity": {"score": 5, "explanation": "Clear"}}
         db.update_lesson_scores(lid, json.dumps(scores))
         lesson = db.get_lesson(lid)
@@ -374,9 +374,9 @@ class TestDatabaseScores:
         assert loaded["overall"] == 4.2
 
     def test_lesson_initially_no_scores(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         lesson = db.get_lesson(lid)
         assert lesson["scores_json"] is None
 
@@ -386,6 +386,7 @@ class TestTemplatesLib:
 
     def test_list_templates(self):
         from clawed.templates_lib import list_templates
+
         templates = list_templates()
         assert len(templates) >= 7
         names = [t.name for t in templates]
@@ -396,6 +397,7 @@ class TestTemplatesLib:
 
     def test_get_template(self):
         from clawed.templates_lib import get_template
+
         t = get_template("socratic-seminar")
         assert t is not None
         assert t.name == "Socratic Seminar"
@@ -403,10 +405,12 @@ class TestTemplatesLib:
 
     def test_get_template_not_found(self):
         from clawed.templates_lib import get_template
+
         assert get_template("nonexistent") is None
 
     def test_template_sections(self):
         from clawed.templates_lib import get_template
+
         t = get_template("jigsaw")
         assert t is not None
         total_time = sum(s.duration_minutes for s in t.sections)
@@ -414,6 +418,7 @@ class TestTemplatesLib:
 
     def test_template_to_prompt_constraint(self):
         from clawed.templates_lib import get_template, template_to_prompt_constraint
+
         t = get_template("station-rotation")
         assert t is not None
         constraint = template_to_prompt_constraint(t)
@@ -426,12 +431,14 @@ class TestQualityScoreModel:
 
     def test_dimensions_defined(self):
         from clawed.quality import LessonQualityScore
+
         assert len(LessonQualityScore.dimensions) == 6
         assert "objective_clarity" in LessonQualityScore.dimensions
 
     def test_lesson_to_text(self):
         from clawed.models import DailyLesson
         from clawed.quality import LessonQualityScore
+
         lesson = DailyLesson(title="Test", lesson_number=1, objective="Learn cells", do_now="Draw a cell")
         text = LessonQualityScore._lesson_to_text(lesson)
         assert "Learn cells" in text
@@ -444,9 +451,13 @@ class TestExporterPDF:
     def test_lesson_to_html_for_pdf(self):
         from clawed.export_markdown import _lesson_to_html_for_pdf
         from clawed.models import DailyLesson
+
         lesson = DailyLesson(
-            title="Cell Division", lesson_number=3, objective="Understand mitosis",
-            do_now="Label a cell", direct_instruction="The cell cycle consists of...",
+            title="Cell Division",
+            lesson_number=3,
+            objective="Understand mitosis",
+            do_now="Label a cell",
+            direct_instruction="The cell cycle consists of...",
         )
         html = _lesson_to_html_for_pdf(lesson, teacher_name="Ms. Johnson", date_str="2026-01-15")
         assert "Cell Division" in html
@@ -474,10 +485,12 @@ class TestNewAPIRoutes:
 
     def test_classroom_export_success(self, client, db):
         from clawed.models import DailyLesson
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lesson = DailyLesson(
-            title="Photosynthesis", lesson_number=1,
+            title="Photosynthesis",
+            lesson_number=1,
             objective="Explain the equation for photosynthesis",
             standards=["NGSS MS-LS1-6"],
         )
@@ -510,16 +523,22 @@ class TestNewAPIRoutes:
         assert resp.status_code in (400, 404)
 
     def test_course_no_persona(self, client):
-        resp = client.post("/api/course", json={
-            "subject": "Science", "grade_level": "8",
-            "topics": ["Cells", "DNA"], "weeks_per_topic": 2,
-        })
+        resp = client.post(
+            "/api/course",
+            json={
+                "subject": "Science",
+                "grade_level": "8",
+                "topics": ["Cells", "DNA"],
+                "weeks_per_topic": 2,
+            },
+        )
         assert resp.status_code == 400
 
     def test_lesson_page_with_scores(self, client, db):
         from clawed.models import DailyLesson
+
         tid = db.upsert_teacher("T", '{"name": "T"}')
-        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", '{}')
+        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", "{}")
         lesson = DailyLesson(title="Scored Lesson", lesson_number=1, objective="Test")
         lid = db.insert_lesson(uid, 1, "Scored Lesson", lesson.model_dump_json())
         scores = {"overall": 4.0, "objective_clarity": {"score": 5, "explanation": "Very clear."}}
@@ -555,7 +574,7 @@ class TestOnboardingDatabase:
         assert db.is_onboarding_complete() is False
 
     def test_upsert_and_get_onboarding(self, db):
-        tid = db.upsert_teacher("T", '{}')
+        tid = db.upsert_teacher("T", "{}")
         db.upsert_onboarding(tid, 2)
         state = db.get_onboarding(tid)
         assert state is not None
@@ -563,24 +582,24 @@ class TestOnboardingDatabase:
         assert state["completed_at"] is None
 
     def test_onboarding_complete_at_step_5(self, db):
-        tid = db.upsert_teacher("T", '{}')
+        tid = db.upsert_teacher("T", "{}")
         db.upsert_onboarding(tid, 5)
         assert db.is_onboarding_complete() is True
         state = db.get_onboarding(tid)
         assert state["completed_at"] is not None
 
     def test_clear_all_generated(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        db.insert_lesson(uid, 1, "L1", "{}")
         db.insert_feedback("fake", 4, "Nice")
         db.clear_all_generated()
         assert db.get_stats()["units"] == 0
         assert db.get_stats()["lessons"] == 0
 
     def test_reset_all(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        db.insert_unit(tid, "U", "S", "8", "T", "{}")
         db.upsert_onboarding(tid, 5)
         db.reset_all()
         assert db.get_default_teacher() is None
@@ -616,28 +635,31 @@ class TestSettingsRoutes:
         assert "include_homework" in data
 
     def test_save_settings(self, client):
-        resp = client.post("/api/settings", json={
-            "provider": "ollama",
-            "ollama_model": "llama3.2",
-            "ollama_base_url": "http://localhost:11434",
-            "anthropic_model": "claude-sonnet-4-6",
-            "openai_model": "gpt-4.1",
-            "include_homework": False,
-            "export_format": "pdf",
-        })
+        resp = client.post(
+            "/api/settings",
+            json={
+                "provider": "ollama",
+                "ollama_model": "llama3.2",
+                "ollama_base_url": "http://localhost:11434",
+                "anthropic_model": "claude-sonnet-4-6",
+                "openai_model": "gpt-4.1",
+                "include_homework": False,
+                "export_format": "pdf",
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "saved"
 
     def test_clear_content(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        db.insert_unit(tid, "U", "S", "8", "T", "{}")
         resp = client.post("/api/settings/clear-content")
         assert resp.status_code == 200
         assert resp.json()["status"] == "cleared"
         assert db.get_stats()["units"] == 0
 
     def test_reset_all(self, client, db):
-        db.upsert_teacher("T", '{}')
+        db.upsert_teacher("T", "{}")
         resp = client.post("/api/settings/reset")
         assert resp.status_code == 200
         assert resp.json()["status"] == "reset"
@@ -663,12 +685,15 @@ class TestOnboardingRoutes:
         assert data["teacher_id"] is not None
 
     def test_create_persona_from_form(self, client):
-        resp = client.post("/api/onboarding/persona-form", json={
-            "name": "Mr. Test",
-            "subject_area": "Math",
-            "grade_levels": "8, 9",
-            "teaching_style": "socratic",
-        })
+        resp = client.post(
+            "/api/onboarding/persona-form",
+            json={
+                "name": "Mr. Test",
+                "subject_area": "Math",
+                "grade_levels": "8, 9",
+                "teaching_style": "socratic",
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["persona"]["name"] == "Mr. Test"
@@ -676,11 +701,14 @@ class TestOnboardingRoutes:
         assert data["teacher_id"] is not None
 
     def test_update_onboarding_step(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        resp = client.post("/api/onboarding/step", json={
-            "teacher_id": tid,
-            "step": 3,
-        })
+        tid = db.upsert_teacher("T", "{}")
+        resp = client.post(
+            "/api/onboarding/step",
+            json={
+                "teacher_id": tid,
+                "step": 3,
+            },
+        )
         assert resp.status_code == 200
         state = db.get_onboarding(tid)
         assert state["step_completed"] == 3
@@ -716,12 +744,14 @@ class TestConfigModule:
 
     def test_mask_api_key_short(self):
         from clawed.config import mask_api_key
+
         assert mask_api_key("abc") == "***"
         assert mask_api_key("") == ""
         assert mask_api_key(None) == ""
 
     def test_mask_api_key_long(self):
         from clawed.config import mask_api_key
+
         result = mask_api_key("sk-ant-api03-abcdefghij")
         assert result.startswith("sk-")
         assert result.endswith("ghij")  # last 6 chars
@@ -729,6 +759,7 @@ class TestConfigModule:
 
     def test_has_config(self):
         from clawed.config import has_config
+
         # Just test it doesn't crash — actual value depends on system state
         result = has_config()
         assert isinstance(result, bool)

@@ -62,8 +62,7 @@ async def plan_unit(
 
     prompt_template = PROMPT_PATH.read_text(encoding="utf-8")
     prompt = (
-        prompt_template
-        .replace("{persona}", persona.to_prompt_context())
+        prompt_template.replace("{persona}", persona.to_prompt_context())
         .replace("{subject}", subject)
         .replace("{grade_level}", grade_level)
         .replace("{topic}", topic)
@@ -79,10 +78,7 @@ async def plan_unit(
     return await client.safe_generate_json(
         prompt=prompt,
         model_class=UnitPlan,
-        system=(
-            "You are an expert curriculum designer. "
-            "Respond only with valid JSON matching the specified format."
-        ),
+        system=("You are an expert curriculum designer. Respond only with valid JSON matching the specified format."),
         temperature=0.5,
         max_tokens=6000,
     )

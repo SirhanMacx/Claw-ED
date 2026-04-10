@@ -1,4 +1,5 @@
 """Tool: read_heartbeat — read the agent's schedule from HEARTBEAT.md."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -47,10 +48,9 @@ class ReadHeartbeatTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.paths import workspace_dir
+
         heartbeat_path = workspace_dir() / "HEARTBEAT.md"
 
         if not heartbeat_path.exists():

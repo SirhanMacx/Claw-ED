@@ -87,9 +87,17 @@ class TestSkillLibrary:
 
     def test_expected_subjects_present(self, library):
         expected = {
-            "ela", "history", "math", "science", "social_studies",
-            "foreign_language", "art", "music", "physical_education",
-            "computer_science", "special_education",
+            "ela",
+            "history",
+            "math",
+            "science",
+            "social_studies",
+            "foreign_language",
+            "art",
+            "music",
+            "physical_education",
+            "computer_science",
+            "special_education",
         }
         assert set(library.subjects()) == expected
 
@@ -150,6 +158,7 @@ class TestSkillLibrary:
 class TestSocialStudiesSkill:
     def test_loads(self):
         from clawed.skills.social_studies import skill
+
         assert skill.subject == "social_studies"
         assert "DBQ" in skill.lesson_prompt_additions
         assert "MAIN" in skill.lesson_prompt_additions
@@ -158,6 +167,7 @@ class TestSocialStudiesSkill:
 
     def test_aliases(self):
         from clawed.skills.social_studies import skill
+
         assert "civics" in skill.aliases
         assert "government" in skill.aliases
 
@@ -165,6 +175,7 @@ class TestSocialStudiesSkill:
 class TestMathSkill:
     def test_loads(self):
         from clawed.skills.math import skill
+
         assert skill.subject == "math"
         assert "worked example" in skill.lesson_prompt_additions.lower()
         assert "scaffold" in skill.lesson_prompt_additions.lower()
@@ -174,6 +185,7 @@ class TestMathSkill:
 
     def test_aliases(self):
         from clawed.skills.math import skill
+
         assert "algebra" in skill.aliases
         assert "geometry" in skill.aliases
         assert "calculus" in skill.aliases
@@ -182,6 +194,7 @@ class TestMathSkill:
 class TestScienceSkill:
     def test_loads(self):
         from clawed.skills.science import skill
+
         assert skill.subject == "science"
         assert "NGSS" in skill.system_prompt
         assert "CER" in skill.lesson_prompt_additions
@@ -190,6 +203,7 @@ class TestScienceSkill:
 
     def test_aliases(self):
         from clawed.skills.science import skill
+
         assert "biology" in skill.aliases
         assert "chemistry" in skill.aliases
         assert "physics" in skill.aliases
@@ -198,6 +212,7 @@ class TestScienceSkill:
 class TestELASkill:
     def test_loads(self):
         from clawed.skills.ela import skill
+
         assert skill.subject == "ela"
         assert "close reading" in skill.lesson_prompt_additions.lower()
         lpa = skill.lesson_prompt_additions.lower()
@@ -207,6 +222,7 @@ class TestELASkill:
 
     def test_aliases(self):
         from clawed.skills.ela import skill
+
         assert "english" in skill.aliases
         assert "reading" in skill.aliases
         assert "writing" in skill.aliases
@@ -215,6 +231,7 @@ class TestELASkill:
 class TestHistorySkill:
     def test_loads(self):
         from clawed.skills.history import skill
+
         assert skill.subject == "history"
         assert "causation" in skill.lesson_prompt_additions.lower()
         assert "continuity" in skill.lesson_prompt_additions.lower()
@@ -224,6 +241,7 @@ class TestHistorySkill:
 
     def test_aliases(self):
         from clawed.skills.history import skill
+
         assert "us history" in skill.aliases
         assert "world history" in skill.aliases
         assert "apush" in skill.aliases
@@ -305,6 +323,7 @@ class TestAliasCoverage:
 class TestForeignLanguageSkill:
     def test_loads(self):
         from clawed.skills.foreign_language import skill
+
         assert skill.subject == "foreign_language"
         assert "communicative" in skill.lesson_prompt_additions.lower()
         assert "actfl" in skill.system_prompt.upper() or "ACTFL" in skill.system_prompt
@@ -312,6 +331,7 @@ class TestForeignLanguageSkill:
 
     def test_aliases(self):
         from clawed.skills.foreign_language import skill
+
         assert "spanish" in skill.aliases
         assert "french" in skill.aliases
         assert "mandarin" in skill.aliases
@@ -320,6 +340,7 @@ class TestForeignLanguageSkill:
 class TestArtSkill:
     def test_loads(self):
         from clawed.skills.art import skill
+
         assert skill.subject == "art"
         assert "studio" in skill.lesson_prompt_additions.lower()
         assert "national core arts" in skill.system_prompt.lower()
@@ -327,6 +348,7 @@ class TestArtSkill:
 
     def test_aliases(self):
         from clawed.skills.art import skill
+
         assert "visual arts" in skill.aliases
         assert "drawing" in skill.aliases
         assert "painting" in skill.aliases
@@ -335,12 +357,14 @@ class TestArtSkill:
 class TestMusicSkill:
     def test_loads(self):
         from clawed.skills.music import skill
+
         assert skill.subject == "music"
         assert "perform" in skill.lesson_prompt_additions.lower()
         assert len(skill.example_strategies) >= 4
 
     def test_aliases(self):
         from clawed.skills.music import skill
+
         assert "band" in skill.aliases
         assert "orchestra" in skill.aliases
         assert "chorus" in skill.aliases
@@ -349,6 +373,7 @@ class TestMusicSkill:
 class TestPhysicalEducationSkill:
     def test_loads(self):
         from clawed.skills.physical_education import skill
+
         assert skill.subject == "physical_education"
         assert "shape america" in skill.system_prompt.lower()
         assert "fitt" in skill.lesson_prompt_additions.upper() or "FITT" in skill.lesson_prompt_additions
@@ -356,6 +381,7 @@ class TestPhysicalEducationSkill:
 
     def test_aliases(self):
         from clawed.skills.physical_education import skill
+
         assert "pe" in skill.aliases
         assert "fitness" in skill.aliases
         assert "health" in skill.aliases
@@ -364,6 +390,7 @@ class TestPhysicalEducationSkill:
 class TestComputerScienceSkill:
     def test_loads(self):
         from clawed.skills.computer_science import skill
+
         assert skill.subject == "computer_science"
         assert "computational thinking" in skill.system_prompt.lower()
         assert "csta" in skill.system_prompt.upper() or "CSTA" in skill.system_prompt
@@ -371,6 +398,7 @@ class TestComputerScienceSkill:
 
     def test_aliases(self):
         from clawed.skills.computer_science import skill
+
         assert "programming" in skill.aliases
         assert "coding" in skill.aliases
         assert "robotics" in skill.aliases
@@ -379,6 +407,7 @@ class TestComputerScienceSkill:
 class TestSpecialEducationSkill:
     def test_loads(self):
         from clawed.skills.special_education import skill
+
         assert skill.subject == "special_education"
         assert "udl" in skill.system_prompt.lower() or "UDL" in skill.system_prompt
         assert "iep" in skill.lesson_prompt_additions.lower() or "IEP" in skill.lesson_prompt_additions
@@ -386,6 +415,7 @@ class TestSpecialEducationSkill:
 
     def test_aliases(self):
         from clawed.skills.special_education import skill
+
         assert "sped" in skill.aliases
         assert "iep" in skill.aliases
         assert "inclusion" in skill.aliases

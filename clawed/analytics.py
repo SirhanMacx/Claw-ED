@@ -162,8 +162,7 @@ def get_teacher_stats(teacher_id: str) -> dict[str, Any]:
         ).fetchone()["c"]
 
         avg_rating_row = conn.execute(
-            "SELECT AVG(rating) as avg FROM generated_lessons"
-            " WHERE teacher_id = ? AND rating IS NOT NULL",
+            "SELECT AVG(rating) as avg FROM generated_lessons WHERE teacher_id = ? AND rating IS NOT NULL",
             (teacher_id,),
         ).fetchone()
         overall_avg = round(avg_rating_row["avg"], 2) if avg_rating_row["avg"] else 0.0
@@ -247,6 +246,7 @@ def rate_lesson(teacher_id: str, lesson_id: str, rating: int, notes: str = "") -
 
         if lesson_json:
             from clawed.models import DailyLesson
+
             lesson_obj = DailyLesson.model_validate_json(lesson_json)
             # Resolve subject from the lesson's unit (not teacher profile)
             # so a History lesson gets tagged [History] even if the teacher
@@ -268,6 +268,7 @@ def rate_lesson(teacher_id: str, lesson_id: str, rating: int, notes: str = "") -
             if not subject:
                 try:
                     from clawed.models import AppConfig
+
                     cfg = AppConfig.load()
                     if cfg.teacher_profile and cfg.teacher_profile.subjects:
                         subject = cfg.teacher_profile.subjects[0]
@@ -276,6 +277,7 @@ def rate_lesson(teacher_id: str, lesson_id: str, rating: int, notes: str = "") -
             memory_process(lesson_obj, rating, notes, subject=subject)
             # Track lesson metadata for rule-based quality insights
             from clawed.memory_engine import track_lesson_metadata
+
             track_lesson_metadata(lesson_obj, rating)
     except Exception as exc:
         # Memory engine is best-effort -- never block rating

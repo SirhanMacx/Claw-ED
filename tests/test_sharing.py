@@ -1,6 +1,5 @@
 """Tests for shareable lesson URLs."""
 
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,6 +19,7 @@ def db(tmp_path):
 def app(db):
     """Create a test app with the temp database injected."""
     import clawed.api.deps as deps
+
     old_db = deps._db
     deps._db = db
     test_app = create_app()
@@ -35,8 +35,8 @@ def client(app):
 
 class TestShareDatabase:
     def test_lesson_has_share_token(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", "{}")
         lid = db.insert_lesson(uid, 1, "Lesson 1", '{"title": "Lesson 1"}')
         lesson = db.get_lesson(lid)
         assert lesson is not None
@@ -44,8 +44,8 @@ class TestShareDatabase:
         assert len(lesson["share_token"]) == 32  # UUID hex
 
     def test_get_lesson_by_token(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", "{}")
         lid = db.insert_lesson(uid, 1, "Lesson 1", '{"title": "Lesson 1"}')
         lesson = db.get_lesson(lid)
         token = lesson["share_token"]
@@ -60,8 +60,8 @@ class TestShareDatabase:
 
 class TestShareAPI:
     def test_create_share_link(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", "{}")
         lid = db.insert_lesson(uid, 1, "Lesson 1", '{"title": "Lesson 1"}')
         resp = client.post(f"/api/lessons/{lid}/share")
         assert resp.status_code == 200
@@ -75,8 +75,8 @@ class TestShareAPI:
         assert resp.status_code == 404
 
     def test_get_shared_lesson(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", "{}")
         lid = db.insert_lesson(uid, 1, "Lesson 1", '{"title": "Lesson 1"}')
         lesson = db.get_lesson(lid)
         token = lesson["share_token"]
@@ -87,8 +87,8 @@ class TestShareAPI:
         assert data["share_token"] == token
 
     def test_shared_page_html(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", "{}")
         lid = db.insert_lesson(uid, 1, "Lesson 1", '{"title": "Lesson 1"}')
         lesson = db.get_lesson(lid)
         token = lesson["share_token"]

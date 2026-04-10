@@ -1,4 +1,5 @@
 """Tool: gap_analysis — wraps CurriculumMapper.identify_curriculum_gaps."""
+
 from __future__ import annotations
 
 import json
@@ -27,16 +28,12 @@ class GapAnalysisTool:
                         "existing_materials": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": (
-                                "Summaries or titles of existing curriculum materials"
-                            ),
+                            "description": ("Summaries or titles of existing curriculum materials"),
                         },
                         "standards": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": (
-                                "Standards codes/descriptions to check coverage against"
-                            ),
+                            "description": ("Standards codes/descriptions to check coverage against"),
                         },
                     },
                     "required": ["existing_materials", "standards"],
@@ -44,9 +41,7 @@ class GapAnalysisTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.curriculum_map import CurriculumMapper
         from clawed.models import TeacherPersona
 
@@ -79,8 +74,7 @@ class GapAnalysisTool:
             if len(gaps) > 5:
                 lines.append(f"  ... and {len(gaps) - 5} more")
             return ToolResult(
-                text="\n".join(lines) + "\n\n"
-                f"{json.dumps(gaps_data, indent=2)[:2000]}",
+                text="\n".join(lines) + f"\n\n{json.dumps(gaps_data, indent=2)[:2000]}",
                 data={"gaps": gaps_data},
                 side_effects=["Performed curriculum gap analysis"],
             )

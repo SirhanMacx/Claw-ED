@@ -104,9 +104,7 @@ async def ingest_drive_folder(url: str) -> list[Document]:
             ) from exc
         raise
     except httpx.HTTPError as exc:
-        raise ConnectionError(
-            "Couldn't reach Google Drive. Check your internet connection and try again."
-        ) from exc
+        raise ConnectionError("Couldn't reach Google Drive. Check your internet connection and try again.") from exc
 
     if not files:
         return []

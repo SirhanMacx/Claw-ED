@@ -153,14 +153,16 @@ class TestHandleQuestion:
 
         bot = StudentBot()
         code = bot.create_class("teacher-mac")
-        lesson = json.dumps({
-            "title": "Photosynthesis",
-            "objective": "Explain photosynthesis",
-            "do_now": "What do plants need?",
-            "direct_instruction": "Plants use sunlight...",
-            "guided_practice": "Label the diagram",
-            "independent_work": "Answer questions 1-5",
-        })
+        lesson = json.dumps(
+            {
+                "title": "Photosynthesis",
+                "objective": "Explain photosynthesis",
+                "do_now": "What do plants need?",
+                "direct_instruction": "Plants use sunlight...",
+                "guided_practice": "Label the diagram",
+                "independent_work": "Answer questions 1-5",
+            }
+        )
         _run(bot.set_active_lesson(code, "lesson-1", "teacher-mac", lesson))
 
         mock_chat.return_value = "Great question! Plants use sunlight to make food."
@@ -394,22 +396,22 @@ class TestConfusionDetection:
 
         bot = StudentBot()
         code = bot.create_class("teacher-conf")
-        lesson = json.dumps({
-            "title": "WWI Causes",
-            "objective": "Understand causes of WWI",
-            "direct_instruction": (
-                "The powder keg analogy refers to the Balkans region before 1914. "
-                "Nationalism, militarism, and imperial rivalry had packed the region with tension."
-            ),
-            "guided_practice": "Map activity",
-        })
+        lesson = json.dumps(
+            {
+                "title": "WWI Causes",
+                "objective": "Understand causes of WWI",
+                "direct_instruction": (
+                    "The powder keg analogy refers to the Balkans region before 1914. "
+                    "Nationalism, militarism, and imperial rivalry had packed the region with tension."
+                ),
+                "guided_practice": "Map activity",
+            }
+        )
         _run(bot.set_active_lesson(code, "lesson-3", "teacher-conf", lesson))
 
         mock_chat.return_value = "Great question about the powder keg!"
 
-        _run(bot.handle_message(
-            "I'm confused about the powder keg analogy", "stu-001", code
-        ))
+        _run(bot.handle_message("I'm confused about the powder keg analogy", "stu-001", code))
 
         call_args = mock_chat.call_args
         question_arg = call_args.kwargs.get("question", "")
@@ -565,6 +567,7 @@ class TestConversationMemory:
 class TestStudentCLI:
     def test_student_cli_importable(self):
         from clawed.student_cli import cli_entry, main
+
         assert callable(main)
         assert callable(cli_entry)
 
@@ -624,6 +627,7 @@ except ImportError:
 class TestMCPServer:
     def test_mcp_server_import(self):
         from clawed.mcp_server import mcp
+
         assert mcp is not None
 
     def test_mcp_tools_registered(self):

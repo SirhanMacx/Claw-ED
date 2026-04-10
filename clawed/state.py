@@ -31,10 +31,13 @@ logger = logging.getLogger(__name__)
 # space, parentheses, single-quotes, and periods only.
 _SAFE_SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_ ()'.\[\]]+$")
 
+
 # Default data directory
 def _default_data_dir():
     from clawed.paths import data_dir
+
     return data_dir()
+
 
 DEFAULT_DATA_DIR = None  # resolved lazily via _default_data_dir()
 
@@ -174,9 +177,7 @@ def init_db() -> None:
 
 def _migrate_classes(conn: sqlite3.Connection) -> None:
     """Add new columns to the classes table for existing databases."""
-    existing = {
-        row[1] for row in conn.execute("PRAGMA table_info(classes)").fetchall()
-    }
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(classes)").fetchall()}
     migrations = [
         ("name", "TEXT DEFAULT ''"),
         ("topic", "TEXT DEFAULT ''"),
@@ -309,11 +310,13 @@ class TeacherSession:
 
     def add_context(self, role: str, content: str) -> None:
         """Add a turn to the conversation context."""
-        self.context.append({
-            "role": role,
-            "content": content[:2000],  # Cap per-turn length
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        self.context.append(
+            {
+                "role": role,
+                "content": content[:2000],  # Cap per-turn length
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
     def save_unit(self, unit: UnitPlan) -> str:
         """Save a generated unit, return its ID."""
@@ -327,8 +330,13 @@ class TeacherSession:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    unit_id, self.teacher_id, unit.title, unit.subject,
-                    unit.grade_level, unit.topic, unit.model_dump_json(),
+                    unit_id,
+                    self.teacher_id,
+                    unit.title,
+                    unit.subject,
+                    unit.grade_level,
+                    unit.topic,
+                    unit.model_dump_json(),
                 ),
             )
         self.save()
@@ -347,9 +355,13 @@ class TeacherSession:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    lesson_id, unit_id, self.teacher_id,
-                    lesson.lesson_number, lesson.title,
-                    lesson.model_dump_json(), share_token,
+                    lesson_id,
+                    unit_id,
+                    self.teacher_id,
+                    lesson.lesson_number,
+                    lesson.title,
+                    lesson.model_dump_json(),
+                    share_token,
                 ),
             )
         self.save()
@@ -379,7 +391,4 @@ class TeacherSession:
 
     def get_context_for_llm(self, max_turns: int = 5) -> list[dict]:
         """Get recent conversation context formatted for LLM input."""
-        return [
-            {"role": turn["role"], "content": turn["content"]}
-            for turn in self.context[-max_turns:]
-        ]
+        return [{"role": turn["role"], "content": turn["content"]} for turn in self.context[-max_turns:]]

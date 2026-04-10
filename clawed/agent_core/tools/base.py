@@ -1,4 +1,5 @@
 """Tool protocol and registry for the agent core."""
+
 from __future__ import annotations
 
 import importlib
@@ -16,25 +17,29 @@ logger = logging.getLogger(__name__)
 # Every tool should declare a risk_level attribute. If absent, defaults
 # to WRITE_LOCAL for safety (requires approval).
 
-RISK_READ_ONLY = "read_only"             # No side effects — always allowed
-RISK_WRITE_LOCAL = "write_local"         # Writes local files — requires approval
-RISK_NETWORK_CALL = "network_call"       # External API calls — requires approval
-RISK_PACKAGE_INSTALL = "package_install" # pip install — ALWAYS requires confirmation
+RISK_READ_ONLY = "read_only"  # No side effects — always allowed
+RISK_WRITE_LOCAL = "write_local"  # Writes local files — requires approval
+RISK_NETWORK_CALL = "network_call"  # External API calls — requires approval
+RISK_PACKAGE_INSTALL = "package_install"  # pip install — ALWAYS requires confirmation
 RISK_EXTERNAL_PUBLISH = "external_publish"  # Posts to external services — ALWAYS requires confirmation
-RISK_DAEMON_CONTROL = "daemon_control"   # Starts/stops background processes
+RISK_DAEMON_CONTROL = "daemon_control"  # Starts/stops background processes
 
 # Levels that ALWAYS require explicit teacher confirmation regardless of config
-_ALWAYS_REQUIRE_APPROVAL = frozenset({
-    RISK_PACKAGE_INSTALL,
-    RISK_EXTERNAL_PUBLISH,
-})
+_ALWAYS_REQUIRE_APPROVAL = frozenset(
+    {
+        RISK_PACKAGE_INSTALL,
+        RISK_EXTERNAL_PUBLISH,
+    }
+)
 
 # Levels that require approval unless teacher has opted into auto-approve
-_REQUIRE_APPROVAL_BY_DEFAULT = frozenset({
-    RISK_WRITE_LOCAL,
-    RISK_NETWORK_CALL,
-    RISK_DAEMON_CONTROL,
-})
+_REQUIRE_APPROVAL_BY_DEFAULT = frozenset(
+    {
+        RISK_WRITE_LOCAL,
+        RISK_NETWORK_CALL,
+        RISK_DAEMON_CONTROL,
+    }
+)
 
 
 @runtime_checkable
@@ -61,8 +66,8 @@ class ToolRegistry:
         name = tool.schema()["function"]["name"]
         if not hasattr(tool, "risk_level"):
             logger.warning(
-                "Tool '%s' has no risk_level — defaults to write_local. "
-                "Add explicit risk_level attribute for clarity.", name,
+                "Tool '%s' has no risk_level — defaults to write_local. Add explicit risk_level attribute for clarity.",
+                name,
             )
         self._tools[name] = tool
 
@@ -75,8 +80,7 @@ class ToolRegistry:
     def schemas(self) -> list[dict[str, Any]]:
         return [t.schema() for t in self._tools.values()]
 
-    async def execute(self, name: str, params: dict[str, Any],
-                      context: AgentContext) -> ToolResult:
+    async def execute(self, name: str, params: dict[str, Any], context: AgentContext) -> ToolResult:
         """Execute a tool by name with policy enforcement.
 
         Every tool is checked against its declared risk_level before execution.
@@ -100,22 +104,23 @@ class ToolRegistry:
             if not approved:
                 return ToolResult(
                     text=f"BLOCKED: '{name}' requires explicit teacher approval "
-                         f"(risk level: {risk}). Ask the teacher to confirm "
-                         f"before proceeding."
+                    f"(risk level: {risk}). Ask the teacher to confirm "
+                    f"before proceeding."
                 )
 
         elif risk in _REQUIRE_APPROVAL_BY_DEFAULT:
             # Check if auto-approve is enabled
             import os
+
             auto_approve = os.environ.get("CLAWED_AUTO_APPROVE", "").lower() in ("1", "true", "yes")
             if not auto_approve:
                 approved = await self._check_approval(name, risk, params, context)
                 if not approved:
                     return ToolResult(
                         text=f"BLOCKED: '{name}' requires teacher approval "
-                             f"(risk level: {risk}). The teacher can enable "
-                             f"auto-approve with CLAWED_AUTO_APPROVE=1 for "
-                             f"low-risk write operations."
+                        f"(risk level: {risk}). The teacher can enable "
+                        f"auto-approve with CLAWED_AUTO_APPROVE=1 for "
+                        f"low-risk write operations."
                     )
 
         # risk == RISK_READ_ONLY → always allowed, no check needed
@@ -126,15 +131,18 @@ class ToolRegistry:
             logger.error("Tool %s failed: %s", name, e)
             return ToolResult(
                 text=f"ERROR: Tool '{name}' failed and did NOT complete. "
-                     f"Reason: {e}. "
-                     f"Do NOT tell the teacher this action succeeded — it did not. "
-                     f"Either retry with corrected parameters or tell the teacher "
-                     f"what went wrong."
+                f"Reason: {e}. "
+                f"Do NOT tell the teacher this action succeeded — it did not. "
+                f"Either retry with corrected parameters or tell the teacher "
+                f"what went wrong."
             )
 
     async def _check_approval(
-        self, tool_name: str, risk_level: str,
-        params: dict[str, Any], context: AgentContext,
+        self,
+        tool_name: str,
+        risk_level: str,
+        params: dict[str, Any],
+        context: AgentContext,
     ) -> bool:
         """Check if the teacher has approved this action.
 
@@ -144,6 +152,7 @@ class ToolRegistry:
         """
         try:
             from clawed.agent_core.approvals import ApprovalManager
+
             mgr = ApprovalManager()
             # Check for standing approval for this tool
             teacher_id = getattr(context, "teacher_id", "default")
@@ -151,7 +160,8 @@ class ToolRegistry:
             if existing:
                 logger.info(
                     "Tool '%s' (risk=%s) approved via standing approval",
-                    tool_name, risk_level,
+                    tool_name,
+                    risk_level,
                 )
                 return True
         except Exception as exc:
@@ -159,7 +169,8 @@ class ToolRegistry:
 
         logger.warning(
             "Tool '%s' BLOCKED (risk=%s) — no approval found",
-            tool_name, risk_level,
+            tool_name,
+            risk_level,
         )
         return False
 
@@ -221,6 +232,4 @@ class ToolRegistry:
                         self.register(instance)
                         logger.debug("Discovered tool: %s", _attr_name)
                     except Exception as exc:
-                        logger.warning(
-                            "Failed to instantiate tool %s: %s", _attr_name, exc
-                        )
+                        logger.warning("Failed to instantiate tool %s: %s", _attr_name, exc)

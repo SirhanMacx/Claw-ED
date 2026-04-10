@@ -1,4 +1,5 @@
 """Tool: student_insights — query student question patterns for reteaching."""
+
 from __future__ import annotations
 
 import logging
@@ -10,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class StudentInsightsTool:
-
     risk_level = "read_only"
 
     def schema(self) -> dict[str, Any]:
@@ -19,7 +19,7 @@ class StudentInsightsTool:
             "function": {
                 "name": "student_insights",
                 "description": "Analyze student question patterns to find confusion topics. "
-                    "Shows what students are struggling with so you can plan reteach activities.",
+                "Shows what students are struggling with so you can plan reteach activities.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -43,6 +43,7 @@ class StudentInsightsTool:
 
         try:
             from clawed.state import _get_conn, init_db
+
             init_db()
             with _get_conn() as conn:
                 if class_code:

@@ -10,8 +10,13 @@ skill = SubjectSkill(
         "lab writeups, science and engineering practices."
     ),
     aliases=(
-        "biology", "chemistry", "physics", "earth science",
-        "environmental science", "life science", "physical science",
+        "biology",
+        "chemistry",
+        "physics",
+        "earth science",
+        "environmental science",
+        "life science",
+        "physical science",
     ),
     system_prompt=(
         "You are an expert science educator aligned to the Next Generation Science Standards "

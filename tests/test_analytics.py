@@ -24,6 +24,7 @@ def analytics_db(tmp_path):
 
     with patch("clawed.state._db_path", return_value=db_path):
         from clawed.state import init_db
+
         init_db()
 
         conn = sqlite3.connect(str(db_path))
@@ -202,10 +203,12 @@ class TestRateLesson:
 class TestQueueLowRated:
     def test_queues_below_threshold(self):
         from clawed.improver import queue_low_rated_for_improvement
+
         assert queue_low_rated_for_improvement(2, "l1", "t1") is True
 
     def test_skips_good_ratings(self):
         from clawed.improver import queue_low_rated_for_improvement
+
         assert queue_low_rated_for_improvement(3, "l1", "t1") is False
         assert queue_low_rated_for_improvement(5, "l1", "t1") is False
 
@@ -239,6 +242,7 @@ class TestStatsAPI:
     @pytest.fixture
     def web_db(self, tmp_path):
         from clawed.database import Database
+
         return Database(tmp_path / "test.db")
 
     @pytest.fixture
@@ -275,5 +279,3 @@ class TestStatsAPI:
             assert resp.status_code == 200
             data = resp.json()
             assert data["total_lessons"] == 0
-
-

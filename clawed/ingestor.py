@@ -58,8 +58,8 @@ def _detect_type(path: Path) -> DocType:
 # ── URL extraction helpers ───────────────────────────────────────────────
 
 _YT_RE = re.compile(
-    r'(?:https?://)?(?:www\.|m\.)?(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)'
-    r'([a-zA-Z0-9_-]{11})'
+    r"(?:https?://)?(?:www\.|m\.)?(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)"
+    r"([a-zA-Z0-9_-]{11})"
 )
 
 
@@ -73,11 +73,13 @@ def _extract_urls_from_text(text: str) -> list[ExtractedURL]:
         seen.add(url)
         yt_ids = extract_youtube_ids(url)
         if yt_ids:
-            urls.append(ExtractedURL(
-                url=f"https://youtube.com/watch?v={yt_ids[0]}",
-                link_type="youtube",
-            ))
-        elif 'docs.google.com' in url or 'drive.google.com' in url:
+            urls.append(
+                ExtractedURL(
+                    url=f"https://youtube.com/watch?v={yt_ids[0]}",
+                    link_type="youtube",
+                )
+            )
+        elif "docs.google.com" in url or "drive.google.com" in url:
             urls.append(ExtractedURL(url=url, link_type="google_doc"))
         else:
             urls.append(ExtractedURL(url=url, link_type="website"))
@@ -123,11 +125,13 @@ def _extract_pdf_rich(path: Path) -> ExtractionResult:
                     img_bytes = base_image["image"]
                     ext = base_image.get("ext", "png")
                     if len(img_bytes) > 2000:  # Skip tiny icons
-                        images.append(ExtractedImage(
-                            image_bytes=img_bytes,
-                            format=ext,
-                            context_text=slide_context[:200] if slide_context else "",
-                        ))
+                        images.append(
+                            ExtractedImage(
+                                image_bytes=img_bytes,
+                                format=ext,
+                                context_text=slide_context[:200] if slide_context else "",
+                            )
+                        )
             except Exception as e:
                 logger.debug("Failed to extract image xref %d: %s", xref, e)
     page_count = len(doc)
@@ -195,10 +199,12 @@ def _extract_docx_rich(path: Path) -> ExtractionResult:
                 if url and isinstance(url, str) and url.startswith("http"):
                     yt_ids = extract_youtube_ids(url)
                     if yt_ids:
-                        urls.append(ExtractedURL(
-                            url=f"https://youtube.com/watch?v={yt_ids[0]}",
-                            link_type="youtube",
-                        ))
+                        urls.append(
+                            ExtractedURL(
+                                url=f"https://youtube.com/watch?v={yt_ids[0]}",
+                                link_type="youtube",
+                            )
+                        )
                     else:
                         urls.append(ExtractedURL(url=url, link_type="website"))
     except (AttributeError, KeyError, ValueError) as e:
@@ -219,12 +225,14 @@ def _extract_docx_rich(path: Path) -> ExtractionResult:
                     ct = img_part.content_type or ""
                     fmt = "png" if "png" in ct else "jpeg"
                     if len(img_bytes) > 1000:  # skip tiny icons
-                        images.append(ExtractedImage(
-                            image_bytes=img_bytes,
-                            format=fmt,
-                            alt_text="",
-                            context_text="",
-                        ))
+                        images.append(
+                            ExtractedImage(
+                                image_bytes=img_bytes,
+                                format=fmt,
+                                alt_text="",
+                                context_text="",
+                            )
+                        )
                 except (AttributeError, OSError, ValueError) as e:
                     logger.debug("Failed to extract DOCX image: %s", e)
     except (AttributeError, KeyError) as e:
@@ -290,17 +298,21 @@ def _extract_pptx_rich(path: Path) -> ExtractionResult:
                                     seen_urls.add(url)
                                     yt_ids = extract_youtube_ids(url)
                                     if yt_ids:
-                                        urls.append(ExtractedURL(
-                                            url=f"https://youtube.com/watch?v={yt_ids[0]}",
-                                            link_type="youtube",
-                                            context_text=run.text[:100],
-                                        ))
+                                        urls.append(
+                                            ExtractedURL(
+                                                url=f"https://youtube.com/watch?v={yt_ids[0]}",
+                                                link_type="youtube",
+                                                context_text=run.text[:100],
+                                            )
+                                        )
                                     else:
-                                        urls.append(ExtractedURL(
-                                            url=url,
-                                            link_type="website",
-                                            context_text=run.text[:100],
-                                        ))
+                                        urls.append(
+                                            ExtractedURL(
+                                                url=url,
+                                                link_type="website",
+                                                context_text=run.text[:100],
+                                            )
+                                        )
                         except (AttributeError, ValueError) as e:
                             logger.debug("Failed to extract PPTX hyperlink: %s", e)
 
@@ -310,19 +322,21 @@ def _extract_pptx_rich(path: Path) -> ExtractionResult:
                     img = shape.image
                     ct = img.content_type or ""
                     # Skip EMF/WMF (not reusable in new PPTX easily)
-                    if 'emf' in ct.lower() or 'wmf' in ct.lower():
+                    if "emf" in ct.lower() or "wmf" in ct.lower():
                         continue
                     fmt = "png" if "png" in ct else "jpeg"
                     img_bytes = img.blob
                     if len(img_bytes) > 2000:  # skip tiny icons/bullets
-                        images.append(ExtractedImage(
-                            image_bytes=img_bytes,
-                            format=fmt,
-                            width=shape.width,
-                            height=shape.height,
-                            context_text=slide_context,
-                            slide_number=i,
-                        ))
+                        images.append(
+                            ExtractedImage(
+                                image_bytes=img_bytes,
+                                format=fmt,
+                                width=shape.width,
+                                height=shape.height,
+                                context_text=slide_context,
+                                slide_number=i,
+                            )
+                        )
             except (AttributeError, OSError, ValueError) as e:
                 logger.debug("Failed to extract PPTX image on slide %d: %s", i, e)
 
@@ -384,7 +398,9 @@ def _extract_doc(path: Path) -> str:
         try:
             result = subprocess.run(
                 ["textutil", "-convert", "txt", "-stdout", str(path)],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
@@ -396,7 +412,9 @@ def _extract_doc(path: Path) -> str:
             try:
                 result = subprocess.run(
                     [tool, str(path)],
-                    capture_output=True, text=True, timeout=30,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     return result.stdout.strip()
@@ -425,7 +443,9 @@ def _extract_ppt(path: Path) -> str:
         try:
             result = subprocess.run(
                 ["textutil", "-convert", "txt", "-stdout", str(path)],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
@@ -465,6 +485,7 @@ def _extract_xlsx(path: Path) -> str:
     """Extract text from an .xlsx file using openpyxl."""
     try:
         from openpyxl import load_workbook
+
         wb = load_workbook(str(path), read_only=True, data_only=True)
         rows: list[str] = []
         for sheet in wb.sheetnames:
@@ -496,6 +517,7 @@ def _extract_xls(path: Path) -> str:
     # Strategy 1: xlrd (proper XLS parser)
     try:
         import xlrd
+
         wb = xlrd.open_workbook(str(path))
         rows: list[str] = []
         for sheet in wb.sheet_names():
@@ -525,7 +547,9 @@ def _extract_xls(path: Path) -> str:
         try:
             result = subprocess.run(
                 ["textutil", "-convert", "txt", "-stdout", str(path)],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
@@ -555,6 +579,7 @@ def _extract_rtf(path: Path) -> str:
     """
     try:
         from striprtf.striprtf import rtf_to_text
+
         raw = path.read_text(encoding="utf-8", errors="replace")
         return rtf_to_text(raw).strip()
     except ImportError:
@@ -566,7 +591,9 @@ def _extract_rtf(path: Path) -> str:
         try:
             result = subprocess.run(
                 ["textutil", "-convert", "txt", "-stdout", str(path)],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
@@ -781,21 +808,118 @@ _EXTENSION_EXTRACTORS: dict[str, object] = {
 
 
 # Words too common to be useful as topic tags
-_TAG_STOPWORDS = frozenset({
-    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "shall", "can", "this", "that", "these",
-    "those", "it", "its", "not", "no", "so", "if", "as", "up", "out",
-    "about", "into", "through", "during", "before", "after", "above",
-    "below", "between", "under", "again", "further", "then", "once",
-    "here", "there", "when", "where", "why", "how", "all", "each",
-    "every", "both", "few", "more", "most", "other", "some", "such",
-    "than", "too", "very", "just", "also", "new", "old", "first",
-    "last", "next", "per", "page", "slide", "sheet", "file", "name",
-    "class", "grade", "date", "unit", "week", "day", "period", "mr",
-    "mrs", "ms", "dr", "student", "students", "teacher",
-})
+_TAG_STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
+        "not",
+        "no",
+        "so",
+        "if",
+        "as",
+        "up",
+        "out",
+        "about",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "above",
+        "below",
+        "between",
+        "under",
+        "again",
+        "further",
+        "then",
+        "once",
+        "here",
+        "there",
+        "when",
+        "where",
+        "why",
+        "how",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "than",
+        "too",
+        "very",
+        "just",
+        "also",
+        "new",
+        "old",
+        "first",
+        "last",
+        "next",
+        "per",
+        "page",
+        "slide",
+        "sheet",
+        "file",
+        "name",
+        "class",
+        "grade",
+        "date",
+        "unit",
+        "week",
+        "day",
+        "period",
+        "mr",
+        "mrs",
+        "ms",
+        "dr",
+        "student",
+        "students",
+        "teacher",
+    }
+)
 
 
 def _extract_topic_tags(path: Path, content: str) -> list[str]:
@@ -885,15 +1009,33 @@ def _contribute_to_corpus(doc: "Document") -> None:
     content_lower = doc.content.lower()
 
     # Detect lesson-plan-like documents
-    is_lesson = any(kw in content_lower for kw in [
-        "objective", "swbat", "do now", "aim", "warm up",
-        "direct instruction", "guided practice", "exit ticket",
-        "homework", "materials needed", "lesson plan",
-    ])
-    is_unit = any(kw in content_lower for kw in [
-        "unit plan", "essential question", "enduring understanding",
-        "unit overview", "unit goals", "pacing guide",
-    ])
+    is_lesson = any(
+        kw in content_lower
+        for kw in [
+            "objective",
+            "swbat",
+            "do now",
+            "aim",
+            "warm up",
+            "direct instruction",
+            "guided practice",
+            "exit ticket",
+            "homework",
+            "materials needed",
+            "lesson plan",
+        ]
+    )
+    is_unit = any(
+        kw in content_lower
+        for kw in [
+            "unit plan",
+            "essential question",
+            "enduring understanding",
+            "unit overview",
+            "unit goals",
+            "pacing guide",
+        ]
+    )
 
     if not (is_lesson or is_unit):
         return
@@ -1160,7 +1302,9 @@ def ingest_path(
             logger.info(summary)
             return _dry_run_results(files)
         return ingest_directory(
-            path, max_files=max_files, progress_callback=progress_callback,
+            path,
+            max_files=max_files,
+            progress_callback=progress_callback,
         )
     elif path.is_file() and path.suffix.lower() == ".zip":
         if dry_run:
@@ -1199,12 +1343,14 @@ def _dry_run_results(files: list[Path]) -> list[Document]:
     for f in files:
         doc_type = _detect_type(f)
         if doc_type != DocType.UNKNOWN:
-            results.append(Document(
-                title=f.stem.replace("_", " ").replace("-", " ").title(),
-                content="[dry-run: content not extracted]",
-                doc_type=doc_type,
-                source_path=str(f),
-            ))
+            results.append(
+                Document(
+                    title=f.stem.replace("_", " ").replace("-", " ").title(),
+                    content="[dry-run: content not extracted]",
+                    doc_type=doc_type,
+                    source_path=str(f),
+                )
+            )
     return results
 
 
@@ -1265,11 +1411,7 @@ def full_ingest(
             try:
                 if not doc.source_path:
                     continue
-                doc_type_val = (
-                    doc.doc_type.value
-                    if hasattr(doc.doc_type, "value")
-                    else str(doc.doc_type)
-                )
+                doc_type_val = doc.doc_type.value if hasattr(doc.doc_type, "value") else str(doc.doc_type)
                 extraction = extract_rich(Path(doc.source_path))
                 aid = registry.register_asset(
                     teacher_id=teacher_id,
@@ -1286,15 +1428,9 @@ def full_ingest(
             except Exception:
                 pass
             if (i + 1) % 200 == 0:
-                _progress(
-                    f"  assets {i + 1}/{len(docs)} "
-                    f"({result['images_extracted']} images)"
-                )
+                _progress(f"  assets {i + 1}/{len(docs)} ({result['images_extracted']} images)")
                 gc.collect()
-        _progress(
-            f"Assets: {result['assets_registered']} registered, "
-            f"{result['images_extracted']} images extracted"
-        )
+        _progress(f"Assets: {result['assets_registered']} registered, {result['images_extracted']} images extracted")
     except Exception as e:
         result["errors"].append(f"Asset registration: {e}")
 
@@ -1310,17 +1446,16 @@ def full_ingest(
                 if len(text.strip()) < 20:
                     continue
                 chunks = kb.index(
-                    teacher_id, doc.title,
-                    doc.source_path or "", text,
+                    teacher_id,
+                    doc.title,
+                    doc.source_path or "",
+                    text,
                 )
                 result["chunks_indexed"] += chunks
             except Exception:
                 pass
             if (i + 1) % 200 == 0:
-                _progress(
-                    f"  chunks {i + 1}/{len(docs)} "
-                    f"({result['chunks_indexed']} chunks)"
-                )
+                _progress(f"  chunks {i + 1}/{len(docs)} ({result['chunks_indexed']} chunks)")
                 gc.collect()
         _progress(f"Indexed {result['chunks_indexed']} chunks")
     except Exception as e:
@@ -1339,17 +1474,24 @@ def full_ingest(
         for doc in docs:
             tags = list(getattr(doc, "tags", []) or [])
             entities = extract_entities_from_document(
-                doc.title, doc.content[:3000], tags,
+                doc.title,
+                doc.content[:3000],
+                tags,
             )
             for ent in entities:
                 kg.add_entity(
-                    teacher_id, ent["name"], ent["entity_type"], embed=False,
+                    teacher_id,
+                    ent["name"],
+                    ent["entity_type"],
+                    embed=False,
                 )
                 result["kg_entities"] += 1
             rels = infer_relationships(entities, doc.title)
             for rel in rels:
                 kg.add_triple(
-                    teacher_id, rel["subject"], rel["predicate"],
+                    teacher_id,
+                    rel["subject"],
+                    rel["predicate"],
                     rel["object"],
                     confidence=rel.get("confidence", 0.5),
                     source="ingest",
@@ -1357,10 +1499,7 @@ def full_ingest(
                 )
                 result["kg_triples"] += 1
         kg.batch_embed_unembedded(teacher_id)
-        _progress(
-            f"KG: {result['kg_entities']} entities, "
-            f"{result['kg_triples']} relationships"
-        )
+        _progress(f"KG: {result['kg_entities']} entities, {result['kg_triples']} relationships")
     except Exception as e:
         result["errors"].append(f"Knowledge graph: {e}")
 
@@ -1380,6 +1519,7 @@ def full_ingest(
         if loop and loop.is_running():
             # Already in an async context — can't nest asyncio.run()
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 wiki = pool.submit(asyncio.run, compile_wiki(teacher_id)).result()
         else:

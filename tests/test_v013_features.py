@@ -87,7 +87,8 @@ class TestClassCodeDBOperations:
 
     def test_class_code_with_expiry(self, db):
         db.create_class_code(
-            code="EX-PIR-1", teacher_id="t1",
+            code="EX-PIR-1",
+            teacher_id="t1",
             expires_at="2026-06-15T23:59:59",
         )
         row = db.get_class_code("EX-PIR-1")
@@ -191,10 +192,14 @@ class TestModelAutoDetection:
     def test_anthropic_takes_priority_over_openai(self):
         from clawed.onboarding import _detect_available_models
 
-        with patch.dict("os.environ", {
-            "ANTHROPIC_API_KEY": "sk-ant-test",
-            "OPENAI_API_KEY": "sk-test",
-        }, clear=True):
+        with patch.dict(
+            "os.environ",
+            {
+                "ANTHROPIC_API_KEY": "sk-ant-test",
+                "OPENAI_API_KEY": "sk-test",
+            },
+            clear=True,
+        ):
             provider, _ = _detect_available_models()
             assert provider == LLMProvider.ANTHROPIC
 
@@ -250,9 +255,7 @@ class TestOnboardingPersonaPreview:
         from clawed.onboarding import _show_persona_preview
 
         with patch("clawed.onboarding.Prompt.ask", return_value="y"):
-            result = _show_persona_preview(
-                ["Social Studies", "History"], ["8", "9"], "NY"
-            )
+            result = _show_persona_preview(["Social Studies", "History"], ["8", "9"], "NY")
             assert result is True
 
     def test_preview_state_resolution(self):
@@ -323,19 +326,19 @@ class TestLessonsListPage:
         assert "Generate New Lesson" in resp.text
 
     def test_lessons_page_with_data(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "Math", "8", "Algebra", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "Math", "8", "Algebra", "{}")
         db.insert_lesson(uid, 1, "Solving Equations", '{"title": "Solving Equations"}')
         resp = client.get("/lessons")
         assert resp.status_code == 200
         assert "Solving Equations" in resp.text
 
     def test_lessons_page_subject_filter(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid1 = db.insert_unit(tid, "U1", "Math", "8", "Algebra", '{}')
-        uid2 = db.insert_unit(tid, "U2", "Science", "8", "Cells", '{}')
-        db.insert_lesson(uid1, 1, "Math Lesson", '{}')
-        db.insert_lesson(uid2, 1, "Science Lesson", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid1 = db.insert_unit(tid, "U1", "Math", "8", "Algebra", "{}")
+        uid2 = db.insert_unit(tid, "U2", "Science", "8", "Cells", "{}")
+        db.insert_lesson(uid1, 1, "Math Lesson", "{}")
+        db.insert_lesson(uid2, 1, "Science Lesson", "{}")
         resp = client.get("/lessons?subject=Math")
         assert resp.status_code == 200
         assert "Math Lesson" in resp.text
@@ -343,17 +346,17 @@ class TestLessonsListPage:
         assert "Science Lesson" not in resp.text
 
     def test_lessons_page_grade_filter(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U1", "Math", "6", "Fractions", '{}')
-        db.insert_lesson(uid, 1, "Fractions Lesson", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U1", "Math", "6", "Fractions", "{}")
+        db.insert_lesson(uid, 1, "Fractions Lesson", "{}")
         resp = client.get("/lessons?grade=6")
         assert resp.status_code == 200
         assert "Fractions Lesson" in resp.text
 
     def test_lessons_page_no_results(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U1", "Math", "8", "Algebra", '{}')
-        db.insert_lesson(uid, 1, "Algebra", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U1", "Math", "8", "Algebra", "{}")
+        db.insert_lesson(uid, 1, "Algebra", "{}")
         resp = client.get("/lessons?subject=Art")
         assert resp.status_code == 200
         assert "No lessons" in resp.text
@@ -395,7 +398,7 @@ class TestLessonPageEmbedSnippet:
         from clawed.models import DailyLesson
 
         tid = db.upsert_teacher("T", '{"name": "T"}')
-        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", '{}')
+        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", "{}")
         lesson = DailyLesson(
             title="Cell Division",
             lesson_number=1,
@@ -412,7 +415,7 @@ class TestLessonPageEmbedSnippet:
         from clawed.models import DailyLesson
 
         tid = db.upsert_teacher("T", '{"name": "T"}')
-        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", '{}')
+        uid = db.insert_unit(tid, "U", "Science", "8", "Cells", "{}")
         lesson = DailyLesson(title="Sharing Test", lesson_number=1, objective="Test")
         lid = db.insert_lesson(uid, 1, "Sharing Test", lesson.model_dump_json())
         row = db.get_lesson(lid)
@@ -447,8 +450,8 @@ class TestDashboardPage:
 
     def test_dashboard_with_units(self, client, db):
         tid = db.upsert_teacher("Ms. Teacher", '{"name": "Ms. Teacher"}')
-        db.insert_unit(tid, "Unit A", "Math", "8", "Algebra", '{}')
-        db.insert_unit(tid, "Unit B", "Science", "7", "Cells", '{}')
+        db.insert_unit(tid, "Unit A", "Math", "8", "Algebra", "{}")
+        db.insert_unit(tid, "Unit B", "Science", "7", "Cells", "{}")
         resp = client.get("/dashboard")
         assert resp.status_code == 200
         assert "Unit A" in resp.text

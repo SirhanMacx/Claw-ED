@@ -1,6 +1,5 @@
 """Tests for year-level curriculum mapping models and utilities."""
 
-
 import pytest
 
 from clawed.models import (

@@ -41,16 +41,19 @@ class TestExtensionMap:
 
 
 class TestDetectType:
-    @pytest.mark.parametrize("ext,expected", [
-        (".pdf", DocType.PDF),
-        (".docx", DocType.DOCX),
-        (".pptx", DocType.PPTX),
-        (".txt", DocType.TXT),
-        (".md", DocType.MD),
-        (".notebook", DocType.NOTEBOOK),
-        (".xbk", DocType.XBK),
-        (".flipchart", DocType.FLIPCHART),
-    ])
+    @pytest.mark.parametrize(
+        "ext,expected",
+        [
+            (".pdf", DocType.PDF),
+            (".docx", DocType.DOCX),
+            (".pptx", DocType.PPTX),
+            (".txt", DocType.TXT),
+            (".md", DocType.MD),
+            (".notebook", DocType.NOTEBOOK),
+            (".xbk", DocType.XBK),
+            (".flipchart", DocType.FLIPCHART),
+        ],
+    )
     def test_known_extensions(self, ext, expected):
         assert _detect_type(Path(f"lesson{ext}")) == expected
 

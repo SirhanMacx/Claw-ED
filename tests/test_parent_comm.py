@@ -104,14 +104,16 @@ class TestGenerateParentComm:
     @pytest.mark.asyncio
     async def test_generate_progress_update(self):
         mock_llm = MagicMock()
-        mock_llm.generate_json = AsyncMock(return_value={
-            "subject_line": "Progress Update: Unit 4 WWI",
-            "email_body": "Dear Parent/Guardian,\n\nI wanted to reach out about your child's progress...",
-            "follow_up_suggestions": [
-                "Schedule a parent-teacher conference",
-                "Review document analysis skills at home",
-            ],
-        })
+        mock_llm.generate_json = AsyncMock(
+            return_value={
+                "subject_line": "Progress Update: Unit 4 WWI",
+                "email_body": "Dear Parent/Guardian,\n\nI wanted to reach out about your child's progress...",
+                "follow_up_suggestions": [
+                    "Schedule a parent-teacher conference",
+                    "Review document analysis skills at home",
+                ],
+            }
+        )
 
         req = ParentCommRequest(
             comm_type=CommType.PROGRESS_UPDATE,
@@ -130,11 +132,13 @@ class TestGenerateParentComm:
     @pytest.mark.asyncio
     async def test_generate_behavior_concern(self):
         mock_llm = MagicMock()
-        mock_llm.generate_json = AsyncMock(return_value={
-            "subject_line": "Classroom Behavior Update",
-            "email_body": "Dear Parent/Guardian,\n\nI'm reaching out because...",
-            "follow_up_suggestions": ["Schedule a meeting"],
-        })
+        mock_llm.generate_json = AsyncMock(
+            return_value={
+                "subject_line": "Classroom Behavior Update",
+                "email_body": "Dear Parent/Guardian,\n\nI'm reaching out because...",
+                "follow_up_suggestions": ["Schedule a meeting"],
+            }
+        )
 
         req = ParentCommRequest(
             comm_type=CommType.BEHAVIOR_CONCERN,
@@ -149,11 +153,13 @@ class TestGenerateParentComm:
     @pytest.mark.asyncio
     async def test_generate_positive_note(self):
         mock_llm = MagicMock()
-        mock_llm.generate_json = AsyncMock(return_value={
-            "subject_line": "Great News from Math Class!",
-            "email_body": "Dear Parent/Guardian,\n\nI wanted to share some wonderful news...",
-            "follow_up_suggestions": ["Celebrate at home!"],
-        })
+        mock_llm.generate_json = AsyncMock(
+            return_value={
+                "subject_line": "Great News from Math Class!",
+                "email_body": "Dear Parent/Guardian,\n\nI wanted to share some wonderful news...",
+                "follow_up_suggestions": ["Celebrate at home!"],
+            }
+        )
 
         req = ParentCommRequest(
             comm_type=CommType.POSITIVE_NOTE,
@@ -170,11 +176,13 @@ class TestGenerateParentComm:
         """Ensure all comm types can be used without error."""
         for ct in CommType:
             mock_llm = MagicMock()
-            mock_llm.generate_json = AsyncMock(return_value={
-                "subject_line": f"Test {ct.value}",
-                "email_body": "Body text.",
-                "follow_up_suggestions": [],
-            })
+            mock_llm.generate_json = AsyncMock(
+                return_value={
+                    "subject_line": f"Test {ct.value}",
+                    "email_body": "Body text.",
+                    "follow_up_suggestions": [],
+                }
+            )
 
             req = ParentCommRequest(
                 comm_type=ct,
@@ -187,11 +195,13 @@ class TestGenerateParentComm:
     @pytest.mark.asyncio
     async def test_generate_passes_tone_to_system_prompt(self):
         mock_llm = MagicMock()
-        mock_llm.generate_json = AsyncMock(return_value={
-            "subject_line": "S",
-            "email_body": "B",
-            "follow_up_suggestions": [],
-        })
+        mock_llm.generate_json = AsyncMock(
+            return_value={
+                "subject_line": "S",
+                "email_body": "B",
+                "follow_up_suggestions": [],
+            }
+        )
 
         req = ParentCommRequest(
             comm_type=CommType.GENERAL_UPDATE,

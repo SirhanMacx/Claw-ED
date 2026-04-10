@@ -155,8 +155,7 @@ async def evaluate_voice_consistency(
 
     for lesson in lessons:
         prompt = (
-            _EVALUATION_PROMPT
-            .replace("{persona}", persona.to_prompt_context())
+            _EVALUATION_PROMPT.replace("{persona}", persona.to_prompt_context())
             .replace("{lesson_title}", lesson.title)
             .replace("{objective}", lesson.objective)
             .replace("{do_now}", lesson.do_now[:500])
@@ -202,8 +201,7 @@ async def evaluate_voice_consistency(
     recommendations: list[str] = []
     if avg_voice < 3.5:
         recommendations.append(
-            "Voice consistency is low. Add more voice_examples to the persona "
-            "by sharing additional teaching materials."
+            "Voice consistency is low. Add more voice_examples to the persona by sharing additional teaching materials."
         )
     if avg_vocab < 3.5:
         recommendations.append(
@@ -212,8 +210,7 @@ async def evaluate_voice_consistency(
         )
     if avg_struct < 3.5:
         recommendations.append(
-            "Structure doesn't match the teacher's preferences. "
-            "Update structural_preferences in the persona."
+            "Structure doesn't match the teacher's preferences. Update structural_preferences in the persona."
         )
     if overall >= 4.0:
         recommendations.append("Voice quality is strong across all dimensions.")

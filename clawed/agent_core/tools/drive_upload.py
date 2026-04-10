@@ -1,4 +1,5 @@
 """Tool: drive_upload — upload a file to Google Drive."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,10 +18,7 @@ class DriveUploadTool:
             "type": "function",
             "function": {
                 "name": "drive_upload",
-                "description": (
-                    "Upload a local file to Google Drive. "
-                    "Returns the web link to the uploaded file."
-                ),
+                "description": ("Upload a local file to Google Drive. Returns the web link to the uploaded file."),
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -35,10 +33,7 @@ class DriveUploadTool:
                         },
                         "file_name": {
                             "type": "string",
-                            "description": (
-                                "Name for the file in Drive "
-                                "(defaults to local filename)"
-                            ),
+                            "description": ("Name for the file in Drive (defaults to local filename)"),
                         },
                     },
                     "required": ["file_path"],
@@ -46,9 +41,7 @@ class DriveUploadTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.drive.client import DriveClient
 
         file_path = Path(params["file_path"]).expanduser().resolve()

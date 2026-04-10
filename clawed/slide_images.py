@@ -29,9 +29,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_CACHE_DIR = Path(
-    os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-) / "cache" / "images"
+_CACHE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))) / "cache" / "images"
 
 # Per-image network timeout (seconds)
 _FETCH_TIMEOUT = 15.0
@@ -71,6 +69,7 @@ def _cleanup_cache(cache_dir: Optional[Path] = None) -> None:
     if removed:
         logger.info("Cache cleanup: removed %d images older than %d days", removed, MAX_CACHE_AGE_DAYS)
 
+
 # ── Subject-aware query enrichment ───────────────────────────────────
 
 _SUBJECT_KEYWORDS: dict[str, list[str]] = {
@@ -103,7 +102,7 @@ def _extract_key_concepts(text: str, max_concepts: int = 3) -> list[str]:
     concepts: list[str] = []
 
     # Extract proper nouns (capitalized multi-word phrases)
-    proper_nouns = re.findall(r'[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+', text)
+    proper_nouns = re.findall(r"[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+", text)
     concepts.extend(proper_nouns[:2])
 
     # Extract quoted terms
@@ -112,7 +111,7 @@ def _extract_key_concepts(text: str, max_concepts: int = 3) -> list[str]:
 
     # Extract terms after "about", "of", "on" (topic indicators)
     topic_phrases = re.findall(
-        r'(?:about|of|on|regarding|concerning)\s+(?:the\s+)?([A-Z][\w\s]{3,30})',
+        r"(?:about|of|on|regarding|concerning)\s+(?:the\s+)?([A-Z][\w\s]{3,30})",
         text,
     )
     concepts.extend(topic_phrases[:1])
@@ -220,52 +219,201 @@ def extract_image_subjects(lesson) -> list[dict]:
     that regex would otherwise match.
     """
     subjects: list[dict] = []
-    all_text = " ".join(filter(None, [
-        getattr(lesson, 'title', ''),
-        getattr(lesson, 'objective', ''),
-        getattr(lesson, 'do_now', ''),
-        getattr(lesson, 'direct_instruction', ''),
-        getattr(lesson, 'guided_practice', ''),
-    ]))
+    all_text = " ".join(
+        filter(
+            None,
+            [
+                getattr(lesson, "title", ""),
+                getattr(lesson, "objective", ""),
+                getattr(lesson, "do_now", ""),
+                getattr(lesson, "direct_instruction", ""),
+                getattr(lesson, "guided_practice", ""),
+            ],
+        )
+    )
 
     # Named historical figures
     # Pattern 1: Titled names (King Louis, President Lincoln, etc.)
     # Pattern 2: Known first names of historical figures
     # Pattern 3: Any "Firstname Lastname" that appears near historical context
     common_non_names = {
-        "The", "This", "That", "These", "Those", "When", "Where", "What",
-        "How", "Why", "Each", "Every", "Your", "Their", "Some", "Many",
-        "Most", "Both", "Other", "Such", "More", "Less", "New", "Old",
-        "First", "Last", "Next", "Direct", "Independent", "Guided",
-        "Exit", "Essential", "Key", "Primary", "Source", "Document",
-        "Group", "Social", "Studies", "Grade", "Unit", "Lesson",
-        "Common", "American", "English", "French", "British", "European",
-        "Civil", "World", "Cold", "Middle", "South", "North", "West", "East",
-        "Analyze", "Compare", "Evaluate", "Describe", "Explain", "Identify",
-        "Test", "Review", "Movement", "Act", "Age", "Era", "Period",
+        "The",
+        "This",
+        "That",
+        "These",
+        "Those",
+        "When",
+        "Where",
+        "What",
+        "How",
+        "Why",
+        "Each",
+        "Every",
+        "Your",
+        "Their",
+        "Some",
+        "Many",
+        "Most",
+        "Both",
+        "Other",
+        "Such",
+        "More",
+        "Less",
+        "New",
+        "Old",
+        "First",
+        "Last",
+        "Next",
+        "Direct",
+        "Independent",
+        "Guided",
+        "Exit",
+        "Essential",
+        "Key",
+        "Primary",
+        "Source",
+        "Document",
+        "Group",
+        "Social",
+        "Studies",
+        "Grade",
+        "Unit",
+        "Lesson",
+        "Common",
+        "American",
+        "English",
+        "French",
+        "British",
+        "European",
+        "Civil",
+        "World",
+        "Cold",
+        "Middle",
+        "South",
+        "North",
+        "West",
+        "East",
+        "Analyze",
+        "Compare",
+        "Evaluate",
+        "Describe",
+        "Explain",
+        "Identify",
+        "Test",
+        "Review",
+        "Movement",
+        "Act",
+        "Age",
+        "Era",
+        "Period",
     }
     # Common English verbs/adjectives that appear capitalized in headings
     # but are never historical entity names
     _non_name_second_words = {
-        "Left", "Right", "Home", "Away", "Back", "Up", "Down", "Out", "Over",
-        "Under", "Forever", "Together", "Apart", "Behind", "Ahead",
-        "Looks", "Looked", "Looking", "Goes", "Went", "Gone", "Comes", "Came",
-        "Changes", "Changed", "Begins", "Began", "Ends", "Ended", "Falls",
-        "Fell", "Rises", "Rose", "Grows", "Grew", "Leads", "Led",
-        "Succeeds", "Succeed", "Fails", "Failed", "Starts", "Stops",
-        "Outward", "Forward", "Onward", "Beyond", "Across",
-        "Explore", "Explores", "Explored", "Exploring", "Explorer",
-        "Trade", "Trades", "Traded", "Trading",
-        "Sail", "Sails", "Sailed", "Sailing",
-        "Expand", "Expands", "Expanded", "Expanding", "Expansion",
-        "Spread", "Spreads", "Discover", "Discovers", "Discovered",
-        "Fight", "Fights", "Fighting", "Fought",
-        "Create", "Creates", "Created", "Building", "Built",
-        "Motivations", "Motivation", "Reasons", "Causes", "Effects",
-        "Europe", "Europeans", "Asian", "African", "American",
-        "Economic", "Political", "Religious", "Cultural", "Social",
-        "Consequences", "Impact", "Significance", "Importance",
-        "Changes", "Developments", "Factors", "Events", "Period",
+        "Left",
+        "Right",
+        "Home",
+        "Away",
+        "Back",
+        "Up",
+        "Down",
+        "Out",
+        "Over",
+        "Under",
+        "Forever",
+        "Together",
+        "Apart",
+        "Behind",
+        "Ahead",
+        "Looks",
+        "Looked",
+        "Looking",
+        "Goes",
+        "Went",
+        "Gone",
+        "Comes",
+        "Came",
+        "Changes",
+        "Changed",
+        "Begins",
+        "Began",
+        "Ends",
+        "Ended",
+        "Falls",
+        "Fell",
+        "Rises",
+        "Rose",
+        "Grows",
+        "Grew",
+        "Leads",
+        "Led",
+        "Succeeds",
+        "Succeed",
+        "Fails",
+        "Failed",
+        "Starts",
+        "Stops",
+        "Outward",
+        "Forward",
+        "Onward",
+        "Beyond",
+        "Across",
+        "Explore",
+        "Explores",
+        "Explored",
+        "Exploring",
+        "Explorer",
+        "Trade",
+        "Trades",
+        "Traded",
+        "Trading",
+        "Sail",
+        "Sails",
+        "Sailed",
+        "Sailing",
+        "Expand",
+        "Expands",
+        "Expanded",
+        "Expanding",
+        "Expansion",
+        "Spread",
+        "Spreads",
+        "Discover",
+        "Discovers",
+        "Discovered",
+        "Fight",
+        "Fights",
+        "Fighting",
+        "Fought",
+        "Create",
+        "Creates",
+        "Created",
+        "Building",
+        "Built",
+        "Motivations",
+        "Motivation",
+        "Reasons",
+        "Causes",
+        "Effects",
+        "Europe",
+        "Europeans",
+        "Asian",
+        "African",
+        "American",
+        "Economic",
+        "Political",
+        "Religious",
+        "Cultural",
+        "Social",
+        "Consequences",
+        "Impact",
+        "Significance",
+        "Importance",
+        "Changes",
+        "Developments",
+        "Factors",
+        "Events",
+        "Period",
     }
     people_patterns = [
         r"((?:King |Queen |Emperor |Empress |President |Pope |Tsar |Czar )"
@@ -314,7 +462,7 @@ def extract_image_subjects(lesson) -> list[dict]:
     for doc_name in set(doc_patterns[:2]):
         subjects.append({"query": doc_name, "type": "document", "label": doc_name})
 
-    title = getattr(lesson, 'title', '')
+    title = getattr(lesson, "title", "")
     topic_queries = _get_topic_queries(title)
 
     # Topic-map queries always anchor the first positions — they are
@@ -374,7 +522,7 @@ def _build_search_query(topic: str, subject: str = "") -> str:
     # Subject-style refinements: add specific qualifiers
     if style == "event_person_document":
         # History: look for dates, specific events
-        date_match = re.search(r'\b(1[0-9]{3}|20[0-2][0-9])\b', topic)
+        date_match = re.search(r"\b(1[0-9]{3}|20[0-2][0-9])\b", topic)
         if date_match:
             extra = [date_match.group()] + extra[:1]
     elif style == "process_organism_diagram":
@@ -434,7 +582,10 @@ def _check_cache(source: str, query: str, base: Optional[Path] = None) -> Option
 
 
 def _save_to_cache(
-    data: bytes, source: str, query: str, base: Optional[Path] = None,
+    data: bytes,
+    source: str,
+    query: str,
+    base: Optional[Path] = None,
 ) -> Path:
     """Write image bytes to the cache and return the path."""
     path = _cache_path(source, query, base)
@@ -447,7 +598,8 @@ def _save_to_cache(
 
 
 async def _fetch_loc(
-    query: str, cache_dir: Optional[Path] = None,
+    query: str,
+    cache_dir: Optional[Path] = None,
 ) -> Optional[Path]:
     """Fetch an image from the Library of Congress free API.
 
@@ -506,7 +658,8 @@ async def _fetch_loc(
 
 
 async def _fetch_wikimedia(
-    query: str, cache_dir: Optional[Path] = None,
+    query: str,
+    cache_dir: Optional[Path] = None,
 ) -> Optional[Path]:
     """Fetch a relevant image from Wikipedia/Wikimedia for a given query.
 
@@ -530,7 +683,6 @@ async def _fetch_wikimedia(
 
     try:
         async with httpx.AsyncClient(timeout=_FETCH_TIMEOUT, headers=headers) as client:
-
             # ── Strategy 1: Wikipedia article thumbnail ───────────────────
             # Use the Wikipedia OpenSearch to find the best-matching article,
             # then fetch its page image via the pageimages prop.
@@ -579,7 +731,9 @@ async def _fetch_wikimedia(
                     path = _save_to_cache(dl.content, "wikimedia", query, cache_dir)
                     logger.info(
                         "Wikipedia article image for '%s' (article: '%s') -> %s",
-                        query, page_title, path,
+                        query,
+                        page_title,
+                        path,
                     )
                     return path
 
@@ -613,7 +767,8 @@ def _get_unsplash_key() -> Optional[str]:
 
 
 async def _fetch_unsplash(
-    query: str, cache_dir: Optional[Path] = None,
+    query: str,
+    cache_dir: Optional[Path] = None,
 ) -> Optional[Path]:
     """Fetch an image from the Unsplash API (requires API key)."""
     import httpx
@@ -719,6 +874,7 @@ def _query_teacher_images_db(
     import sqlite3
 
     from clawed.paths import data_dir
+
     db_path = data_dir() / "memory" / "curriculum_kb.db"
     if not db_path.exists():
         return []
@@ -808,7 +964,9 @@ async def _fetch_teacher_image(
         result = _best_from_rows(rows, all_keywords, query_lower, min_score=6)
         if result:
             logger.info(
-                "Teacher image match (full query) for '%s' -> %s", query, result,
+                "Teacher image match (full query) for '%s' -> %s",
+                query,
+                result,
             )
             return result
 
@@ -828,7 +986,9 @@ async def _fetch_teacher_image(
             if result:
                 logger.info(
                     "Teacher image match (keyword '%s') for '%s' -> %s",
-                    kw, query, result,
+                    kw,
+                    query,
+                    result,
                 )
                 return result
 
@@ -839,12 +999,17 @@ async def _fetch_teacher_image(
             if subj_keywords:
                 subj_rows = _query_teacher_images_db(subj_keywords)
                 result = _best_from_rows(
-                    subj_rows, all_keywords + subj_keywords, query_lower, min_score=3,
+                    subj_rows,
+                    all_keywords + subj_keywords,
+                    query_lower,
+                    min_score=3,
                 )
                 if result:
                     logger.info(
                         "Teacher image match (subject '%s') for '%s' -> %s",
-                        subject, query, result,
+                        subject,
+                        query,
+                        result,
                     )
                     return result
 
@@ -854,7 +1019,8 @@ async def _fetch_teacher_image(
 
 
 async def _fetch_web_scrape(
-    query: str, cache_dir: Optional[Path] = None,
+    query: str,
+    cache_dir: Optional[Path] = None,
 ) -> Optional[Path]:
     """Scrape an image from the web via DuckDuckGo image search.
 
@@ -907,7 +1073,9 @@ async def _fetch_web_scrape(
             for attempt in range(max_vqd_attempts):
                 try:
                     resp = await client.get(
-                        search_url, params={"q": query}, timeout=5.0,
+                        search_url,
+                        params={"q": query},
+                        timeout=5.0,
                     )
                     # Try multiple VQD token patterns (DDG changes format)
                     for pattern in vqd_patterns:
@@ -921,19 +1089,27 @@ async def _fetch_web_scrape(
                     last_error = e
                     logger.debug(
                         "DDG VQD request timed out (attempt %d/%d) for: %s",
-                        attempt + 1, max_vqd_attempts, query,
+                        attempt + 1,
+                        max_vqd_attempts,
+                        query,
                     )
                 except httpx.HTTPStatusError as e:
                     last_error = e
                     logger.debug(
                         "DDG returned HTTP %d (attempt %d/%d) for: %s",
-                        e.response.status_code, attempt + 1, max_vqd_attempts, query,
+                        e.response.status_code,
+                        attempt + 1,
+                        max_vqd_attempts,
+                        query,
                     )
                 except httpx.HTTPError as e:
                     last_error = e
                     logger.debug(
                         "DDG request failed (attempt %d/%d) for '%s': %s",
-                        attempt + 1, max_vqd_attempts, query, e,
+                        attempt + 1,
+                        max_vqd_attempts,
+                        query,
+                        e,
                     )
 
                 # Backoff before retry (skip on last attempt)
@@ -944,16 +1120,18 @@ async def _fetch_web_scrape(
             if not vqd:
                 if last_error:
                     logger.warning(
-                        "DDG unavailable for '%s' after %d attempts (%s); "
-                        "falling back to next image source",
-                        query, max_vqd_attempts, type(last_error).__name__,
+                        "DDG unavailable for '%s' after %d attempts (%s); falling back to next image source",
+                        query,
+                        max_vqd_attempts,
+                        type(last_error).__name__,
                     )
                 else:
                     logger.warning(
                         "Could not extract DDG VQD token for '%s' after %d attempts; "
                         "DDG may have changed their page format — "
                         "falling back to next image source",
-                        query, max_vqd_attempts,
+                        query,
+                        max_vqd_attempts,
                     )
                 return None
 
@@ -972,17 +1150,17 @@ async def _fetch_web_scrape(
                 img_resp = await client.get(img_url, params=img_params)
             except httpx.HTTPError as e:
                 logger.warning(
-                    "DDG image results request failed for '%s': %s; "
-                    "falling back to next image source",
-                    query, e,
+                    "DDG image results request failed for '%s': %s; falling back to next image source",
+                    query,
+                    e,
                 )
                 return None
 
             if img_resp.status_code != 200:
                 logger.warning(
-                    "DDG image results returned HTTP %d for '%s'; "
-                    "falling back to next image source",
-                    img_resp.status_code, query,
+                    "DDG image results returned HTTP %d for '%s'; falling back to next image source",
+                    img_resp.status_code,
+                    query,
                 )
                 return None
 
@@ -1025,9 +1203,9 @@ async def _fetch_web_scrape(
 
     except Exception as e:
         logger.warning(
-            "DDG web image scrape failed for '%s': %s; "
-            "falling back to next image source",
-            query, e,
+            "DDG web image scrape failed for '%s': %s; falling back to next image source",
+            query,
+            e,
         )
         return None
 
@@ -1139,13 +1317,16 @@ async def fetch_content_image(
                 if path:
                     logger.info(
                         "Content image found via concept '%s' -> %s",
-                        concept, path,
+                        concept,
+                        path,
                     )
                     return path
             except Exception as e:
                 logger.debug(
                     "Source %s failed for concept '%s': %s",
-                    source_name, concept, e,
+                    source_name,
+                    concept,
+                    e,
                 )
                 continue
 

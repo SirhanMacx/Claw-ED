@@ -8,17 +8,18 @@ sans-serif fonts for readability on projectors.
 These templates are used by generate_animation tool when the LLM selects a
 known pattern instead of generating custom Manim code from scratch.
 """
+
 from __future__ import annotations
 
 # ── Color palettes (education-friendly, high contrast) ──────────────
 COLORS = {
-    "bg": "#1a1a2e",         # dark navy background
-    "text": "#e6e6e6",       # near-white text
-    "accent": "#e94560",     # coral red accent
+    "bg": "#1a1a2e",  # dark navy background
+    "text": "#e6e6e6",  # near-white text
+    "accent": "#e94560",  # coral red accent
     "highlight": "#0f3460",  # deep blue highlight
-    "success": "#16c79a",    # teal green
-    "warning": "#f5a623",    # amber
-    "info": "#4a9eff",       # bright blue
+    "success": "#16c79a",  # teal green
+    "warning": "#f5a623",  # amber
+    "info": "#4a9eff",  # bright blue
 }
 
 # ── Template: Historical Timeline ────────────────────────────────────

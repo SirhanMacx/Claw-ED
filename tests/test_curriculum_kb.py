@@ -1,4 +1,5 @@
 """Tests for the Curriculum Knowledge Base."""
+
 from __future__ import annotations
 
 import tempfile

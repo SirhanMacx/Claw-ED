@@ -9,6 +9,7 @@ Architecture:
     question → query_wiki() → index lookup → article reading → cited answer
     lint_wiki() → stale / uncovered / orphaned detection
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -39,6 +40,7 @@ _MAX_WORDS_PER_CALL = 15_000  # Cap chunk text to stay within context limits
 
 # ── Result types ─────────────────────────────────────────────────────
 
+
 @dataclass
 class CompileResult:
     compiled: int = 0
@@ -67,6 +69,7 @@ class LintResult:
 
 # ── Internal helpers ─────────────────────────────────────────────────
 
+
 def _load_compile_state() -> dict[str, Any]:
     """Read _compile_state.json, return empty dict if missing."""
     if COMPILE_STATE_PATH.exists():
@@ -81,7 +84,8 @@ def _save_compile_state(state: dict[str, Any]) -> None:
     """Persist compile state to disk."""
     COMPILE_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     COMPILE_STATE_PATH.write_text(
-        json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8",
+        json.dumps(state, indent=2, ensure_ascii=False),
+        encoding="utf-8",
     )
 
 
@@ -98,19 +102,19 @@ def _get_doc_groups(teacher_id: str = "default") -> dict[str, list[dict[str, str
         with sqlite3.connect(str(KB_DB_PATH)) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                "SELECT doc_title, chunk_text, source_path "
-                "FROM chunks WHERE teacher_id = ? "
-                "ORDER BY doc_title, id",
+                "SELECT doc_title, chunk_text, source_path FROM chunks WHERE teacher_id = ? ORDER BY doc_title, id",
                 (teacher_id,),
             ).fetchall()
             for row in rows:
                 title = row["doc_title"]
                 if title not in groups:
                     groups[title] = []
-                groups[title].append({
-                    "chunk_text": row["chunk_text"],
-                    "source_path": row["source_path"] or "",
-                })
+                groups[title].append(
+                    {
+                        "chunk_text": row["chunk_text"],
+                        "source_path": row["source_path"] or "",
+                    }
+                )
     except sqlite3.OperationalError as e:
         logger.warning("Could not read chunks table: %s", e)
     return groups
@@ -166,6 +170,7 @@ def _build_index() -> str:
 
 
 # ── Core: compile ────────────────────────────────────────────────────
+
 
 async def compile_article(
     doc_title: str,
@@ -253,7 +258,9 @@ async def compile_wiki(
     compiled_count = 0
 
     async def _compile_one(
-        title: str, chunks: list[dict], doc_hash: str,
+        title: str,
+        chunks: list[dict],
+        doc_hash: str,
     ) -> tuple[str, str | None, str]:
         """Compile one article under semaphore."""
         async with sem:
@@ -267,11 +274,8 @@ async def compile_wiki(
     # Process in batches to save state periodically
     batch_size = 50
     for batch_start in range(0, len(to_compile), batch_size):
-        batch = to_compile[batch_start: batch_start + batch_size]
-        tasks = [
-            _compile_one(title, chunks, doc_hash)
-            for title, chunks, doc_hash in batch
-        ]
+        batch = to_compile[batch_start : batch_start + batch_size]
+        tasks = [_compile_one(title, chunks, doc_hash) for title, chunks, doc_hash in batch]
         results_batch = await asyncio.gather(*tasks)
 
         for title, article_md, doc_hash_or_err in results_batch:
@@ -308,6 +312,7 @@ async def compile_wiki(
 
 # ── Core: query ──────────────────────────────────────────────────────
 
+
 async def query_wiki(question: str) -> QueryResult:
     """Ask a question against the compiled wiki.
 
@@ -320,9 +325,7 @@ async def query_wiki(question: str) -> QueryResult:
     from clawed.models import AppConfig
 
     if not INDEX_PATH.exists() or not ARTICLES_DIR.exists():
-        raise FileNotFoundError(
-            "No wiki found. Run `clawed kb compile` first to build your curriculum wiki."
-        )
+        raise FileNotFoundError("No wiki found. Run `clawed kb compile` first to build your curriculum wiki.")
 
     config = AppConfig.load()
     index_text = INDEX_PATH.read_text(encoding="utf-8")
@@ -337,7 +340,7 @@ async def query_wiki(question: str) -> QueryResult:
         f"Available files: {json.dumps(available_files)}\n\n"
         f"Question: {question}\n\n"
         f"Return a JSON array of the most relevant filenames (max 5) to answer "
-        f"this question. Example: [\"file1.md\", \"file2.md\"]\n"
+        f'this question. Example: ["file1.md", "file2.md"]\n'
         f"If no articles seem relevant, return an empty array: []"
     )
 
@@ -367,6 +370,7 @@ async def query_wiki(question: str) -> QueryResult:
             # Fallback: try json_repair
             try:
                 import json_repair
+
                 selected = json_repair.loads(pick_text)
             except Exception:
                 pass
@@ -397,10 +401,7 @@ async def query_wiki(question: str) -> QueryResult:
                 source_titles.append(fname.replace(".md", "").replace("_", " ").title())
 
     system = _load_prompt("wiki_query")
-    answer_prompt = (
-        f"Question: {question}\n\n"
-        f"Articles:\n\n" + "\n\n".join(articles_content)
-    )
+    answer_prompt = f"Question: {question}\n\nArticles:\n\n" + "\n\n".join(articles_content)
 
     deep_config = route("wiki_query_answer", config)
     deep_client = LLMClient(config=deep_config)
@@ -420,6 +421,7 @@ async def query_wiki(question: str) -> QueryResult:
 
 # ── Core: lint ───────────────────────────────────────────────────────
 
+
 def lint_wiki(teacher_id: str = "default") -> LintResult:
     """Check wiki health — no LLM calls, purely structural.
 
@@ -438,27 +440,33 @@ def lint_wiki(teacher_id: str = "default") -> LintResult:
         if doc_title in doc_groups:
             current_hash = _compute_doc_hash(doc_groups[doc_title])
             if current_hash != entry.get("hash"):
-                result.stale.append({
-                    "doc_title": doc_title,
-                    "compiled_at": entry.get("compiled_at", "unknown"),
-                    "article_file": entry.get("article_file", ""),
-                })
+                result.stale.append(
+                    {
+                        "doc_title": doc_title,
+                        "compiled_at": entry.get("compiled_at", "unknown"),
+                        "article_file": entry.get("article_file", ""),
+                    }
+                )
 
     # Uncovered: in chunks but never compiled
     for doc_title, chunks in doc_groups.items():
         if doc_title not in state:
-            result.uncovered.append({
-                "doc_title": doc_title,
-                "chunk_count": len(chunks),
-                "source_path": chunks[0].get("source_path", "") if chunks else "",
-            })
+            result.uncovered.append(
+                {
+                    "doc_title": doc_title,
+                    "chunk_count": len(chunks),
+                    "source_path": chunks[0].get("source_path", "") if chunks else "",
+                }
+            )
 
     # Orphaned: in compile state but no longer in chunks
     for doc_title, entry in state.items():
         if doc_title not in doc_groups:
-            result.orphaned.append({
-                "doc_title": doc_title,
-                "article_file": entry.get("article_file", ""),
-            })
+            result.orphaned.append(
+                {
+                    "doc_title": doc_title,
+                    "article_file": entry.get("article_file", ""),
+                }
+            )
 
     return result

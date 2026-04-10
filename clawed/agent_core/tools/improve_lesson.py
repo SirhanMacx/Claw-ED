@@ -1,4 +1,5 @@
 """Tool: improve_lesson — revise a specific section of an existing lesson."""
+
 from __future__ import annotations
 
 import logging
@@ -82,9 +83,7 @@ class ImproveLessonTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         topic = params["topic"]
         improvement = params["improvement"]
         section = params.get("section", "")
@@ -94,7 +93,7 @@ class ImproveLessonTool:
 
         # ── Notify the teacher ───────────────────────────────────────
         context.notify_progress(
-            f"Looking up your existing lesson on \"{topic}\" and applying "
+            f'Looking up your existing lesson on "{topic}" and applying '
             f"your requested change. This usually takes under a minute."
         )
 
@@ -114,14 +113,8 @@ class ImproveLessonTool:
                 for a in assets:
                     title = a.get("title", "Untitled")
                     atype = a.get("material_type", "document")
-                    asset_parts.append(
-                        f"[{atype}] {title} ({a.get('filename', 'unknown')})"
-                    )
-                original_content += (
-                    "Existing teacher files on this topic:\n"
-                    + "\n".join(asset_parts)
-                    + "\n\n"
-                )
+                    asset_parts.append(f"[{atype}] {title} ({a.get('filename', 'unknown')})")
+                original_content += "Existing teacher files on this topic:\n" + "\n".join(asset_parts) + "\n\n"
         except Exception as e:
             logger.debug("Asset search for improve_lesson failed: %s", e)
 
@@ -141,7 +134,7 @@ class ImproveLessonTool:
                     for r in relevant:
                         source = r.get("doc_title", "Unknown source")
                         chunk = r.get("chunk_text", "")[:800]
-                        original_content += f"--- From \"{source}\" ---\n{chunk}\n\n"
+                        original_content += f'--- From "{source}" ---\n{chunk}\n\n'
         except Exception as e:
             logger.debug("KB search for improve_lesson failed: %s", e)
 
@@ -169,19 +162,13 @@ class ImproveLessonTool:
                                 if lesson_data.get("objective"):
                                     parts.append(f"Objective: {lesson_data['objective']}")
                                 if lesson_data.get("standards"):
-                                    parts.append(
-                                        f"Standards: {', '.join(lesson_data['standards'][:5])}"
-                                    )
+                                    parts.append(f"Standards: {', '.join(lesson_data['standards'][:5])}")
                                 # Include full lesson JSON (truncated for context window)
                                 lesson_str = json.dumps(lesson_data, indent=2)
                                 if len(lesson_str) > 3000:
                                     lesson_str = lesson_str[:3000] + "\n... (truncated)"
                                 parts.append(f"\nFull lesson data:\n{lesson_str}")
-                                original_content += (
-                                    "Previously generated lesson:\n"
-                                    + "\n".join(parts)
-                                    + "\n\n"
-                                )
+                                original_content += "Previously generated lesson:\n" + "\n".join(parts) + "\n\n"
                             except (json.JSONDecodeError, TypeError):
                                 pass
         except Exception as e:
@@ -190,7 +177,7 @@ class ImproveLessonTool:
         if not original_content:
             return ToolResult(
                 text=(
-                    f"Could not find an existing lesson on \"{topic}\" in your "
+                    f'Could not find an existing lesson on "{topic}" in your '
                     f"materials or generation history. Try generating the lesson "
                     f"first with generate_lesson_bundle, then use improve_lesson "
                     f"to refine it."
@@ -256,7 +243,8 @@ class ImproveLessonTool:
         except Exception as e:
             logger.error(
                 "NLAH_FAILURE=%s: improve_lesson LLM call failed: %s",
-                FailureCode.API_FAILURE, e,
+                FailureCode.API_FAILURE,
+                e,
             )
             return ToolResult(
                 text=(
@@ -267,8 +255,7 @@ class ImproveLessonTool:
 
         if not improved_text or len(improved_text.strip()) < 20:
             return ToolResult(
-                text="The LLM returned an empty or unusable response. "
-                     "Try rephrasing your improvement request."
+                text="The LLM returned an empty or unusable response. Try rephrasing your improvement request."
             )
 
         # ── Humanize the output ──────────────────────────────────────
@@ -280,11 +267,9 @@ class ImproveLessonTool:
             pass
 
         # ── Build the response ───────────────────────────────────────
-        section_label = (
-            section.replace("_", " ").title() if section else "Lesson"
-        )
+        section_label = section.replace("_", " ").title() if section else "Lesson"
         lines = [
-            f"Improved {section_label} for \"{topic}\":",
+            f'Improved {section_label} for "{topic}":',
             "",
             improved_text,
             "",

@@ -130,20 +130,22 @@ class LLMClient:
                     max_tokens=max_tokens,
                     temperature=temperature,
                     system=system or "",
-                    messages=[{
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": media_type,
-                                    "data": b64,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": media_type,
+                                        "data": b64,
+                                    },
                                 },
-                            },
-                            {"type": "text", "text": prompt},
-                        ],
-                    }],
+                                {"type": "text", "text": prompt},
+                            ],
+                        }
+                    ],
                 )
                 return msg.content[0].text
             except Exception as e:
@@ -332,6 +334,7 @@ class LLMClient:
         # Strip <think>...</think> blocks (common in reasoning models like Qwen)
         cleaned = raw.strip()
         import re
+
         cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.DOTALL).strip()
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
@@ -358,9 +361,7 @@ class LLMClient:
 
         # Step 3: raise a clear error with raw LLM output for debugging
         preview = raw[:500] + ("..." if len(raw) > 500 else "")
-        raise ValueError(
-            f"LLM returned unparseable JSON. Raw output:\n{preview}"
-        )
+        raise ValueError(f"LLM returned unparseable JSON. Raw output:\n{preview}")
 
     async def safe_generate_json(
         self,
@@ -412,7 +413,9 @@ class LLMClient:
             "You are creating a student handout for a lesson. The handout is what "
             "students receive --- it must be self-contained, printable, and include "
             "everything referenced in the lesson plan.\n\n"
-            f"{persona_context}\n" if persona_context else ""
+            f"{persona_context}\n"
+            if persona_context
+            else ""
         )
 
         prompt = (
@@ -465,11 +468,13 @@ class LLMClient:
 
         # Build handout style block from persona context
         import re as _re
+
         handout_style = ""
         if persona_context:
             hs_match = _re.search(
                 r"=== Handout Style ===\n(.+?)(?:\n===|\Z)",
-                persona_context, _re.DOTALL,
+                persona_context,
+                _re.DOTALL,
             )
             if hs_match:
                 handout_style = hs_match.group(1).strip()
@@ -483,13 +488,10 @@ class LLMClient:
                 "Don't impose a format the teacher wouldn't recognize as their own."
             )
         else:
-            handout_style_block = (
-                "No specific handout style detected — use the default format below."
-            )
+            handout_style_block = "No specific handout style detected — use the default format below."
 
         prompt = (
-            prompt_template
-            .replace("{lesson_json}", lesson_json[:6000])
+            prompt_template.replace("{lesson_json}", lesson_json[:6000])
             .replace("{persona}", persona_context)
             .replace("{handout_style_block}", handout_style_block)
         )
@@ -527,11 +529,7 @@ class LLMClient:
 
         prompt_path = Path(__file__).parent / "prompts" / "admin_lesson_plan.txt"
         prompt_template = prompt_path.read_text(encoding="utf-8")
-        prompt = (
-            prompt_template
-            .replace("{lesson_json}", lesson_json[:6000])
-            .replace("{persona}", persona_context)
-        )
+        prompt = prompt_template.replace("{lesson_json}", lesson_json[:6000]).replace("{persona}", persona_context)
 
         system = (
             "You are creating an observation-ready lesson plan for an administrator. "
@@ -595,9 +593,7 @@ class LLMClient:
 
     # ── Anthropic ────────────────────────────────────────────────────────
 
-    async def _anthropic(
-        self, prompt: str, system: str, temperature: float, max_tokens: int
-    ) -> str:
+    async def _anthropic(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         import anthropic
 
         from clawed.config import get_api_key, is_anthropic_oauth_token
@@ -640,24 +636,17 @@ class LLMClient:
             return msg.content[0].text
 
         except anthropic.AuthenticationError:
-            raise EnvironmentError(
-                "Invalid API key or OAuth token. Check with: clawed debug"
-            )
+            raise EnvironmentError("Invalid API key or OAuth token. Check with: clawed debug")
         except anthropic.RateLimitError:
-            raise RuntimeError(
-                "The AI service is busy right now. Wait a minute and try again."
-            )
+            raise RuntimeError("The AI service is busy right now. Wait a minute and try again.")
         except anthropic.APIConnectionError:
             raise ConnectionError(
-                "Could not connect to the Anthropic API.\n"
-                "Check your internet connection and try again."
+                "Could not connect to the Anthropic API.\nCheck your internet connection and try again."
             )
 
     # ── OpenAI ───────────────────────────────────────────────────────────
 
-    async def _openai(
-        self, prompt: str, system: str, temperature: float, max_tokens: int
-    ) -> str:
+    async def _openai(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         from clawed.config import get_api_key
 
         api_key = get_api_key("openai")
@@ -693,30 +682,21 @@ class LLMClient:
                     raise RuntimeError("OpenAI returned an empty response (content may have been filtered)")
                 return choices[0].get("message", {}).get("content", "")
         except httpx.ConnectError:
-            raise ConnectionError(
-                "Could not connect to the OpenAI API.\n"
-                "Check your internet connection and try again."
-            )
+            raise ConnectionError("Could not connect to the OpenAI API.\nCheck your internet connection and try again.")
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                raise EnvironmentError(
-                    "Invalid OPENAI_API_KEY. Check your key at https://platform.openai.com"
-                )
+                raise EnvironmentError("Invalid OPENAI_API_KEY. Check your key at https://platform.openai.com")
             raise
 
     # ── OpenRouter ───────────────────────────────────────────────────────
 
-    async def _openrouter(
-        self, prompt: str, system: str, temperature: float, max_tokens: int
-    ) -> str:
+    async def _openrouter(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         """OpenRouter — OpenAI-compatible API at openrouter.ai/api/v1."""
         from clawed.config import get_api_key
 
         api_key = get_api_key("openrouter")
         if not api_key:
-            raise EnvironmentError(
-                "OpenRouter API key not found. Get one at https://openrouter.ai/keys"
-            )
+            raise EnvironmentError("OpenRouter API key not found. Get one at https://openrouter.ai/keys")
         messages: list[dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -748,21 +728,15 @@ class LLMClient:
                     raise RuntimeError("OpenRouter returned an empty response (no choices)")
                 return choices[0].get("message", {}).get("content", "")
         except httpx.ConnectError:
-            raise ConnectionError(
-                "Could not connect to OpenRouter. Check your internet connection."
-            )
+            raise ConnectionError("Could not connect to OpenRouter. Check your internet connection.")
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                raise EnvironmentError(
-                    "Invalid OpenRouter API key. Check at https://openrouter.ai/keys"
-                )
+                raise EnvironmentError("Invalid OpenRouter API key. Check at https://openrouter.ai/keys")
             raise
 
     # ── Ollama ───────────────────────────────────────────────────────────
 
-    async def _ollama(
-        self, prompt: str, system: str, temperature: float, max_tokens: int
-    ) -> str:
+    async def _ollama(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         # Support both local Ollama (no auth) and Ollama Cloud (Bearer token)
         api_key = getattr(self.config, "ollama_api_key", None) or os.environ.get("OLLAMA_API_KEY")
         headers = {}
@@ -836,23 +810,19 @@ class LLMClient:
                             err_msg = ""
                         raise ConnectionError(
                             f"Ollama model '{model}' not installed.\n"
-                            f"Run: ollama pull {model}"
-                            + (f"\n\nOllama says: {err_msg}" if err_msg else "")
+                            f"Run: ollama pull {model}" + (f"\n\nOllama says: {err_msg}" if err_msg else "")
                         )
                     resp.raise_for_status()
                     data = resp.json()
                     return data.get("response", "")
         except httpx.ConnectError:
             raise ConnectionError(
-                "Could not connect to Ollama.\n"
-                "Install from https://ollama.com and make sure it's running."
+                "Could not connect to Ollama.\nInstall from https://ollama.com and make sure it's running."
             )
 
     # ── Google Gemini ────────────────────────────────────────────────────
 
-    async def _google(
-        self, prompt: str, system: str, temperature: float, max_tokens: int
-    ) -> str:
+    async def _google(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         """Call Google Gemini API via API key."""
         from clawed.auth.google_auth import get_google_api_key
 
@@ -865,10 +835,7 @@ class LLMClient:
             )
 
         model = self.config.google_model
-        base_url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent"
-        )
+        base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
         params = {"key": api_key}
         headers: dict[str, str] = {"Content-Type": "application/json"}
@@ -891,7 +858,10 @@ class LLMClient:
         try:
             async with httpx.AsyncClient(timeout=7200.0) as client:
                 resp = await client.post(
-                    base_url, params=params, headers=headers, json=body,
+                    base_url,
+                    params=params,
+                    headers=headers,
+                    json=body,
                 )
                 resp.raise_for_status()
                 data = resp.json()
@@ -905,13 +875,11 @@ class LLMClient:
                 return parts[0].get("text", "")
         except httpx.ConnectError:
             raise ConnectionError(
-                "Could not connect to the Google Gemini API.\n"
-                "Check your internet connection and try again."
+                "Could not connect to the Google Gemini API.\nCheck your internet connection and try again."
             )
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
                 raise EnvironmentError(
-                    "Google credentials expired or invalid.\n"
-                    "Run `clawed setup --reset` to re-authenticate."
+                    "Google credentials expired or invalid.\nRun `clawed setup --reset` to re-authenticate."
                 )
             raise

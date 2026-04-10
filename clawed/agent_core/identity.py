@@ -4,6 +4,7 @@ All transports (CLI, Telegram, MCP, scheduled tasks) resolve to
 the same teacher_id so Ed's memory, KB, episodes, and sessions
 are shared across every interaction surface.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -41,6 +42,7 @@ def get_teacher_id() -> str:
     # 2. Derive from teacher profile
     try:
         from clawed.models import AppConfig
+
         config = AppConfig.load()
         tp = config.teacher_profile
         if tp and tp.name:
@@ -60,6 +62,7 @@ def get_teacher_name() -> str:
     """Return the teacher's display name from config, or 'Teacher'."""
     try:
         from clawed.models import AppConfig
+
         config = AppConfig.load()
         tp = config.teacher_profile
         if tp and tp.name:

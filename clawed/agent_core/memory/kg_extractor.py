@@ -4,6 +4,7 @@ Heuristic-based (no LLM) — designed for speed during bulk ingestion.
 Extracts topics, standards, figures, vocabulary terms, and infers
 prerequisite/builds_on/related_to relationships from document structure.
 """
+
 from __future__ import annotations
 
 import re
@@ -12,11 +13,11 @@ from clawed.noise_words import ALL_NOISE as _STOP_WORDS
 
 # Standard code patterns
 _STANDARD_PATTERNS = [
-    re.compile(r"\bCCSS\.[A-Z]+\.\w+\.\d+[\.\d]*\b"),   # CCSS.ELA.RL.8.1
-    re.compile(r"\bNGSS\s*[-:]?\s*\w+-\w+[-\d]+\b"),     # NGSS HS-PS1-1
-    re.compile(r"\bNY\s*\d+[A-Z]?\.\d+\b"),               # NY state standards
-    re.compile(r"\bC3\s*D\d\.\d+\.\d+\b"),                # C3 framework
-    re.compile(r"\b[A-Z]{2}\.\d+\.\d+\.\d+[a-z]?\b"),        # Generic: SS.8.1.1a (3+ dot segments)
+    re.compile(r"\bCCSS\.[A-Z]+\.\w+\.\d+[\.\d]*\b"),  # CCSS.ELA.RL.8.1
+    re.compile(r"\bNGSS\s*[-:]?\s*\w+-\w+[-\d]+\b"),  # NGSS HS-PS1-1
+    re.compile(r"\bNY\s*\d+[A-Z]?\.\d+\b"),  # NY state standards
+    re.compile(r"\bC3\s*D\d\.\d+\.\d+\b"),  # C3 framework
+    re.compile(r"\b[A-Z]{2}\.\d+\.\d+\.\d+[a-z]?\b"),  # Generic: SS.8.1.1a (3+ dot segments)
 ]
 
 
@@ -40,11 +41,13 @@ def extract_entities_from_document(
         if key in seen_names:
             return
         seen_names.add(key)
-        entities.append({
-            "name": clean,
-            "entity_type": etype,
-            "properties": props or {},
-        })
+        entities.append(
+            {
+                "name": clean,
+                "entity_type": etype,
+                "properties": props or {},
+            }
+        )
 
     # 1. Doc title → primary topic entity
     if doc_title:
@@ -53,18 +56,16 @@ def extract_entities_from_document(
             _add(title_clean, "topic", {"source": "title"})
 
     # 2. Tags → topic entities
-    for tag in (tags or []):
+    for tag in tags or []:
         if len(tag) > 3 and tag.lower() not in _STOP_WORDS:
             _add(tag, "topic", {"source": "tag"})
 
     # 3. Capitalized multi-word phrases from content → topics/figures
-    for m in re.finditer(
-        r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4}\b", content[:3000]
-    ):
+    for m in re.finditer(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4}\b", content[:3000]):
         phrase = m.group()
         # Skip if it looks like a sentence start (preceded by period)
         start = m.start()
-        if start > 0 and content[start - 2: start] in (". ", "? ", "! "):
+        if start > 0 and content[start - 2 : start] in (". ", "? ", "! "):
             continue
         # Heuristic: names of people (2 words, both capitalized) → figure
         words = phrase.split()
@@ -121,28 +122,34 @@ def infer_relationships(
 
         if etype == "term":
             # Vocabulary belongs to the primary topic
-            relationships.append({
-                "subject": primary_topic,
-                "predicate": "includes_vocab",
-                "object": name,
-                "confidence": 0.8,
-            })
+            relationships.append(
+                {
+                    "subject": primary_topic,
+                    "predicate": "includes_vocab",
+                    "object": name,
+                    "confidence": 0.8,
+                }
+            )
         elif etype == "standard":
             # Topic covers this standard
-            relationships.append({
-                "subject": primary_topic,
-                "predicate": "covers_standard",
-                "object": name,
-                "confidence": 0.7,
-            })
+            relationships.append(
+                {
+                    "subject": primary_topic,
+                    "predicate": "covers_standard",
+                    "object": name,
+                    "confidence": 0.7,
+                }
+            )
         elif etype in ("topic", "figure"):
             # Related to the primary topic
-            relationships.append({
-                "subject": primary_topic,
-                "predicate": "related_to",
-                "object": name,
-                "confidence": 0.5,
-            })
+            relationships.append(
+                {
+                    "subject": primary_topic,
+                    "predicate": "related_to",
+                    "object": name,
+                    "confidence": 0.5,
+                }
+            )
 
     return relationships
 

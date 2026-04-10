@@ -28,13 +28,16 @@ def persona_show(
 ):
     """Display the current teacher persona."""
     if json_output:
+
         def _persona_show_json():
             from clawed.commands._helpers import output_dir
             from clawed.persona import load_persona
+
             pp = output_dir() / "persona.json"
             if not pp.exists():
                 return {
-                    "data": {"persona": None}, "files": [],
+                    "data": {"persona": None},
+                    "files": [],
                     "warnings": ["No persona found. Run clawed ingest first."],
                 }
             persona = load_persona(pp)
@@ -42,13 +45,12 @@ def persona_show(
                 "data": {"persona": persona.model_dump() if hasattr(persona, "model_dump") else persona.dict()},
                 "files": [str(pp)],
             }
+
         run_json_command("config.persona.show", _persona_show_json)
         return
 
     persona = load_persona_or_exit()
-    console.print(
-        Panel(persona.to_prompt_context(), title="Teacher Persona")
-    )
+    console.print(Panel(persona.to_prompt_context(), title="Teacher Persona"))
 
 
 # ── Standards commands ───────────────────────────────────────────────────
@@ -56,28 +58,28 @@ def persona_show(
 
 @standards_app.command("list")
 def standards_list(
-    grade: str = typer.Option(
-        ..., "--grade", "-g", help="Grade level (e.g., K, 5, 8, 9-12)"
-    ),
-    subject: str = typer.Option(
-        ..., "--subject", "-s", help="Subject (math, ela, science, history)"
-    ),
+    grade: str = typer.Option(..., "--grade", "-g", help="Grade level (e.g., K, 5, 8, 9-12)"),
+    subject: str = typer.Option(..., "--subject", "-s", help="Subject (math, ela, science, history)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """List education standards for a grade and subject."""
     if json_output:
+
         def _standards_json():
             from clawed.standards import get_standards as _get_stds
+
             results = _get_stds(subject, grade)
             return {
                 "data": {
                     "standards": [
-                        {"code": s.code, "description": s.description, "band": getattr(s, "band", "")}
-                        for s in results
-                    ] if results else []
+                        {"code": s.code, "description": s.description, "band": getattr(s, "band", "")} for s in results
+                    ]
+                    if results
+                    else []
                 },
                 "files": [],
             }
+
         run_json_command("config.standards.list", _standards_json)
         return
 
@@ -88,6 +90,7 @@ def standards_list(
         # Fallback: try SkillLibrary alias resolution
         try:
             from clawed.skills.library import SkillLibrary
+
             lib = SkillLibrary()
             skill = lib.get(subject)
             if skill:
@@ -96,16 +99,13 @@ def standards_list(
             pass
     if canonical is None:
         console.print(
-            f"[red]Unknown subject: {subject}[/red]. "
-            "Supported: math, ela/english, science, history/social studies"
+            f"[red]Unknown subject: {subject}[/red]. Supported: math, ela/english, science, history/social studies"
         )
         raise typer.Exit(1)
 
     results = get_standards(subject, grade)
     if not results:
-        console.print(
-            f"[yellow]No standards found for grade {grade} {subject}.[/yellow]"
-        )
+        console.print(f"[yellow]No standards found for grade {grade} {subject}.[/yellow]")
         raise typer.Exit(0)
 
     framework = {
@@ -143,11 +143,7 @@ def templates_list():
     table.add_column("Description")
     table.add_column("Best For", style="dim")
     for t in all_templates:
-        desc = (
-            t.description[:80] + "..."
-            if len(t.description) > 80
-            else t.description
-        )
+        desc = t.description[:80] + "..." if len(t.description) > 80 else t.description
         best_for = t.best_for[:60] if t.best_for else ""
         table.add_row(t.name, t.slug, desc, best_for)
     console.print(table)
@@ -174,11 +170,7 @@ def skills_list():
         aliases = ", ".join(s.aliases[:4])
         if len(s.aliases) > 4:
             aliases += f" (+{len(s.aliases) - 4})"
-        desc = (
-            s.description[:80] + "..."
-            if len(s.description) > 80
-            else s.description
-        )
+        desc = s.description[:80] + "..." if len(s.description) > 80 else s.description
         source = "[yellow]custom[/yellow]" if lib.is_custom(s.subject) else "built-in"
         table.add_row(s.subject, s.display_name, desc, aliases, source)
     console.print(table)
@@ -186,9 +178,7 @@ def skills_list():
 
 @skills_app.command("show")
 def skills_show(
-    subject: str = typer.Argument(
-        help="Subject name or alias (e.g., 'math', 'biology', 'ela')."
-    ),
+    subject: str = typer.Argument(help="Subject name or alias (e.g., 'math', 'biology', 'ela')."),
 ):
     """Show detailed pedagogy skill for a subject."""
     from clawed.skills import SkillLibrary
@@ -219,9 +209,7 @@ def skills_show(
 
 @skills_app.command("create")
 def skills_create(
-    subject: str = typer.Argument(
-        help="Subject name for the new skill (e.g., 'ap_psychology')."
-    ),
+    subject: str = typer.Argument(help="Subject name for the new skill (e.g., 'ap_psychology')."),
 ):
     """Generate a template YAML skill file in ~/.eduagent/skills/.
 
@@ -250,9 +238,7 @@ def skills_create(
 @school_app.command("setup")
 def school_setup(
     name: str = typer.Option(..., "--name", help="School name"),
-    state: str = typer.Option(
-        "", "--state", help="State abbreviation (e.g., NY, CA)"
-    ),
+    state: str = typer.Option("", "--state", help="State abbreviation (e.g., NY, CA)"),
     district: str = typer.Option("", "--district", help="School district"),
     grade_levels: str = typer.Option(
         "",
@@ -265,14 +251,8 @@ def school_setup(
     from clawed.school import setup_school
 
     db = Database()
-    grades = (
-        [g.strip() for g in grade_levels.split(",") if g.strip()]
-        if grade_levels
-        else []
-    )
-    school_id = setup_school(
-        db, name=name, state=state, district=district, grade_levels=grades
-    )
+    grades = [g.strip() for g in grade_levels.split(",") if g.strip()] if grade_levels else []
+    school_id = setup_school(db, name=name, state=state, district=district, grade_levels=grades)
     db.close()
 
     console.print(
@@ -294,20 +274,14 @@ def school_setup(
 
 @school_app.command("join")
 def school_join(
-    school_id: str = typer.Option(
-        ..., "--school-id", help="School ID to join"
-    ),
-    teacher_id: str = typer.Option(
-        "local-teacher", "--teacher-id", help="Teacher ID"
-    ),
+    school_id: str = typer.Option(..., "--school-id", help="School ID to join"),
+    teacher_id: str = typer.Option("local-teacher", "--teacher-id", help="Teacher ID"),
     department: str = typer.Option(
         "",
         "--department",
         help="Department (e.g., 'Science', 'Math')",
     ),
-    role: str = typer.Option(
-        "teacher", "--role", help="Role: teacher or admin"
-    ),
+    role: str = typer.Option("teacher", "--role", help="Role: teacher or admin"),
 ) -> None:
     """Join a school as a teacher or admin."""
     from clawed.database import Database
@@ -320,23 +294,17 @@ def school_join(
         db.close()
         raise typer.Exit(1)
 
-    add_teacher(
-        db, school_id, teacher_id, role=role, department=department
-    )
+    add_teacher(db, school_id, teacher_id, role=role, department=department)
     db.close()
 
-    console.print(
-        f"[green]Joined [bold]{school['name']}[/bold] as {role}.[/green]"
-    )
+    console.print(f"[green]Joined [bold]{school['name']}[/bold] as {role}.[/green]")
     if department:
         console.print(f"  Department: {department}")
 
 
 @school_app.command("roster")
 def school_roster(
-    school_id: str = typer.Option(
-        ..., "--school-id", help="School ID"
-    ),
+    school_id: str = typer.Option(..., "--school-id", help="School ID"),
 ) -> None:
     """Show all teachers in a school."""
     from clawed.database import Database
@@ -369,18 +337,10 @@ def school_roster(
 
 @school_app.command("share")
 def school_share(
-    school_id: str = typer.Option(
-        ..., "--school-id", help="School ID"
-    ),
-    teacher_id: str = typer.Option(
-        "local-teacher", "--teacher-id", help="Your teacher ID"
-    ),
-    unit_id: str = typer.Option(
-        None, "--unit-id", help="Unit ID to share"
-    ),
-    lesson_id: str = typer.Option(
-        None, "--lesson-id", help="Lesson ID to share"
-    ),
+    school_id: str = typer.Option(..., "--school-id", help="School ID"),
+    teacher_id: str = typer.Option("local-teacher", "--teacher-id", help="Your teacher ID"),
+    unit_id: str = typer.Option(None, "--unit-id", help="Unit ID to share"),
+    lesson_id: str = typer.Option(None, "--lesson-id", help="Lesson ID to share"),
     department: str = typer.Option(
         "",
         "--department",
@@ -392,16 +352,12 @@ def school_share(
     from clawed.school import share_lesson, share_unit
 
     if not unit_id and not lesson_id:
-        console.print(
-            "[red]Provide --unit-id or --lesson-id to share.[/red]"
-        )
+        console.print("[red]Provide --unit-id or --lesson-id to share.[/red]")
         raise typer.Exit(1)
 
     db = Database()
     if unit_id:
-        sid = share_unit(
-            db, school_id, teacher_id, unit_id, department=department
-        )
+        sid = share_unit(db, school_id, teacher_id, unit_id, department=department)
         label = "Unit"
     else:
         sid = share_lesson(
@@ -415,15 +371,8 @@ def school_share(
     db.close()
 
     if sid:
-        dept_msg = (
-            f" with department '{department}'"
-            if department
-            else " with the whole school"
-        )
-        console.print(
-            f"[green]{label} shared{dept_msg}.[/green]"
-            f"  Shared ID: [cyan]{sid}[/cyan]"
-        )
+        dept_msg = f" with department '{department}'" if department else " with the whole school"
+        console.print(f"[green]{label} shared{dept_msg}.[/green]  Shared ID: [cyan]{sid}[/cyan]")
     else:
         console.print(f"[red]{label} not found.[/red]")
         raise typer.Exit(1)
@@ -431,12 +380,8 @@ def school_share(
 
 @school_app.command("library")
 def school_library(
-    school_id: str = typer.Option(
-        ..., "--school-id", help="School ID"
-    ),
-    department: str = typer.Option(
-        "", "--department", help="Filter by department"
-    ),
+    school_id: str = typer.Option(..., "--school-id", help="School ID"),
+    department: str = typer.Option("", "--department", help="Filter by department"),
 ) -> None:
     """Browse your school's shared curriculum library."""
     from clawed.database import Database
@@ -463,9 +408,7 @@ def school_library(
     table.add_column("Shared By")
     table.add_column("Rating", justify="right")
     for item in items:
-        rating_str = (
-            str(item["rating"]) if item.get("rating") else "—"
-        )
+        rating_str = str(item["rating"]) if item.get("rating") else "—"
         table.add_row(
             item["content_type"],
             item["title"],
@@ -476,10 +419,7 @@ def school_library(
         )
     console.print(table)
     if not items:
-        console.print(
-            "[dim]No shared content yet."
-            " Use 'clawed school share' to contribute![/dim]"
-        )
+        console.print("[dim]No shared content yet. Use 'clawed school share' to contribute![/dim]")
 
 
 # ── Class commands ──────────────────────────────────────────────────────
@@ -644,11 +584,8 @@ def class_qr(
         # Fallback: save a text file with the link
         out_path = Path(output).with_suffix(".txt")
         out_path.write_text(
-            f"Class: {info.name or code}\n"
-            f"Code: {code}\n"
-            f"Join link: https://t.me/clawed_bot?start={code}\n",
+            f"Class: {info.name or code}\nCode: {code}\nJoin link: https://t.me/clawed_bot?start={code}\n",
             encoding="utf-8",
         )
         console.print(f"[yellow]qrcode package not installed. Link saved to {out_path}[/yellow]")
         console.print("[dim]Install with: pip install qrcode[pil][/dim]")
-

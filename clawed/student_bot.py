@@ -98,9 +98,7 @@ class StudentBot:
     def get_class(self, class_code: str) -> Optional[ClassInfo]:
         """Load class info by code."""
         with _get_conn() as conn:
-            row = conn.execute(
-                "SELECT * FROM classes WHERE class_code = ?", (class_code,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM classes WHERE class_code = ?", (class_code,)).fetchone()
         if not row:
             return None
         allowed: list[str] = []
@@ -175,15 +173,11 @@ class StudentBot:
             "active_students": active_count["cnt"] if active_count else 0,
         }
 
-    async def set_active_lesson(
-        self, class_code: str, lesson_id: str, teacher_id: str, lesson_json: str = ""
-    ) -> None:
+    async def set_active_lesson(self, class_code: str, lesson_id: str, teacher_id: str, lesson_json: str = "") -> None:
         """Teacher sets which lesson is active for their class."""
         with _get_conn() as conn:
             # Ensure class exists
-            row = conn.execute(
-                "SELECT class_code FROM classes WHERE class_code = ?", (class_code,)
-            ).fetchone()
+            row = conn.execute("SELECT class_code FROM classes WHERE class_code = ?", (class_code,)).fetchone()
             if not row:
                 conn.execute(
                     """INSERT INTO classes
@@ -199,9 +193,7 @@ class StudentBot:
                     (lesson_id, lesson_json, teacher_id, class_code),
                 )
 
-    def set_hint_mode(
-        self, class_code: str, enabled: bool, student_name: Optional[str] = None
-    ) -> None:
+    def set_hint_mode(self, class_code: str, enabled: bool, student_name: Optional[str] = None) -> None:
         """Toggle hint mode for a class or a specific student.
 
         When hint mode is ON: Socratic questioning only, NEVER give direct
@@ -261,9 +253,7 @@ class StudentBot:
 
     # ── Student registration ─────────────────────────────────────────────
 
-    def register_student(
-        self, student_id: str, class_code: str, display_name: str = ""
-    ) -> str:
+    def register_student(self, student_id: str, class_code: str, display_name: str = "") -> str:
         """Register a first-time student with a class code.
 
         Returns a status message. If the class doesn't exist, tells the
@@ -271,10 +261,7 @@ class StudentBot:
         """
         class_info = self.get_class(class_code)
         if not class_info:
-            return (
-                "Hmm, I don't recognize that class code. "
-                "Double-check with your teacher and try again!"
-            )
+            return "Hmm, I don't recognize that class code. Double-check with your teacher and try again!"
 
         with _get_conn() as conn:
             existing = conn.execute(
@@ -291,10 +278,7 @@ class StudentBot:
                 (str(uuid.uuid4()), student_id, class_code, display_name),
             )
 
-        return (
-            f"Welcome to {class_code}! You're all set. "
-            "Ask me anything about today's lesson."
-        )
+        return f"Welcome to {class_code}! You're all set. Ask me anything about today's lesson."
 
     def is_registered(self, student_id: str, class_code: str) -> bool:
         """Check if a student is registered for a class."""
@@ -335,9 +319,7 @@ class StudentBot:
         return None
 
     @staticmethod
-    def _find_lesson_section_for_topic(
-        topic: str, lesson_json: dict[str, Any]
-    ) -> str:
+    def _find_lesson_section_for_topic(topic: str, lesson_json: dict[str, Any]) -> str:
         """Search lesson content for the section most relevant to the topic.
 
         Returns the matching section text, or empty string if not found.
@@ -358,9 +340,7 @@ class StudentBot:
 
     # ── Student message handling ─────────────────────────────────────────
 
-    async def handle_message(
-        self, message: str, student_id: str, class_code: str
-    ) -> str:
+    async def handle_message(self, message: str, student_id: str, class_code: str) -> str:
         """Handle a student message. Answers in teacher's voice using lesson context.
 
         Rules:
@@ -390,10 +370,7 @@ class StudentBot:
                 pass
 
         if not lesson_json:
-            return (
-                "Your teacher hasn't activated a lesson yet. "
-                "Check back soon — they'll set one up for you!"
-            )
+            return "Your teacher hasn't activated a lesson yet. Check back soon — they'll set one up for you!"
 
         # Update student session
         self._touch_student_session(student_id, class_code)
@@ -526,15 +503,9 @@ class StudentBot:
             ).fetchall()
 
         # Build anonymized per-student stats
-        student_activity = [
-            {"student_number": i + 1, "question_count": r["cnt"]}
-            for i, r in enumerate(per_student)
-        ]
+        student_activity = [{"student_number": i + 1, "question_count": r["cnt"]} for i, r in enumerate(per_student)]
 
-        common_topics = [
-            {"topic": r["lesson_topic"], "count": r["cnt"]}
-            for r in topics
-        ]
+        common_topics = [{"topic": r["lesson_topic"], "count": r["cnt"]} for r in topics]
 
         return {
             "class_code": class_code,
@@ -546,9 +517,7 @@ class StudentBot:
             "question_samples": [r["question"] for r in all_questions[:20]],
         }
 
-    def get_student_conversation(
-        self, student_id: str, class_code: str, limit: int = 20
-    ) -> list[dict[str, str]]:
+    def get_student_conversation(self, student_id: str, class_code: str, limit: int = 20) -> list[dict[str, str]]:
         """Get a student's full conversation history for today (teacher view)."""
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         with _get_conn() as conn:
@@ -573,9 +542,7 @@ class StudentBot:
         """Create or update a student session, incrementing message count."""
         session_id = f"{student_id}:{class_code}"
         with _get_conn() as conn:
-            existing = conn.execute(
-                "SELECT id FROM student_sessions WHERE id = ?", (session_id,)
-            ).fetchone()
+            existing = conn.execute("SELECT id FROM student_sessions WHERE id = ?", (session_id,)).fetchone()
             if existing:
                 conn.execute(
                     "UPDATE student_sessions SET message_count = message_count + 1, last_activity = ? WHERE id = ?",
@@ -606,9 +573,7 @@ class StudentBot:
                 (str(uuid.uuid4()), student_id, class_code, question, answer, lesson_topic),
             )
 
-    def _get_student_history(
-        self, student_id: str, class_code: str, limit: int = 6
-    ) -> list[dict[str, str]]:
+    def _get_student_history(self, student_id: str, class_code: str, limit: int = 6) -> list[dict[str, str]]:
         """Get recent Q&A history for a student in a class."""
         with _get_conn() as conn:
             rows = conn.execute(
@@ -624,9 +589,7 @@ class StudentBot:
             history.append({"role": "assistant", "content": row["answer"]})
         return history
 
-    def _update_student_progress(
-        self, student_id: str, class_code: str, topic: str
-    ) -> None:
+    def _update_student_progress(self, student_id: str, class_code: str, topic: str) -> None:
         """Update per-student progress tracking after a question."""
         try:
             from clawed.bot_state import StudentProgressStore

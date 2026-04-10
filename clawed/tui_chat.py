@@ -20,9 +20,7 @@ try:
     from textual.widgets import Footer, Input, Static
 except ImportError:
     raise ImportError(
-        "textual is required for the TUI chat.\n"
-        "Install with: pip install 'clawed[tui]'\n"
-        "Or: pip install textual"
+        "textual is required for the TUI chat.\nInstall with: pip install 'clawed[tui]'\nOr: pip install textual"
     )
 
 import httpx
@@ -81,9 +79,7 @@ class ThinkingIndicator(Static):
 
     def _animate(self) -> None:
         self._frame = (self._frame + 1) % len(self._frames)
-        self.update(
-            f"[bold green]Claw-ED[/bold green]  [dim]{self._frames[self._frame]}[/dim]"
-        )
+        self.update(f"[bold green]Claw-ED[/bold green]  [dim]{self._frames[self._frame]}[/dim]")
 
 
 class ClawEDChat(App):
@@ -216,8 +212,7 @@ class ClawEDChat(App):
                 response_text = f"Gateway error (HTTP {resp.status_code}): {resp.text}"
         except httpx.ConnectError:
             response_text = (
-                f"[red]Lost connection to gateway at {self._base_url}[/red]\n"
-                "Is `clawed serve` still running?"
+                f"[red]Lost connection to gateway at {self._base_url}[/red]\nIs `clawed serve` still running?"
             )
         except Exception as e:
             response_text = f"Something went wrong: {e}"
@@ -233,9 +228,7 @@ class ClawEDChat(App):
 
         if buttons:
             options = [b["label"] for b in buttons]
-            opts_msg = ChatMessage(
-                "assistant", f"[dim]Options: {' | '.join(options)}[/dim]"
-            )
+            opts_msg = ChatMessage("assistant", f"[dim]Options: {' | '.join(options)}[/dim]")
             await chat_area.mount(opts_msg)
 
         chat_area.scroll_end(animate=False)

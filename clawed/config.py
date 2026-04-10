@@ -45,6 +45,7 @@ def _save_secrets(secrets: dict[str, str]) -> None:
 def _try_keyring_get(key: str) -> Optional[str]:
     try:
         import keyring
+
         return keyring.get_password(_SERVICE_NAME, key)
     except Exception:
         return None
@@ -53,6 +54,7 @@ def _try_keyring_get(key: str) -> Optional[str]:
 def _try_keyring_set(key: str, value: str) -> bool:
     try:
         import keyring
+
         keyring.set_password(_SERVICE_NAME, key, value)
         return True
     except Exception:
@@ -62,6 +64,7 @@ def _try_keyring_set(key: str, value: str) -> bool:
 def _try_keyring_delete(key: str) -> bool:
     try:
         import keyring
+
         keyring.delete_password(_SERVICE_NAME, key)
         return True
     except Exception:
@@ -76,6 +79,7 @@ def _resolve_claude_code_token() -> Optional[str]:
     """
     try:
         from clawed.oauth_refresh import get_oauth_token
+
         token = get_oauth_token()
         if token:
             return token
@@ -84,6 +88,7 @@ def _resolve_claude_code_token() -> Optional[str]:
 
     # Fallback: read raw token without refresh
     import json as _json
+
     for path in [
         Path.home() / ".claude" / ".credentials.json",
         Path.home() / ".claude.json",
@@ -110,6 +115,7 @@ def _resolve_codex_token() -> Optional[str]:
     to run `codex` to re-authenticate.
     """
     import json as _json
+
     auth_path = Path.home() / ".codex" / "auth.json"
     if not auth_path.exists():
         return None
@@ -174,6 +180,7 @@ def resolve_credentials(config=None):
     Returns (provider_name, api_key) or (None, None) if nothing is available.
     """
     import os
+
     for env_var, provider in [
         ("ANTHROPIC_API_KEY", "anthropic"),
         ("OPENAI_API_KEY", "openai"),
@@ -189,6 +196,7 @@ def resolve_credentials(config=None):
             return provider, key
     if config:
         from clawed.models import LLMProvider
+
         if getattr(config, "provider", None) == LLMProvider.OLLAMA:
             return "ollama", None
     return None, None
@@ -274,6 +282,7 @@ async def test_llm_connection(config: Optional[AppConfig] = None) -> dict:
 
     if provider == "ollama":
         import httpx
+
         base = cfg.ollama_base_url.rstrip("/")
         is_cloud = is_ollama_cloud(base)
         api_key = cfg.ollama_api_key or get_api_key("ollama")
@@ -295,9 +304,12 @@ async def test_llm_connection(config: Optional[AppConfig] = None) -> dict:
                         },
                     )
                     if resp.status_code == 401:
-                        return _result(False, cfg.ollama_model,
-                            "API key missing or invalid for Ollama Cloud. "
-                            "Run: clawed config set-key ollama YOUR_KEY", is_err=True)
+                        return _result(
+                            False,
+                            cfg.ollama_model,
+                            "API key missing or invalid for Ollama Cloud. Run: clawed config set-key ollama YOUR_KEY",
+                            is_err=True,
+                        )
                     resp.raise_for_status()
                     return _result(True, cfg.ollama_model, f"{cfg.ollama_model} is ready")
             else:
@@ -322,7 +334,8 @@ async def test_llm_connection(config: Optional[AppConfig] = None) -> dict:
         model = cfg.anthropic_model
         if not api_key:
             return _result(
-                False, model,
+                False,
+                model,
                 "No API key configured. Set ANTHROPIC_API_KEY or log in to Claude Code.",
                 is_err=True,
             )
@@ -340,7 +353,8 @@ async def test_llm_connection(config: Optional[AppConfig] = None) -> dict:
             else:
                 client = _anthropic.Anthropic(api_key=api_key)
             client.messages.create(
-                model=model, max_tokens=5,
+                model=model,
+                max_tokens=5,
                 messages=[{"role": "user", "content": "Hi"}],
             )
             return _result(True, model, f"{model} is ready")
@@ -357,6 +371,7 @@ async def test_llm_connection(config: Optional[AppConfig] = None) -> dict:
         if not api_key:
             return _result(False, model, "No API key configured", is_err=True)
         import httpx
+
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 headers = {
@@ -364,12 +379,14 @@ async def test_llm_connection(config: Optional[AppConfig] = None) -> dict:
                     "Content-type": "application/json",
                 }
                 body = {
-                    "model": model, "max_tokens": 5,
+                    "model": model,
+                    "max_tokens": 5,
                     "messages": [{"role": "user", "content": "Hi"}],
                 }
                 resp = await client.post(
                     "https://api.openai.com/v1/chat/completions",
-                    headers=headers, json=body,
+                    headers=headers,
+                    json=body,
                 )
                 if resp.status_code == 401:
                     return _result(False, model, "API key invalid", is_err=True)

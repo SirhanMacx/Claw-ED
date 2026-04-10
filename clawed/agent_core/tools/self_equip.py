@@ -19,12 +19,26 @@ logger = logging.getLogger(__name__)
 
 # Curated allowlist of safe packages. Only these can be installed.
 # Add to this list as needed — every addition should be reviewed.
-_ALLOWED_PACKAGES = frozenset({
-    "matplotlib", "pandas", "numpy", "scipy", "seaborn",
-    "plotly", "pillow", "requests", "beautifulsoup4",
-    "openpyxl", "xlsxwriter", "tabulate", "rich",
-    "sympy", "networkx", "wordcloud",
-})
+_ALLOWED_PACKAGES = frozenset(
+    {
+        "matplotlib",
+        "pandas",
+        "numpy",
+        "scipy",
+        "seaborn",
+        "plotly",
+        "pillow",
+        "requests",
+        "beautifulsoup4",
+        "openpyxl",
+        "xlsxwriter",
+        "tabulate",
+        "rich",
+        "sympy",
+        "networkx",
+        "wordcloud",
+    }
+)
 
 
 class InstallPackageTool:
@@ -63,9 +77,7 @@ class InstallPackageTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         package = params.get("package_name", "").strip()
         reason = params.get("reason", "")
 
@@ -89,14 +101,15 @@ class InstallPackageTool:
         if base_name not in _ALLOWED_PACKAGES:
             return ToolResult(
                 text=f"BLOCKED: '{package}' is not on the approved package list. "
-                     f"Allowed packages: {', '.join(sorted(_ALLOWED_PACKAGES)[:10])}... "
-                     f"Ask the teacher to add it to the allowlist if needed."
+                f"Allowed packages: {', '.join(sorted(_ALLOWED_PACKAGES)[:10])}... "
+                f"Ask the teacher to add it to the allowlist if needed."
             )
 
         # Log what we're about to install
         logger.info(
             "Self-equip: installing '%s' (reason: %s)",
-            package, reason or "not specified",
+            package,
+            reason or "not specified",
         )
 
         # Install (--user scope only, never system-wide)
@@ -115,6 +128,7 @@ class InstallPackageTool:
                 # Audit log
                 try:
                     from clawed.workspace import append_daily_note
+
                     append_daily_note(
                         f"Package installed: {package} (reason: {reason or 'not specified'})",
                         category="self-equip",
@@ -160,8 +174,7 @@ class CreateCustomToolTool:
                         "prompt_template": {
                             "type": "string",
                             "description": (
-                                "The LLM prompt template for the tool. "
-                                "Use {topic}, {grade}, {subject} as placeholders."
+                                "The LLM prompt template for the tool. Use {topic}, {grade}, {subject} as placeholders."
                             ),
                         },
                     },
@@ -170,9 +183,7 @@ class CreateCustomToolTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         import os
         from pathlib import Path
 
@@ -187,6 +198,7 @@ class CreateCustomToolTool:
 
         # Sanitize name
         import re
+
         name = re.sub(r"[^a-z0-9_]", "_", name.lower())
 
         data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))

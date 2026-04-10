@@ -12,10 +12,13 @@ from clawed.skills.base import SubjectSkill
 
 logger = logging.getLogger(__name__)
 
+
 # Default location for user-defined custom YAML skills
 def _custom_skills_dir():
     from clawed.paths import custom_skills_dir
+
     return custom_skills_dir()
+
 
 CUSTOM_SKILLS_DIR = None  # resolved lazily via _custom_skills_dir()
 
@@ -67,8 +70,7 @@ class SkillLibrary:
             import yaml  # noqa: F401 — checked here for availability, used in _parse_yaml_skill
         except ImportError:
             logger.warning(
-                "pyyaml is not installed — custom YAML skills will not be loaded. "
-                "Install with: pip install pyyaml"
+                "pyyaml is not installed — custom YAML skills will not be loaded. Install with: pip install pyyaml"
             )
             return
 
@@ -185,7 +187,7 @@ def generate_skill_template(subject: str, output_dir: Path | None = None) -> Pat
     filepath = target_dir / filename
 
     template = f"""\
-subject: {subject.lower().replace(' ', '_')}
+subject: {subject.lower().replace(" ", "_")}
 display_name: "{subject.title()}"
 description: "Custom pedagogy skill for {subject.title()}"
 aliases:

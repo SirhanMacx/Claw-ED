@@ -10,11 +10,22 @@ skill = SubjectSkill(
         "literacy aligned to CSTA K-12 CS Standards and the CS for All framework."
     ),
     aliases=(
-        "cs", "programming", "coding", "digital literacy",
-        "ap computer science", "ap cs", "ap csp", "ap csa",
-        "information technology", "it", "web development",
-        "computer programming", "computational thinking",
-        "data science", "cybersecurity", "robotics",
+        "cs",
+        "programming",
+        "coding",
+        "digital literacy",
+        "ap computer science",
+        "ap cs",
+        "ap csp",
+        "ap csa",
+        "information technology",
+        "it",
+        "web development",
+        "computer programming",
+        "computational thinking",
+        "data science",
+        "cybersecurity",
+        "robotics",
     ),
     system_prompt=(
         "You are an expert computer science educator grounded in the CSTA K-12 "

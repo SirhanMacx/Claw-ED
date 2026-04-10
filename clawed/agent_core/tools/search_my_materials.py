@@ -5,6 +5,7 @@ this before generating to find relevant prior work in the teacher's own
 uploaded materials. Now includes asset-level awareness (slideshows, handouts,
 YouTube links) alongside text chunk search.
 """
+
 from __future__ import annotations
 
 import json
@@ -56,9 +57,7 @@ class SearchMyMaterialsTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         query = params["query"]
         top_k = params.get("top_k", 5)
         teacher_id = context.teacher_id
@@ -68,6 +67,7 @@ class SearchMyMaterialsTool:
         # ── Asset-level search (files, YouTube links) ──────────────
         try:
             from clawed.asset_registry import AssetRegistry
+
             registry = AssetRegistry()
             assets = registry.search_assets(teacher_id, query, top_k=top_k)
             # Fallback: if no results with this teacher_id, try without
@@ -94,15 +94,12 @@ class SearchMyMaterialsTool:
                     if yt_count:
                         extras.append(f"{yt_count} YouTube links")
                     extra_str = f" ({', '.join(extras)})" if extras else ""
-                    lines.append(
-                        f"  {i}. [{type_label}] \"{a['title']}\"{extra_str}\n"
-                        f"     File: {a['filename']}\n"
-                    )
+                    lines.append(f'  {i}. [{type_label}] "{a["title"]}"{extra_str}\n     File: {a["filename"]}\n')
 
             if yt_links:
                 lines.append("YOUTUBE LINKS IN YOUR FILES:\n")
                 for link in yt_links:
-                    lines.append(f"  - {link['url']} (from \"{link['from_file']}\")\n")
+                    lines.append(f'  - {link["url"]} (from "{link["from_file"]}")\n')
 
         except Exception as e:
             logger.warning("Asset search failed: %s", e)
@@ -126,13 +123,10 @@ class SearchMyMaterialsTool:
                 if stats["doc_count"] == 0:
                     return ToolResult(
                         text="No curriculum files uploaded yet. Ask the teacher "
-                             "to share their lesson plans, handouts, or other "
-                             "teaching materials so you can reference them."
+                        "to share their lesson plans, handouts, or other "
+                        "teaching materials so you can reference them."
                     )
-                return ToolResult(
-                    text=f"No matches found for '{query}' in "
-                         f"{stats['doc_count']} uploaded documents."
-                )
+                return ToolResult(text=f"No matches found for '{query}' in {stats['doc_count']} uploaded documents.")
 
             if results:
                 lines.append("RELEVANT EXCERPTS:\n")
@@ -145,21 +139,15 @@ class SearchMyMaterialsTool:
                     text_preview = r["chunk_text"][:300]
                     if len(r["chunk_text"]) > 300:
                         text_preview += "..."
-                    lines.append(
-                        f"  {i}. From '{source}' ({sim_pct}% match):\n"
-                        f"     {text_preview}\n"
-                    )
+                    lines.append(f"  {i}. From '{source}' ({sim_pct}% match):\n     {text_preview}\n")
 
         except Exception as e:
             if not lines:
                 return ToolResult(text=f"Failed to search curriculum files: {e}")
 
         if lines:
-            header = f"Found materials related to \"{query}\":\n\n"
-            lines.append(
-                "\nWould you like me to use these existing materials, "
-                "enhance them, or create something new?"
-            )
+            header = f'Found materials related to "{query}":\n\n'
+            lines.append("\nWould you like me to use these existing materials, enhance them, or create something new?")
             return ToolResult(
                 text=header + "\n".join(lines),
                 data={"query": query},

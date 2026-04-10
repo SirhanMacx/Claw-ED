@@ -25,6 +25,7 @@ def _build_document_block(documents: list[Document]) -> str:
     sampled = documents
     if len(documents) > _MAX_DOCS:
         import random
+
         # Deterministic sample for reproducibility
         rng = random.Random(42)
         sampled = rng.sample(documents, _MAX_DOCS)
@@ -35,10 +36,7 @@ def _build_document_block(documents: list[Document]) -> str:
         excerpt = doc.content[:_MAX_PER_DOC_CHARS]
         if total + len(excerpt) > _MAX_TOTAL_CHARS:
             break
-        parts.append(
-            f"--- Document {i}: {doc.title} ({doc.doc_type.value}) ---\n"
-            f"{excerpt}\n"
-        )
+        parts.append(f"--- Document {i}: {doc.title} ({doc.doc_type.value}) ---\n{excerpt}\n")
         total += len(excerpt)
 
     return "\n".join(parts)

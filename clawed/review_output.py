@@ -30,16 +30,16 @@ class OutputReview:
         self.issues: list[dict[str, Any]] = []
         self.score: float = 10.0  # Start perfect, deduct for issues
 
-    def add_issue(
-        self, severity: str, location: str, description: str
-    ) -> None:
+    def add_issue(self, severity: str, location: str, description: str) -> None:
         """Add a quality issue. Severity: critical, major, minor."""
         deductions = {"critical": 3.0, "major": 1.5, "minor": 0.5}
-        self.issues.append({
-            "severity": severity,
-            "location": location,
-            "description": description,
-        })
+        self.issues.append(
+            {
+                "severity": severity,
+                "location": location,
+                "description": description,
+            }
+        )
         self.score = max(0.0, self.score - deductions.get(severity, 0.5))
 
     @property
@@ -55,10 +55,7 @@ class OutputReview:
         lines = [f"{'PASSED' if self.passed else 'FAILED'} ({self.score:.1f}/10)"]
         for issue in self.issues:
             icon = {"critical": "X", "major": "!", "minor": "~"}
-            lines.append(
-                f"  [{icon.get(issue['severity'], '?')}] "
-                f"{issue['location']}: {issue['description']}"
-            )
+            lines.append(f"  [{icon.get(issue['severity'], '?')}] {issue['location']}: {issue['description']}")
         return "\n".join(lines)
 
 
@@ -101,10 +98,7 @@ def review_pptx(pptx_path: Path) -> OutputReview:
             if t and len(t) > 10:
                 first_char = t[0]
                 if first_char.islower() or first_char in ("'", "\u2019"):
-                    review.add_issue(
-                        "major", loc,
-                        f"Text starts mid-sentence: '{t[:50]}...'"
-                    )
+                    review.add_issue("major", loc, f"Text starts mid-sentence: '{t[:50]}...'")
                     break
 
         # Check: truncated text (ends with ... or ellipsis mid-word)
@@ -113,17 +107,12 @@ def review_pptx(pptx_path: Path) -> OutputReview:
                 # Check if truncation is mid-word
                 before_ellipsis = t.rstrip(".\u2026 ")
                 if before_ellipsis and before_ellipsis[-1].isalpha():
-                    review.add_issue(
-                        "minor", loc,
-                        f"Text truncated mid-word: '...{t[-40:]}'"
-                    )
+                    review.add_issue("minor", loc, f"Text truncated mid-word: '...{t[-40:]}'")
 
         # Check: too much text on one slide (>500 chars)
         if len(all_text) > 600:
             review.add_issue(
-                "major", loc,
-                f"Overcrowded slide ({len(all_text)} chars) — "
-                f"should be split across multiple slides"
+                "major", loc, f"Overcrowded slide ({len(all_text)} chars) — should be split across multiple slides"
             )
 
         # Check: answer keys visible
@@ -135,10 +124,7 @@ def review_pptx(pptx_path: Path) -> OutputReview:
         ]
         for pattern in answer_patterns:
             if re.search(pattern, all_text):
-                review.add_issue(
-                    "critical", loc,
-                    "Answer key visible in student-facing slide"
-                )
+                review.add_issue("critical", loc, "Answer key visible in student-facing slide")
                 break
 
     return review
@@ -166,27 +152,18 @@ def review_docx(docx_path: Path) -> OutputReview:
             r"\(Answer:\s*[^)]+\)|\(answer:\s*[^)]+\)|ANSWER KEY",
             text,
         ):
-            review.add_issue(
-                "critical",
-                "content",
-                f"Answer key visible: '{text[:60]}...'"
-            )
+            review.add_issue("critical", "content", f"Answer key visible: '{text[:60]}...'")
 
     # Check: document too short
     if len(all_text) < 500:
-        review.add_issue(
-            "major", "content", "Document is very short — may be incomplete"
-        )
+        review.add_issue("major", "content", "Document is very short — may be incomplete")
 
     # Check: missing key sections
     sections_expected = ["do now", "aim", "exit ticket"]
     text_lower = all_text.lower()
     for section in sections_expected:
         if section not in text_lower:
-            review.add_issue(
-                "minor", "structure",
-                f"Missing expected section: '{section}'"
-            )
+            review.add_issue("minor", "structure", f"Missing expected section: '{section}'")
 
     return review
 
@@ -213,15 +190,16 @@ def review_game_html(html_path: Path) -> OutputReview:
 
     # Check: has game elements
     game_indicators = [
-        "addEventListener", "onclick", "function", "score",
-        "querySelector", "getElementById",
+        "addEventListener",
+        "onclick",
+        "function",
+        "score",
+        "querySelector",
+        "getElementById",
     ]
     found = sum(1 for g in game_indicators if g in html)
     if found < 3:
-        review.add_issue(
-            "critical", "content",
-            f"Only {found}/6 game indicators found — may not be interactive"
-        )
+        review.add_issue("critical", "content", f"Only {found}/6 game indicators found — may not be interactive")
 
     # Check: file size (too small = broken, too large = bloated)
     size_kb = len(html) / 1024

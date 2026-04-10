@@ -1,4 +1,5 @@
 """Tests for starter persona selection."""
+
 from clawed.starter_personas import (
     STARTER_PERSONAS,
     get_starter_persona,

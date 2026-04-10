@@ -1,4 +1,5 @@
 """Custom teacher tools -- YAML prompt-template tools loaded from ~/.eduagent/tools/."""
+
 from __future__ import annotations
 
 import logging
@@ -77,9 +78,7 @@ class YAMLPromptTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         """Fill the prompt template and send to LLM."""
         try:
             filled = self._prompt_template.format(**params)

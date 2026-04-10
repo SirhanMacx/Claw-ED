@@ -3,6 +3,7 @@
 All functionality moved to hermes_plugin.py as part of the
 OpenClaw → Hermes Agent migration (2026-03-30).
 """
+
 from clawed.hermes_plugin import (  # noqa: F401
     _fmt_lesson_summary,
     _fmt_persona,

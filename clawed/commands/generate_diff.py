@@ -25,24 +25,12 @@ from clawed.io import safe_filename as _safe_filename
 
 @generate_app.command()
 def differentiate(
-    lesson_file: str = typer.Option(
-        ..., "--lesson-file", "-l", help="Path to lesson plan JSON"
-    ),
-    iep: Optional[str] = typer.Option(
-        None, "--iep", help="Path to IEP student profiles JSON"
-    ),
-    accommodations_504: Optional[str] = typer.Option(
-        None, "--504", help="Comma-separated 504 accommodations"
-    ),
-    tiered_topic: Optional[str] = typer.Option(
-        None, "--tiered-topic", help="Topic for tiered assignments"
-    ),
-    tiered_grade: str = typer.Option(
-        "8", "--tiered-grade", help="Grade level for tiered assignments"
-    ),
-    tiers: int = typer.Option(
-        3, "--tiers", help="Number of difficulty tiers"
-    ),
+    lesson_file: str = typer.Option(..., "--lesson-file", "-l", help="Path to lesson plan JSON"),
+    iep: Optional[str] = typer.Option(None, "--iep", help="Path to IEP student profiles JSON"),
+    accommodations_504: Optional[str] = typer.Option(None, "--504", help="Comma-separated 504 accommodations"),
+    tiered_topic: Optional[str] = typer.Option(None, "--tiered-topic", help="Topic for tiered assignments"),
+    tiered_grade: str = typer.Option("8", "--tiered-grade", help="Grade level for tiered assignments"),
+    tiers: int = typer.Option(3, "--tiers", help="Number of difficulty tiers"),
 ):
     """Generate IEP modifications, 504 accommodations, and tiered assignments."""
     check_api_key_or_exit()
@@ -67,28 +55,21 @@ def differentiate(
         profiles = load_iep_profiles(Path(iep))
         console.print(
             Panel(
-                f"Generating modified lessons for"
-                f" [bold]{len(profiles)}[/bold] IEP students",
+                f"Generating modified lessons for [bold]{len(profiles)}[/bold] IEP students",
                 title="IEP Modifications",
             )
         )
 
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Modifying lessons for IEP students...", total=None
-            )
+            task = progress.add_task("Modifying lessons for IEP students...", total=None)
             try:
-                modifications = _run_async(
-                    generate_iep_lesson_modifications(daily, profiles)
-                )
+                modifications = _run_async(generate_iep_lesson_modifications(daily, profiles))
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
                 raise typer.Exit(1)
             progress.update(
                 task,
-                description=(
-                    f"Generated {len(modifications)} modified lessons!"
-                ),
+                description=(f"Generated {len(modifications)} modified lessons!"),
             )
 
         paths = save_modified_lessons(modifications, out_dir)
@@ -98,11 +79,7 @@ def differentiate(
         table.add_column("File", style="dim")
         for name, mod_lesson in modifications.items():
             path = next(
-                (
-                    p
-                    for p in paths
-                    if _safe_filename(name) in str(p)
-                ),
+                (p for p in paths if _safe_filename(name) in str(p)),
                 paths[0],
             )
             table.add_row(name, mod_lesson.title, str(path))
@@ -120,19 +97,13 @@ def differentiate(
         )
 
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating 504 accommodations...", total=None
-            )
+            task = progress.add_task("Generating 504 accommodations...", total=None)
             try:
-                notes = _run_async(
-                    generate_504_accommodations(daily, acc_list)
-                )
+                notes = _run_async(generate_504_accommodations(daily, acc_list))
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
                 raise typer.Exit(1)
-            progress.update(
-                task, description="504 accommodations complete!"
-            )
+            progress.update(task, description="504 accommodations complete!")
 
         console.print(
             Panel(
@@ -146,22 +117,15 @@ def differentiate(
         ran_any = True
         console.print(
             Panel(
-                f"Generating [bold]{tiers}-tier[/bold]"
-                f" assignments for: {tiered_topic}",
+                f"Generating [bold]{tiers}-tier[/bold] assignments for: {tiered_topic}",
                 title="Tiered Assignments",
             )
         )
 
         with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating tiered assignments...", total=None
-            )
+            task = progress.add_task("Generating tiered assignments...", total=None)
             try:
-                items = _run_async(
-                    generate_tiered_assignments(
-                        tiered_topic, tiered_grade, tiers
-                    )
-                )
+                items = _run_async(generate_tiered_assignments(tiered_topic, tiered_grade, tiers))
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
                 raise typer.Exit(1)
@@ -178,9 +142,7 @@ def differentiate(
             low = t * 100 + (1 if t == 0 else 0)
             high = (t + 1) * 100
             count = sum(1 for i in items if low <= i.item_number < high)
-            labels = ["Approaching", "On-Level", "Advanced"] + [
-                f"Tier {t + 1}"
-            ]
+            labels = ["Approaching", "On-Level", "Advanced"] + [f"Tier {t + 1}"]
             table.add_row(labels[min(t, len(labels) - 1)], str(count))
         console.print(table)
         console.print(f"[green]Saved:[/green] {path}")

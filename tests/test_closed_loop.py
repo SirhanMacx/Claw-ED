@@ -2,6 +2,7 @@
 
 Flow: generate -> feedback -> next generation sees the feedback.
 """
+
 import pytest
 
 from clawed.agent_core.memory.episodes import EpisodicMemory
@@ -37,15 +38,18 @@ class TestClosedLoop:
 
         # Point the default DB path so load_memory_context finds our episodes
         monkeypatch.setattr(
-            "clawed.agent_core.memory.episodes._DEFAULT_DB", db_path,
+            "clawed.agent_core.memory.episodes._DEFAULT_DB",
+            db_path,
         )
 
         # Load context for a new interaction about the same topic
         ctx = load_memory_context("t1", "plan another photosynthesis lesson")
         # The relevant episode should appear
-        assert "inquiry-based" in ctx.get("relevant_episodes", "") or \
-               "photosynthesis" in ctx.get("relevant_episodes", "") or \
-               ctx.get("relevant_episodes", "") != ""
+        assert (
+            "inquiry-based" in ctx.get("relevant_episodes", "")
+            or "photosynthesis" in ctx.get("relevant_episodes", "")
+            or ctx.get("relevant_episodes", "") != ""
+        )
 
     def test_negative_feedback_appears_in_context(self, tmp_path, monkeypatch):
         """Negative feedback shows up to prevent repeating mistakes."""
@@ -56,13 +60,13 @@ class TestClosedLoop:
         mem = EpisodicMemory(db_path=db_path)
         mem.store(
             "t1",
-            "Teacher rated lesson 'Cell Division' 1 star. "
-            "Feedback: The vocabulary section was too long and boring.",
+            "Teacher rated lesson 'Cell Division' 1 star. Feedback: The vocabulary section was too long and boring.",
             metadata={"type": "feedback", "rating": 1},
         )
 
         monkeypatch.setattr(
-            "clawed.agent_core.memory.episodes._DEFAULT_DB", db_path,
+            "clawed.agent_core.memory.episodes._DEFAULT_DB",
+            db_path,
         )
 
         ctx = load_memory_context("t1", "plan a lesson on cell division")
@@ -76,7 +80,8 @@ class TestClosedLoop:
 
         db_path = tmp_path / "memory" / "episodes.db"
         monkeypatch.setattr(
-            "clawed.agent_core.memory.episodes._DEFAULT_DB", db_path,
+            "clawed.agent_core.memory.episodes._DEFAULT_DB",
+            db_path,
         )
 
         from clawed.agent_core.core import Gateway as AgentGateway
@@ -84,6 +89,7 @@ class TestClosedLoop:
 
         # Create a config file with teacher profile so onboarding is skipped
         from clawed.models import TeacherProfile
+
         config = AppConfig(
             agent_gateway=True,
             teacher_profile=TeacherProfile(name="Test Teacher", subjects=["Math"]),
@@ -92,9 +98,11 @@ class TestClosedLoop:
         config_path.write_text(config.model_dump_json(), encoding="utf-8")
 
         # Step 1: Agent generates (with FakeLLM)
-        llm = FakeLLM([
-            {"type": "text", "content": "Here's your lesson on fractions."},
-        ])
+        llm = FakeLLM(
+            [
+                {"type": "text", "content": "Here's your lesson on fractions."},
+            ]
+        )
         gw = AgentGateway(config=config, llm=llm)
         result = await gw.handle("generate a lesson on fractions", "t1")
         assert "fractions" in result.text.lower()
@@ -110,11 +118,13 @@ class TestClosedLoop:
         # Step 3: Next generation should see the feedback
         ctx = load_memory_context("t1", "another fractions lesson")
         # Should have episodes referencing fractions
-        all_context = " ".join([
-            ctx.get("relevant_episodes", ""),
-            ctx.get("improvement_context", ""),
-            ctx.get("preferences_summary", ""),
-        ])
+        all_context = " ".join(
+            [
+                ctx.get("relevant_episodes", ""),
+                ctx.get("improvement_context", ""),
+                ctx.get("preferences_summary", ""),
+            ]
+        )
         assert "fractions" in all_context.lower() or len(ctx.get("relevant_episodes", "")) > 0
 
     def test_episode_metadata_includes_interaction_type(self, tmp_path, monkeypatch):

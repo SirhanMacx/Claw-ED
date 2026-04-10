@@ -291,12 +291,7 @@ def get_student_profile(name: str) -> str:
         return path.read_text(encoding="utf-8")
 
     # Create a new profile
-    initial = (
-        f"# Student Profile — {name}\n\n"
-        f"*Created {_now_iso()}*\n\n"
-        f"## Interactions\n"
-        f"*(No interactions yet.)*\n"
-    )
+    initial = f"# Student Profile — {name}\n\n*Created {_now_iso()}*\n\n## Interactions\n*(No interactions yet.)*\n"
     path.write_text(initial, encoding="utf-8")
     return initial
 
@@ -329,10 +324,7 @@ def list_student_profiles() -> list[str]:
     """Return a list of student profile names (from filenames)."""
     if not STUDENTS_DIR.exists():
         return []
-    return sorted(
-        p.stem.replace("_", " ").title()
-        for p in STUDENTS_DIR.glob("*.md")
-    )
+    return sorted(p.stem.replace("_", " ").title() for p in STUDENTS_DIR.glob("*.md"))
 
 
 # ── Heartbeat ──────────────────────────────────────────────────────────
@@ -377,7 +369,7 @@ def _deduplicate_entry(content: str, new_entry: str, section_header: str) -> boo
     section_start = idx + len(section_header)
     next_section = re.search(r"\n## ", content[section_start:])
     if next_section:
-        section_text = content[section_start: section_start + next_section.start()]
+        section_text = content[section_start : section_start + next_section.start()]
     else:
         section_text = content[section_start:]
 
@@ -516,8 +508,7 @@ def init_workspace(
     for check_path, label in [(SOUL_PATH, "soul.md"), (IDENTITY_PATH, "identity.md")]:
         if _is_corrupted(check_path):
             logger.warning(
-                "%s appears corrupted (duplicate content detected). "
-                "Regenerating from persona...",
+                "%s appears corrupted (duplicate content detected). Regenerating from persona...",
                 label,
             )
             check_path.unlink()
@@ -593,8 +584,4 @@ def inject_workspace_context() -> str:
     ctx = load_context()
     if not ctx:
         return ""
-    return (
-        "\n\n<!-- Teacher Workspace Context -->\n"
-        f"{ctx}\n"
-        "<!-- End Teacher Workspace Context -->\n"
-    )
+    return f"\n\n<!-- Teacher Workspace Context -->\n{ctx}\n<!-- End Teacher Workspace Context -->\n"

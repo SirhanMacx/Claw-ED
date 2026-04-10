@@ -417,9 +417,7 @@ class TestDemoHtml:
         from clawed.cli import _DEMO_HTML
 
         # No external CSS/JS links
-        assert 'href="http' not in _DEMO_HTML.replace(
-            'href="https://github.com/SirhanMacx/Claw-ED"', ""
-        )
+        assert 'href="http' not in _DEMO_HTML.replace('href="https://github.com/SirhanMacx/Claw-ED"', "")
         assert "<script src=" not in _DEMO_HTML
         assert '<link rel="stylesheet"' not in _DEMO_HTML
 

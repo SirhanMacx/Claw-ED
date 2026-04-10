@@ -5,6 +5,7 @@ building (post-generation buttons, error handling).
 
 Extracted from tg.py lines 1697-1766.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -48,14 +49,10 @@ class GenerateHandler:
             )
         except asyncio.TimeoutError:
             logger.error("Lesson generation timed out after 120s")
-            return GatewayResponse(
-                text="Generation timed out. Please try again with a simpler topic."
-            )
+            return GatewayResponse(text="Generation timed out. Please try again with a simpler topic.")
         except Exception as e:
             logger.error("Lesson generation failed: %s", e)
-            return GatewayResponse(
-                text="I ran into an issue generating that lesson. Please try again."
-            )
+            return GatewayResponse(text="I ran into an issue generating that lesson. Please try again.")
 
         button_rows = []
         lesson_id = get_last_lesson_id(teacher_id)
@@ -79,13 +76,9 @@ class GenerateHandler:
             )
         except asyncio.TimeoutError:
             logger.error("Unit generation timed out after 120s")
-            return GatewayResponse(
-                text="Generation timed out. Please try again with a simpler topic."
-            )
+            return GatewayResponse(text="Generation timed out. Please try again with a simpler topic.")
         except Exception as e:
             logger.error("Unit generation failed: %s", e)
-            return GatewayResponse(
-                text="I ran into an issue planning that unit. Please try again."
-            )
+            return GatewayResponse(text="I ran into an issue planning that unit. Please try again.")
 
         return GatewayResponse(text=response_text)

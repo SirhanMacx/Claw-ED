@@ -108,7 +108,8 @@ class TestSkillLibraryCustom:
 
     def test_loads_custom_skill(self, tmp_path):
         self._write_skill(
-            tmp_path, "ap_psychology",
+            tmp_path,
+            "ap_psychology",
             display_name="AP Psychology",
             aliases=["psych"],
             system_prompt="AP Psych educator.",
@@ -121,7 +122,8 @@ class TestSkillLibraryCustom:
 
     def test_custom_accessible_by_alias(self, tmp_path):
         self._write_skill(
-            tmp_path, "marine_bio",
+            tmp_path,
+            "marine_bio",
             aliases=["marine biology", "ocean science"],
         )
         lib = SkillLibrary(custom_dir=tmp_path)
@@ -131,7 +133,8 @@ class TestSkillLibraryCustom:
 
     def test_custom_overrides_builtin(self, tmp_path):
         self._write_skill(
-            tmp_path, "math",
+            tmp_path,
+            "math",
             display_name="Custom Math",
             system_prompt="My custom math pedagogy.",
         )
@@ -150,7 +153,8 @@ class TestSkillLibraryCustom:
 
     def test_custom_skill_in_list(self, tmp_path):
         self._write_skill(
-            tmp_path, "ap_psychology",
+            tmp_path,
+            "ap_psychology",
             display_name="AP Psychology",
         )
         lib = SkillLibrary(custom_dir=tmp_path)

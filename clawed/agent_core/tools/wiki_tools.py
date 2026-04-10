@@ -36,23 +36,20 @@ class WikiCompileTool:
                     "properties": {
                         "force": {
                             "type": "boolean",
-                            "description": (
-                                "Recompile all articles even if unchanged"
-                            ),
+                            "description": ("Recompile all articles even if unchanged"),
                         },
                     },
                 },
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         force = params.get("force", False)
         context.notify_progress("Compiling curriculum wiki...")
 
         try:
             from clawed.wiki import compile_wiki
+
             result = await compile_wiki(
                 teacher_id=context.teacher_id,
                 force=force,
@@ -98,15 +95,14 @@ class WikiQueryTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         question = params.get("question", "").strip()
         if not question:
             return ToolResult(text="ERROR: question is required")
 
         try:
             from clawed.wiki import query_wiki
+
             result = await query_wiki(question)
             parts = [result.answer]
             if result.sources:
@@ -142,11 +138,10 @@ class WikiLintTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         try:
             from clawed.wiki import lint_wiki
+
             result = lint_wiki(teacher_id=context.teacher_id)
             parts = ["Wiki Health Report:"]
             parts.append(f"  Stale articles: {len(result.stale)}")
@@ -164,9 +159,7 @@ class WikiLintTool:
             if result.orphaned:
                 parts.append("\nOrphaned (source deleted):")
                 for o in result.orphaned[:5]:
-                    parts.append(
-                        f"  - {o.get('doc_title', '?')}"
-                    )
+                    parts.append(f"  - {o.get('doc_title', '?')}")
 
             return ToolResult(text="\n".join(parts))
         except Exception as e:

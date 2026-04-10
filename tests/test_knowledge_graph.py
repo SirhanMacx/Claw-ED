@@ -1,4 +1,5 @@
 """Tests for Curriculum Knowledge Graph."""
+
 import pytest
 
 from clawed.agent_core.memory.knowledge_graph import CurriculumKG, _normalize_id
@@ -106,7 +107,10 @@ class TestCurriculumKG:
         kg.add_triple("teacher1", "A", "related_to", "B")
         kg.add_triple("teacher1", "A", "prerequisite_for", "C")
         results = kg.query_related(
-            "teacher1", "A", predicate="prerequisite_for", direction="outgoing",
+            "teacher1",
+            "A",
+            predicate="prerequisite_for",
+            direction="outgoing",
         )
         assert len(results) == 1
         assert results[0]["entity"] == "C"
@@ -149,12 +153,14 @@ class TestCurriculumKG:
 class TestKGExtractor:
     def test_extract_entities_from_title(self):
         from clawed.agent_core.memory.kg_extractor import extract_entities_from_document
+
         entities = extract_entities_from_document("American Revolution", "", [])
         names = [e["name"] for e in entities]
         assert "American Revolution" in names
 
     def test_extract_entities_from_tags(self):
         from clawed.agent_core.memory.kg_extractor import extract_entities_from_document
+
         entities = extract_entities_from_document("", "", ["Civil War", "Reconstruction"])
         names = [e["name"] for e in entities]
         assert "Civil War" in names
@@ -162,12 +168,14 @@ class TestKGExtractor:
 
     def test_extract_standard_codes(self):
         from clawed.agent_core.memory.kg_extractor import extract_standard_codes
+
         codes = extract_standard_codes("Aligned to CCSS.ELA.RL.8.1 and CCSS.ELA.W.8.2")
         assert len(codes) == 2
         assert "CCSS.ELA.RL.8.1" in codes
 
     def test_extract_vocabulary_terms(self):
         from clawed.agent_core.memory.kg_extractor import extract_entities_from_document
+
         content = "Key vocabulary: taxation, representation, boycott, Parliament"
         entities = extract_entities_from_document("Test", content, [])
         types = {e["entity_type"] for e in entities}
@@ -175,6 +183,7 @@ class TestKGExtractor:
 
     def test_infer_relationships_vocab(self):
         from clawed.agent_core.memory.kg_extractor import infer_relationships
+
         entities = [
             {"name": "Revolution", "entity_type": "topic"},
             {"name": "Boycott", "entity_type": "term"},
@@ -184,6 +193,7 @@ class TestKGExtractor:
 
     def test_infer_relationships_standard(self):
         from clawed.agent_core.memory.kg_extractor import infer_relationships
+
         entities = [
             {"name": "Revolution", "entity_type": "topic"},
             {"name": "CCSS.RH.8.1", "entity_type": "standard"},
@@ -193,5 +203,6 @@ class TestKGExtractor:
 
     def test_empty_doc(self):
         from clawed.agent_core.memory.kg_extractor import extract_entities_from_document
+
         entities = extract_entities_from_document("", "", [])
         assert entities == []

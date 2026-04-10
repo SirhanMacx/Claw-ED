@@ -1,4 +1,5 @@
 """Tool: standards_dashboard — show teachers their standards coverage across all generated lessons."""
+
 from __future__ import annotations
 
 import json
@@ -50,9 +51,7 @@ class StandardsDashboardTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.standards import get_standards
         from clawed.state import _get_conn, init_db
 
@@ -130,11 +129,7 @@ class StandardsDashboardTool:
         pct = (covered / total * 100) if total > 0 else 0
 
         # Most-covered: standards hit 2+ times, sorted descending
-        multi_hit = [
-            (code, count)
-            for code, count in covered_counter.most_common()
-            if count >= 2
-        ]
+        multi_hit = [(code, count) for code, count in covered_counter.most_common() if count >= 2]
 
         # ── Build markdown report ────────────────────────────────────
         subject_label = subject.replace("_", " ").title()
@@ -181,19 +176,14 @@ class StandardsDashboardTool:
             # Pick a gap standard to recommend next
             next_code = sorted(gap_codes)[0]
             next_desc = standard_descriptions.get(next_code, "")
-            lines.append(
-                f"Consider covering **{next_code}** next: {next_desc}"
-            )
+            lines.append(f"Consider covering **{next_code}** next: {next_desc}")
             if len(gap_codes) > 1:
                 second = sorted(gap_codes)[1]
                 second_desc = standard_descriptions.get(second, "")
-                lines.append(
-                    f"Also consider **{second}**: {second_desc}"
-                )
+                lines.append(f"Also consider **{second}**: {second_desc}")
         else:
             lines.append(
-                "All standards are covered! Consider revisiting "
-                "standards with only one lesson for deeper mastery."
+                "All standards are covered! Consider revisiting standards with only one lesson for deeper mastery."
             )
 
         report_text = "\n".join(lines)
@@ -205,9 +195,7 @@ class StandardsDashboardTool:
                 "covered": covered,
                 "coverage_pct": round(pct, 1),
                 "gaps": sorted(gap_codes),
-                "multi_hit": [
-                    {"code": c, "count": n} for c, n in multi_hit
-                ],
+                "multi_hit": [{"code": c, "count": n} for c, n in multi_hit],
                 "lesson_count": lesson_count,
             },
             side_effects=["Generated standards coverage dashboard"],

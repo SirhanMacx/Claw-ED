@@ -81,9 +81,7 @@ async def export_classroom(lesson_id: str):
         worksheet_desc = "Student Worksheet:\n"
         for item in materials_data["worksheet_items"]:
             worksheet_desc += f"{item.get('item_number', '')}. {item.get('prompt', '')}\n"
-        coursework_materials.append({
-            "description": {"text": worksheet_desc}
-        })
+        coursework_materials.append({"description": {"text": worksheet_desc}})
 
     max_points = 0
     if materials_data and materials_data.get("worksheet_items"):
@@ -132,9 +130,7 @@ async def import_lesson(req: ImportRequest):
             fetch_server = f"{parsed.scheme}://{parsed.netloc}"
 
     if not token:
-        return JSONResponse(
-            {"error": "Provide a url or token."}, status_code=400
-        )
+        return JSONResponse({"error": "Provide a url or token."}, status_code=400)
 
     # Security: restrict fetch to localhost unless explicitly allowed
     _allowed_prefixes = ["http://localhost", "http://127.0.0.1"]
@@ -153,14 +149,10 @@ async def import_lesson(req: ImportRequest):
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(fetch_url)
     except httpx.HTTPError as exc:
-        return JSONResponse(
-            {"error": f"Network error: {exc}"}, status_code=502
-        )
+        return JSONResponse({"error": f"Network error: {exc}"}, status_code=502)
 
     if resp.status_code == 404:
-        return JSONResponse(
-            {"error": "Lesson not found."}, status_code=404
-        )
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
     if resp.status_code != 200:
         return JSONResponse(
             {"error": f"Upstream returned {resp.status_code}"},
@@ -170,9 +162,7 @@ async def import_lesson(req: ImportRequest):
     try:
         data = resp.json()
     except (json.JSONDecodeError, ValueError):
-        return JSONResponse(
-            {"error": "Invalid JSON from upstream."}, status_code=502
-        )
+        return JSONResponse({"error": "Invalid JSON from upstream."}, status_code=502)
 
     lesson_data = data.get("lesson", data)
     original_title = data.get("title", lesson_data.get("title", "Untitled"))

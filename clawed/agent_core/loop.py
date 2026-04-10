@@ -3,6 +3,7 @@
 Migrated from clawed/agent.py. Supports any LLM that implements
 the generate(messages, tools, system) interface.
 """
+
 from __future__ import annotations
 
 import json
@@ -62,7 +63,9 @@ async def run_agent_loop(
 
     for iteration in range(max_iterations):
         response = await llm.generate(
-            messages=messages, tools=tool_schemas, system=system,
+            messages=messages,
+            tools=tool_schemas,
+            system=system,
         )
 
         if response["type"] == "text":
@@ -71,11 +74,13 @@ async def run_agent_loop(
         if response["type"] == "tool_calls":
             tool_calls = response["tool_calls"]
 
-            messages.append({
-                "role": "assistant",
-                "content": None,
-                "tool_calls": tool_calls,
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": tool_calls,
+                }
+            )
 
             for tc in tool_calls:
                 name = tc["name"]
@@ -94,11 +99,13 @@ async def run_agent_loop(
                 if not content:
                     content = "(no output)"
 
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc.get("id", name),
-                    "content": content,
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc.get("id", name),
+                        "content": content,
+                    }
+                )
             continue
 
     # TODO: export guarantee — detect when generation tools were called
@@ -106,9 +113,6 @@ async def run_agent_loop(
 
     # Safety limit reached
     return GatewayResponse(
-        text=(
-            "I've been working on this for a while. "
-            "Here's what I have so far — want me to continue?"
-        ),
+        text=("I've been working on this for a while. Here's what I have so far — want me to continue?"),
         files=all_files,
     )

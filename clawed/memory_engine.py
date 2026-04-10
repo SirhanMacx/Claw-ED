@@ -97,66 +97,82 @@ def extract_lesson_patterns(
 
     if rating == 5:
         # Extract what made it excellent
-        patterns.append({
-            "type": "positive",
-            "pattern": f"Lesson '{lesson.title}' rated 5-star{subject_tag} ({timestamp})",
-            "section": SECTION_WHAT_WORKS,
-        })
+        patterns.append(
+            {
+                "type": "positive",
+                "pattern": f"Lesson '{lesson.title}' rated 5-star{subject_tag} ({timestamp})",
+                "section": SECTION_WHAT_WORKS,
+            }
+        )
 
         # Structural patterns from the lesson itself
         if lesson.do_now and len(lesson.do_now) > 50:
             _extract_do_now_pattern(lesson.do_now, patterns)
         if lesson.exit_ticket and len(lesson.exit_ticket) >= 3:
-            patterns.append({
-                "type": "positive",
-                "pattern": "Exit tickets with 3+ questions work well",
-                "section": SECTION_STRUCTURAL_PREFS,
-            })
+            patterns.append(
+                {
+                    "type": "positive",
+                    "pattern": "Exit tickets with 3+ questions work well",
+                    "section": SECTION_STRUCTURAL_PREFS,
+                }
+            )
         if notes:
-            patterns.append({
-                "type": "positive",
-                "pattern": f"Teacher note on 5-star lesson{subject_tag}: {notes[:200]}",
-                "section": SECTION_WHAT_WORKS,
-            })
+            patterns.append(
+                {
+                    "type": "positive",
+                    "pattern": f"Teacher note on 5-star lesson{subject_tag}: {notes[:200]}",
+                    "section": SECTION_WHAT_WORKS,
+                }
+            )
 
     elif rating <= 2:
         # Extract what went wrong
-        patterns.append({
-            "type": "negative",
-            "pattern": f"Lesson '{lesson.title}' rated {rating}-star{subject_tag} ({timestamp})",
-            "section": SECTION_WHAT_TO_AVOID,
-        })
+        patterns.append(
+            {
+                "type": "negative",
+                "pattern": f"Lesson '{lesson.title}' rated {rating}-star{subject_tag} ({timestamp})",
+                "section": SECTION_WHAT_TO_AVOID,
+            }
+        )
 
         if notes:
-            patterns.append({
-                "type": "negative",
-                "pattern": f"Teacher complaint{subject_tag}: {notes[:200]}",
-                "section": SECTION_WHAT_TO_AVOID,
-            })
+            patterns.append(
+                {
+                    "type": "negative",
+                    "pattern": f"Teacher complaint{subject_tag}: {notes[:200]}",
+                    "section": SECTION_WHAT_TO_AVOID,
+                }
+            )
 
         # Track which sections were edited (they needed fixing)
         for section_name in edited:
-            patterns.append({
-                "type": "structural",
-                "pattern": f"Teacher edited '{section_name}' section{subject_tag} -- needs improvement",
-                "section": SECTION_STRUCTURAL_PREFS,
-            })
+            patterns.append(
+                {
+                    "type": "structural",
+                    "pattern": f"Teacher edited '{section_name}' section{subject_tag} -- needs improvement",
+                    "section": SECTION_STRUCTURAL_PREFS,
+                }
+            )
 
     elif rating == 4:
         # Good but not perfect -- note minor tweaks if notes provided
         if notes:
-            patterns.append({
-                "type": "positive",
-                "pattern": f"4-star lesson '{lesson.title}': {notes[:150]}",
-                "section": SECTION_TOPIC_NOTES,
-            })
+            patterns.append(
+                {
+                    "type": "positive",
+                    "pattern": f"4-star lesson '{lesson.title}': {notes[:150]}",
+                    "section": SECTION_TOPIC_NOTES,
+                }
+            )
         if edited:
             for section_name in edited:
-                patterns.append({
-                    "type": "structural",
-                    "pattern": f"Minor edit needed in '{section_name}' on 4-star lesson",
-                    "section": SECTION_STRUCTURAL_PREFS,
-                })
+                patterns.append(
+                    {
+                        "type": "structural",
+                        "pattern": f"Minor edit needed in '{section_name}' on 4-star lesson",
+                        "section": SECTION_STRUCTURAL_PREFS,
+                    }
+                )
 
     # Rating 3 = neutral, don't learn from mediocre
 
@@ -170,23 +186,29 @@ def _extract_do_now_pattern(do_now_text: str, patterns: list[dict[str, str]]) ->
     if "?" in do_now_text:
         q_count = do_now_text.count("?")
         if q_count >= 2:
-            patterns.append({
-                "type": "positive",
-                "pattern": f"Do-Now with {q_count} questions works well",
-                "section": SECTION_STRUCTURAL_PREFS,
-            })
+            patterns.append(
+                {
+                    "type": "positive",
+                    "pattern": f"Do-Now with {q_count} questions works well",
+                    "section": SECTION_STRUCTURAL_PREFS,
+                }
+            )
     if any(kw in text_lower for kw in ("predict", "prediction", "what do you think")):
-        patterns.append({
-            "type": "positive",
-            "pattern": "Do-Now with prediction/anticipation questions gets high ratings",
-            "section": SECTION_STRUCTURAL_PREFS,
-        })
+        patterns.append(
+            {
+                "type": "positive",
+                "pattern": "Do-Now with prediction/anticipation questions gets high ratings",
+                "section": SECTION_STRUCTURAL_PREFS,
+            }
+        )
     if any(kw in text_lower for kw in ("reflect", "reflection", "yesterday", "last class")):
-        patterns.append({
-            "type": "positive",
-            "pattern": "Do-Now with reflection on prior learning gets high ratings",
-            "section": SECTION_STRUCTURAL_PREFS,
-        })
+        patterns.append(
+            {
+                "type": "positive",
+                "pattern": "Do-Now with reflection on prior learning gets high ratings",
+                "section": SECTION_STRUCTURAL_PREFS,
+            }
+        )
 
 
 # ── Memory.md read/write ─────────────────────────────────────────────
@@ -195,6 +217,7 @@ def _extract_do_now_pattern(do_now_text: str, patterns: list[dict[str, str]]) ->
 def _get_memory_path():
     """Get the memory.md path, respecting EDUAGENT_DATA_DIR."""
     from clawed.workspace import MEMORY_PATH
+
     return MEMORY_PATH
 
 
@@ -276,10 +299,7 @@ def _update_stats_section(content: str, total_rated: int, avg_rating: float, tre
     avg_str = f"{avg_rating:.1f}" if avg_rating > 0 else "--"
 
     stats_block = (
-        f"{heading}\n"
-        f"- Total lessons rated: {total_rated}\n"
-        f"- Average rating: {avg_str}\n"
-        f"- Rating trend: {trend}\n"
+        f"{heading}\n- Total lessons rated: {total_rated}\n- Average rating: {avg_str}\n- Rating trend: {trend}\n"
     )
 
     if heading in content:
@@ -388,7 +408,9 @@ def process_feedback(
         _write_memory(content)
         logger.info(
             "Memory updated: %d pattern(s) from %d-star rating of '%s'",
-            len(applied), rating, lesson.title,
+            len(applied),
+            rating,
+            lesson.title,
         )
 
     # Preference drift detection (runs on every rated lesson)
@@ -400,10 +422,12 @@ def process_feedback(
     # Check if persona evolution should trigger
     try:
         from clawed.persona_evolution import apply_confirmed_changes, get_confirmed_changes
+
         confirmed = get_confirmed_changes()
         if confirmed:
             from clawed.commands._helpers import persona_path
             from clawed.persona import load_persona
+
             pp = persona_path()
             if pp.exists():
                 current_persona = load_persona(pp)
@@ -412,15 +436,14 @@ def process_feedback(
                     pp.write_text(updated.model_dump_json(indent=2), encoding="utf-8")
                     # Log to SOUL.md
                     from clawed.workspace import SOUL_PATH
+
                     if SOUL_PATH.exists():
                         soul_content = SOUL_PATH.read_text(encoding="utf-8")
                         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
                         for desc in descriptions:
                             entry = f"\n\n*({stamp})* Fingerprint updated: {desc}\n"
                             marker = "## Agent Observations"
-                            soul_content = soul_content.replace(
-                                marker, marker + entry, 1
-                            )
+                            soul_content = soul_content.replace(marker, marker + entry, 1)
                         SOUL_PATH.write_text(soul_content, encoding="utf-8")
                     logger.info("Persona evolution applied: %s", "; ".join(descriptions))
     except Exception as e:
@@ -534,10 +557,7 @@ def build_improvement_context(
         if subject or topic:
             # Filter to entries mentioning the subject or topic
             search_terms = [t.lower() for t in [subject, topic] if t]
-            filtered = [
-                n for n in topic_notes
-                if any(term in n.lower() for term in search_terms)
-            ]
+            filtered = [n for n in topic_notes if any(term in n.lower() for term in search_terms)]
             relevant = filtered if filtered else topic_notes[-5:]
         parts.append("")
         parts.append("Topic-specific notes:")
@@ -604,6 +624,7 @@ def reset_memory(confirm: bool = False) -> bool:
 def _base_dir() -> Path:
     """Get the base data directory for stats files."""
     from clawed.paths import data_dir
+
     return data_dir()
 
 
@@ -636,11 +657,7 @@ def track_lesson_metadata(lesson: "DailyLesson", rating: int) -> None:
         "has_homework": bool(lesson.homework),
         "has_differentiation": bool(
             lesson.differentiation
-            and (
-                lesson.differentiation.struggling
-                or lesson.differentiation.advanced
-                or lesson.differentiation.ell
-            )
+            and (lesson.differentiation.struggling or lesson.differentiation.advanced or lesson.differentiation.ell)
         ),
         "instruction_length": len(lesson.direct_instruction or ""),
         "practice_length": len(lesson.guided_practice or ""),
@@ -707,20 +724,16 @@ def get_quality_insights() -> list[str]:
                     f"({high_avg:.0%} of top lessons vs {low_avg:.0%} of low-rated)"
                 )
             elif low_avg > 0.7 and high_avg < 0.4:
-                insights.append(
-                    f"Lessons without {label} tend to rate higher"
-                )
+                insights.append(f"Lessons without {label} tend to rate higher")
         elif key == "exit_ticket_count":
             if high_avg > low_avg + 0.5:
                 insights.append(
-                    f"Top-rated lessons average {high_avg:.1f} exit ticket questions "
-                    f"vs {low_avg:.1f} for lower-rated"
+                    f"Top-rated lessons average {high_avg:.1f} exit ticket questions vs {low_avg:.1f} for lower-rated"
                 )
         elif key in ("instruction_length", "practice_length"):
             if high_avg > low_avg * 1.3 and len(high) >= 2:
                 insights.append(
-                    f"Higher-rated lessons have longer {label} sections "
-                    f"(avg {high_avg:.0f} chars vs {low_avg:.0f})"
+                    f"Higher-rated lessons have longer {label} sections (avg {high_avg:.0f} chars vs {low_avg:.0f})"
                 )
             elif low_avg > high_avg * 1.3 and len(low) >= 2:
                 insights.append(
@@ -823,6 +836,7 @@ EPISODES_TO_KEEP_VERBATIM = 10  # Keep this many recent episodes uncompressed
 def _get_memory_summary_path() -> Path:
     """Get the memory_summary.md path, respecting EDUAGENT_DATA_DIR."""
     from clawed.workspace import MEMORY_SUMMARY_PATH
+
     return MEMORY_SUMMARY_PATH
 
 
@@ -880,7 +894,8 @@ def compress_old_episodes(teacher_id: str) -> str:
 
     logger.info(
         "Compressed %d old episodes into memory_summary.md for teacher %s",
-        len(old_episodes), teacher_id,
+        len(old_episodes),
+        teacher_id,
     )
     return summary_text
 
@@ -906,7 +921,7 @@ def maybe_compress_episodes(teacher_id: str) -> str:
 # ── Preference drift detection ────────────────────────────────────────
 
 DRIFT_WINDOW_SIZE = 10  # Rolling window of ratings to compare
-DRIFT_THRESHOLD = 0.5   # Minimum average change to trigger an alert
+DRIFT_THRESHOLD = 0.5  # Minimum average change to trigger an alert
 
 
 def _get_rating_history_path() -> Path:

@@ -55,9 +55,7 @@ def unit_to_markdown(unit: UnitPlan) -> str:
     lines.append("| # | Topic | Type | Description |")
     lines.append("|---|-------|------|-------------|")
     for lesson in unit.daily_lessons:
-        lines.append(
-            f"| {lesson.lesson_number} | {lesson.topic} | {lesson.lesson_type} | {lesson.description} |"
-        )
+        lines.append(f"| {lesson.lesson_number} | {lesson.topic} | {lesson.lesson_type} | {lesson.description} |")
     lines.append("")
 
     lines.append("## Assessment Plan")
@@ -98,26 +96,28 @@ def lesson_to_markdown(lesson: DailyLesson) -> str:
     lines.append(f"**Total Time:** {total} minutes")
     lines.append("")
 
-    lines.extend([
-        "## Do-Now / Warm-Up (5 min)",
-        "",
-        lesson.do_now,
-        "",
-        "## Direct Instruction (15-20 min)",
-        "",
-        lesson.direct_instruction,
-        "",
-        "## Guided Practice (15-20 min)",
-        "",
-        lesson.guided_practice,
-        "",
-        "## Independent Work (10 min)",
-        "",
-        lesson.independent_work,
-        "",
-        "## Exit Ticket",
-        "",
-    ])
+    lines.extend(
+        [
+            "## Do-Now / Warm-Up (5 min)",
+            "",
+            lesson.do_now,
+            "",
+            "## Direct Instruction (15-20 min)",
+            "",
+            lesson.direct_instruction,
+            "",
+            "## Guided Practice (15-20 min)",
+            "",
+            lesson.guided_practice,
+            "",
+            "## Independent Work (10 min)",
+            "",
+            lesson.independent_work,
+            "",
+            "## Exit Ticket",
+            "",
+        ]
+    )
     for i, et in enumerate(lesson.exit_ticket, 1):
         lines.append(f"{i}. {et.question}")
         if et.expected_response:
@@ -125,18 +125,22 @@ def lesson_to_markdown(lesson: DailyLesson) -> str:
     lines.append("")
 
     if lesson.homework:
-        lines.extend([
-            "## Homework",
-            "",
-            lesson.homework,
-            "",
-        ])
+        lines.extend(
+            [
+                "## Homework",
+                "",
+                lesson.homework,
+                "",
+            ]
+        )
 
-    lines.extend([
-        "## Differentiation",
-        "",
-        "### Struggling Learners",
-    ])
+    lines.extend(
+        [
+            "## Differentiation",
+            "",
+            "### Struggling Learners",
+        ]
+    )
     for item in lesson.differentiation.struggling:
         lines.append(f"- {item}")
     lines.append("")
@@ -359,10 +363,7 @@ def _lesson_to_html_for_pdf(
         for item in materials.worksheet_items:
             pts = "pts" if item.point_value != 1 else "pt"
             prompt_html = esc(item.prompt)
-            sections.append(
-                f"<p><strong>{item.item_number}.</strong>"
-                f" ({item.point_value} {pts}) {prompt_html}</p>"
-            )
+            sections.append(f"<p><strong>{item.item_number}.</strong> ({item.point_value} {pts}) {prompt_html}</p>")
         sections.append("</div>")
 
     body = "\n".join(sections)
@@ -399,6 +400,7 @@ def _pdf_css_stylesheet():
     """Create a weasyprint CSS stylesheet from our PDF styles."""
     try:
         import weasyprint
+
         return weasyprint.CSS(string=_PDF_CSS)
     except ImportError:
         return None

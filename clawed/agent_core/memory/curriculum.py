@@ -1,5 +1,6 @@
 # clawed/agent_core/memory/curriculum.py
 """Layer 2: Curriculum state — projections from canonical database."""
+
 from __future__ import annotations
 
 import logging
@@ -23,6 +24,7 @@ def load_curriculum_state(teacher_id: str) -> dict[str, Any]:
     }
     try:
         from clawed.database import Database
+
         db = Database()
         stats = db.get_stats()
         state["units_generated"] = stats.get("units", 0)
@@ -40,8 +42,7 @@ def summarize_curriculum_state(state: dict[str, Any]) -> str:
     parts = []
     if state["units_generated"]:
         parts.append(
-            f"You've generated {state['units_generated']} units "
-            f"and {state['lessons_generated']} lessons together."
+            f"You've generated {state['units_generated']} units and {state['lessons_generated']} lessons together."
         )
     if state["recent_topics"]:
         parts.append(f"Recent topics: {', '.join(state['recent_topics'][:5])}.")

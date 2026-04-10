@@ -1,4 +1,5 @@
 """Tool: drive_create_doc — create a Google Doc."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -16,10 +17,7 @@ class DriveCreateDocTool:
             "type": "function",
             "function": {
                 "name": "drive_create_doc",
-                "description": (
-                    "Create a native Google Doc in Drive. "
-                    "Returns the web link to the new document."
-                ),
+                "description": ("Create a native Google Doc in Drive. Returns the web link to the new document."),
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -29,9 +27,7 @@ class DriveCreateDocTool:
                         },
                         "content": {
                             "type": "string",
-                            "description": (
-                                "Content or outline for the document"
-                            ),
+                            "description": ("Content or outline for the document"),
                         },
                         "folder_id": {
                             "type": "string",
@@ -44,9 +40,7 @@ class DriveCreateDocTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.drive.client import DriveClient
 
         title = params["title"]

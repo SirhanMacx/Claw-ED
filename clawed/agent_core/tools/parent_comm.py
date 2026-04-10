@@ -1,4 +1,5 @@
 """Tool: parent_comm — wraps clawed.parent_comm.generate_parent_comm."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -43,10 +44,7 @@ class ParentCommTool:
                         },
                         "student_description": {
                             "type": "string",
-                            "description": (
-                                "Brief description of the student situation "
-                                "(no real names)"
-                            ),
+                            "description": ("Brief description of the student situation (no real names)"),
                         },
                         "class_context": {
                             "type": "string",
@@ -68,9 +66,7 @@ class ParentCommTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.llm import LLMClient
         from clawed.parent_comm import (
             CommType,

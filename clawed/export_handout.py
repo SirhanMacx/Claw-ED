@@ -10,6 +10,7 @@ Produces a 4-6 page DOCX workbook with:
 
 Consumes a StudentPacket model (v2.3+) or falls back to legacy dict format.
 """
+
 from __future__ import annotations
 
 import logging
@@ -38,7 +39,9 @@ def export_student_packet_docx(
     theme = get_color_theme(subject)
     primary_hex = theme["primary"]
     primary_rgb = RGBColor(
-        int(primary_hex[:2], 16), int(primary_hex[2:4], 16), int(primary_hex[4:6], 16),
+        int(primary_hex[:2], 16),
+        int(primary_hex[2:4], 16),
+        int(primary_hex[4:6], 16),
     )
     accent_hex = theme.get("accent", primary_hex)
 
@@ -112,7 +115,8 @@ def export_student_packet_docx(
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         shading = tcPr.makeelement(
-            qn("w:shd"), {qn("w:val"): "clear", qn("w:color"): "auto", qn("w:fill"): hex_color},
+            qn("w:shd"),
+            {qn("w:val"): "clear", qn("w:color"): "auto", qn("w:fill"): hex_color},
         )
         tcPr.append(shading)
 
@@ -241,7 +245,7 @@ def export_student_packet_docx(
                 p.paragraph_format.right_indent = Inches(0.4)
                 p.paragraph_format.space_before = Pt(6)
                 p.paragraph_format.space_after = Pt(6)
-                r = p.add_run(f'\u201c{full_text}\u201d')
+                r = p.add_run(f"\u201c{full_text}\u201d")
                 r.italic = True
                 r.font.size = Pt(11)
                 # Attribution

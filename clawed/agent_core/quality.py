@@ -20,9 +20,7 @@ _initialized = False
 
 
 def _db_path() -> Path:
-    data_dir = os.environ.get(
-        "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-    )
+    data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
     return Path(data_dir) / "memory" / "quality.db"
 
 
@@ -191,8 +189,7 @@ def record_pattern(
     now = datetime.now(timezone.utc).isoformat()
     with _get_conn() as conn:
         existing = conn.execute(
-            "SELECT id, occurrences FROM patterns"
-            " WHERE teacher_id = ? AND pattern_type = ? AND description = ?",
+            "SELECT id, occurrences FROM patterns WHERE teacher_id = ? AND pattern_type = ? AND description = ?",
             (teacher_id, pattern_type, description),
         ).fetchone()
         if existing:
@@ -315,7 +312,7 @@ def self_distill(teacher_id: str, llm_generate=None) -> str:
             scores = json.loads(row["score_json"]) if row["score_json"] else {}
             line = f"- {topic}"
             if feedback:
-                line += f": \"{feedback}\""
+                line += f': "{feedback}"'
             if scores:
                 top_score = max(scores.items(), key=lambda x: x[1])
                 line += f" (best: {top_score[0]}={top_score[1]:.1f})"
@@ -333,10 +330,7 @@ def self_distill(teacher_id: str, llm_generate=None) -> str:
     if patterns:
         insights.append("\n## Confirmed Patterns (recurring teacher behaviors)")
         for row in patterns:
-            insights.append(
-                f"- [{row['pattern_type']}] {row['description']} "
-                f"(seen {row['occurrences']}x)"
-            )
+            insights.append(f"- [{row['pattern_type']}] {row['description']} (seen {row['occurrences']}x)")
 
     # If LLM is available, generate actionable rules
     if llm_generate and (best or worst):
@@ -346,9 +340,7 @@ def self_distill(teacher_id: str, llm_generate=None) -> str:
                 "teacher feedback patterns, generate 3-5 specific, "
                 "actionable rules for improving future lesson generation. "
                 "Be concrete — reference specific formats, structures, "
-                "or approaches.\n\n"
-                + "\n".join(insights)
-                + "\n\nRules (one per line, start each with 'RULE:'):"
+                "or approaches.\n\n" + "\n".join(insights) + "\n\nRules (one per line, start each with 'RULE:'):"
             )
             rules_text = llm_generate(prompt)
             if rules_text:
@@ -365,9 +357,7 @@ def self_distill(teacher_id: str, llm_generate=None) -> str:
     # Auto-update soul.md with distilled insights
     if distilled:
         try:
-            data_dir = os.environ.get(
-                "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-            )
+            data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
             soul_path = Path(data_dir) / "workspace" / "soul.md"
             if soul_path.exists():
                 current = soul_path.read_text(encoding="utf-8")

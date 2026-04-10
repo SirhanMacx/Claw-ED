@@ -4,6 +4,7 @@ Lists available models from Ollama Cloud, OpenRouter, and other
 providers via their APIs. Used by the /models command and the
 switch_model agent tool.
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,7 +30,9 @@ def list_ollama_models(
 
     try:
         resp = requests.get(
-            f"{base}/api/tags", headers=headers, timeout=10,
+            f"{base}/api/tags",
+            headers=headers,
+            timeout=10,
         )
         if resp.status_code == 200:
             models = resp.json().get("models", [])
@@ -38,9 +41,7 @@ def list_ollama_models(
                     "name": m.get("name", ""),
                     "size": m.get("size", 0),
                     "family": m.get("details", {}).get("family", ""),
-                    "parameter_size": m.get("details", {}).get(
-                        "parameter_size", ""
-                    ),
+                    "parameter_size": m.get("details", {}).get("parameter_size", ""),
                 }
                 for m in models
                 if m.get("name")
@@ -69,7 +70,8 @@ def list_openrouter_models(
 
         resp = requests.get(
             "https://openrouter.ai/api/v1/models",
-            headers=headers, timeout=15,
+            headers=headers,
+            timeout=15,
         )
         if resp.status_code != 200:
             return []
@@ -85,14 +87,16 @@ def list_openrouter_models(
             if free_only and not is_free:
                 continue
 
-            result.append({
-                "id": m.get("id", ""),
-                "name": m.get("name", m.get("id", "")),
-                "context_length": m.get("context_length", 0),
-                "free": is_free,
-                "prompt_cost": prompt_cost,
-                "completion_cost": completion_cost,
-            })
+            result.append(
+                {
+                    "id": m.get("id", ""),
+                    "name": m.get("name", m.get("id", "")),
+                    "context_length": m.get("context_length", 0),
+                    "free": is_free,
+                    "prompt_cost": prompt_cost,
+                    "completion_cost": completion_cost,
+                }
+            )
 
         return result
 

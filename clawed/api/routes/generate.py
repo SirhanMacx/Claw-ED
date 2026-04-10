@@ -96,9 +96,7 @@ async def create_unit(request: Request, req: UnitRequest):
         )
     except Exception:
         logger.error("Unit generation failed", exc_info=True)
-        return JSONResponse(
-            {"error": "Unit generation failed. Please try again."}, status_code=500
-        )
+        return JSONResponse({"error": "Unit generation failed. Please try again."}, status_code=500)
 
     unit_id = db.insert_unit(
         teacher_id=teacher_id,
@@ -121,15 +119,11 @@ async def create_lesson(request: Request, req: LessonRequest):
     db = get_db()
     persona, _ = _get_persona(db)
     if not persona:
-        return JSONResponse(
-            {"error": "No persona found."}, status_code=400
-        )
+        return JSONResponse({"error": "No persona found."}, status_code=400)
 
     unit_row = db.get_unit(req.unit_id)
     if not unit_row:
-        return JSONResponse(
-            {"error": "Unit not found."}, status_code=404
-        )
+        return JSONResponse({"error": "Unit not found."}, status_code=404)
 
     unit = UnitPlan.model_validate_json(unit_row["unit_json"])
 
@@ -141,9 +135,7 @@ async def create_lesson(request: Request, req: LessonRequest):
         )
     except Exception:
         logger.error("Lesson generation failed", exc_info=True)
-        return JSONResponse(
-            {"error": "Lesson generation failed. Please try again."}, status_code=500
-        )
+        return JSONResponse({"error": "Lesson generation failed. Please try again."}, status_code=500)
 
     lesson_id = db.insert_lesson(
         unit_id=req.unit_id,
@@ -164,15 +156,11 @@ async def create_materials(request: Request, req: MaterialsRequest):
     db = get_db()
     persona, _ = _get_persona(db)
     if not persona:
-        return JSONResponse(
-            {"error": "No persona found."}, status_code=400
-        )
+        return JSONResponse({"error": "No persona found."}, status_code=400)
 
     lesson_row = db.get_lesson(req.lesson_id)
     if not lesson_row:
-        return JSONResponse(
-            {"error": "Lesson not found."}, status_code=404
-        )
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
 
     lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
 
@@ -204,13 +192,13 @@ async def full_pipeline(request: Request, req: FullRequest):
     db = get_db()
     persona, teacher_id = _get_persona(db)
     if not persona:
-        return JSONResponse(
-            {"error": "No persona found."}, status_code=400
-        )
+        return JSONResponse({"error": "No persona found."}, status_code=400)
 
     async def event_stream():
         yield _sse(
-            "progress", step="unit", status="generating",
+            "progress",
+            step="unit",
+            status="generating",
             message="Generating unit plan...",
         )
 
@@ -225,9 +213,7 @@ async def full_pipeline(request: Request, req: FullRequest):
             )
         except Exception:
             logger.error("Unit generation failed in SSE stream", exc_info=True)
-            yield _sse(
-                "error", error="Unit generation failed. Please try again."
-            )
+            yield _sse("error", error="Unit generation failed. Please try again.")
             return
 
         unit_id = db.insert_unit(
@@ -240,8 +226,11 @@ async def full_pipeline(request: Request, req: FullRequest):
         )
 
         yield _sse(
-            "progress", step="unit", status="done",
-            unit_id=unit_id, title=unit.title,
+            "progress",
+            step="unit",
+            status="done",
+            unit_id=unit_id,
+            title=unit.title,
             lesson_count=len(unit.daily_lessons),
         )
 
@@ -252,7 +241,9 @@ async def full_pipeline(request: Request, req: FullRequest):
         lesson_ids = []
         for brief in briefs:
             yield _sse(
-                "progress", step="lesson", status="generating",
+                "progress",
+                step="lesson",
+                status="generating",
                 lesson_number=brief.lesson_number,
                 topic=brief.topic,
             )
@@ -267,7 +258,9 @@ async def full_pipeline(request: Request, req: FullRequest):
             except Exception:
                 logger.error("Lesson %d generation failed", brief.lesson_number, exc_info=True)
                 yield _sse(
-                    "progress", step="lesson", status="error",
+                    "progress",
+                    step="lesson",
+                    status="error",
                     lesson_number=brief.lesson_number,
                     error="Lesson generation failed.",
                 )
@@ -282,7 +275,9 @@ async def full_pipeline(request: Request, req: FullRequest):
             lesson_ids.append(lid)
 
             yield _sse(
-                "progress", step="lesson", status="done",
+                "progress",
+                step="lesson",
+                status="done",
                 lesson_id=lid,
                 lesson_number=lesson.lesson_number,
                 title=lesson.title,
@@ -294,31 +289,30 @@ async def full_pipeline(request: Request, req: FullRequest):
                 continue
 
             yield _sse(
-                "progress", step="materials",
-                status="generating", lesson_id=lid,
+                "progress",
+                step="materials",
+                status="generating",
+                lesson_id=lid,
             )
 
-            lesson_obj = DailyLesson.model_validate_json(
-                lesson_row["lesson_json"]
-            )
+            lesson_obj = DailyLesson.model_validate_json(lesson_row["lesson_json"])
 
             try:
-                materials = await generate_all_materials(
-                    lesson_obj, persona
-                )
-                db.update_lesson_materials(
-                    lid, materials.model_dump_json()
-                )
+                materials = await generate_all_materials(lesson_obj, persona)
+                db.update_lesson_materials(lid, materials.model_dump_json())
             except Exception:
                 pass
 
             yield _sse(
-                "progress", step="materials",
-                status="done", lesson_id=lid,
+                "progress",
+                step="materials",
+                status="done",
+                lesson_id=lid,
             )
 
         yield _sse(
-            "done", unit_id=unit_id,
+            "done",
+            unit_id=unit_id,
             lesson_count=len(lesson_ids),
         )
 
@@ -340,14 +334,14 @@ async def stream_unit(
     db = get_db()
     persona, teacher_id = _get_persona(db)
     if not persona:
-        return JSONResponse(
-            {"error": "No persona found."}, status_code=400
-        )
+        return JSONResponse({"error": "No persona found."}, status_code=400)
 
     async def event_stream():
         yield _sse(
-            "progress", status="planning_unit",
-            progress=10, message="Planning unit structure...",
+            "progress",
+            status="planning_unit",
+            progress=10,
+            message="Planning unit structure...",
         )
 
         try:
@@ -373,8 +367,11 @@ async def stream_unit(
         )
 
         yield _sse(
-            "progress", status="unit_complete", progress=100,
-            unit_id=unit_id, title=unit.title,
+            "progress",
+            status="unit_complete",
+            progress=100,
+            unit_id=unit_id,
+            title=unit.title,
             lesson_count=len(unit.daily_lessons),
         )
         yield _sse("done", unit_id=unit_id)
@@ -391,15 +388,11 @@ async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1):
     db = get_db()
     persona, _ = _get_persona(db)
     if not persona:
-        return JSONResponse(
-            {"error": "No persona found."}, status_code=400
-        )
+        return JSONResponse({"error": "No persona found."}, status_code=400)
 
     unit_row = db.get_unit(unit_id)
     if not unit_row:
-        return JSONResponse(
-            {"error": "Unit not found."}, status_code=404
-        )
+        return JSONResponse({"error": "Unit not found."}, status_code=404)
 
     unit = UnitPlan.model_validate_json(unit_row["unit_json"])
 
@@ -430,8 +423,11 @@ async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1):
         )
 
         yield _sse(
-            "progress", status="lesson_complete",
-            progress=100, lesson_id=lid, title=lesson.title,
+            "progress",
+            status="lesson_complete",
+            progress=100,
+            lesson_id=lid,
+            title=lesson.title,
         )
         yield _sse("done", lesson_id=lid)
 
@@ -447,9 +443,7 @@ async def create_course(request: Request, req: CourseRequest):
     db = get_db()
     persona, teacher_id = _get_persona(db)
     if not persona:
-        return JSONResponse(
-            {"error": "No persona found."}, status_code=400
-        )
+        return JSONResponse({"error": "No persona found."}, status_code=400)
 
     async def event_stream():
         total = len(req.topics)
@@ -458,7 +452,8 @@ async def create_course(request: Request, req: CourseRequest):
         for i, topic in enumerate(req.topics, 1):
             pct = int((i - 1) / total * 100)
             yield _sse(
-                "progress", status="generating_unit",
+                "progress",
+                status="generating_unit",
                 progress=pct,
                 message=f"Planning unit {i}/{total}: {topic}...",
             )
@@ -474,12 +469,11 @@ async def create_course(request: Request, req: CourseRequest):
             except Exception:
                 logger.error("Failed to plan topic '%s'", topic, exc_info=True)
                 yield _sse(
-                    "progress", status="error",
+                    "progress",
+                    status="error",
                     message=f"Failed to plan '{topic}'. Skipping.",
                 )
-                course_units.append(
-                    {"topic": topic, "error": "Generation failed."}
-                )
+                course_units.append({"topic": topic, "error": "Generation failed."})
                 continue
 
             unit_id = db.insert_unit(
@@ -495,23 +489,21 @@ async def create_course(request: Request, req: CourseRequest):
                 "unit_id": unit_id,
                 "title": unit.title,
                 "topic": topic,
-                "lesson_titles": [
-                    b.topic for b in unit.daily_lessons
-                ],
+                "lesson_titles": [b.topic for b in unit.daily_lessons],
             }
             course_units.append(unit_summary)
 
             yield _sse(
-                "progress", status="unit_done",
+                "progress",
+                status="unit_done",
                 progress=int(i / total * 100),
                 unit=unit_summary,
             )
 
-        successful = [
-            u for u in course_units if "unit_id" in u
-        ]
+        successful = [u for u in course_units if "unit_id" in u]
         yield _sse(
-            "done", course=course_units,
+            "done",
+            course=course_units,
             total_units=len(successful),
         )
 
@@ -527,18 +519,14 @@ async def score_lesson(request: Request, lesson_id: str):
     db = get_db()
     lesson_row = db.get_lesson(lesson_id)
     if not lesson_row:
-        return JSONResponse(
-            {"error": "Lesson not found."}, status_code=404
-        )
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
 
     lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
     materials = None
     if lesson_row.get("materials_json"):
         from clawed.models import LessonMaterials
 
-        materials = LessonMaterials.model_validate_json(
-            lesson_row["materials_json"]
-        )
+        materials = LessonMaterials.model_validate_json(lesson_row["materials_json"])
 
     scorer = LessonQualityScore()
     scores = await scorer.score(lesson, materials)
@@ -558,21 +546,15 @@ async def suggest_improvements_endpoint(request: Request, lesson_id: str):
     db = get_db()
     lesson_row = db.get_lesson(lesson_id)
     if not lesson_row:
-        return JSONResponse(
-            {"error": "Lesson not found."}, status_code=404
-        )
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
 
     lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
 
     # Check for feedback notes
     feedback_list = db.get_feedback_for_lesson(lesson_id)
-    notes = " | ".join(
-        f["notes"] for f in feedback_list if f.get("notes")
-    )
+    notes = " | ".join(f["notes"] for f in feedback_list if f.get("notes"))
 
-    suggestions = await suggest_improvements(
-        lesson, feedback_notes=notes
-    )
+    suggestions = await suggest_improvements(lesson, feedback_notes=notes)
     return {"lesson_id": lesson_id, "suggestions": suggestions}
 
 

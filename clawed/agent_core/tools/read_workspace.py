@@ -1,4 +1,5 @@
 """Tool: read_workspace — read any file in the agent's workspace."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -27,8 +28,7 @@ class ReadWorkspaceTool:
                         "filename": {
                             "type": "string",
                             "description": (
-                                "Name of the file to read, e.g. 'SOUL.md', "
-                                "'HEARTBEAT.md', 'reading_report.md'"
+                                "Name of the file to read, e.g. 'SOUL.md', 'HEARTBEAT.md', 'reading_report.md'"
                             ),
                         },
                     },
@@ -37,10 +37,9 @@ class ReadWorkspaceTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.paths import workspace_dir
+
         workspace = workspace_dir()
         filename = params["filename"]
         target = (workspace / filename).resolve()
@@ -53,13 +52,8 @@ class ReadWorkspaceTool:
                 files = sorted(f.name for f in workspace.iterdir() if f.is_file())
                 if files:
                     listing = ", ".join(files)
-                    return ToolResult(
-                        text=f"File '{filename}' not found. "
-                        f"Available workspace files: {listing}"
-                    )
-            return ToolResult(
-                text=f"File '{filename}' not found and workspace is empty."
-            )
+                    return ToolResult(text=f"File '{filename}' not found. Available workspace files: {listing}")
+            return ToolResult(text=f"File '{filename}' not found and workspace is empty.")
 
         try:
             content = target.read_text(encoding="utf-8")

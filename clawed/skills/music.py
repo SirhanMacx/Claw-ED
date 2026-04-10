@@ -10,9 +10,17 @@ skill = SubjectSkill(
         "the National Core Arts Standards — creating, performing, responding, connecting."
     ),
     aliases=(
-        "music theory", "band", "orchestra", "chorus", "choir",
-        "general music", "music appreciation", "music composition",
-        "music performance", "vocal music", "instrumental music",
+        "music theory",
+        "band",
+        "orchestra",
+        "chorus",
+        "choir",
+        "general music",
+        "music appreciation",
+        "music composition",
+        "music performance",
+        "vocal music",
+        "instrumental music",
     ),
     system_prompt=(
         "You are an expert music educator grounded in the National Core Arts "

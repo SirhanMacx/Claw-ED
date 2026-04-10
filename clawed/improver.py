@@ -64,9 +64,7 @@ async def improve_prompts(
         notes = row.get("feedback_notes", "")
         rating = row.get("feedback_rating", "?")
         lesson_examples += (
-            f"\n--- Example {i} (rated {rating}/5) ---\n"
-            f"Teacher notes: {notes}\n"
-            f"Lesson excerpt: {lesson_data[:500]}\n"
+            f"\n--- Example {i} (rated {rating}/5) ---\nTeacher notes: {notes}\nLesson excerpt: {lesson_data[:500]}\n"
         )
 
     # Determine which prompt type to improve based on edit patterns
@@ -216,7 +214,9 @@ def queue_low_rated_for_improvement(rating: int, lesson_id: str, teacher_id: str
             # Additionally, log this for visibility.
             logger.info(
                 "Lesson %s rated %d/5 by teacher %s — queued for improvement analysis",
-                lesson_id, rating, teacher_id,
+                lesson_id,
+                rating,
+                teacher_id,
             )
     except Exception as e:
         logger.warning("Failed to queue lesson for improvement: %s", e)

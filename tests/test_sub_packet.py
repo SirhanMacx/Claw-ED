@@ -129,23 +129,25 @@ class TestGenerateSubPacket:
     @pytest.mark.asyncio
     async def test_generate_returns_sub_packet(self):
         mock_llm = MagicMock()
-        mock_llm.generate_json = AsyncMock(return_value={
-            "overview": "A great 8th grade class studying WWI.",
-            "daily_schedule": [
-                "0:00-5:00 — Attendance and warm-up",
-                "5:00-35:00 — Document analysis activity",
-                "35:00-45:00 — Exit ticket",
-            ],
-            "lesson_instructions": [
-                "1. Take attendance using the seating chart on the desk.",
-                "2. Have students read Document A silently.",
-                "3. Lead a brief discussion using the guiding questions.",
-            ],
-            "student_notes": "Generally well-behaved. Table 3 may need redirection.",
-            "materials_needed": ["Document packet (on desk)", "Pencils"],
-            "emergency_info": "Main Office: ext 100. Nurse: ext 150.",
-            "closing_notes": "Thank you so much for covering my class!",
-        })
+        mock_llm.generate_json = AsyncMock(
+            return_value={
+                "overview": "A great 8th grade class studying WWI.",
+                "daily_schedule": [
+                    "0:00-5:00 — Attendance and warm-up",
+                    "5:00-35:00 — Document analysis activity",
+                    "35:00-45:00 — Exit ticket",
+                ],
+                "lesson_instructions": [
+                    "1. Take attendance using the seating chart on the desk.",
+                    "2. Have students read Document A silently.",
+                    "3. Lead a brief discussion using the guiding questions.",
+                ],
+                "student_notes": "Generally well-behaved. Table 3 may need redirection.",
+                "materials_needed": ["Document packet (on desk)", "Pencils"],
+                "emergency_info": "Main Office: ext 100. Nurse: ext 150.",
+                "closing_notes": "Thank you so much for covering my class!",
+            }
+        )
 
         req = SubPacketRequest(
             teacher_name="Ms. Rivera",
@@ -175,15 +177,17 @@ class TestGenerateSubPacket:
     @pytest.mark.asyncio
     async def test_generate_without_optional_fields(self):
         mock_llm = MagicMock()
-        mock_llm.generate_json = AsyncMock(return_value={
-            "overview": "A standard math class.",
-            "daily_schedule": ["Full period: Review worksheet"],
-            "lesson_instructions": ["Hand out worksheet"],
-            "student_notes": "",
-            "materials_needed": [],
-            "emergency_info": "Office: 100",
-            "closing_notes": "Thanks!",
-        })
+        mock_llm.generate_json = AsyncMock(
+            return_value={
+                "overview": "A standard math class.",
+                "daily_schedule": ["Full period: Review worksheet"],
+                "lesson_instructions": ["Hand out worksheet"],
+                "student_notes": "",
+                "materials_needed": [],
+                "emergency_info": "Office: 100",
+                "closing_notes": "Thanks!",
+            }
+        )
 
         req = SubPacketRequest(
             teacher_name="Mr. Kim",
@@ -203,15 +207,17 @@ class TestGenerateSubPacket:
     @pytest.mark.asyncio
     async def test_generate_calls_llm_with_system_prompt(self):
         mock_llm = MagicMock()
-        mock_llm.generate_json = AsyncMock(return_value={
-            "overview": "O",
-            "daily_schedule": [],
-            "lesson_instructions": [],
-            "student_notes": "",
-            "materials_needed": [],
-            "emergency_info": "",
-            "closing_notes": "",
-        })
+        mock_llm.generate_json = AsyncMock(
+            return_value={
+                "overview": "O",
+                "daily_schedule": [],
+                "lesson_instructions": [],
+                "student_notes": "",
+                "materials_needed": [],
+                "emergency_info": "",
+                "closing_notes": "",
+            }
+        )
 
         req = SubPacketRequest(
             teacher_name="T",
@@ -300,9 +306,7 @@ class TestSubCLI:
         result = runner.invoke(app, ["sub", "--help"])
         assert result.exit_code == 0
         assert (
-            "substitute" in result.output.lower()
-            or "sub packet" in result.output.lower()
-            or "--class" in result.output
+            "substitute" in result.output.lower() or "sub packet" in result.output.lower() or "--class" in result.output
         )
 
     def test_parent_comm_command_registered(self):

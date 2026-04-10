@@ -11,6 +11,7 @@ Produces 3Blue1Brown-style educational animations for:
 Adapted from the Hermes agent manim-video skill with education-specific
 templates and cognitive load limits (max 6 elements, 2-3s pauses).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -24,10 +25,13 @@ from clawed.failure_codes import FailureCode  # noqa: F401 — used in error mes
 
 logger = logging.getLogger(__name__)
 
+
 # Safe output directory for rendered animations
 def _get_animation_dir() -> Path:
     from clawed.paths import data_dir
+
     return data_dir() / "animations"
+
 
 _ANIMATION_DIR = _get_animation_dir()
 
@@ -57,10 +61,7 @@ class GenerateAnimationTool:
                     "properties": {
                         "topic": {
                             "type": "string",
-                            "description": (
-                                "What to animate — e.g., "
-                                "'Timeline of the American Revolution 1775-1783'"
-                            ),
+                            "description": ("What to animate — e.g., 'Timeline of the American Revolution 1775-1783'"),
                         },
                         "animation_type": {
                             "type": "string",
@@ -101,9 +102,7 @@ class GenerateAnimationTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         topic = params["topic"]
         animation_type = params["animation_type"]
         key_points = params.get("key_points", [])
@@ -153,11 +152,13 @@ class GenerateAnimationTool:
         # Stage 3: Render with Manim
         quality_flag = "-ql" if quality == "low" else "-qm"
         cmd = [
-            "manim", "render",
+            "manim",
+            "render",
             quality_flag,
             str(scene_file),
             class_name,
-            "--media_dir", str(_ANIMATION_DIR / "media"),
+            "--media_dir",
+            str(_ANIMATION_DIR / "media"),
         ]
 
         if context.progress_callback:
@@ -326,16 +327,17 @@ class GenerateAnimationTool:
     def _parse_timeline_events(points: list[str]) -> list[tuple[int, str]]:
         """Parse 'YEAR: description' or 'YEAR description' into (year, label) tuples."""
         import re
+
         events = []
         for p in points:
-            m = re.match(r'(\d{3,4})\s*[:.\-–—]\s*(.+)', p.strip())
+            m = re.match(r"(\d{3,4})\s*[:.\-–—]\s*(.+)", p.strip())
             if m:
                 events.append((int(m.group(1)), m.group(2).strip()))
             else:
                 # Try to find a year anywhere in the string
-                ym = re.search(r'(\d{4})', p)
+                ym = re.search(r"(\d{4})", p)
                 if ym:
-                    label = re.sub(r'\d{4}', '', p).strip(' :.-–—')
+                    label = re.sub(r"\d{4}", "", p).strip(" :.-–—")
                     events.append((int(ym.group(1)), label or p))
         return events
 
@@ -345,7 +347,7 @@ class GenerateAnimationTool:
         causes, effects = [], []
         for p in points:
             # Split on arrow-like separators
-            for sep in ['→', '->', '=>', '➜', '⟹', ' leads to ', ' causes ', ' results in ']:
+            for sep in ["→", "->", "=>", "➜", "⟹", " leads to ", " causes ", " results in "]:
                 if sep in p:
                     parts = p.split(sep, 1)
                     causes.append(parts[0].strip())
@@ -364,11 +366,11 @@ class GenerateAnimationTool:
         left_label, right_label = "A", "B"
 
         # Try to extract labels from topic (e.g., "Federalists vs Anti-Federalists")
-        for sep in [' vs ', ' vs. ', ' versus ', ' compared to ', ' and ']:
+        for sep in [" vs ", " vs. ", " versus ", " compared to ", " and "]:
             if sep in topic.lower():
                 idx = topic.lower().index(sep)
                 left_label = topic[:idx].strip()
-                right_label = topic[idx + len(sep):].strip()
+                right_label = topic[idx + len(sep) :].strip()
                 break
 
         for p in points:
@@ -393,7 +395,7 @@ class GenerateAnimationTool:
         """Parse 'term: definition' pairs."""
         vocab = []
         for p in points:
-            for sep in [':', ' - ', ' — ', ' – ']:
+            for sep in [":", " - ", " — ", " – "]:
                 if sep in p:
                     parts = p.split(sep, 1)
                     vocab.append((parts[0].strip(), parts[1].strip()))
@@ -408,7 +410,8 @@ class GenerateAnimationTool:
     def _extract_class_name(code: str) -> str:
         """Extract the Scene class name from Manim code."""
         import re
-        m = re.search(r'class\s+(\w+)\s*\(', code)
+
+        m = re.search(r"class\s+(\w+)\s*\(", code)
         return m.group(1) if m else "Scene"
 
     @staticmethod
@@ -440,6 +443,7 @@ class GenerateAnimationTool:
 
         # Fallback: find any recently created MP4
         import time
+
         now = time.time()
         for mp4 in media_dir.rglob("*.mp4"):
             if now - mp4.stat().st_mtime < 300:  # created in last 5 min

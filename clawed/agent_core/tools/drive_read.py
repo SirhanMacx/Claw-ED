@@ -1,4 +1,5 @@
 """Tool: drive_read — read file metadata and content from Google Drive."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -33,9 +34,7 @@ class DriveReadTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.drive.client import DriveClient
 
         file_id = params["file_id"]

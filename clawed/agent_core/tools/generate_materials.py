@@ -1,4 +1,5 @@
 """Tool: generate_materials — wraps clawed.materials worksheet/assessment generation."""
+
 from __future__ import annotations
 
 import json
@@ -18,8 +19,7 @@ class GenerateMaterialsTool:
             "function": {
                 "name": "generate_materials",
                 "description": (
-                    "Generate supplementary teaching materials such as "
-                    "worksheets for a given topic and grade level."
+                    "Generate supplementary teaching materials such as worksheets for a given topic and grade level."
                 ),
                 "parameters": {
                     "type": "object",
@@ -44,9 +44,7 @@ class GenerateMaterialsTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.materials import generate_worksheet
         from clawed.models import DailyLesson, TeacherPersona
 
@@ -76,8 +74,7 @@ class GenerateMaterialsTool:
             )
             items_data = [item.model_dump() for item in items]
             return ToolResult(
-                text=f"Generated {len(items)} worksheet items for {topic}\n\n"
-                f"{json.dumps(items_data, indent=2)[:2000]}",
+                text=f"Generated {len(items)} worksheet items for {topic}\n\n{json.dumps(items_data, indent=2)[:2000]}",
                 data={"items": items_data},
                 side_effects=[f"Generated worksheet for {topic}"],
             )

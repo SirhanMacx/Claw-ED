@@ -1,4 +1,5 @@
 """Generation quality report — accumulated throughout the pipeline, surfaced to teacher."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field

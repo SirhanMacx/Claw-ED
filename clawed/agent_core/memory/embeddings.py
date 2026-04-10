@@ -8,6 +8,7 @@ Priority:
 The ONNX embedder auto-downloads all-MiniLM-L6-v2 (~22MB) on first use.
 Produces 384-dimensional dense vectors — compact, fast, high quality.
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,18 +20,10 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_MODEL_DIR = Path(
-    os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-) / "models" / "minilm"
+_MODEL_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))) / "models" / "minilm"
 
-_MODEL_URL = (
-    "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/"
-    "resolve/main/onnx/model.onnx"
-)
-_TOKENIZER_URL = (
-    "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/"
-    "resolve/main/tokenizer.json"
-)
+_MODEL_URL = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx"
+_TOKENIZER_URL = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json"
 
 
 # ── ONNX MiniLM Embedder ────────────────────────────────────────────
@@ -72,6 +65,7 @@ class ONNXMiniLMEmbedder:
                 for attempt in range(3):
                     try:
                         import httpx
+
                         with httpx.Client(
                             timeout=120,
                             follow_redirects=True,
@@ -85,16 +79,19 @@ class ONNXMiniLMEmbedder:
                     except Exception as e:
                         logger.warning(
                             "Download attempt %d failed: %s",
-                            attempt + 1, e,
+                            attempt + 1,
+                            e,
                         )
                         import time as _time
-                        _time.sleep(2 ** attempt)
+
+                        _time.sleep(2**attempt)
                 if not downloaded:
                     return False
 
         # Load ONNX session
         try:
             import onnxruntime as ort
+
             self._session = ort.InferenceSession(
                 str(model_path),
                 providers=["CPUExecutionProvider"],
@@ -106,6 +103,7 @@ class ONNXMiniLMEmbedder:
         # Load tokenizer
         try:
             from tokenizers import Tokenizer
+
             self._tokenizer = Tokenizer.from_file(str(tokenizer_path))
             self._tokenizer.enable_truncation(max_length=256)
             self._tokenizer.enable_padding(length=256)
@@ -158,9 +156,7 @@ class ONNXMiniLMEmbedder:
 
         encodings = self._tokenizer.encode_batch(texts)
         input_ids = np.array([e.ids for e in encodings], dtype=np.int64)
-        attention_mask = np.array(
-            [e.attention_mask for e in encodings], dtype=np.int64
-        )
+        attention_mask = np.array([e.attention_mask for e in encodings], dtype=np.int64)
         token_type_ids = np.zeros_like(input_ids, dtype=np.int64)
 
         outputs = self._session.run(
@@ -185,6 +181,7 @@ class ONNXMiniLMEmbedder:
 
     def cosine_similarity(self, a: list[float], b: list[float]) -> float:
         import numpy as np
+
         va = np.array(a, dtype=np.float32)
         vb = np.array(b, dtype=np.float32)
         dot = np.dot(va, vb)
@@ -209,6 +206,7 @@ class OllamaEmbedder:
 
     def embed(self, text: str) -> list[float]:
         import httpx
+
         resp = httpx.post(
             f"{self._base_url}/api/embed",
             json={"model": self._model, "input": text},
@@ -239,10 +237,31 @@ def _simple_stem(word: str) -> str:
     if len(word) <= 3:
         return word
     for suffix in (
-        "ation", "tion", "sion", "ness", "ment", "ible", "able",
-        "ical", "ism", "ist", "ity", "ure", "ous",
-        "ing", "ies", "ive", "ful", "ess", "ize",
-        "ed", "ly", "er", "al", "es", "s",
+        "ation",
+        "tion",
+        "sion",
+        "ness",
+        "ment",
+        "ible",
+        "able",
+        "ical",
+        "ism",
+        "ist",
+        "ity",
+        "ure",
+        "ous",
+        "ing",
+        "ies",
+        "ive",
+        "ful",
+        "ess",
+        "ize",
+        "ed",
+        "ly",
+        "er",
+        "al",
+        "es",
+        "s",
     ):
         if word.endswith(suffix) and len(word) - len(suffix) >= 3:
             return word[: -len(suffix)]
@@ -265,10 +284,7 @@ class TFIDFEmbedder:
     def _tokenize(text: str) -> list[str]:
         raw = re.findall(r"[a-z]+", text.lower())
         stemmed = [_simple_stem(w) for w in raw]
-        bigrams = [
-            f"{stemmed[i]}_{stemmed[i+1]}"
-            for i in range(len(stemmed) - 1)
-        ]
+        bigrams = [f"{stemmed[i]}_{stemmed[i + 1]}" for i in range(len(stemmed) - 1)]
         return stemmed + bigrams
 
     def embed(self, text: str) -> list[float]:
@@ -314,18 +330,18 @@ def get_embedder() -> ONNXMiniLMEmbedder | OllamaEmbedder | TFIDFEmbedder:
         import numpy  # noqa: F401
         import onnxruntime  # noqa: F401
         import tokenizers  # noqa: F401
+
         embedder = ONNXMiniLMEmbedder()
         if embedder._ensure_model():
             return embedder
-        logger.debug("ONNX MiniLM model not yet downloaded, will try on next use")
-        # Return it anyway — it'll download on first embed() call
-        return embedder
+        logger.debug("ONNX MiniLM model not available, trying next embedder")
     except ImportError:
         pass
 
     # 2. Ollama (local server with embedding model)
     try:
         import httpx
+
         resp = httpx.get("http://localhost:11434/api/tags", timeout=2.0)
         if resp.status_code == 200:
             models = [m["name"] for m in resp.json().get("models", [])]
@@ -337,8 +353,5 @@ def get_embedder() -> ONNXMiniLMEmbedder | OllamaEmbedder | TFIDFEmbedder:
         pass
 
     # 3. TF-IDF fallback
-    logger.debug(
-        "Using TF-IDF embedder. Install onnxruntime + tokenizers "
-        "for much better search quality."
-    )
+    logger.debug("Using TF-IDF embedder. Install onnxruntime + tokenizers for much better search quality.")
     return TFIDFEmbedder()

@@ -124,9 +124,7 @@ def _good_lesson() -> DailyLesson:
         ),
         exit_ticket=[
             ExitTicketQuestion(
-                question=(
-                    "What was the main argument colonists made against the Stamp Act?"
-                ),
+                question=("What was the main argument colonists made against the Stamp Act?"),
                 expected_response=(
                     "The colonists argued that the Stamp Act was unfair because "
                     "they had no elected representatives in the British Parliament "
@@ -134,9 +132,7 @@ def _good_lesson() -> DailyLesson:
                 ),
             ),
             ExitTicketQuestion(
-                question=(
-                    "How did the Stamp Act unite the colonies?"
-                ),
+                question=("How did the Stamp Act unite the colonies?"),
                 expected_response=(
                     "The Stamp Act led delegates from nine colonies to meet at "
                     "the Stamp Act Congress in New York — the first time colonies "
@@ -167,22 +163,20 @@ def _good_lesson() -> DailyLesson:
                 "students focus on 3 critical lines rather than the full text",
                 "Provide a completed APPARTS model for a different document so "
                 "students can see what a finished analysis looks like",
-                "Pair with a stronger reader during station activity for "
-                "shared reading of the source",
+                "Pair with a stronger reader during station activity for shared reading of the source",
             ],
             advanced=[
                 "Assign the full text of the Stamp Act Congress petition "
                 "(not just the excerpt) and ask them to identify 2 rhetorical "
                 "strategies the delegates used",
-                "Write a counter-argument from Parliament's perspective defending "
-                "the right to tax the colonies",
+                "Write a counter-argument from Parliament's perspective defending the right to tax the colonies",
             ],
             ell=[
                 "Provide a bilingual glossary card with key terms: "
                 "representation, taxation, petition, delegates, tyranny",
                 "Sentence frames for the independent paragraph: "
                 "'The Stamp Act changed the relationship because ___. "
-                "For example, the source says \"___\". This shows that ___.'"
+                'For example, the source says "___". This shows that ___.\'',
             ],
         ),
         materials_needed=[
@@ -220,10 +214,7 @@ def _bad_lesson() -> DailyLesson:
             "many causes of the American Revolution. We will check for "
             "understanding throughout the lesson."
         ),
-        guided_practice=(
-            "Students will work in groups on an organizer about the causes "
-            "of the American Revolution."
-        ),
+        guided_practice=("Students will work in groups on an organizer about the causes of the American Revolution."),
         independent_work="Complete the worksheet.",
         exit_ticket=[
             ExitTicketQuestion(
@@ -289,9 +280,7 @@ class TestTimingQuality:
         """
         lesson = _good_lesson()
         do_now_time = lesson.time_estimates.get("do_now", 0)
-        assert 3 <= do_now_time <= 7, (
-            f"Do Now time {do_now_time} min is outside 3-7 range"
-        )
+        assert 3 <= do_now_time <= 7, f"Do Now time {do_now_time} min is outside 3-7 range"
 
 
 class TestExitTicketQuality:
@@ -305,16 +294,12 @@ class TestExitTicketQuality:
         Bloom's taxonomy (recall, application, analysis).
         """
         lesson = _good_lesson()
-        assert len(lesson.exit_ticket) >= 2, (
-            f"Expected >= 2 exit ticket questions, got {len(lesson.exit_ticket)}"
-        )
+        assert len(lesson.exit_ticket) >= 2, f"Expected >= 2 exit ticket questions, got {len(lesson.exit_ticket)}"
 
     def test_bad_lesson_exit_ticket_too_few(self):
         """Bad lesson has fewer than 2 exit ticket questions."""
         lesson = _bad_lesson()
-        assert len(lesson.exit_ticket) < 2, (
-            f"Expected < 2 exit ticket questions, got {len(lesson.exit_ticket)}"
-        )
+        assert len(lesson.exit_ticket) < 2, f"Expected < 2 exit ticket questions, got {len(lesson.exit_ticket)}"
 
     def test_exit_ticket_has_expected_responses(self):
         """Every exit ticket question needs an expected response.
@@ -325,9 +310,7 @@ class TestExitTicketQuality:
         """
         lesson = _good_lesson()
         for i, q in enumerate(lesson.exit_ticket):
-            assert q.expected_response.strip(), (
-                f"Exit ticket question {i + 1} has no expected response"
-            )
+            assert q.expected_response.strip(), f"Exit ticket question {i + 1} has no expected response"
 
     def test_bad_lesson_exit_ticket_missing_responses(self):
         """Bad lesson has exit ticket questions with empty expected responses."""
@@ -368,24 +351,18 @@ class TestDifferentiationQuality:
         """
         lesson = _good_lesson()
         all_accommodations = (
-            lesson.differentiation.struggling
-            + lesson.differentiation.advanced
-            + lesson.differentiation.ell
+            lesson.differentiation.struggling + lesson.differentiation.advanced + lesson.differentiation.ell
         )
         for acc in all_accommodations:
             acc_lower = acc.lower()
             for phrase in _GENERIC_PHRASES:
-                assert phrase not in acc_lower, (
-                    f"Generic phrase '{phrase}' found in differentiation: '{acc}'"
-                )
+                assert phrase not in acc_lower, f"Generic phrase '{phrase}' found in differentiation: '{acc}'"
 
     def test_bad_lesson_differentiation_is_generic(self):
         """Bad lesson contains generic differentiation phrases."""
         lesson = _bad_lesson()
         all_accommodations = (
-            lesson.differentiation.struggling
-            + lesson.differentiation.advanced
-            + lesson.differentiation.ell
+            lesson.differentiation.struggling + lesson.differentiation.advanced + lesson.differentiation.ell
         )
         generic_found = False
         for acc in all_accommodations:
@@ -421,28 +398,44 @@ class TestInstructionQuality:
         # Filter out common non-domain words (task verbs, geographic
         # adjectives, and general academic language)
         common_words = {
-            "students", "analyze", "explain", "primary", "source",
-            "excerpts", "describe", "identify", "understand", "evaluate",
-            "determine", "compare", "contrast", "between", "through",
-            "because", "american", "british", "united", "opposition",
-            "policies", "colonies", "congress", "taxation",
+            "students",
+            "analyze",
+            "explain",
+            "primary",
+            "source",
+            "excerpts",
+            "describe",
+            "identify",
+            "understand",
+            "evaluate",
+            "determine",
+            "compare",
+            "contrast",
+            "between",
+            "through",
+            "because",
+            "american",
+            "british",
+            "united",
+            "opposition",
+            "policies",
+            "colonies",
+            "congress",
+            "taxation",
         }
         # Common capitalized words that are not content-specific vocabulary
         common_proper = {
-            "students", "american", "british", "congress",
+            "students",
+            "american",
+            "british",
+            "congress",
         }
-        domain_terms = [
-            w for w in words if w.lower() not in common_words
-        ]
-        filtered_capitalized = [
-            t for t in capitalized_terms if t.lower() not in common_proper
-        ]
+        domain_terms = [w for w in words if w.lower() not in common_words]
+        filtered_capitalized = [t for t in capitalized_terms if t.lower() not in common_proper]
         all_terms = set(filtered_capitalized + domain_terms)
         di_text = lesson.direct_instruction.lower()
         for term in all_terms:
-            assert term.lower() in di_text, (
-                f"Objective term '{term}' not found in direct instruction"
-            )
+            assert term.lower() in di_text, f"Objective term '{term}' not found in direct instruction"
 
     def test_lesson_has_check_for_understanding(self):
         """Direct instruction must include a specific CFU activity.
@@ -456,8 +449,7 @@ class TestInstructionQuality:
         di_lower = lesson.direct_instruction.lower()
         found = any(activity in di_lower for activity in _CFU_ACTIVITIES)
         assert found, (
-            "Direct instruction must contain a specific CFU activity "
-            "(think-pair-share, cold call, thumbs up, etc.)"
+            "Direct instruction must contain a specific CFU activity (think-pair-share, cold call, thumbs up, etc.)"
         )
 
     def test_bad_lesson_no_specific_cfu(self):
@@ -470,9 +462,7 @@ class TestInstructionQuality:
         )
         # Verify no SPECIFIC CFU activity is present
         found = any(activity in di_lower for activity in _CFU_ACTIVITIES)
-        assert not found, (
-            "Bad lesson should not contain a specific CFU activity"
-        )
+        assert not found, "Bad lesson should not contain a specific CFU activity"
 
 
 class TestMaterialsQuality:
@@ -487,24 +477,26 @@ class TestMaterialsQuality:
         independent practice text must describe what is on it.
         """
         lesson = _good_lesson()
-        full_text = (
-            lesson.do_now
-            + lesson.direct_instruction
-            + lesson.guided_practice
-            + lesson.independent_work
-        )
+        full_text = lesson.do_now + lesson.direct_instruction + lesson.guided_practice + lesson.independent_work
         if "organizer" in full_text.lower():
-            practice_text = (
-                lesson.guided_practice + " " + lesson.independent_work
-            ).lower()
+            practice_text = (lesson.guided_practice + " " + lesson.independent_work).lower()
             # Must describe the organizer structure
             structure_words = [
-                "column", "row", "chart", "graphic", "apparts", "t-chart",
-                "venn", "compare", "categories", "table", "restate",
-                "answer", "cite",
+                "column",
+                "row",
+                "chart",
+                "graphic",
+                "apparts",
+                "t-chart",
+                "venn",
+                "compare",
+                "categories",
+                "table",
+                "restate",
+                "answer",
+                "cite",
             ]
             found = any(word in practice_text for word in structure_words)
             assert found, (
-                "Lesson references an 'organizer' but guided/independent "
-                "practice does not describe its structure"
+                "Lesson references an 'organizer' but guided/independent practice does not describe its structure"
             )

@@ -1,4 +1,5 @@
 """Teacher preference learning — extract signals from feedback, ratings, and approvals."""
+
 from __future__ import annotations
 
 import logging
@@ -23,19 +24,19 @@ def extract_preferences(teacher_id: str) -> dict[str, Any]:
     try:
         from clawed.database import Database
         from clawed.feedback import analyze_feedback
+
         db = Database()
         analysis = analyze_feedback(db)
         if analysis.get("most_edited_sections"):
             for section in analysis["most_edited_sections"][:3]:
-                preferences["structural_prefs"].append(
-                    f"Teacher often edits '{section}' — adjust this section"
-                )
+                preferences["structural_prefs"].append(f"Teacher often edits '{section}' — adjust this section")
     except Exception as e:
         logger.debug("Feedback analysis failed: %s", e)
 
     # From memory engine patterns
     try:
         from clawed.memory_engine import build_improvement_context
+
         ctx = build_improvement_context()
         if ctx:
             preferences["summary"] = ctx
@@ -45,6 +46,7 @@ def extract_preferences(teacher_id: str) -> dict[str, Any]:
     # From approval patterns
     try:
         from clawed.agent_core.autonomy import ApprovalTracker
+
         tracker = ApprovalTracker()
         autonomy_summary = tracker.summarize_for_prompt()
         if autonomy_summary:

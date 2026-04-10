@@ -4,7 +4,6 @@ Verifies that differentiation, games, standards, and quality gate
 auto-chain correctly after lesson generation.
 """
 
-
 from clawed.models import AppConfig
 
 
@@ -54,10 +53,12 @@ class TestLessonFormatField:
         )
 
         master = MasterContent(
-            title="Test", subject="History", grade_level="8",
-            topic="Test", objective="Test objective",
-            do_now=DoNow(stimulus="q", stimulus_type="question",
-                         questions=["a"], answers=["b"]),
+            title="Test",
+            subject="History",
+            grade_level="8",
+            topic="Test",
+            objective="Test objective",
+            do_now=DoNow(stimulus="q", stimulus_type="question", questions=["a"], answers=["b"]),
             direct_instruction=[
                 InstructionSection(heading="h", content="c", teacher_script="t"),
             ],
@@ -65,8 +66,7 @@ class TestLessonFormatField:
                 GuidedNote(prompt="p", answer="a", section_ref="s"),
             ],
             exit_ticket=[
-                StimulusQuestion(stimulus="s", stimulus_type="text",
-                                 question="q", answer="a"),
+                StimulusQuestion(stimulus="s", stimulus_type="text", question="q", answer="a"),
             ],
             differentiation=DifferentiationNotes(),
         )
@@ -83,11 +83,13 @@ class TestLessonFormatField:
         )
 
         master = MasterContent(
-            title="Test", subject="History", grade_level="8",
-            topic="Test", objective="Test objective",
+            title="Test",
+            subject="History",
+            grade_level="8",
+            topic="Test",
+            objective="Test objective",
             lesson_format="station_rotation",
-            do_now=DoNow(stimulus="q", stimulus_type="question",
-                         questions=["a"], answers=["b"]),
+            do_now=DoNow(stimulus="q", stimulus_type="question", questions=["a"], answers=["b"]),
             direct_instruction=[
                 InstructionSection(heading="h", content="c", teacher_script="t"),
             ],
@@ -95,8 +97,7 @@ class TestLessonFormatField:
                 GuidedNote(prompt="p", answer="a", section_ref="s"),
             ],
             exit_ticket=[
-                StimulusQuestion(stimulus="s", stimulus_type="text",
-                                 question="q", answer="a"),
+                StimulusQuestion(stimulus="s", stimulus_type="text", question="q", answer="a"),
             ],
             differentiation=DifferentiationNotes(),
         )
@@ -117,15 +118,15 @@ class TestEnrichmentFields:
         )
 
         master = MasterContent(
-            title="T", subject="S", grade_level="8", topic="T",
+            title="T",
+            subject="S",
+            grade_level="8",
+            topic="T",
             objective="O",
-            do_now=DoNow(stimulus="q", stimulus_type="q",
-                         questions=["a"], answers=["b"]),
-            direct_instruction=[InstructionSection(heading="h", content="c",
-                                                   teacher_script="t")],
+            do_now=DoNow(stimulus="q", stimulus_type="q", questions=["a"], answers=["b"]),
+            direct_instruction=[InstructionSection(heading="h", content="c", teacher_script="t")],
             guided_notes=[GuidedNote(prompt="p", answer="a", section_ref="s")],
-            exit_ticket=[StimulusQuestion(stimulus="s", stimulus_type="t",
-                                          question="q", answer="a")],
+            exit_ticket=[StimulusQuestion(stimulus="s", stimulus_type="t", question="q", answer="a")],
             differentiation=DifferentiationNotes(),
         )
         assert master.misconceptions == []
@@ -143,18 +144,18 @@ class TestEnrichmentFields:
         )
 
         master = MasterContent(
-            title="T", subject="S", grade_level="8", topic="T",
+            title="T",
+            subject="S",
+            grade_level="8",
+            topic="T",
             objective="O",
             misconceptions=["Students think X but actually Y"],
             formative_checks=["Quick check: thumbs up if..."],
             prerequisite_skills=["Can read a timeline"],
-            do_now=DoNow(stimulus="q", stimulus_type="q",
-                         questions=["a"], answers=["b"]),
-            direct_instruction=[InstructionSection(heading="h", content="c",
-                                                   teacher_script="t")],
+            do_now=DoNow(stimulus="q", stimulus_type="q", questions=["a"], answers=["b"]),
+            direct_instruction=[InstructionSection(heading="h", content="c", teacher_script="t")],
             guided_notes=[GuidedNote(prompt="p", answer="a", section_ref="s")],
-            exit_ticket=[StimulusQuestion(stimulus="s", stimulus_type="t",
-                                          question="q", answer="a")],
+            exit_ticket=[StimulusQuestion(stimulus="s", stimulus_type="t", question="q", answer="a")],
             differentiation=DifferentiationNotes(),
         )
         assert len(master.misconceptions) == 1

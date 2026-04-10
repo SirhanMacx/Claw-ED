@@ -1,4 +1,5 @@
 """Tests for clawed.deep_research — parallel sub-query research synthesis."""
+
 from unittest.mock import AsyncMock
 
 import pytest
@@ -59,9 +60,11 @@ class TestDecomposition:
     async def test_decomposition_failure_produces_fallback(self):
         """If decomposition fails, a fallback single question is used."""
         llm = AsyncMock()
-        llm.generate = AsyncMock(side_effect=[
-            Exception("LLM timeout"),  # decomposition fails
-        ])
+        llm.generate = AsyncMock(
+            side_effect=[
+                Exception("LLM timeout"),  # decomposition fails
+            ]
+        )
 
         report = await deep_research(
             topic="Photosynthesis",
@@ -84,9 +87,7 @@ class TestParallelResearch:
     async def test_parallel_research(self):
         """Each sub-question results in a research call."""
         decomposition = (
-            "1. What caused the French Revolution?\n"
-            "2. Who were the key figures?\n"
-            "3. What were the outcomes?\n"
+            "1. What caused the French Revolution?\n2. Who were the key figures?\n3. What were the outcomes?\n"
         )
         llm = _make_mock_llm(
             decomposition_response=decomposition,
@@ -106,10 +107,7 @@ class TestParallelResearch:
     @pytest.mark.asyncio
     async def test_report_contains_all_findings(self):
         """The final report includes sections for each sub-question."""
-        decomposition = (
-            "1. What are the causes?\n"
-            "2. What are the effects?\n"
-        )
+        decomposition = "1. What are the causes?\n2. What are the effects?\n"
         llm = _make_mock_llm(
             decomposition_response=decomposition,
             research_response="Finding details here.",
@@ -130,9 +128,7 @@ class TestParallelResearch:
     @pytest.mark.asyncio
     async def test_max_sub_queries_respected(self):
         """No more than max_sub_queries questions are researched."""
-        decomposition = "\n".join(
-            f"{i}. Question number {i}?" for i in range(1, 11)
-        )
+        decomposition = "\n".join(f"{i}. Question number {i}?" for i in range(1, 11))
         llm = _make_mock_llm(
             decomposition_response=decomposition,
             research_response="Answer here.",

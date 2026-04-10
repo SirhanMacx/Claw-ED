@@ -6,6 +6,7 @@ read a file), the LLM can call these tools.
 
 Reuses implementations from the MCP server and handlers where possible.
 """
+
 from __future__ import annotations
 
 import json
@@ -239,6 +240,7 @@ def _load_persona_for_tool(teacher_id: str = ""):
     if teacher_id:
         try:
             from clawed.state import TeacherSession
+
             session = TeacherSession.load(teacher_id)
             if session.persona:
                 return session.persona
@@ -249,6 +251,7 @@ def _load_persona_for_tool(teacher_id: str = ""):
     try:
         from clawed.paths import data_dir
         from clawed.persona import load_persona
+
         return load_persona(data_dir() / "persona.json")
     except Exception:
         return TeacherPersona()
@@ -287,9 +290,7 @@ async def execute_tool(name: str, arguments: dict[str, Any], teacher_id: str = "
         return json.dumps({"error": str(e)})
 
 
-async def _tool_generate_lesson(
-    topic: str, grade: str = "8", subject: str = "General", teacher_id: str = ""
-) -> str:
+async def _tool_generate_lesson(topic: str, grade: str = "8", subject: str = "General", teacher_id: str = "") -> str:
     """Generate a lesson -- reuses existing lesson generation."""
     from clawed.lesson import generate_lesson
     from clawed.models import AppConfig, LessonBrief, UnitPlan
@@ -298,8 +299,12 @@ async def _tool_generate_lesson(
     persona = _load_persona_for_tool(teacher_id)
 
     unit = UnitPlan(
-        title=f"{topic} Unit", subject=subject, grade_level=grade, topic=topic,
-        duration_weeks=1, overview=f"A lesson on {topic}.",
+        title=f"{topic} Unit",
+        subject=subject,
+        grade_level=grade,
+        topic=topic,
+        duration_weeks=1,
+        overview=f"A lesson on {topic}.",
         daily_lessons=[LessonBrief(lesson_number=1, topic=topic, description=f"Introduction to {topic}")],
     )
     lesson = await generate_lesson(lesson_number=1, unit=unit, persona=persona, config=config)
@@ -327,8 +332,12 @@ async def _tool_generate_unit(
     persona = _load_persona_for_tool(teacher_id)
 
     unit = await plan_unit(
-        subject=subject, grade_level=grade, topic=topic,
-        duration_weeks=weeks, persona=persona, config=config,
+        subject=subject,
+        grade_level=grade,
+        topic=topic,
+        duration_weeks=weeks,
+        persona=persona,
+        config=config,
     )
     lines = [f"**{unit.title}** ({unit.duration_weeks} weeks, {len(unit.daily_lessons)} lessons)"]
     for q in unit.essential_questions[:3]:
@@ -357,6 +366,7 @@ async def _tool_generate_quiz(topic: str, grade: str = "8", num_questions: int =
 async def _tool_search_standards(subject: str, grade: str = "") -> str:
     """Look up curriculum standards."""
     from clawed.standards import get_standards
+
     results = get_standards(subject, grade or None)
     if not results:
         return f"No standards found for {subject} grade {grade}."
@@ -372,6 +382,7 @@ async def _tool_read_persona(teacher_id: str = "") -> str:
     """Read the teacher's persona."""
     try:
         from clawed.state import TeacherSession
+
         session = TeacherSession.load(teacher_id or "local-teacher")
         if session.persona:
             return session.persona.to_prompt_context()
@@ -384,6 +395,7 @@ def _tool_list_files(directory: str = "all") -> str:
     """List files in teacher's output/workspace directories."""
     dirs_to_check: list[tuple[str, Path]] = []
     from clawed.paths import data_dir
+
     base = data_dir()
 
     if directory in ("output", "all"):
@@ -415,6 +427,7 @@ def _tool_read_file(path: str) -> str:
     p = Path(path).expanduser().resolve()
     # Security: only allow reading from known directories (resolved path containment)
     from clawed.paths import data_dir
+
     allowed = [data_dir(), Path("clawed_output").resolve(), Path("eduagent_output").resolve()]
     if not any(str(p).startswith(str(a.resolve()) + os.sep) or p == a.resolve() for a in allowed):
         return "Cannot read files outside of Claw-ED directories."
@@ -434,6 +447,7 @@ def _tool_search_files(query: str) -> str:
     query_lower = query.lower()
     matches: list[str] = []
     from clawed.paths import data_dir
+
     dirs = [data_dir(), Path("clawed_output").resolve(), Path("eduagent_output").resolve()]
     for d in dirs:
         if not d.exists():
@@ -510,10 +524,7 @@ async def _tool_ingest_folder(path: str, teacher_id: str = "") -> str:
 
     docs = ingest_path(str(resolved))
     if not docs:
-        return (
-            f"No supported files found in {path}. "
-            "I can read PDF, DOCX, PPTX, TXT, and MD files."
-        )
+        return f"No supported files found in {path}. I can read PDF, DOCX, PPTX, TXT, and MD files."
 
     # Extract persona from ingested documents
     try:
@@ -522,6 +533,7 @@ async def _tool_ingest_folder(path: str, teacher_id: str = "") -> str:
 
         persona = await extract_persona(docs, AppConfig.load())
         from clawed.paths import data_dir
+
         save_persona(persona, data_dir())
         style = persona.teaching_style.value.replace("_", " ").title()
         return f"Ingested {len(docs)} files! Teaching style: {style}, Tone: {persona.tone}."

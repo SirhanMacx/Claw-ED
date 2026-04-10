@@ -47,6 +47,7 @@ def _lesson_json(*, topic, grade, subject, fmt, unit_file=None, lesson_number=1)
 
     if unit_file:
         from clawed.planner import load_unit
+
         unit_plan = load_unit(Path(unit_file))
     else:
         unit_plan = UnitPlan(
@@ -97,32 +98,31 @@ def lesson(
     unit_file: Optional[str] = typer.Option(
         None, "--unit-file", "-u", help="Path to unit plan JSON (omit for standalone lesson)"
     ),
-    lesson_num: int = typer.Option(
-        1, "--lesson-num", "-n", help="Lesson number in unit"
-    ),
-    grade: str = typer.Option(
-        "8", "--grade", "-g", help="Grade level (for standalone lesson)"
-    ),
+    lesson_num: int = typer.Option(1, "--lesson-num", "-n", help="Lesson number in unit"),
+    grade: str = typer.Option("8", "--grade", "-g", help="Grade level (for standalone lesson)"),
     subject: Optional[str] = typer.Option(
         None, "--subject", "-s", help="Subject area (reads from your profile if not set)"
     ),
-    homework: bool = typer.Option(
-        True, "--homework/--no-homework", help="Include homework"
-    ),
+    homework: bool = typer.Option(True, "--homework/--no-homework", help="Include homework"),
     multi_agent: bool = typer.Option(
-        True, "--multi-agent/--single-agent",
+        True,
+        "--multi-agent/--single-agent",
         help="Multi-agent pipeline (researcher→writer→reviewer) for higher quality. Use --single-agent for speed.",
     ),
     game: bool = typer.Option(
-        False, "--game/--no-game",
+        False,
+        "--game/--no-game",
         help="Also generate an interactive HTML learning game",
     ),
     narrate: bool = typer.Option(
-        False, "--narrate",
+        False,
+        "--narrate",
         help="Generate voice narration MP3 files for slides",
     ),
     fmt: str = typer.Option(
-        "handout", "--format", "-f",
+        "handout",
+        "--format",
+        "-f",
         help="Export: handout, docx, pptx, pdf, markdown",
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
@@ -142,6 +142,7 @@ def lesson(
     # Resolve subject from teacher profile if not provided
     if subject is None:
         from clawed.commands._helpers import get_default_subject
+
         subject = get_default_subject()
 
     if json_output:
@@ -166,10 +167,12 @@ def lesson(
 
     if unit_file:
         from clawed.planner import load_unit
+
         unit_plan = load_unit(Path(unit_file))
     else:
         # Standalone mode: create a minimal unit plan from the topic
         from clawed.models import LessonBrief, UnitPlan
+
         unit_plan = UnitPlan(
             title=f"{topic} Lesson",
             subject=subject,
@@ -195,6 +198,7 @@ def lesson(
     # Asset-level search (files, YouTube links, images)
     try:
         from clawed.asset_registry import AssetRegistry
+
         registry = AssetRegistry()
         assets = registry.search_assets("default", topic, top_k=5)
         yt_links = registry.get_youtube_links("default", topic, top_k=3)
@@ -204,7 +208,7 @@ def lesson(
             # Show teacher what was found
             for a in assets:
                 type_label = a["material_type"].replace("_", " ").title()
-                console.print(f"[dim]Found [{type_label}] \"{a['title']}\"[/dim]")
+                console.print(f'[dim]Found [{type_label}] "{a["title"]}"[/dim]')
             for link in yt_links:
                 console.print(f"[dim]Found YouTube: {link['url']}[/dim]")
     except Exception:
@@ -213,23 +217,20 @@ def lesson(
     # KB chunk-level search (supplements asset search)
     try:
         from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
         kb = CurriculumKB()
         kb_results = kb.search("default", topic, top_k=3)
         if kb_results:
             kb_parts = [r for r in kb_results if r.get("similarity", 0) > 0.1]
             if kb_parts:
-                chunk_section = "\n\n".join(
-                    f"From \"{r['doc_title']}\":\n{r['chunk_text'][:500]}"
-                    for r in kb_parts
-                )
+                chunk_section = "\n\n".join(f'From "{r["doc_title"]}":\n{r["chunk_text"][:500]}' for r in kb_parts)
                 if kb_prompt_section:
                     kb_prompt_section += "\n\n" + chunk_section
                 else:
                     kb_prompt_section = (
                         "Teacher's Existing Materials on This Topic\n"
                         "The teacher has created content on this topic before. "
-                        "Reference and build on their existing work:\n\n"
-                        + chunk_section
+                        "Reference and build on their existing work:\n\n" + chunk_section
                     )
                 if not assets:
                     console.print(f"[dim]Found {len(kb_parts)} related materials in knowledge base[/dim]")
@@ -246,6 +247,7 @@ def lesson(
                 # Multi-agent pipeline: researcher → writer → reviewer
                 from clawed.compile_teacher import compile_teacher_view
                 from clawed.multi_agent import multi_agent_generate_master_content
+
                 console.print("[dim]Using multi-agent pipeline (researcher→writer→reviewer)...[/dim]")
                 _ma_config = AppConfig.load()
                 try:
@@ -262,13 +264,13 @@ def lesson(
                 except Exception:
                     master = None
                 if master is None:
-                    console.print(
-                        "[yellow]Multi-agent didn't complete. Using single-agent instead...[/yellow]"
-                    )
+                    console.print("[yellow]Multi-agent didn't complete. Using single-agent instead...[/yellow]")
                     daily = _run_async(
                         generate_lesson(
-                            lesson_number=lesson_num, unit=unit_plan,
-                            persona=persona, include_homework=homework,
+                            lesson_number=lesson_num,
+                            unit=unit_plan,
+                            persona=persona,
+                            include_homework=homework,
                             teacher_materials=kb_prompt_section,
                         )
                     )
@@ -278,7 +280,9 @@ def lesson(
                     try:
                         _run_async(
                             compile_teacher_view(
-                                master, images={}, output_dir=_output_dir(),
+                                master,
+                                images={},
+                                output_dir=_output_dir(),
                             )
                         )
                     except Exception:
@@ -302,12 +306,12 @@ def lesson(
     try:
         from clawed.persona import load_persona as _load_p
         from clawed.quality import score_voice_match
+
         _pp = _output_dir() / "persona.json"
         if _pp.exists():
             _persona = _load_p(_pp)
             _lesson_text = (
-                str(daily.objective) + " " + str(daily.do_now)
-                + " " + str(getattr(daily, "direct_instruction", ""))
+                str(daily.objective) + " " + str(daily.do_now) + " " + str(getattr(daily, "direct_instruction", ""))
             )
             _voice_score = _run_async(score_voice_match(_lesson_text, _persona.to_prompt_context()))
             if _voice_score and _voice_score > 0:
@@ -330,6 +334,7 @@ def lesson(
                 export_lesson_pptx,
                 export_student_handout,
             )
+
             if fmt == "pptx":
                 doc_path = export_lesson_pptx(daily, persona, out_dir, narrate=narrate)
             elif fmt == "docx":
@@ -358,6 +363,7 @@ def lesson(
                 review_docx,
                 review_pptx,
             )
+
             export_p = Path(export_path) if not isinstance(export_path, Path) else export_path
             if export_p.suffix == ".pptx":
                 review = review_pptx(export_p)
@@ -367,14 +373,9 @@ def lesson(
                 review = None
             if review:
                 if review.passed:
-                    console.print(
-                        f"  Quality: [green]{review.score:.1f}/10[/green]"
-                    )
+                    console.print(f"  Quality: [green]{review.score:.1f}/10[/green]")
                 else:
-                    console.print(
-                        f"  Quality: [red]{review.score:.1f}/10 "
-                        f"({len(review.issues)} issues)[/red]"
-                    )
+                    console.print(f"  Quality: [red]{review.score:.1f}/10 ({len(review.issues)} issues)[/red]")
                     for issue in review.issues[:5]:
                         _sev = {"critical": "red", "major": "yellow", "minor": "dim"}
                         console.print(
@@ -387,8 +388,7 @@ def lesson(
 
     console.print(
         Panel(
-            f"[bold]Objective:[/bold] {daily.objective}\n"
-            f"[bold]Standards:[/bold] {', '.join(daily.standards)}",
+            f"[bold]Objective:[/bold] {daily.objective}\n[bold]Standards:[/bold] {', '.join(daily.standards)}",
             title=f"Lesson {daily.lesson_number}: {daily.title}",
         )
     )
@@ -397,10 +397,9 @@ def lesson(
     if game:
         try:
             from clawed.compile_game import compile_game
+
             with _safe_progress(console=console) as gprog:
-                gtask = gprog.add_task(
-                    "Designing learning game...", total=None
-                )
+                gtask = gprog.add_task("Designing learning game...", total=None)
                 game_path = _run_async(
                     compile_game(
                         master=daily,
@@ -410,17 +409,13 @@ def lesson(
                 )
                 gprog.update(gtask, description="Game ready!")
             if game_path:
-                console.print(
-                    f"[green]Game created:[/green] {game_path}\n"
-                    f"[dim]Open: open {game_path}[/dim]"
-                )
+                console.print(f"[green]Game created:[/green] {game_path}\n[dim]Open: open {game_path}[/dim]")
         except Exception as e:
-            console.print(
-                f"[yellow]Game generation failed:[/yellow] {e}"
-            )
+            console.print(f"[yellow]Game generation failed:[/yellow] {e}")
 
     # Star prompt — show once per session, not every time
     import os
+
     if not os.environ.get("_CLAWED_STAR_SHOWN"):
         os.environ["_CLAWED_STAR_SHOWN"] = "1"
         console.print(
@@ -428,7 +423,6 @@ def lesson(
             "If it saved you time, consider starring the repo:[/dim]\n"
             "[dim]  https://github.com/SirhanMacx/Claw-ED[/dim]\n"
         )
-
 
 
 # ── Import split modules so their commands register on generate_app ──────

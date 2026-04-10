@@ -13,6 +13,7 @@ The existing clawed/hermes_plugin.py handles the heavy lifting
 Gateway.handle() for the full Claw-ED experience (onboarding,
 export buttons, feedback prompts).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -52,8 +53,7 @@ async def handle_message(
 
     # Hermes skills return text. Log files/buttons for debugging.
     if response.files:
-        logger.info("Claw-ED generated %d file(s): %s", len(response.files),
-                     [f.name for f in response.files])
+        logger.info("Claw-ED generated %d file(s): %s", len(response.files), [f.name for f in response.files])
     if response.button_rows or response.buttons:
         logger.debug("Claw-ED suggested actions (not rendered in Hermes)")
 

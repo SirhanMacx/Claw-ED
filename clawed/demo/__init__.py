@@ -38,8 +38,10 @@ def is_demo_mode(config: Any = None) -> bool:
     stored keys. This is useful for demo presentations and development.
     """
     import os
+
     if os.environ.get("CLAWED_DEMO", "").strip() in ("1", "true", "yes"):
         return True
     from clawed.config import resolve_credentials
+
     provider, key = resolve_credentials(config)
     return provider is None

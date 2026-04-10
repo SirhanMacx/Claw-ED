@@ -1,4 +1,5 @@
 """Google OAuth flow + token persistence for Drive access."""
+
 from __future__ import annotations
 
 import json
@@ -9,9 +10,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 def _default_token_path():
     from clawed.paths import data_dir
+
     return data_dir() / "drive_token.json"
+
 
 _DEFAULT_TOKEN_PATH = None  # resolved lazily via _default_token_path()
 
@@ -20,8 +24,7 @@ SCOPES = [
 ]
 
 
-def save_token(token_data: dict[str, Any],
-               token_path: Path | None = None) -> None:
+def save_token(token_data: dict[str, Any], token_path: Path | None = None) -> None:
     """Persist OAuth token to disk."""
     path = token_path or _default_token_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,9 +67,7 @@ def run_oauth_flow(
     try:
         from google_auth_oauthlib.flow import InstalledAppFlow
     except ImportError:
-        raise RuntimeError(
-            "google-auth-oauthlib not installed. Run: pip install clawed[google]"
-        )
+        raise RuntimeError("google-auth-oauthlib not installed. Run: pip install clawed[google]")
 
     if credentials_file:
         # Use downloaded credentials JSON from Google Cloud Console
@@ -141,6 +142,7 @@ def get_auth_url(
         return None
 
     import urllib.parse
+
     params = {
         "client_id": cid,
         "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",

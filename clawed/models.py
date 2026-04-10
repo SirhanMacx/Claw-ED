@@ -126,9 +126,7 @@ class TeacherPersona(BaseModel):
         return v
 
     tone: str = "warm and encouraging"
-    structural_preferences: list[str] = Field(
-        default_factory=lambda: ["warm-ups", "exit tickets"]
-    )
+    structural_preferences: list[str] = Field(default_factory=lambda: ["warm-ups", "exit tickets"])
     assessment_style: AssessmentStyle = AssessmentStyle.RUBRIC_BASED
 
     @field_validator("assessment_style", mode="before")
@@ -161,6 +159,7 @@ class TeacherPersona(BaseModel):
                 return AssessmentStyle(aliases[normalized])
             return AssessmentStyle.RUBRIC_BASED
         return v
+
     preferred_lesson_format: str = "I Do / We Do / You Do"
     favorite_strategies: list[str] = Field(default_factory=list)
     subject_area: str = ""
@@ -317,36 +316,23 @@ class TeacherPersona(BaseModel):
         # Strong voice enforcement block
         lines.append("")
         lines.append("=== VOICE ENFORCEMENT (CRITICAL) ===")
-        lines.append(
-            "Your writing MUST match this teacher's actual voice. "
-            "This means:"
-        )
-        lines.append(
-            "- Use their EXACT phrases and transitions from the "
-            "voice examples above"
-        )
-        lines.append(
-            "- Match their tone — if they're warm and witty, be warm "
-            "and witty. If they're direct, be direct."
-        )
+        lines.append("Your writing MUST match this teacher's actual voice. This means:")
+        lines.append("- Use their EXACT phrases and transitions from the voice examples above")
+        lines.append("- Match their tone — if they're warm and witty, be warm and witty. If they're direct, be direct.")
         lines.append(
             "- Use their scaffolding patterns — if they use fill-in-"
             "the-blank guided notes, you MUST use fill-in-the-blank "
             "guided notes"
         )
         lines.append(
-            "- Use their activity structures — if they use jigsaw "
-            "groups of 3, you MUST use jigsaw groups of 3"
+            "- Use their activity structures — if they use jigsaw groups of 3, you MUST use jigsaw groups of 3"
         )
         lines.append(
             "- DO NOT write like a textbook. DO NOT use generic AI "
             "language. DO NOT be dry or formal unless the teacher is "
             "dry and formal."
         )
-        lines.append(
-            "- A colleague reading this lesson should think the "
-            "teacher wrote it themselves."
-        )
+        lines.append("- A colleague reading this lesson should think the teacher wrote it themselves.")
         return "\n".join(lines) + "\n"
 
 
@@ -370,39 +356,39 @@ class ProjectPhase(BaseModel):
     """One phase/day of a multi-day project arc."""
 
     day_number: int
-    title: str                              # "Day 1: The Spark (Selection)"
+    title: str  # "Day 1: The Spark (Selection)"
     objective: str
     activities: list[str] = Field(default_factory=list)
-    student_deliverable: str = ""           # What students produce this day
-    checkpoint: str = ""                    # How teacher checks progress
+    student_deliverable: str = ""  # What students produce this day
+    checkpoint: str = ""  # How teacher checks progress
 
 
 class CulminatingPerformance(BaseModel):
     """The final performance task of a project arc."""
 
-    title: str = ""                         # "The Reformers' Summit"
-    format: str = ""                        # gallery_walk, debate, presentation, symposium
+    title: str = ""  # "The Reformers' Summit"
+    format: str = ""  # gallery_walk, debate, presentation, symposium
     duration_minutes: int = 40
-    setup_instructions: str = ""            # How to arrange the room
-    student_prep: str = ""                  # What students need ready
+    setup_instructions: str = ""  # How to arrange the room
+    student_prep: str = ""  # What students need ready
     evaluation_criteria: list[str] = Field(default_factory=list)
-    debrief_protocol: str = ""              # How to close
+    debrief_protocol: str = ""  # How to close
 
 
 class ProjectArc(BaseModel):
     """A multi-day project arc with phases, rubric, and culminating performance."""
 
     title: str
-    essential_question: str = ""            # Driving question for the whole project
+    essential_question: str = ""  # Driving question for the whole project
     duration_days: int = 5
     phases: list[ProjectPhase] = Field(default_factory=list)
-    movement_options: list[str] = Field(default_factory=list)   # Topics students can choose
-    format_options: list[str] = Field(default_factory=list)     # Project formats
+    movement_options: list[str] = Field(default_factory=list)  # Topics students can choose
+    format_options: list[str] = Field(default_factory=list)  # Project formats
     resource_library: list[dict] = Field(default_factory=list)  # curated research databases
-    rubric_text: str = ""                   # Full 4-point rubric as formatted text
+    rubric_text: str = ""  # Full 4-point rubric as formatted text
     culminating_performance: CulminatingPerformance = Field(default_factory=CulminatingPerformance)
-    debate_prep_template: str = ""          # Formatted debate/argument prep sheet
-    graphic_organizer: str = ""             # Research note-taking template
+    debate_prep_template: str = ""  # Formatted debate/argument prep sheet
+    graphic_organizer: str = ""  # Research note-taking template
 
 
 class UnitPlan(BaseModel):
@@ -420,7 +406,7 @@ class UnitPlan(BaseModel):
     daily_lessons: list[LessonBrief] = Field(default_factory=list)
     assessment_plan: AssessmentPlan = Field(default_factory=AssessmentPlan)
     required_materials: list[str] = Field(default_factory=list)
-    project: Optional[ProjectArc] = None    # Multi-day project arc (for units > 1 week)
+    project: Optional[ProjectArc] = None  # Multi-day project arc (for units > 1 week)
 
 
 class ExitTicketQuestion(BaseModel):
@@ -609,6 +595,7 @@ class WorksheetItem(BaseModel):
     def _coerce_point_value(cls, v):
         if isinstance(v, str):
             import re
+
             match = re.match(r"(\d+)", v.strip())
             return int(match.group(1)) if match else 1
         return v
@@ -629,6 +616,7 @@ class AssessmentQuestion(BaseModel):
     def _coerce_point_value(cls, v):
         if isinstance(v, str):
             import re
+
             match = re.match(r"(\d+)", v.strip())
             return int(match.group(1)) if match else 1
         return v
@@ -731,11 +719,13 @@ class SubPacket(BaseModel):
     schedule: list[ScheduleBlock] = Field(default_factory=list)
     behavioral_notes: list[BehavioralNote] = Field(default_factory=list)
     lesson_instructions: list[SubLessonInstructions] = Field(default_factory=list)
-    emergency_contacts: list[str] = Field(default_factory=lambda: [
-        "Main Office: ext. 100",
-        "Nurse: ext. 150",
-        "Nearest Teacher (for emergencies): See posted list by door",
-    ])
+    emergency_contacts: list[str] = Field(
+        default_factory=lambda: [
+            "Main Office: ext. 100",
+            "Nurse: ext. 150",
+            "Nearest Teacher (for emergencies): See posted list by door",
+        ]
+    )
     emergency_procedures: str = (
         "Fire drill: exit via nearest marked exit, proceed to designated area. "
         "Lockdown: lock door, lights off, students against interior wall away from windows."
@@ -813,6 +803,7 @@ class SummativeQuestion(BaseModel):
     def _coerce_point_value(cls, v):
         if isinstance(v, str):
             import re
+
             match = re.match(r"(\d+)", v.strip())
             return int(match.group(1)) if match else 1
         return v
@@ -963,12 +954,33 @@ class LLMProvider(str, Enum):
 
 
 VALID_SUBJECTS = {
-    "math", "mathematics", "science", "biology", "chemistry", "physics",
-    "social studies", "history", "civics", "government", "geography",
-    "english", "ela", "language arts", "reading", "writing",
-    "art", "music", "physical education", "health", "technology",
-    "computer science", "foreign language", "spanish", "french",
-    "special education", "general",
+    "math",
+    "mathematics",
+    "science",
+    "biology",
+    "chemistry",
+    "physics",
+    "social studies",
+    "history",
+    "civics",
+    "government",
+    "geography",
+    "english",
+    "ela",
+    "language arts",
+    "reading",
+    "writing",
+    "art",
+    "music",
+    "physical education",
+    "health",
+    "technology",
+    "computer science",
+    "foreign language",
+    "spanish",
+    "french",
+    "special education",
+    "general",
 }
 
 
@@ -1035,7 +1047,7 @@ class TeacherProfile(BaseModel):
 
     # Materials paths (where their curriculum lives)
     materials_paths: list[str] = Field(default_factory=list)  # Local paths
-    drive_urls: list[str] = Field(default_factory=list)       # Google Drive URLs
+    drive_urls: list[str] = Field(default_factory=list)  # Google Drive URLs
 
     # API keys (stored here for portability, keyring preferred)
     tavily_api_key: Optional[str] = None
@@ -1082,9 +1094,7 @@ class TeacherProfile(BaseModel):
             return ""
         from clawed.state_standards import get_standards_context_for_prompt
 
-        return get_standards_context_for_prompt(
-            self.state, self.subjects, self.grade_levels
-        )
+        return get_standards_context_for_prompt(self.state, self.subjects, self.grade_levels)
 
 
 class AppConfig(BaseModel):
@@ -1134,10 +1144,10 @@ class AppConfig(BaseModel):
     image_fetch_timeout: int = 10
 
     # Zero-touch auto-chain: generate_lesson_bundle auto-produces everything
-    auto_differentiate: bool = True   # Auto-generate IEP/ELL/gifted versions
-    auto_game: bool = True            # Auto-generate review game with each lesson
-    auto_standards: bool = True       # Auto-lookup and align to state standards
-    quality_threshold: float = 3.5    # Warn if voice match score below this
+    auto_differentiate: bool = True  # Auto-generate IEP/ELL/gifted versions
+    auto_game: bool = True  # Auto-generate review game with each lesson
+    auto_standards: bool = True  # Auto-lookup and align to state standards
+    quality_threshold: float = 3.5  # Warn if voice match score below this
 
     # Teacher profile — the key to auto-tailoring
     teacher_profile: TeacherProfile = Field(default_factory=TeacherProfile)
@@ -1145,10 +1155,12 @@ class AppConfig(BaseModel):
     @staticmethod
     def config_path() -> Path:
         import os
+
         env_dir = os.environ.get("EDUAGENT_DATA_DIR")
         if env_dir:
             return Path(env_dir) / "config.json"
         from clawed.paths import data_dir
+
         return data_dir() / "config.json"
 
     # Fields that contain secrets and must never be written to the JSON
@@ -1178,12 +1190,14 @@ class AppConfig(BaseModel):
 
         # Honor OLLAMA_URL env var as an alias for ollama_base_url
         import os
+
         ollama_url_env = os.environ.get("OLLAMA_URL")
         if ollama_url_env:
             cfg.ollama_base_url = ollama_url_env
 
         # Auto-fix stale Ollama Cloud URLs from earlier versions
         from clawed.config import is_ollama_cloud
+
         if is_ollama_cloud(cfg.ollama_base_url) and cfg.ollama_base_url != "https://ollama.com":
             cfg.ollama_base_url = "https://ollama.com"
             cfg.save()
@@ -1196,10 +1210,7 @@ class AppConfig(BaseModel):
         if not cfg.telegram_bot_token:
             cfg.telegram_bot_token = get_api_key("telegram")
         # Teacher-profile tavily key
-        if (
-            cfg.teacher_profile
-            and not cfg.teacher_profile.tavily_api_key
-        ):
+        if cfg.teacher_profile and not cfg.teacher_profile.tavily_api_key:
             cfg.teacher_profile.tavily_api_key = get_api_key("tavily")
 
         return cfg
@@ -1218,10 +1229,7 @@ class AppConfig(BaseModel):
             set_api_key("ollama", self.ollama_api_key)
         if self.telegram_bot_token:
             set_api_key("telegram", self.telegram_bot_token)
-        if (
-            self.teacher_profile
-            and self.teacher_profile.tavily_api_key
-        ):
+        if self.teacher_profile and self.teacher_profile.tavily_api_key:
             set_api_key("tavily", self.teacher_profile.tavily_api_key)
 
         # Serialize, stripping secret fields so they are never on disk

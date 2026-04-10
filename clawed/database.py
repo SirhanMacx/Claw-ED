@@ -260,7 +260,13 @@ class Database:
     # -- units ------------------------------------------------------------
 
     def insert_unit(
-        self, teacher_id: str, title: str, subject: str, grade_level: str, topic: str, unit_json: str,
+        self,
+        teacher_id: str,
+        title: str,
+        subject: str,
+        grade_level: str,
+        topic: str,
+        unit_json: str,
     ) -> str:
         uid = self._new_id()
         with self._connect() as conn:
@@ -286,7 +292,11 @@ class Database:
     # -- lessons ----------------------------------------------------------
 
     def insert_lesson(
-        self, unit_id: str, lesson_number: int, title: str, lesson_json: str,
+        self,
+        unit_id: str,
+        lesson_number: int,
+        title: str,
+        lesson_json: str,
         materials_json: Optional[str] = None,
     ) -> str:
         lid = self._new_id()
@@ -482,9 +492,14 @@ class Database:
     # -- schools ----------------------------------------------------------
 
     def create_school(  # noqa: E501
-        self, name: str, district: str = "", state: str = "", grade_levels: Optional[list[str]] = None,
+        self,
+        name: str,
+        district: str = "",
+        state: str = "",
+        grade_levels: Optional[list[str]] = None,
     ) -> str:
         import json as _json
+
         sid = self._new_id()
         with self._connect() as conn:
             conn.execute(
@@ -500,7 +515,11 @@ class Database:
         return self._fetchall("SELECT * FROM schools ORDER BY created_at DESC")
 
     def add_teacher_to_school(
-        self, school_id: str, teacher_id: str, role: str = "teacher", department: str = "",
+        self,
+        school_id: str,
+        teacher_id: str,
+        role: str = "teacher",
+        department: str = "",
     ) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -534,8 +553,15 @@ class Database:
     # -- shared content ----------------------------------------------------
 
     def share_content(
-        self, school_id: str, teacher_id: str, content_type: str, content_id: str,
-        title: str, subject: str = "", grade_level: str = "", department: str = "",
+        self,
+        school_id: str,
+        teacher_id: str,
+        content_type: str,
+        content_id: str,
+        title: str,
+        subject: str = "",
+        grade_level: str = "",
+        department: str = "",
     ) -> str:
         sid = self._new_id()
         with self._connect() as conn:
@@ -571,9 +597,14 @@ class Database:
     # -- IEP profiles ------------------------------------------------------
 
     def upsert_iep_profile(
-        self, teacher_id: str, student_name: str, disability_type: str = "",
-        accommodations_json: str = "[]", modifications_json: str = "[]",
-        goals_json: str = "[]", profile_id: Optional[str] = None,
+        self,
+        teacher_id: str,
+        student_name: str,
+        disability_type: str = "",
+        accommodations_json: str = "[]",
+        modifications_json: str = "[]",
+        goals_json: str = "[]",
+        profile_id: Optional[str] = None,
     ) -> str:
         pid = profile_id or self._new_id()
         with self._connect() as conn:
@@ -620,8 +651,13 @@ class Database:
     # -- class codes -------------------------------------------------------
 
     def create_class_code(
-        self, code: str, teacher_id: str, name: str = "", topic: str = "",
-        allowed_lesson_ids: str = "[]", expires_at: Optional[str] = None,
+        self,
+        code: str,
+        teacher_id: str,
+        name: str = "",
+        topic: str = "",
+        allowed_lesson_ids: str = "[]",
+        expires_at: Optional[str] = None,
     ) -> str:
         cid = self._new_id()
         with self._connect() as conn:
@@ -677,7 +713,11 @@ class Database:
     # -- student questions (web db) ----------------------------------------
 
     def insert_student_question(
-        self, student_id: str, class_code: str, question: str, answer: str,
+        self,
+        student_id: str,
+        class_code: str,
+        question: str,
+        answer: str,
     ) -> str:
         qid = self._new_id()
         with self._connect() as conn:

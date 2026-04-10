@@ -47,6 +47,7 @@ def tmp_memory(tmp_path, monkeypatch):
 def episodic_db(tmp_path):
     """Create an EpisodicMemory with an isolated database."""
     from clawed.agent_core.memory.episodes import EpisodicMemory
+
     return EpisodicMemory(db_path=tmp_path / "episodes.db")
 
 
@@ -56,6 +57,7 @@ def episodic_db(tmp_path):
 class TestEpisodicMemoryHelpers:
     def test_get_latest_episode_empty(self, tmp_path):
         from clawed.agent_core.memory.episodes import EpisodicMemory
+
         mem = EpisodicMemory(db_path=tmp_path / "episodes.db")
         assert mem.get_latest_episode("t1") is None
 

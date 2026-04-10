@@ -66,12 +66,14 @@ async def search_curriculum(
 
     output = []
     for r in results:
-        output.append({
-            "doc_title": r.get("doc_title", ""),
-            "chunk_text": r.get("chunk_text", ""),
-            "similarity": round(r.get("similarity", 0), 3),
-            "source_path": r.get("source_path", ""),
-        })
+        output.append(
+            {
+                "doc_title": r.get("doc_title", ""),
+                "chunk_text": r.get("chunk_text", ""),
+                "similarity": round(r.get("similarity", 0), 3),
+                "source_path": r.get("source_path", ""),
+            }
+        )
 
     return json.dumps({"results": output, "count": len(output)}, indent=2)
 
@@ -169,14 +171,16 @@ async def search_session_history(
 
     output = []
     for r in results:
-        output.append({
-            "session_date": r.get("session_date", ""),
-            "turn_count": r.get("turn_count", 0),
-            "topics": json.loads(r.get("topics", "[]")),
-            "materials_generated": json.loads(r.get("materials_generated", "[]")),
-            "summary": r.get("compressed_text", ""),
-            "similarity": round(r.get("similarity", 0), 3),
-        })
+        output.append(
+            {
+                "session_date": r.get("session_date", ""),
+                "turn_count": r.get("turn_count", 0),
+                "topics": json.loads(r.get("topics", "[]")),
+                "materials_generated": json.loads(r.get("materials_generated", "[]")),
+                "summary": r.get("compressed_text", ""),
+                "similarity": round(r.get("similarity", 0), 3),
+            }
+        )
 
     return json.dumps({"results": output, "count": len(output)}, indent=2)
 
@@ -202,11 +206,15 @@ async def query_wiki(
     from clawed.wiki import query_wiki as _query
 
     result = _query(teacher_id, question)
-    return json.dumps({
-        "answer": result.answer,
-        "sources": result.sources,
-        "articles_read": result.articles_read,
-    }, indent=2, default=str)
+    return json.dumps(
+        {
+            "answer": result.answer,
+            "sources": result.sources,
+            "articles_read": result.articles_read,
+        },
+        indent=2,
+        default=str,
+    )
 
 
 # ── Lesson generation ────────────────────────────────────────────────
@@ -248,9 +256,7 @@ async def generate_lesson(
         topic=topic,
         duration_weeks=1,
         overview=f"A lesson on {topic}.",
-        daily_lessons=[
-            LessonBrief(lesson_number=1, topic=topic, description=f"Introduction to {topic}")
-        ],
+        daily_lessons=[LessonBrief(lesson_number=1, topic=topic, description=f"Introduction to {topic}")],
     )
 
     lesson = await gen_lesson(lesson_number=1, unit=unit, persona=persona, config=config)
@@ -314,10 +320,13 @@ async def ingest_materials(path: str) -> str:
     config = AppConfig.load()
     persona = await extract_persona(docs, config)
 
-    return json.dumps({
-        "documents_ingested": len(docs),
-        "persona": json.loads(persona.model_dump_json()),
-    }, indent=2)
+    return json.dumps(
+        {
+            "documents_ingested": len(docs),
+            "persona": json.loads(persona.model_dump_json()),
+        },
+        indent=2,
+    )
 
 
 # ── Student Q&A ──────────────────────────────────────────────────────

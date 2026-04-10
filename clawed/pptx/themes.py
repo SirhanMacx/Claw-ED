@@ -17,8 +17,19 @@ from __future__ import annotations
 TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     # Exploration / nautical topics
     (
-        ["exploration", "nautical", "voyage", "navigation", "maritime",
-         "columbus", "magellan", "ocean", "sailing", "expedition", "discover"],
+        [
+            "exploration",
+            "nautical",
+            "voyage",
+            "navigation",
+            "maritime",
+            "columbus",
+            "magellan",
+            "ocean",
+            "sailing",
+            "expedition",
+            "discover",
+        ],
         {
             "primary": "1a3a5c",
             "secondary": "c9a96e",
@@ -32,10 +43,28 @@ TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     ),
     # Renaissance / art / history topics — Jon's warm brown palette
     (
-        ["renaissance", "art", "painting", "sculpture", "michelangelo",
-         "da vinci", "medici", "baroque", "classical art", "gallery",
-         "fresco", "patron", "reform", "movement", "amendment",
-         "constitution", "rights", "abolition", "suffrage", "progressive"],
+        [
+            "renaissance",
+            "art",
+            "painting",
+            "sculpture",
+            "michelangelo",
+            "da vinci",
+            "medici",
+            "baroque",
+            "classical art",
+            "gallery",
+            "fresco",
+            "patron",
+            "reform",
+            "movement",
+            "amendment",
+            "constitution",
+            "rights",
+            "abolition",
+            "suffrage",
+            "progressive",
+        ],
         {
             "primary": "8B6914",
             "secondary": "DAA520",
@@ -49,9 +78,22 @@ TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     ),
     # Revolution / war topics
     (
-        ["revolution", "war", "battle", "conflict", "military", "independence",
-         "civil war", "rebellion", "uprising", "army", "combat", "wwi", "wwii",
-         "world war"],
+        [
+            "revolution",
+            "war",
+            "battle",
+            "conflict",
+            "military",
+            "independence",
+            "civil war",
+            "rebellion",
+            "uprising",
+            "army",
+            "combat",
+            "wwi",
+            "wwii",
+            "world war",
+        ],
         {
             "primary": "8b0000",
             "secondary": "ffd700",
@@ -65,9 +107,21 @@ TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     ),
     # Science topics
     (
-        ["science", "biology", "chemistry", "physics", "experiment",
-         "hypothesis", "laboratory", "cell", "atom", "molecule",
-         "ecosystem", "evolution", "genetics"],
+        [
+            "science",
+            "biology",
+            "chemistry",
+            "physics",
+            "experiment",
+            "hypothesis",
+            "laboratory",
+            "cell",
+            "atom",
+            "molecule",
+            "ecosystem",
+            "evolution",
+            "genetics",
+        ],
         {
             "primary": "1a4a4a",
             "secondary": "00c853",
@@ -81,9 +135,20 @@ TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     ),
     # Math topics
     (
-        ["math", "algebra", "geometry", "calculus", "equation", "fraction",
-         "polynomial", "trigonometry", "statistics", "probability",
-         "arithmetic", "number"],
+        [
+            "math",
+            "algebra",
+            "geometry",
+            "calculus",
+            "equation",
+            "fraction",
+            "polynomial",
+            "trigonometry",
+            "statistics",
+            "probability",
+            "arithmetic",
+            "number",
+        ],
         {
             "primary": "2a1a4a",
             "secondary": "ff9800",

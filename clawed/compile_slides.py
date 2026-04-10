@@ -32,10 +32,20 @@ def _add_slide(prs, layout_idx: int = 6):
     return prs.slides.add_slide(layout)
 
 
-def _textbox(slide, left, top, width, height, text: str,
-             font_size: int = 18, bold: bool = False,
-             hex_color: str = "222222", align_center: bool = False,
-             italic: bool = False, word_wrap: bool = True):
+def _textbox(
+    slide,
+    left,
+    top,
+    width,
+    height,
+    text: str,
+    font_size: int = 18,
+    bold: bool = False,
+    hex_color: str = "222222",
+    align_center: bool = False,
+    italic: bool = False,
+    word_wrap: bool = True,
+):
     """Add a textbox to a slide and return the shape."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Pt
@@ -56,9 +66,7 @@ def _textbox(slide, left, top, width, height, text: str,
     return tb
 
 
-def _bullet_textbox(slide, left, top, width, height,
-                    items: list[str], font_size: int = 16,
-                    hex_color: str = "333333"):
+def _bullet_textbox(slide, left, top, width, height, items: list[str], font_size: int = 16, hex_color: str = "333333"):
     """Add a textbox with one paragraph per bullet item."""
     from pptx.util import Pt
 
@@ -80,8 +88,7 @@ def _bullet_textbox(slide, left, top, width, height,
     return tb
 
 
-def _embed_image(slide, image_spec: str, images: dict[str, Path],
-                 left, top, width, height) -> bool:
+def _embed_image(slide, image_spec: str, images: dict[str, Path], left, top, width, height) -> bool:
     """Embed a pre-fetched image on the slide. Returns True if embedded."""
     if not image_spec:
         return False
@@ -134,11 +141,11 @@ async def compile_slides(
     _slide_h = prs.slide_height  # noqa: F841, N806
 
     # Palette (neutral academic)
-    C_TITLE_BG = "1F3864"    # dark navy  # noqa: N806
+    C_TITLE_BG = "1F3864"  # dark navy  # noqa: N806
     C_SECTION_BG = "2E75B6"  # medium blue  # noqa: N806
     C_WHITE = "FFFFFF"  # noqa: N806
     C_DARK = "222222"  # noqa: N806
-    C_ACCENT = "BDD7EE"      # light blue  # noqa: N806
+    C_ACCENT = "BDD7EE"  # light blue  # noqa: N806
 
     def _set_bg(slide, hex_color: str) -> None:
         bg = slide.background
@@ -154,30 +161,41 @@ async def compile_slides(
     # Main title
     _textbox(
         slide,
-        left=Inches(1.0), top=Inches(1.5),
-        width=W - Inches(2.0), height=Inches(1.8),
+        left=Inches(1.0),
+        top=Inches(1.5),
+        width=W - Inches(2.0),
+        height=Inches(1.8),
         text=master.title,
-        font_size=40, bold=True,
-        hex_color=C_WHITE, align_center=True,
+        font_size=40,
+        bold=True,
+        hex_color=C_WHITE,
+        align_center=True,
     )
     # Subject / grade / duration
     meta = f"{master.subject}  |  Grade {master.grade_level}  |  {master.duration_minutes} min"
     _textbox(
         slide,
-        left=Inches(1.0), top=Inches(3.4),
-        width=W - Inches(2.0), height=Inches(0.5),
+        left=Inches(1.0),
+        top=Inches(3.4),
+        width=W - Inches(2.0),
+        height=Inches(0.5),
         text=meta,
-        font_size=18, bold=False,
-        hex_color=C_ACCENT, align_center=True,
+        font_size=18,
+        bold=False,
+        hex_color=C_ACCENT,
+        align_center=True,
     )
     # Objective
     _textbox(
         slide,
-        left=Inches(1.0), top=Inches(4.1),
-        width=W - Inches(2.0), height=Inches(1.4),
+        left=Inches(1.0),
+        top=Inches(4.1),
+        width=W - Inches(2.0),
+        height=Inches(1.4),
         text=f"Objective: {master.objective}",
         font_size=16,
-        hex_color=C_WHITE, align_center=True,
+        hex_color=C_WHITE,
+        align_center=True,
     )
 
     # ── 2. Vocabulary slide(s) ────────────────────────────────────────
@@ -185,20 +203,23 @@ async def compile_slides(
     TERMS_PER_SLIDE = 5  # noqa: N806
     if master.vocabulary:
         vocab_chunks = [
-            master.vocabulary[i: i + TERMS_PER_SLIDE]
-            for i in range(0, len(master.vocabulary), TERMS_PER_SLIDE)
+            master.vocabulary[i : i + TERMS_PER_SLIDE] for i in range(0, len(master.vocabulary), TERMS_PER_SLIDE)
         ]
         for chunk_idx, chunk in enumerate(vocab_chunks):
             slide = _add_slide(prs)
             heading_label = "Vocabulary" if len(vocab_chunks) == 1 else f"Vocabulary ({chunk_idx + 1})"
             # Section header bar
             bar = slide.shapes.add_textbox(
-                Inches(0), Inches(0), W, Inches(0.8),
+                Inches(0),
+                Inches(0),
+                W,
+                Inches(0.8),
             )
             bar_tf = bar.text_frame
             bar_tf.word_wrap = False
             bar_p = bar_tf.paragraphs[0]
             from pptx.enum.text import PP_ALIGN
+
             bar_p.alignment = PP_ALIGN.LEFT
             bar_run = bar_p.add_run()
             bar_run.text = f"  {heading_label}"
@@ -208,9 +229,13 @@ async def compile_slides(
             bar_run.font.name = "Calibri"
             # Fill bar background via shape fill (add a rectangle behind)
             from pptx.util import Emu
+
             rect = slide.shapes.add_shape(
                 1,  # MSO_SHAPE_TYPE.RECTANGLE = 1
-                Emu(0), Emu(0), W, Inches(0.8),
+                Emu(0),
+                Emu(0),
+                W,
+                Inches(0.8),
             )
             rect.fill.solid()
             rect.fill.fore_color.rgb = _hex_to_rgb(C_SECTION_BG)
@@ -226,10 +251,13 @@ async def compile_slides(
                 # Term box
                 _textbox(
                     slide,
-                    left=Inches(0.3), top=top_offset,
-                    width=Inches(3.0), height=row_height,
+                    left=Inches(0.3),
+                    top=top_offset,
+                    width=Inches(3.0),
+                    height=row_height,
                     text=entry.term,
-                    font_size=16, bold=True,
+                    font_size=16,
+                    bold=True,
                     hex_color=C_DARK,
                 )
                 # Definition + context box
@@ -238,8 +266,10 @@ async def compile_slides(
                     defn_text += f"\n\u201c{entry.context_sentence}\u201d"
                 _textbox(
                     slide,
-                    left=Inches(3.5), top=top_offset,
-                    width=Inches(9.0), height=row_height,
+                    left=Inches(3.5),
+                    top=top_offset,
+                    width=Inches(9.0),
+                    height=row_height,
                     text=defn_text,
                     font_size=14,
                     hex_color=C_DARK,
@@ -258,10 +288,13 @@ async def compile_slides(
         rect.line.fill.background()
         _textbox(
             slide,
-            left=Inches(0.2), top=Inches(0.05),
-            width=W - Inches(0.4), height=Inches(0.7),
+            left=Inches(0.2),
+            top=Inches(0.05),
+            width=W - Inches(0.4),
+            height=Inches(0.7),
             text=section.heading,
-            font_size=22, bold=True,
+            font_size=22,
+            bold=True,
             hex_color=C_WHITE,
         )
 
@@ -273,8 +306,10 @@ async def compile_slides(
         if section.key_points:
             _bullet_textbox(
                 slide,
-                left=content_left, top=Inches(1.0),
-                width=content_width, height=Inches(2.5),
+                left=content_left,
+                top=Inches(1.0),
+                width=content_width,
+                height=Inches(2.5),
                 items=section.key_points,
                 font_size=18,
                 hex_color=C_DARK,
@@ -284,8 +319,10 @@ async def compile_slides(
         summary = section.content[:400] + ("…" if len(section.content) > 400 else "")
         _textbox(
             slide,
-            left=content_left, top=Inches(3.6),
-            width=content_width, height=Inches(2.8),
+            left=content_left,
+            top=Inches(3.6),
+            width=content_width,
+            height=Inches(2.8),
             text=summary,
             font_size=14,
             hex_color="444444",
@@ -294,9 +331,13 @@ async def compile_slides(
         # Image (right side)
         if has_image:
             _embed_image(
-                slide, section.image_spec, images,
-                left=W - Inches(4.6), top=Inches(1.0),
-                width=Inches(4.3), height=Inches(5.0),
+                slide,
+                section.image_spec,
+                images,
+                left=W - Inches(4.6),
+                top=Inches(1.0),
+                width=Inches(4.3),
+                height=Inches(5.0),
             )
 
     # ── 4. Source analysis slides ─────────────────────────────────────
@@ -311,10 +352,13 @@ async def compile_slides(
         rect.line.fill.background()
         _textbox(
             slide,
-            left=Inches(0.2), top=Inches(0.05),
-            width=W - Inches(0.4), height=Inches(0.7),
+            left=Inches(0.2),
+            top=Inches(0.05),
+            width=W - Inches(0.4),
+            height=Inches(0.7),
             text=f"Source Analysis: {ps.title}",
-            font_size=20, bold=True,
+            font_size=20,
+            bold=True,
             hex_color=C_WHITE,
         )
 
@@ -324,10 +368,13 @@ async def compile_slides(
         # Attribution + type
         _textbox(
             slide,
-            left=Inches(0.3), top=Inches(0.9),
-            width=text_width, height=Inches(0.4),
+            left=Inches(0.3),
+            top=Inches(0.9),
+            width=text_width,
+            height=Inches(0.4),
             text=f"{ps.source_type.replace('_', ' ').title()}  |  {ps.attribution}",
-            font_size=12, italic=True,
+            font_size=12,
+            italic=True,
             hex_color="666666",
         )
 
@@ -335,10 +382,13 @@ async def compile_slides(
         excerpt = ps.content_text[:300] + ("…" if len(ps.content_text) > 300 else "")
         _textbox(
             slide,
-            left=Inches(0.3), top=Inches(1.4),
-            width=text_width, height=Inches(2.5),
+            left=Inches(0.3),
+            top=Inches(1.4),
+            width=text_width,
+            height=Inches(2.5),
             text=f'"{excerpt}"',
-            font_size=14, italic=True,
+            font_size=14,
+            italic=True,
             hex_color=C_DARK,
         )
 
@@ -346,8 +396,10 @@ async def compile_slides(
         if ps.scaffolding_questions:
             _bullet_textbox(
                 slide,
-                left=Inches(0.3), top=Inches(4.0),
-                width=text_width, height=Inches(2.5),
+                left=Inches(0.3),
+                top=Inches(4.0),
+                width=text_width,
+                height=Inches(2.5),
                 items=ps.scaffolding_questions,
                 font_size=15,
                 hex_color=C_DARK,
@@ -356,9 +408,13 @@ async def compile_slides(
         # Image
         if has_image:
             _embed_image(
-                slide, ps.image_spec, images,
-                left=W - Inches(4.6), top=Inches(1.0),
-                width=Inches(4.3), height=Inches(5.0),
+                slide,
+                ps.image_spec,
+                images,
+                left=W - Inches(4.6),
+                top=Inches(1.0),
+                width=Inches(4.3),
+                height=Inches(5.0),
             )
 
     # ── 5. Station overview (if stations exist) ───────────────────────
@@ -372,10 +428,13 @@ async def compile_slides(
         rect.line.fill.background()
         _textbox(
             slide,
-            left=Inches(0.2), top=Inches(0.05),
-            width=W - Inches(0.4), height=Inches(0.7),
+            left=Inches(0.2),
+            top=Inches(0.05),
+            width=W - Inches(0.4),
+            height=Inches(0.7),
             text="Learning Stations",
-            font_size=24, bold=True,
+            font_size=24,
+            bold=True,
             hex_color=C_WHITE,
         )
 
@@ -390,7 +449,8 @@ async def compile_slides(
                 width=col_w - Inches(0.1),
                 height=Inches(1.0),
                 text=station.title,
-                font_size=16, bold=True,
+                font_size=16,
+                bold=True,
                 hex_color=C_DARK,
             )
             _textbox(
@@ -415,10 +475,13 @@ async def compile_slides(
         rect.line.fill.background()
         _textbox(
             slide,
-            left=Inches(0.2), top=Inches(0.05),
-            width=W - Inches(0.4), height=Inches(0.7),
+            left=Inches(0.2),
+            top=Inches(0.05),
+            width=W - Inches(0.4),
+            height=Inches(0.7),
             text="Exit Ticket",
-            font_size=24, bold=True,
+            font_size=24,
+            bold=True,
             hex_color=C_WHITE,
         )
 
@@ -429,26 +492,36 @@ async def compile_slides(
             # Stimulus
             _textbox(
                 slide,
-                left=Inches(0.3), top=top_offset,
-                width=q_width, height=Inches(0.8),
+                left=Inches(0.3),
+                top=top_offset,
+                width=q_width,
+                height=Inches(0.8),
                 text=f"Stimulus: {sq.stimulus[:200]}",
-                font_size=13, italic=True,
+                font_size=13,
+                italic=True,
                 hex_color="444444",
             )
             # Question
             _textbox(
                 slide,
-                left=Inches(0.3), top=top_offset + Inches(0.85),
-                width=q_width, height=Inches(0.8),
+                left=Inches(0.3),
+                top=top_offset + Inches(0.85),
+                width=q_width,
+                height=Inches(0.8),
                 text=f"Q{i}: {sq.question}",
-                font_size=16, bold=True,
+                font_size=16,
+                bold=True,
                 hex_color=C_DARK,
             )
             if has_image:
                 _embed_image(
-                    slide, sq.stimulus_image_spec, images,
-                    left=W - Inches(4.6), top=top_offset,
-                    width=Inches(4.3), height=Inches(2.0),
+                    slide,
+                    sq.stimulus_image_spec,
+                    images,
+                    left=W - Inches(4.6),
+                    top=top_offset,
+                    width=Inches(4.3),
+                    height=Inches(2.0),
                 )
             top_offset += Inches(2.0)
 

@@ -1,4 +1,5 @@
 """Tests for gateway handlers."""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -127,10 +128,15 @@ class TestExportHandler:
     @pytest.mark.asyncio
     async def test_export_slides_calls_pptx(self):
         from clawed.models import DailyLesson
+
         lesson = DailyLesson(
-            title="Test Lesson", lesson_number=1, objective="Test",
-            do_now="Test", direct_instruction="Test",
-            guided_practice="Test", independent_work="Test",
+            title="Test Lesson",
+            lesson_number=1,
+            objective="Test",
+            do_now="Test",
+            direct_instruction="Test",
+            guided_practice="Test",
+            independent_work="Test",
         )
         with patch("clawed.handlers.export._load_lesson", return_value=lesson):
             with patch("clawed.handlers.export._load_persona", return_value=None):
@@ -174,11 +180,18 @@ class TestFeedbackHandler:
 
     @pytest.mark.asyncio
     async def test_feedback_summary(self):
-        with patch("clawed.handlers.feedback.get_teacher_stats", return_value={
-            "overall_avg_rating": 4.2, "rated_lessons": 10, "streak": 3,
-            "total_lessons": 15, "total_units": 3, "total_feedback": 8,
-            "rating_distribution": {1: 0, 2: 1, 3: 2, 4: 4, 5: 3},
-        }):
+        with patch(
+            "clawed.handlers.feedback.get_teacher_stats",
+            return_value={
+                "overall_avg_rating": 4.2,
+                "rated_lessons": 10,
+                "streak": 3,
+                "total_lessons": 15,
+                "total_units": 3,
+                "total_feedback": 8,
+                "rating_distribution": {1: 0, 2: 1, 3: 2, 4: 4, 5: 3},
+            },
+        ):
             r = await self.handler.summary("teacher_1")
             assert "4.2" in r.text or "rating" in r.text.lower()
 
@@ -195,9 +208,10 @@ class TestScheduleHandler:
 
     @pytest.mark.asyncio
     async def test_show_schedule(self):
-        with patch("clawed.handlers.schedule.load_schedule_config", return_value={
-            "tasks": {"morning-prep": {"enabled": True, "cron": {"hour": "6", "minute": "0"}}}
-        }):
+        with patch(
+            "clawed.handlers.schedule.load_schedule_config",
+            return_value={"tasks": {"morning-prep": {"enabled": True, "cron": {"hour": "6", "minute": "0"}}}},
+        ):
             r = await self.handler.show("teacher_1")
             assert r.has_content
             assert "morning" in r.text.lower()
@@ -228,9 +242,9 @@ class TestStandardsHandler:
 
     @pytest.mark.asyncio
     async def test_lookup_standards(self):
-        with patch("clawed.handlers.standards.get_standards", return_value=[
-            ("CCSS.MATH.6.NS.1", "Divide fractions", "6-8")
-        ]):
+        with patch(
+            "clawed.handlers.standards.get_standards", return_value=[("CCSS.MATH.6.NS.1", "Divide fractions", "6-8")]
+        ):
             r = await self.handler.lookup("math", "6")
             assert r.has_content
             assert "CCSS" in r.text or "standard" in r.text.lower()

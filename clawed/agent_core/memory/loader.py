@@ -1,4 +1,5 @@
 """Memory context loader — assembles all 3 layers for the agent's system prompt."""
+
 from __future__ import annotations
 
 import logging
@@ -49,11 +50,7 @@ def load_memory_context(teacher_id: str, current_message: str) -> dict[str, Any]
         mem = EpisodicMemory()
         episodes = mem.recall(teacher_id, current_message, top_k=5)
         if episodes:
-            relevant_episodes = "\n".join(
-                f"- {ep['text']}"
-                for ep in episodes
-                if ep.get("similarity", 0) > 0.1
-            )
+            relevant_episodes = "\n".join(f"- {ep['text']}" for ep in episodes if ep.get("similarity", 0) > 0.1)
     except Exception as e:
         logger.debug("Episodic recall failed: %s", e)
 
@@ -71,6 +68,7 @@ def load_memory_context(teacher_id: str, current_message: str) -> dict[str, Any]
     autonomy_summary = ""
     try:
         from clawed.agent_core.memory.preferences import extract_preferences, summarize_preferences
+
         prefs = extract_preferences(teacher_id)
         preferences_summary = summarize_preferences(prefs)
         autonomy_summary = prefs.get("autonomy_summary", "")
@@ -94,9 +92,7 @@ def load_memory_context(teacher_id: str, current_message: str) -> dict[str, Any]
             parts = []
             for r in kb_results:
                 if r.get("similarity", 0) > 0.15:
-                    parts.append(
-                        f"- From '{r['doc_title']}': {r['chunk_text'][:200]}"
-                    )
+                    parts.append(f"- From '{r['doc_title']}': {r['chunk_text'][:200]}")
             if parts:
                 curriculum_kb_context = "\n".join(parts)
     except Exception as e:
@@ -114,7 +110,7 @@ def load_memory_context(teacher_id: str, current_message: str) -> dict[str, Any]
             # Extract teacher's message (first line is usually "Teacher: <msg>")
             first_line = text.split("\n")[0].strip()
             if first_line.startswith("Teacher: "):
-                topic = first_line[len("Teacher: "):]
+                topic = first_line[len("Teacher: ") :]
             else:
                 topic = first_line
             # Truncate to a concise summary

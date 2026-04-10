@@ -40,8 +40,7 @@ class DifferentiateLessonTool:
                         "specific_needs": {
                             "type": "string",
                             "description": (
-                                "Specific student needs (e.g., 'extended time, "
-                                "visual supports, reduced questions')"
+                                "Specific student needs (e.g., 'extended time, visual supports, reduced questions')"
                             ),
                         },
                     },
@@ -50,9 +49,7 @@ class DifferentiateLessonTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         content = params.get("lesson_content", "").strip()
         mod_type = params.get("modification_type", "iep")
         needs = params.get("specific_needs", "")

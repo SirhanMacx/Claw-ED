@@ -47,9 +47,14 @@ def tmp_workspace_for_scheduler(tmp_path, monkeypatch):
 class TestDefaultTasks:
     def test_has_all_expected_tasks(self):
         expected = {
-            "morning-prep", "weekly-plan", "feedback-digest",
-            "memory-compress", "student-digest",
-            "gap-detection", "curriculum-watch", "self-distill",
+            "morning-prep",
+            "weekly-plan",
+            "feedback-digest",
+            "memory-compress",
+            "student-digest",
+            "gap-detection",
+            "curriculum-watch",
+            "self-distill",
         }
         assert set(DEFAULT_TASKS.keys()) == expected
 
@@ -68,8 +73,7 @@ class TestDefaultTasks:
     def test_core_tasks_enabled_by_default(self):
         """Core tasks (morning-prep, weekly-plan, gap-detection, curriculum-watch,
         self-distill) are enabled by default. Others start disabled."""
-        core = {"morning-prep", "weekly-plan", "gap-detection",
-                "curriculum-watch", "self-distill"}
+        core = {"morning-prep", "weekly-plan", "gap-detection", "curriculum-watch", "self-distill"}
         for name, task in DEFAULT_TASKS.items():
             if name in core:
                 assert task["enabled"] is True, f"{name} should be enabled"
@@ -104,9 +108,7 @@ class TestScheduleConfig:
 
     def test_load_merges_saved_with_defaults(self, tmp_schedule):
         # Save only a partial override
-        tmp_schedule.write_text(json.dumps({
-            "morning-prep": {"cron": {"hour": "8", "minute": "30"}}
-        }))
+        tmp_schedule.write_text(json.dumps({"morning-prep": {"cron": {"hour": "8", "minute": "30"}}}))
         config = load_schedule_config()
         # Should have the override
         assert config["morning-prep"]["cron"]["hour"] == "8"
@@ -217,6 +219,7 @@ class TestRunTask:
     async def test_run_logs_to_daily_notes(self, tmp_schedule, tmp_workspace_for_scheduler):
         await run_task("morning-prep")
         from clawed.workspace import get_daily_notes
+
         notes = get_daily_notes()
         assert "morning-prep" in notes.lower() or "Morning prep" in notes
 

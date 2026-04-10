@@ -101,9 +101,7 @@ def _lesson_briefs():
         (9, "Document-Based Investigation", "Analyze primary sources on WWI."),
         (10, "Unit Assessment and Reflection", "Summative assessment."),
     ]
-    return [
-        LessonBrief(lesson_number=n, topic=t, description=d) for n, t, d in data
-    ]
+    return [LessonBrief(lesson_number=n, topic=t, description=d) for n, t, d in data]
 
 
 @pytest.fixture()
@@ -146,8 +144,7 @@ def sample_lesson() -> DailyLesson:
         title="Nationalism in 19th-Century Europe",
         lesson_number=1,
         objective=(
-            "SWBAT analyze how nationalism fueled competition among "
-            "European powers by examining primary sources."
+            "SWBAT analyze how nationalism fueled competition among European powers by examining primary sources."
         ),
         standards=["NYS-SS 10.5"],
         do_now=(
@@ -159,8 +156,7 @@ def sample_lesson() -> DailyLesson:
             "on unification movements in Germany and Italy."
         ),
         guided_practice=(
-            "In pairs, students analyze three primary source documents "
-            "and complete a SOAPS analysis chart."
+            "In pairs, students analyze three primary source documents and complete a SOAPS analysis chart."
         ),
         independent_work=(
             "Write a one-paragraph response to: How did nationalism "
@@ -168,14 +164,8 @@ def sample_lesson() -> DailyLesson:
         ),
         exit_ticket=[
             ExitTicketQuestion(
-                question=(
-                    "Name two ways nationalism increased tensions "
-                    "in Europe before 1914."
-                ),
-                expected_response=(
-                    "Competition for territory/resources; instability "
-                    "in multi-ethnic empires."
-                ),
+                question=("Name two ways nationalism increased tensions in Europe before 1914."),
+                expected_response=("Competition for territory/resources; instability in multi-ethnic empires."),
             ),
         ],
         homework="Read pages 412-418 and complete guided reading.",
@@ -193,10 +183,12 @@ def temp_db(tmp_path, monkeypatch):
     """Redirect both state DB and corpus DB to a temp directory."""
     monkeypatch.setattr("clawed.state.DEFAULT_DATA_DIR", tmp_path)
     monkeypatch.setattr(
-        "clawed.corpus.CORPUS_DIR", tmp_path / "corpus",
+        "clawed.corpus.CORPUS_DIR",
+        tmp_path / "corpus",
     )
     monkeypatch.setattr(
-        "clawed.corpus.CORPUS_DB", tmp_path / "corpus" / "corpus.db",
+        "clawed.corpus.CORPUS_DB",
+        tmp_path / "corpus" / "corpus.db",
     )
     return tmp_path
 
@@ -241,15 +233,11 @@ def _mock_lesson_json(lesson_number: int = 1) -> dict:
         "title": "Nationalism in 19th-Century Europe",
         "lesson_number": lesson_number,
         "objective": (
-            "SWBAT analyze how nationalism fueled competition "
-            "among European powers by examining primary sources."
+            "SWBAT analyze how nationalism fueled competition among European powers by examining primary sources."
         ),
         "standards": ["NYS-SS 10.5"],
         "do_now": "Examine the political cartoon on the board.",
-        "direct_instruction": (
-            "Mini-lecture on nationalism and the unification "
-            "of Germany and Italy."
-        ),
+        "direct_instruction": ("Mini-lecture on nationalism and the unification of Germany and Italy."),
         "guided_practice": "Pairs analyze three primary sources.",
         "independent_work": "Write a paragraph on nationalism tensions.",
         "exit_ticket": [
@@ -277,8 +265,7 @@ def _mock_master_content_json() -> dict:
         "topic": "Nationalism in Europe",
         "standards": ["NYS-SS 10.5"],
         "objective": (
-            "SWBAT analyze how nationalism fueled competition "
-            "among European powers by examining primary sources."
+            "SWBAT analyze how nationalism fueled competition among European powers by examining primary sources."
         ),
         "duration_minutes": 45,
         "vocabulary": [
@@ -402,9 +389,7 @@ def _mock_master_content_json() -> dict:
                 "to tensions among European powers before WWI? Use at least two "
                 "pieces of evidence from today's sources."
             ),
-            "rubric_snippet": (
-                "Proficient: Clear claim + 2 evidence citations + explanation of each"
-            ),
+            "rubric_snippet": ("Proficient: Clear claim + 2 evidence citations + explanation of each"),
             "exemplar": (
                 "Nationalism increased tensions by driving competition for territory "
                 "and destabilizing multi-ethnic empires. Bismarck's 'iron and blood' "
@@ -424,30 +409,19 @@ def _mock_master_content_json() -> dict:
             },
             {
                 "stimulus": (
-                    "By 1871, both Germany and Italy had unified into nation-states "
-                    "after decades of fragmentation."
+                    "By 1871, both Germany and Italy had unified into nation-states after decades of fragmentation."
                 ),
                 "stimulus_type": "text_excerpt",
-                "question": (
-                    "How did the unification of Germany and Italy change "
-                    "the balance of power in Europe?"
-                ),
-                "answer": (
-                    "New powerful nations competed with established empires, "
-                    "increasing rivalry and tension."
-                ),
+                "question": ("How did the unification of Germany and Italy change the balance of power in Europe?"),
+                "answer": ("New powerful nations competed with established empires, increasing rivalry and tension."),
                 "cognitive_level": "application",
             },
             {
                 "stimulus": (
-                    "Austria-Hungary contained over 11 major ethnic groups, "
-                    "many of whom sought independence."
+                    "Austria-Hungary contained over 11 major ethnic groups, many of whom sought independence."
                 ),
                 "stimulus_type": "text_excerpt",
-                "question": (
-                    "Why might nationalism be a threat to multi-ethnic empires "
-                    "rather than a unifying force?"
-                ),
+                "question": ("Why might nationalism be a threat to multi-ethnic empires rather than a unifying force?"),
                 "answer": (
                     "Ethnic groups within empires wanted their own nations, "
                     "leading to internal instability and separatist movements."
@@ -480,14 +454,16 @@ class TestFullUnitGenerationFlow:
         with patch("clawed.planner.LLMClient") as mock_cls:
             _mock_llm_client(mock_cls, mock_json, model_class=UnitPlan)
 
-            unit = _run(plan_unit(
-                topic="Causes of WWI",
-                grade_level="10",
-                subject="Social Studies",
-                duration_weeks=2,
-                persona=persona,
-                config=config,
-            ))
+            unit = _run(
+                plan_unit(
+                    topic="Causes of WWI",
+                    grade_level="10",
+                    subject="Social Studies",
+                    duration_weeks=2,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
         assert isinstance(unit, UnitPlan)
         assert unit.title
@@ -503,14 +479,16 @@ class TestFullUnitGenerationFlow:
         with patch("clawed.planner.LLMClient") as mock_cls:
             _mock_llm_client(mock_cls, mock_json, model_class=UnitPlan)
 
-            unit = _run(plan_unit(
-                topic="Causes of WWI",
-                grade_level="10",
-                subject="Social Studies",
-                duration_weeks=2,
-                persona=persona,
-                config=config,
-            ))
+            unit = _run(
+                plan_unit(
+                    topic="Causes of WWI",
+                    grade_level="10",
+                    subject="Social Studies",
+                    duration_weeks=2,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
         assert unit.subject == "Social Studies"
         assert unit.grade_level == "10"
@@ -523,14 +501,16 @@ class TestFullUnitGenerationFlow:
         with patch("clawed.planner.LLMClient") as mock_cls:
             _mock_llm_client(mock_cls, mock_json, model_class=UnitPlan)
 
-            unit = _run(plan_unit(
-                topic="Causes of WWI",
-                grade_level="10",
-                subject="Social Studies",
-                duration_weeks=2,
-                persona=persona,
-                config=config,
-            ))
+            unit = _run(
+                plan_unit(
+                    topic="Causes of WWI",
+                    grade_level="10",
+                    subject="Social Studies",
+                    duration_weeks=2,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
         assert unit.assessment_plan.formative
         assert unit.assessment_plan.summative
@@ -542,23 +522,23 @@ class TestFullUnitGenerationFlow:
         with patch("clawed.planner.LLMClient") as mock_cls:
             inst = _mock_llm_client(mock_cls, mock_json, model_class=UnitPlan)
 
-            _run(plan_unit(
-                topic="Causes of WWI",
-                grade_level="10",
-                subject="Social Studies",
-                duration_weeks=2,
-                persona=persona,
-                config=config,
-            ))
+            _run(
+                plan_unit(
+                    topic="Causes of WWI",
+                    grade_level="10",
+                    subject="Social Studies",
+                    duration_weeks=2,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
             call_args = inst.safe_generate_json.call_args
             prompt_text = call_args.kwargs.get(
-                "prompt", call_args.args[0] if call_args.args else "",
+                "prompt",
+                call_args.args[0] if call_args.args else "",
             )
-            assert (
-                "Ms. Rivera" in prompt_text
-                or "Direct Instruction" in prompt_text
-            )
+            assert "Ms. Rivera" in prompt_text or "Direct Instruction" in prompt_text
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -570,7 +550,10 @@ class TestLessonGenerationFromUnit:
     """End-to-end: unit plan → generate_lesson() → verify DailyLesson."""
 
     def test_generate_lesson_returns_valid_lesson(
-        self, sample_unit, persona, config,
+        self,
+        sample_unit,
+        persona,
+        config,
     ):
         """generate_lesson() with mocked LLM produces a valid DailyLesson."""
         mock_json = _mock_master_content_json()
@@ -578,12 +561,14 @@ class TestLessonGenerationFromUnit:
         with patch("clawed.lesson.LLMClient") as mock_cls:
             _mock_llm_client(mock_cls, mock_json, model_class=MasterContent)
 
-            lesson = _run(generate_lesson(
-                lesson_number=1,
-                unit=sample_unit,
-                persona=persona,
-                config=config,
-            ))
+            lesson = _run(
+                generate_lesson(
+                    lesson_number=1,
+                    unit=sample_unit,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
         assert isinstance(lesson, DailyLesson)
         assert lesson.title
@@ -592,7 +577,10 @@ class TestLessonGenerationFromUnit:
         assert lesson.exit_ticket
 
     def test_lesson_objective_contains_swbat(
-        self, sample_unit, persona, config,
+        self,
+        sample_unit,
+        persona,
+        config,
     ):
         """Lesson objective includes SWBAT or 'will be able to'."""
         mock_json = _mock_master_content_json()
@@ -600,20 +588,23 @@ class TestLessonGenerationFromUnit:
         with patch("clawed.lesson.LLMClient") as mock_cls:
             _mock_llm_client(mock_cls, mock_json, model_class=MasterContent)
 
-            lesson = _run(generate_lesson(
-                lesson_number=1,
-                unit=sample_unit,
-                persona=persona,
-                config=config,
-            ))
+            lesson = _run(
+                generate_lesson(
+                    lesson_number=1,
+                    unit=sample_unit,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
         obj_lower = lesson.objective.lower()
-        assert "swbat" in obj_lower or "will be able to" in obj_lower, (
-            f"Objective missing SWBAT: {lesson.objective}"
-        )
+        assert "swbat" in obj_lower or "will be able to" in obj_lower, f"Objective missing SWBAT: {lesson.objective}"
 
     def test_lesson_has_all_required_sections(
-        self, sample_unit, persona, config,
+        self,
+        sample_unit,
+        persona,
+        config,
     ):
         """Every key section of a DailyLesson is populated."""
         mock_json = _mock_master_content_json()
@@ -621,12 +612,14 @@ class TestLessonGenerationFromUnit:
         with patch("clawed.lesson.LLMClient") as mock_cls:
             _mock_llm_client(mock_cls, mock_json, model_class=MasterContent)
 
-            lesson = _run(generate_lesson(
-                lesson_number=1,
-                unit=sample_unit,
-                persona=persona,
-                config=config,
-            ))
+            lesson = _run(
+                generate_lesson(
+                    lesson_number=1,
+                    unit=sample_unit,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
         assert lesson.title
         assert lesson.objective
@@ -636,19 +629,27 @@ class TestLessonGenerationFromUnit:
         assert lesson.lesson_number == 1
 
     def test_invalid_lesson_number_raises(
-        self, sample_unit, persona, config,
+        self,
+        sample_unit,
+        persona,
+        config,
     ):
         """Requesting a lesson number outside the unit raises ValueError."""
         with pytest.raises(ValueError, match="Lesson 99 not found"):
-            _run(generate_lesson(
-                lesson_number=99,
-                unit=sample_unit,
-                persona=persona,
-                config=config,
-            ))
+            _run(
+                generate_lesson(
+                    lesson_number=99,
+                    unit=sample_unit,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
     def test_lesson_exit_ticket_has_question(
-        self, sample_unit, persona, config,
+        self,
+        sample_unit,
+        persona,
+        config,
     ):
         """Exit ticket contains at least one question with text."""
         mock_json = _mock_master_content_json()
@@ -656,12 +657,14 @@ class TestLessonGenerationFromUnit:
         with patch("clawed.lesson.LLMClient") as mock_cls:
             _mock_llm_client(mock_cls, mock_json, model_class=MasterContent)
 
-            lesson = _run(generate_lesson(
-                lesson_number=1,
-                unit=sample_unit,
-                persona=persona,
-                config=config,
-            ))
+            lesson = _run(
+                generate_lesson(
+                    lesson_number=1,
+                    unit=sample_unit,
+                    persona=persona,
+                    config=config,
+                )
+            )
 
         assert len(lesson.exit_ticket) >= 1
         assert lesson.exit_ticket[0].question
@@ -721,11 +724,7 @@ class TestRouterAccuracy:
     )
     def test_intent_classification(self, message: str, expected: Intent):
         result = parse_intent(message)
-        assert result.intent == expected, (
-            f"Message: {message!r}\n"
-            f"Expected: {expected}\n"
-            f"Got: {result.intent}"
-        )
+        assert result.intent == expected, f"Message: {message!r}\nExpected: {expected}\nGot: {result.intent}"
 
     def test_router_accuracy_at_least_90_percent(self):
         """Overall accuracy must be >= 90%."""
@@ -774,7 +773,11 @@ class TestStatePersistence:
     """Verify TeacherSession survives save → load round-trips."""
 
     def test_session_round_trip(
-        self, temp_db, persona, sample_unit, sample_lesson,
+        self,
+        temp_db,
+        persona,
+        sample_unit,
+        sample_lesson,
     ):
         """Session with persona, unit, and lesson survives save/load."""
         session = TeacherSession(
@@ -810,11 +813,15 @@ class TestStatePersistence:
         assert "WWI" in loaded.context[0]["content"]
 
     def test_session_unit_saved_to_generated_units_table(
-        self, temp_db, persona, sample_unit,
+        self,
+        temp_db,
+        persona,
+        sample_unit,
     ):
         """save_unit() writes to the generated_units table."""
         session = TeacherSession(
-            teacher_id="teacher-integration-002", persona=persona,
+            teacher_id="teacher-integration-002",
+            persona=persona,
         )
         unit_id = session.save_unit(sample_unit)
 
@@ -823,20 +830,25 @@ class TestStatePersistence:
         assert any(u["id"] == unit_id for u in recent)
 
     def test_session_lesson_saved_with_share_token(
-        self, temp_db, persona, sample_unit, sample_lesson,
+        self,
+        temp_db,
+        persona,
+        sample_unit,
+        sample_lesson,
     ):
         """save_lesson() creates a unique share token."""
         session = TeacherSession(
-            teacher_id="teacher-integration-003", persona=persona,
+            teacher_id="teacher-integration-003",
+            persona=persona,
         )
         unit_id = session.save_unit(sample_unit)
         session.save_lesson(sample_lesson, unit_id=unit_id)
 
         from clawed.state import _get_conn
+
         with _get_conn() as conn:
             row = conn.execute(
-                "SELECT share_token FROM generated_lessons "
-                "WHERE teacher_id = ?",
+                "SELECT share_token FROM generated_lessons WHERE teacher_id = ?",
                 ("teacher-integration-003",),
             ).fetchone()
         assert row is not None
@@ -850,7 +862,8 @@ class TestStatePersistence:
     def test_context_capped_at_20_turns(self, temp_db, persona):
         """Session context is capped at 20 turns on save."""
         session = TeacherSession(
-            teacher_id="teacher-cap-test", persona=persona,
+            teacher_id="teacher-cap-test",
+            persona=persona,
         )
         for i in range(30):
             session.add_context("user", f"Message {i}")
@@ -862,7 +875,8 @@ class TestStatePersistence:
     def test_multiple_units_tracked(self, temp_db, persona, sample_unit):
         """Multiple units can be saved for the same teacher."""
         session = TeacherSession(
-            teacher_id="teacher-multi-unit", persona=persona,
+            teacher_id="teacher-multi-unit",
+            persona=persona,
         )
         for i in range(3):
             unit = sample_unit.model_copy(
@@ -962,7 +976,10 @@ class TestCorpusContributionAndRetrieval:
         )
 
         results = get_examples(
-            "lesson_plan", "social studies", min_quality=3.0, limit=10,
+            "lesson_plan",
+            "social studies",
+            min_quality=3.0,
+            limit=10,
         )
         titles = [r.get("title", "") for r in results]
         assert "Good Lesson" in titles
@@ -985,7 +1002,10 @@ class TestCorpusContributionAndRetrieval:
         )
 
         results = get_examples(
-            "lesson_plan", "math", limit=1, min_quality=0.0,
+            "lesson_plan",
+            "math",
+            limit=1,
+            min_quality=0.0,
         )
         assert len(results) == 1
         content_str = json.dumps(results[0])
@@ -1006,6 +1026,7 @@ class TestCorpusContributionAndRetrieval:
         )
 
         from clawed.corpus import _get_conn
+
         with _get_conn() as conn:
             row = conn.execute(
                 "SELECT contributor_hash FROM corpus_examples",

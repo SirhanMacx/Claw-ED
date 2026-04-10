@@ -1,4 +1,5 @@
 """Tool: curriculum_map — wraps CurriculumMapper.generate_year_map."""
+
 from __future__ import annotations
 
 import json
@@ -48,9 +49,7 @@ class CurriculumMapTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.curriculum_map import CurriculumMapper
         from clawed.models import TeacherPersona
 

@@ -106,10 +106,7 @@ async def extension_generate(req: ExtensionGenerateRequest):
             "topic": master.topic,
             "sources": len(master.primary_sources),
             "files": [],  # Could add file paths if compiled
-            "message": (
-                f"Lesson '{master.title}' generated! "
-                f"Open the Claw-ED dashboard to view and export."
-            ),
+            "message": (f"Lesson '{master.title}' generated! Open the Claw-ED dashboard to view and export."),
         }
     except Exception as exc:
         logger.exception("Extension generate failed")
@@ -126,11 +123,13 @@ async def extension_add_source(req: ExtensionSourceRequest):
     """Save highlighted text as a primary source for future lessons."""
     if len(_saved_sources) >= _MAX_SOURCES:
         _saved_sources.pop(0)  # Remove oldest
-    _saved_sources.append({
-        "text": req.text[:50000],  # Cap text length
-        "url": req.source_url,
-        "title": req.source_title,
-    })
+    _saved_sources.append(
+        {
+            "text": req.text[:50000],  # Cap text length
+            "url": req.source_url,
+            "title": req.source_title,
+        }
+    )
     logger.info("Extension: saved source '%s' (%d chars)", req.source_title, len(req.text))
     return {"message": f"Source saved! ({len(_saved_sources)} total)"}
 
@@ -146,6 +145,7 @@ async def extension_list_sources():
 
 class ClassroomState(BaseModel):
     """Shared state for real-time classroom presentation."""
+
     lesson_title: str = ""
     current_slide: int = 0
     total_slides: int = 0
@@ -192,10 +192,13 @@ async def classroom_next_slide(code: str):
         return {"error": "Session not found"}
     if session.current_slide < session.total_slides - 1:
         session.current_slide += 1
-    await _broadcast(code, {
-        "type": "slide_change",
-        "slide": session.current_slide,
-    })
+    await _broadcast(
+        code,
+        {
+            "type": "slide_change",
+            "slide": session.current_slide,
+        },
+    )
     return {"slide": session.current_slide}
 
 
@@ -207,10 +210,13 @@ async def classroom_prev_slide(code: str):
         return {"error": "Session not found"}
     if session.current_slide > 0:
         session.current_slide -= 1
-    await _broadcast(code, {
-        "type": "slide_change",
-        "slide": session.current_slide,
-    })
+    await _broadcast(
+        code,
+        {
+            "type": "slide_change",
+            "slide": session.current_slide,
+        },
+    )
     return {"slide": session.current_slide}
 
 
@@ -222,10 +228,13 @@ async def classroom_start_timer(code: str, seconds: int = 600):
         return {"error": "Session not found"}
     session.timer_seconds = seconds
     session.timer_running = True
-    await _broadcast(code, {
-        "type": "timer_start",
-        "seconds": seconds,
-    })
+    await _broadcast(
+        code,
+        {
+            "type": "timer_start",
+            "seconds": seconds,
+        },
+    )
     return {"timer": seconds}
 
 
@@ -238,10 +247,13 @@ async def classroom_launch_poll(code: str, question: str = ""):
     session.poll_active = True
     session.poll_question = question
     session.poll_responses = []
-    await _broadcast(code, {
-        "type": "poll_start",
-        "question": question,
-    })
+    await _broadcast(
+        code,
+        {
+            "type": "poll_start",
+            "question": question,
+        },
+    )
     return {"poll": question}
 
 
@@ -252,15 +264,20 @@ async def classroom_respond(code: str, student_id: str = "", response: str = "")
     session = _classroom_sessions.get(code)
     if not session:
         return {"error": "Session not found"}
-    session.poll_responses.append({
-        "student_id": student_id,
-        "response": response,
-    })
+    session.poll_responses.append(
+        {
+            "student_id": student_id,
+            "response": response,
+        }
+    )
     # Broadcast updated count to teacher
-    await _broadcast(code, {
-        "type": "poll_update",
-        "count": len(session.poll_responses),
-    })
+    await _broadcast(
+        code,
+        {
+            "type": "poll_update",
+            "count": len(session.poll_responses),
+        },
+    )
     return {"received": True}
 
 
@@ -295,10 +312,12 @@ async def classroom_websocket(websocket: WebSocket, code: str):
         # Send current state on connect
         session = _classroom_sessions.get(code)
         if session:
-            await websocket.send_json({
-                "type": "state_sync",
-                "state": session.model_dump(),
-            })
+            await websocket.send_json(
+                {
+                    "type": "state_sync",
+                    "state": session.model_dump(),
+                }
+            )
 
         # Keep alive and listen for messages
         while True:
@@ -359,8 +378,7 @@ async def community_share(req: ShareRequest):
         _community_lessons.pop(0)
 
     # Strip teacher identity (deep — check nested objects too)
-    _identity_fields = {"teacher_name", "school", "teacher_id", "persona",
-                        "teacher_email", "name"}
+    _identity_fields = {"teacher_name", "school", "teacher_id", "persona", "teacher_email", "name"}
     for field in _identity_fields:
         lesson_data.pop(field, None)
     for key, val in list(lesson_data.items()):
@@ -402,10 +420,9 @@ async def community_browse(
     if query:
         q = query.lower()
         results = [
-            r for r in results
-            if q in r["title"].lower()
-            or q in r["topic"].lower()
-            or any(q in t.lower() for t in r["tags"])
+            r
+            for r in results
+            if q in r["title"].lower() or q in r["topic"].lower() or any(q in t.lower() for t in r["tags"])
         ]
 
     return {
@@ -443,9 +460,12 @@ async def pipeline_status():
     # Read the most recent generation log
     import os
 
-    base = Path(os.environ.get(
-        "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"),
-    ))
+    base = Path(
+        os.environ.get(
+            "EDUAGENT_DATA_DIR",
+            str(Path.home() / ".eduagent"),
+        )
+    )
     log_path = base / "logs" / "generation.log"
 
     recent_entries: list[str] = []

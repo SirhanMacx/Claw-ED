@@ -3,6 +3,7 @@
 Automatically refreshes expired or near-expired OAuth tokens before
 API calls. Uses the same refresh flow as Claude Code CLI.
 """
+
 from __future__ import annotations
 
 import json
@@ -76,9 +77,7 @@ def _refresh_token(refresh_token: str | None) -> str | None:
         if resp.status_code == 400:
             body = resp.text[:200]
             if "invalid_grant" in body:
-                logger.warning(
-                    "OAuth refresh token expired. Run 'claude login' to re-authenticate."
-                )
+                logger.warning("OAuth refresh token expired. Run 'claude login' to re-authenticate.")
             else:
                 logger.warning("Token refresh returned 400: %s", body)
             return None
@@ -103,6 +102,7 @@ def _refresh_token(refresh_token: str | None) -> str | None:
 
         # Also update secrets.json if it has the old token
         from clawed.paths import data_dir
+
         secrets_path = data_dir() / "secrets.json"
         if secrets_path.exists():
             try:

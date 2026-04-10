@@ -1,4 +1,5 @@
 """Tool: request_approval — creates a PendingApproval via ApprovalManager."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -42,9 +43,7 @@ class RequestApprovalTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.approvals import ApprovalManager
 
         action_description = params["action_description"]
@@ -62,8 +61,7 @@ class RequestApprovalTool:
                 timeout_hours=timeout_hours,
             )
             return ToolResult(
-                text=f"Approval requested: {action_description} "
-                f"(ID: {pa.id}, expires in {timeout_hours}h)",
+                text=f"Approval requested: {action_description} (ID: {pa.id}, expires in {timeout_hours}h)",
                 data=pa.to_dict(),
                 side_effects=[f"Created pending approval {pa.id}"],
             )

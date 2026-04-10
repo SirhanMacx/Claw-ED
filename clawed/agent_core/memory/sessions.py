@@ -21,9 +21,7 @@ _initialized = False
 
 
 def _db_path() -> Path:
-    data_dir = os.environ.get(
-        "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-    )
+    data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
     return Path(data_dir) / "memory" / "sessions.db"
 
 
@@ -67,8 +65,7 @@ def save_turn(
     _ensure_db()
     with _get_conn() as conn:
         conn.execute(
-            "INSERT INTO sessions (teacher_id, transport, role, content, timestamp)"
-            " VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO sessions (teacher_id, transport, role, content, timestamp) VALUES (?, ?, ?, ?, ?)",
             (
                 teacher_id,
                 transport,
@@ -100,10 +97,7 @@ def load_recent_for_llm(teacher_id: str, limit: int = 10) -> list[dict]:
     Returns list of {"role": "user"|"assistant", "content": "..."}.
     """
     turns = load_recent(teacher_id, limit)
-    return [
-        {"role": t["role"], "content": t["content"]}
-        for t in turns
-    ]
+    return [{"role": t["role"], "content": t["content"]} for t in turns]
 
 
 def format_for_prompt(teacher_id: str, limit: int = 10) -> str:

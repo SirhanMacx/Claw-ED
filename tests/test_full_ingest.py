@@ -18,8 +18,10 @@ def test_full_ingest_returns_dict_with_all_keys(tmp_path):
     )
 
     # Patch heavy downstream steps so the test stays fast and isolated
-    with patch("clawed.ingestor.extract_rich", return_value=None), \
-         patch("clawed.asset_registry.AssetRegistry.register_asset", return_value=1):
+    with (
+        patch("clawed.ingestor.extract_rich", return_value=None),
+        patch("clawed.asset_registry.AssetRegistry.register_asset", return_value=1),
+    ):
         result = full_ingest(tmp_path, teacher_id="test-teacher")
 
     assert isinstance(result, dict)

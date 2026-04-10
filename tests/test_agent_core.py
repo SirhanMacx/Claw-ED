@@ -1,4 +1,5 @@
 """Tests for agent_core data types."""
+
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,7 @@ class TestToolResult:
 class TestAgentContext:
     def test_construction(self):
         from clawed.models import AppConfig
+
         ctx = AgentContext(
             teacher_id="t1",
             config=AppConfig(),
@@ -39,6 +41,7 @@ class TestAgentContext:
 class TestPromptAssembly:
     def test_builds_prompt_with_teacher_name(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Ms. Smith",
             identity_summary="8th grade Science, inquiry-based",
@@ -52,6 +55,7 @@ class TestPromptAssembly:
 
     def test_identity_summary_included_without_soul_context(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Ms. Smith",
             identity_summary="8th grade Science, inquiry-based",
@@ -62,6 +66,7 @@ class TestPromptAssembly:
 
     def test_identity_summary_hidden_when_soul_context_present(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Ms. Smith",
             identity_summary="8th grade Science, inquiry-based",
@@ -75,6 +80,7 @@ class TestPromptAssembly:
 
     def test_builds_prompt_without_improvement_context(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Teacher",
             identity_summary="",
@@ -86,6 +92,7 @@ class TestPromptAssembly:
 
     def test_builds_prompt_with_custom_agent_name(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             agent_name="Sage",
             teacher_name="Mr. Johnson",
@@ -97,6 +104,7 @@ class TestPromptAssembly:
 
     def test_builds_prompt_with_default_name(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Teacher",
             identity_summary="",
@@ -107,6 +115,7 @@ class TestPromptAssembly:
 
     def test_curriculum_kb_context_included(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Ms. Lee",
             identity_summary="",
@@ -118,6 +127,7 @@ class TestPromptAssembly:
 
     def test_workspace_references_in_prompt(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Teacher",
             identity_summary="",
@@ -131,6 +141,7 @@ class TestPromptAssembly:
 
     def test_new_user_first_interaction(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Teacher",
             identity_summary="",
@@ -143,6 +154,7 @@ class TestPromptAssembly:
 
     def test_tool_names_listed(self):
         from clawed.agent_core.prompt import build_system_prompt
+
         prompt = build_system_prompt(
             teacher_name="Teacher",
             identity_summary="",
@@ -151,7 +163,6 @@ class TestPromptAssembly:
         )
         assert "3 available" in prompt
         assert "generate_lesson" in prompt
-
 
 
 class TestAgentGateway:
@@ -165,8 +176,10 @@ class TestAgentGateway:
 
         llm = FakeLLM([{"type": "text", "content": "Hello teacher!"}])
         gw = AgentGateway(config=AppConfig(agent_gateway=True), llm=llm)
-        with patch("clawed.agent_core.core.has_config", return_value=True), \
-             patch("clawed.agent_core.core.has_teacher_profile", return_value=True):
+        with (
+            patch("clawed.agent_core.core.has_config", return_value=True),
+            patch("clawed.agent_core.core.has_teacher_profile", return_value=True),
+        ):
             result = await gw.handle("hi", "t1")
         assert result.text == "Hello teacher!"
 
@@ -198,6 +211,7 @@ class TestAgentGateway:
     def test_has_event_bus(self):
         from clawed.agent_core.core import Gateway as AgentGateway
         from clawed.models import AppConfig
+
         gw = AgentGateway(config=AppConfig(agent_gateway=True))
         assert gw.event_bus is not None
 
@@ -205,6 +219,7 @@ class TestAgentGateway:
     async def test_has_stats(self):
         from clawed.agent_core.core import Gateway as AgentGateway
         from clawed.models import AppConfig
+
         gw = AgentGateway(config=AppConfig(agent_gateway=True))
         s = await gw.stats()
         assert "messages_today" in s
@@ -212,6 +227,7 @@ class TestAgentGateway:
     def test_has_backward_compat_methods(self):
         from clawed.agent_core.core import Gateway as AgentGateway
         from clawed.models import AppConfig
+
         gw = AgentGateway(config=AppConfig(agent_gateway=True))
         assert hasattr(gw, "process_message")
         assert hasattr(gw, "start")
@@ -221,5 +237,6 @@ class TestAgentGateway:
     def test_feature_flag_on_routes_here(self):
         from clawed.gateway import Gateway
         from clawed.models import AppConfig
+
         gw = Gateway(config=AppConfig(agent_gateway=True))
         assert gw.__class__.__module__ == "clawed.agent_core.core"

@@ -53,8 +53,7 @@ async def generate_iep_lesson_modifications(
 
     for profile in iep_profiles:
         prompt = (
-            prompt_template
-            .replace("{lesson_title}", lesson.title)
+            prompt_template.replace("{lesson_title}", lesson.title)
             .replace("{objective}", lesson.objective)
             .replace("{standards}", ", ".join(lesson.standards) or "None specified")
             .replace("{do_now}", lesson.do_now)
@@ -101,8 +100,7 @@ async def generate_504_accommodations(
     prompt_template = (PROMPT_DIR / "504_accommodations.txt").read_text(encoding="utf-8")
 
     prompt = (
-        prompt_template
-        .replace("{lesson_title}", lesson.title)
+        prompt_template.replace("{lesson_title}", lesson.title)
         .replace("{objective}", lesson.objective)
         .replace("{grade_level}", "Not specified")
         .replace("{do_now}", lesson.do_now)
@@ -145,10 +143,7 @@ async def generate_tiered_assignments(
     prompt_template = (PROMPT_DIR / "tiered_assignments.txt").read_text(encoding="utf-8")
 
     prompt = (
-        prompt_template
-        .replace("{topic}", topic)
-        .replace("{grade_level}", grade)
-        .replace("{num_tiers}", str(tiers))
+        prompt_template.replace("{topic}", topic).replace("{grade_level}", grade).replace("{num_tiers}", str(tiers))
     )
 
     cfg = config or AppConfig.load()

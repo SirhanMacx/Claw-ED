@@ -25,6 +25,7 @@ def _get_gateway():
     global _gateway
     if _gateway is None:
         from clawed.gateway import Gateway
+
         _gateway = Gateway()
     return _gateway
 
@@ -45,11 +46,14 @@ async def gateway_chat(request: Request, req: GatewayChatRequest):
 
     # Use canonical teacher_id — not caller-supplied
     from clawed.agent_core.identity import get_teacher_id
+
     teacher_id = get_teacher_id()
 
     try:
         result = await gateway.handle(
-            req.message, teacher_id, transport="web",
+            req.message,
+            teacher_id,
+            transport="web",
         )
     except Exception:
         logger.error("Gateway chat failed", exc_info=True)

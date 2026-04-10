@@ -65,8 +65,8 @@ class InstructionSection(BaseModel):
     teacher_script: str
     key_points: list[str] = Field(default_factory=list)
     image_spec: str = ""
-    hook: str = ""          # Opening hook — analogy, story, provocative question, character intro
-    transition: str = ""    # Scripted pivot phrase to next section
+    hook: str = ""  # Opening hook — analogy, story, provocative question, character intro
+    transition: str = ""  # Scripted pivot phrase to next section
 
     @field_validator("image_spec", mode="after")
     @classmethod
@@ -92,9 +92,9 @@ class StationDocument(BaseModel):
     task: str
     student_directions: str
     teacher_answer_key: str
-    timer_minutes: int = 10          # Visual timer for rotation
-    group_roles: str = ""            # "Reader, Recorder, Reporter, Timekeeper"
-    reporting_template: str = ""     # Structured output format for each station
+    timer_minutes: int = 10  # Visual timer for rotation
+    group_roles: str = ""  # "Reader, Recorder, Reporter, Timekeeper"
+    reporting_template: str = ""  # Structured output format for each station
 
 
 class StimulusQuestion(BaseModel):
@@ -117,9 +117,7 @@ class StimulusQuestion(BaseModel):
     @classmethod
     def _require_stimulus(cls, v: object) -> object:
         if isinstance(v, str) and not v.strip():
-            raise ValueError(
-                "stimulus must not be empty — every question needs a pedagogical anchor"
-            )
+            raise ValueError("stimulus must not be empty — every question needs a pedagogical anchor")
         return v
 
 
@@ -148,9 +146,9 @@ class JigsawStructure(BaseModel):
     documents_per_group: list[str] = Field(default_factory=list)  # PrimarySource IDs
     expert_phase_minutes: int = 10
     teaching_phase_minutes: int = 10
-    graphic_organizer: str = ""     # Table headers/column structure
-    share_out_protocol: str = ""    # "Each expert has 2 minutes to teach..."
-    debrief_question: str = ""      # Whole-class closing question
+    graphic_organizer: str = ""  # Table headers/column structure
+    share_out_protocol: str = ""  # "Each expert has 2 minutes to teach..."
+    debrief_question: str = ""  # Whole-class closing question
 
 
 class CreativeActivity(BaseModel):
@@ -158,11 +156,11 @@ class CreativeActivity(BaseModel):
 
     activity_type: str = ""  # role_play, debate, podcast_script, social_media, gallery_walk, mock_trial, time_travel
     title: str = ""
-    scenario: str = ""           # The setup/premise students enter
+    scenario: str = ""  # The setup/premise students enter
     roles: list[str] = Field(default_factory=list)  # Character roles
     student_directions: str = ""  # Step-by-step what students do
-    deliverable: str = ""        # What students produce
-    debrief: str = ""            # How teacher wraps up
+    deliverable: str = ""  # What students produce
+    debrief: str = ""  # How teacher wraps up
     time_minutes: int = 15
 
 
@@ -248,17 +246,11 @@ class MasterContent(BaseModel):
 
         do_now_text = self.do_now.stimulus
         if self.do_now.questions:
-            do_now_text += "\n\n" + "\n".join(
-                f"Q: {q}" for q in self.do_now.questions
-            )
+            do_now_text += "\n\n" + "\n".join(f"Q: {q}" for q in self.do_now.questions)
 
-        direct_instruction_text = "\n\n".join(
-            f"## {s.heading}\n{s.content}" for s in self.direct_instruction
-        )
+        direct_instruction_text = "\n\n".join(f"## {s.heading}\n{s.content}" for s in self.direct_instruction)
 
-        guided_practice_text = "\n".join(
-            f"- {n.prompt} (Answer: {n.answer})" for n in self.guided_notes
-        )
+        guided_practice_text = "\n".join(f"- {n.prompt} (Answer: {n.answer})" for n in self.guided_notes)
 
         exit_ticket_items = [
             ExitTicketQuestion(

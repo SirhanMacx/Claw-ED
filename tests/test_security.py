@@ -2,6 +2,7 @@
 
 Proves the security model works, not just that routes exist.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -40,6 +41,7 @@ def authed_client(app, monkeypatch):
     """Client WITH valid auth token."""
     monkeypatch.delenv("EDUAGENT_LOCAL_AUTH_BYPASS", raising=False)
     from clawed.api.deps import get_api_token
+
     token = get_api_token()
     client = TestClient(app)
     client.headers["Authorization"] = f"Bearer {token}"
@@ -69,20 +71,26 @@ class TestHealthPublic:
 class TestAuthRequired:
     """Protected routes return 401 without token."""
 
-    @pytest.mark.parametrize("route", [
-        "/api/settings",
-        "/api/health/diagnostics",
-    ])
+    @pytest.mark.parametrize(
+        "route",
+        [
+            "/api/settings",
+            "/api/health/diagnostics",
+        ],
+    )
     def test_get_routes_reject_no_auth(self, unauthed_client, route):
         resp = unauthed_client.get(route)
         assert resp.status_code == 401
 
-    @pytest.mark.parametrize("route,body", [
-        ("/api/settings", {"provider": "ollama"}),
-        ("/api/settings/clear-content", {}),
-        ("/api/settings/reset", {}),
-        ("/api/gateway/chat", {"message": "hello"}),
-    ])
+    @pytest.mark.parametrize(
+        "route,body",
+        [
+            ("/api/settings", {"provider": "ollama"}),
+            ("/api/settings/clear-content", {}),
+            ("/api/settings/reset", {}),
+            ("/api/gateway/chat", {"message": "hello"}),
+        ],
+    )
     def test_post_routes_reject_no_auth(self, unauthed_client, route, body):
         resp = unauthed_client.post(route, json=body)
         assert resp.status_code == 401
@@ -111,6 +119,7 @@ class TestInvalidToken:
 
     def test_missing_bearer_prefix(self, unauthed_client):
         from clawed.api.deps import get_api_token
+
         unauthed_client.headers["Authorization"] = get_api_token()
         resp = unauthed_client.get("/api/settings")
         assert resp.status_code == 401
@@ -121,9 +130,8 @@ class TestBypassDisabledByDefault:
 
     def test_bypass_env_not_set(self, unauthed_client):
         import os
-        assert os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") != "1", (
-            "Bypass should be disabled for unauthed tests"
-        )
+
+        assert os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") != "1", "Bypass should be disabled for unauthed tests"
 
     def test_testclient_still_rejected_without_bypass(self, unauthed_client):
         """Even though TestClient sends from 'testclient' host,
@@ -163,9 +171,7 @@ class TestRateLimiting:
             )
             statuses.append(resp.status_code)
 
-        assert 429 in statuses, (
-            f"Expected 429 in responses but got: {set(statuses)}"
-        )
+        assert 429 in statuses, f"Expected 429 in responses but got: {set(statuses)}"
 
 
 class TestPublicShareRoutes:

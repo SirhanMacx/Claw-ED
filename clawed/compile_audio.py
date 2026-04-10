@@ -54,9 +54,7 @@ def compile_narration_script(master: "MasterContent", output_dir: Path) -> Path:
     topic_text = master.topic or "today's topic"
     subject_text = master.subject or "class"
     grade_text = master.grade_level or "your grade"
-    lines.append(
-        f"We're covering {topic_text} in {subject_text}, {grade_text}."
-    )
+    lines.append(f"We're covering {topic_text} in {subject_text}, {grade_text}.")
     lines.append(f"Our objective: {master.objective}")
     lines.append("[PAUSE]")
 
@@ -64,10 +62,7 @@ def compile_narration_script(master: "MasterContent", output_dir: Path) -> Path:
     if master.vocabulary:
         lines.append("Let's start with some key vocabulary you'll need today.")
         for entry in master.vocabulary[:5]:
-            lines.append(
-                f"{entry.term} means {entry.definition}. "
-                f"For example: {entry.context_sentence}"
-            )
+            lines.append(f"{entry.term} means {entry.definition}. For example: {entry.context_sentence}")
             lines.append("[PAUSE]")
 
     # Direct instruction (from teacher_script — the most natural voice)
@@ -100,19 +95,13 @@ def compile_narration_script(master: "MasterContent", output_dir: Path) -> Path:
 
     # Exit ticket preview
     if master.exit_ticket:
-        lines.append(
-            "Before we wrap up, here's what you'll need to show me "
-            "you learned today."
-        )
+        lines.append("Before we wrap up, here's what you'll need to show me you learned today.")
         for i, et in enumerate(master.exit_ticket, 1):
             lines.append(f"Question {i}: {et.question}")
         lines.append("[PAUSE]")
 
     # Closing
-    lines.append(
-        "That's our lesson for today. Review your guided notes, "
-        "and come ready to build on this tomorrow."
-    )
+    lines.append("That's our lesson for today. Review your guided notes, and come ready to build on this tomorrow.")
     if master.homework and master.homework.strip():
         lines.append(f"For homework: {master.homework}")
 

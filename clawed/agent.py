@@ -9,6 +9,7 @@ The agent loop:
 Works with Anthropic (native tool use), OpenAI (function calling),
 and Ollama (when model supports tools, falls back to prompt-based).
 """
+
 from __future__ import annotations
 
 import json
@@ -26,6 +27,7 @@ def _is_oauth_token(api_key: str) -> bool:
     detection across all modules.
     """
     from clawed.config import is_anthropic_oauth_token
+
     return is_anthropic_oauth_token(api_key)
 
 
@@ -39,10 +41,7 @@ def _anthropic_headers(api_key: str) -> dict[str, str]:
         return {
             "authorization": f"Bearer {api_key}",
             "anthropic-version": "2023-06-01",
-            "anthropic-beta": (
-                "interleaved-thinking-2025-05-14,"
-                "claude-code-20250219,oauth-2025-04-20"
-            ),
+            "anthropic-beta": ("interleaved-thinking-2025-05-14,claude-code-20250219,oauth-2025-04-20"),
             "user-agent": "claude-cli/1.0.0 (external, cli)",
             "x-app": "cli",
             "content-type": "application/json",
@@ -52,6 +51,7 @@ def _anthropic_headers(api_key: str) -> dict[str, str]:
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }
+
 
 logger = logging.getLogger(__name__)
 
@@ -87,11 +87,13 @@ async def run_agent(
             tool_calls = response["tool_calls"]
 
             # Add ONE assistant message containing ALL tool calls
-            messages.append({
-                "role": "assistant",
-                "content": None,
-                "tool_calls": tool_calls,
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": tool_calls,
+                }
+            )
 
             # Execute each tool and add its result
             for tool_call in tool_calls:
@@ -101,19 +103,19 @@ async def run_agent(
 
                 result = await execute_tool(tool_name, tool_args, teacher_id)
 
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.get("id", tool_name),
-                    "content": result,
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.get("id", tool_name),
+                        "content": result,
+                    }
+                )
             continue
 
     return "I tried to help but hit my iteration limit. Could you rephrase your request?"
 
 
-async def _call_with_native_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
-) -> dict[str, Any]:
+async def _call_with_native_tools(messages: list[dict[str, Any]], system: str, config: AppConfig) -> dict[str, Any]:
     """Call Anthropic or OpenAI with native tool support."""
     if config.provider == LLMProvider.ANTHROPIC:
         return await _anthropic_with_tools(messages, system, config)
@@ -121,9 +123,7 @@ async def _call_with_native_tools(
         return await _openai_with_tools(messages, system, config)
 
 
-async def _anthropic_with_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
-) -> dict[str, Any]:
+async def _anthropic_with_tools(messages: list[dict[str, Any]], system: str, config: AppConfig) -> dict[str, Any]:
     """Call Anthropic API with tool use."""
 
     from clawed.config import get_api_key
@@ -136,34 +136,42 @@ async def _anthropic_with_tools(
     tools = []
     for t in TOOL_DEFINITIONS:
         f = t["function"]
-        tools.append({
-            "name": f["name"],
-            "description": f["description"],
-            "input_schema": f["parameters"],
-        })
+        tools.append(
+            {
+                "name": f["name"],
+                "description": f["description"],
+                "input_schema": f["parameters"],
+            }
+        )
 
     # Convert messages to Anthropic format
     anthropic_messages: list[dict[str, Any]] = []
     for m in messages:
         if m["role"] == "tool":
-            anthropic_messages.append({
-                "role": "user",
-                "content": [{
-                    "type": "tool_result",
-                    "tool_use_id": m.get("tool_call_id", ""),
-                    "content": m["content"],
-                }],
-            })
+            anthropic_messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": m.get("tool_call_id", ""),
+                            "content": m["content"],
+                        }
+                    ],
+                }
+            )
         elif m["role"] == "assistant" and m.get("tool_calls"):
             # Single assistant message with ALL tool_use blocks
             content_blocks = []
             for tc in m["tool_calls"]:
-                content_blocks.append({
-                    "type": "tool_use",
-                    "id": tc.get("id", tc["name"]),
-                    "name": tc["name"],
-                    "input": tc.get("arguments", {}),
-                })
+                content_blocks.append(
+                    {
+                        "type": "tool_use",
+                        "id": tc.get("id", tc["name"]),
+                        "name": tc["name"],
+                        "input": tc.get("arguments", {}),
+                    }
+                )
             anthropic_messages.append({"role": "assistant", "content": content_blocks})
         elif m.get("content"):
             anthropic_messages.append({"role": m["role"], "content": m["content"]})
@@ -192,11 +200,13 @@ async def _anthropic_with_tools(
     text_parts = []
     for block in msg.content:
         if block.type == "tool_use":
-            tool_calls.append({
-                "id": block.id,
-                "name": block.name,
-                "arguments": block.input,
-            })
+            tool_calls.append(
+                {
+                    "id": block.id,
+                    "name": block.name,
+                    "arguments": block.input,
+                }
+            )
         elif block.type == "text" and block.text:
             text_parts.append(block.text)
 
@@ -207,9 +217,7 @@ async def _anthropic_with_tools(
     return {"type": "text", "content": ""}
 
 
-async def _openai_with_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
-) -> dict[str, Any]:
+async def _openai_with_tools(messages: list[dict[str, Any]], system: str, config: AppConfig) -> dict[str, Any]:
     """Call OpenAI-compatible API with function calling (OpenAI, OpenRouter)."""
     import httpx
 
@@ -226,23 +234,27 @@ async def _openai_with_tools(
     oai_messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for m in messages:
         if m["role"] == "tool":
-            oai_messages.append({
-                "role": "tool",
-                "tool_call_id": m.get("tool_call_id", ""),
-                "content": m["content"],
-            })
+            oai_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": m.get("tool_call_id", ""),
+                    "content": m["content"],
+                }
+            )
         elif m["role"] == "assistant" and m.get("tool_calls"):
             # Single assistant message with ALL tool calls
             oai_tool_calls = []
             for tc in m["tool_calls"]:
-                oai_tool_calls.append({
-                    "id": tc.get("id", tc["name"]),
-                    "type": "function",
-                    "function": {
-                        "name": tc["name"],
-                        "arguments": json.dumps(tc.get("arguments", {})),
-                    },
-                })
+                oai_tool_calls.append(
+                    {
+                        "id": tc.get("id", tc["name"]),
+                        "type": "function",
+                        "function": {
+                            "name": tc["name"],
+                            "arguments": json.dumps(tc.get("arguments", {})),
+                        },
+                    }
+                )
             oai_messages.append({"role": "assistant", "tool_calls": oai_tool_calls})
         elif m.get("content"):
             oai_messages.append({"role": m["role"], "content": m["content"]})
@@ -282,19 +294,19 @@ async def _openai_with_tools(
         # Collect ALL tool calls
         tool_calls = []
         for tc in msg["tool_calls"]:
-            tool_calls.append({
-                "id": tc["id"],
-                "name": tc["function"]["name"],
-                "arguments": json.loads(tc["function"]["arguments"]),
-            })
+            tool_calls.append(
+                {
+                    "id": tc["id"],
+                    "name": tc["function"]["name"],
+                    "arguments": json.loads(tc["function"]["arguments"]),
+                }
+            )
         return {"type": "tool_calls", "tool_calls": tool_calls}
 
     return {"type": "text", "content": msg.get("content", "")}
 
 
-async def _call_with_ollama_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
-) -> dict[str, Any]:
+async def _call_with_ollama_tools(messages: list[dict[str, Any]], system: str, config: AppConfig) -> dict[str, Any]:
     """Call Ollama with tool support (native if available, prompt-based fallback)."""
     import httpx
 
@@ -316,22 +328,26 @@ async def _call_with_ollama_tools(
     oai_messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for m in messages:
         if m["role"] == "tool":
-            oai_messages.append({
-                "role": "tool",
-                "tool_call_id": m.get("tool_call_id", ""),
-                "content": m["content"],
-            })
+            oai_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": m.get("tool_call_id", ""),
+                    "content": m["content"],
+                }
+            )
         elif m["role"] == "assistant" and m.get("tool_calls"):
             oai_tool_calls = []
             for tc in m["tool_calls"]:
-                oai_tool_calls.append({
-                    "id": tc.get("id", tc["name"]),
-                    "type": "function",
-                    "function": {
-                        "name": tc["name"],
-                        "arguments": json.dumps(tc.get("arguments", {})),
-                    },
-                })
+                oai_tool_calls.append(
+                    {
+                        "id": tc.get("id", tc["name"]),
+                        "type": "function",
+                        "function": {
+                            "name": tc["name"],
+                            "arguments": json.dumps(tc.get("arguments", {})),
+                        },
+                    }
+                )
             oai_messages.append({"role": "assistant", "tool_calls": oai_tool_calls})
         elif m.get("content"):
             oai_messages.append({"role": m["role"], "content": m["content"]})
@@ -358,11 +374,13 @@ async def _call_with_ollama_tools(
             tool_calls = []
             for tc in msg["tool_calls"]:
                 fn_args = tc["function"]["arguments"]
-                tool_calls.append({
-                    "id": tc.get("id", tc["function"]["name"]),
-                    "name": tc["function"]["name"],
-                    "arguments": json.loads(fn_args) if isinstance(fn_args, str) else fn_args,
-                })
+                tool_calls.append(
+                    {
+                        "id": tc.get("id", tc["function"]["name"]),
+                        "name": tc["function"]["name"],
+                        "arguments": json.loads(fn_args) if isinstance(fn_args, str) else fn_args,
+                    }
+                )
             return {"type": "tool_calls", "tool_calls": tool_calls}
 
         return {"type": "text", "content": msg.get("content", "")}
@@ -372,9 +390,7 @@ async def _call_with_ollama_tools(
         return await _ollama_plain_chat(messages, system, config)
 
 
-async def _ollama_plain_chat(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
-) -> dict[str, Any]:
+async def _ollama_plain_chat(messages: list[dict[str, Any]], system: str, config: AppConfig) -> dict[str, Any]:
     """Plain Ollama chat without tools (fallback)."""
     from clawed.llm import LLMClient
     from clawed.model_router import route
@@ -382,8 +398,6 @@ async def _ollama_plain_chat(
     routed_config = route("quick_answer", config)
     client = LLMClient(routed_config)
 
-    prompt = "\n".join(
-        f"{m['role'].upper()}: {m['content']}" for m in messages if m.get("content")
-    )
+    prompt = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages if m.get("content"))
     response = await client.generate(prompt=prompt, system=system, temperature=0.7, max_tokens=800)
     return {"type": "text", "content": response}

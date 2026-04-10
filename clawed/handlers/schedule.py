@@ -1,4 +1,5 @@
 """Schedule management handler. Extracted from tg.py lines 948-1026."""
+
 from __future__ import annotations
 
 import logging
@@ -7,6 +8,7 @@ from clawed.gateway_response import GatewayResponse
 from clawed.scheduler import disable_task, load_schedule_config
 
 logger = logging.getLogger(__name__)
+
 
 def _cron_to_human(cron: dict) -> str:
     hour = int(cron.get("hour", 0))
@@ -20,6 +22,7 @@ def _cron_to_human(cron: dict) -> str:
     if day:
         return f"{day.title()} at {time_str}"
     return f"Daily at {time_str}"
+
 
 class ScheduleHandler:
     async def show(self, teacher_id: str) -> GatewayResponse:
@@ -44,6 +47,7 @@ class ScheduleHandler:
 
     async def enable(self, teacher_id: str, task_name: str, time_str: str = "") -> GatewayResponse:
         from clawed.scheduler import enable_task, set_task_schedule
+
         enable_task(task_name)
         if time_str:
             set_task_schedule(task_name, time_str)

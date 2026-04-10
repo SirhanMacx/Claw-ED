@@ -3,6 +3,7 @@
 Tests pure functions in clawed.wiki without LLM calls.
 Covers: hashing, grouping, indexing, linting, and state persistence.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -45,25 +46,30 @@ def wiki_env(tmp_path, monkeypatch):
             )
         """)
         # Insert test chunks
-        sql = (
-            "INSERT INTO chunks "
-            "(teacher_id, doc_title, source_path, chunk_text, chunk_hash) "
-            "VALUES (?, ?, ?, ?, ?)"
+        sql = "INSERT INTO chunks (teacher_id, doc_title, source_path, chunk_text, chunk_hash) VALUES (?, ?, ?, ?, ?)"
+        conn.executemany(
+            sql,
+            [
+                (
+                    "default",
+                    "Photosynthesis Lecture",
+                    "/docs/photo.pptx",
+                    "Plants convert sunlight into glucose.",
+                    "h1",
+                ),
+                ("default", "Photosynthesis Lecture", "/docs/photo.pptx", "Chloroplasts contain chlorophyll.", "h2"),
+                (
+                    "default",
+                    "Photosynthesis Lecture",
+                    "/docs/photo.pptx",
+                    "The Calvin cycle fixes carbon dioxide.",
+                    "h3",
+                ),
+                ("default", "Civil War Unit", "/docs/cw.docx", "The Civil War began in 1861.", "h4"),
+                ("default", "Civil War Unit", "/docs/cw.docx", "Fort Sumter was the first battle.", "h5"),
+                ("other_teacher", "Algebra Basics", "/docs/algebra.pdf", "Solve for x.", "h6"),
+            ],
         )
-        conn.executemany(sql, [
-            ("default", "Photosynthesis Lecture", "/docs/photo.pptx",
-             "Plants convert sunlight into glucose.", "h1"),
-            ("default", "Photosynthesis Lecture", "/docs/photo.pptx",
-             "Chloroplasts contain chlorophyll.", "h2"),
-            ("default", "Photosynthesis Lecture", "/docs/photo.pptx",
-             "The Calvin cycle fixes carbon dioxide.", "h3"),
-            ("default", "Civil War Unit", "/docs/cw.docx",
-             "The Civil War began in 1861.", "h4"),
-            ("default", "Civil War Unit", "/docs/cw.docx",
-             "Fort Sumter was the first battle.", "h5"),
-            ("other_teacher", "Algebra Basics", "/docs/algebra.pdf",
-             "Solve for x.", "h6"),
-        ])
 
     return tmp_path
 
@@ -211,18 +217,20 @@ class TestLintWiki:
         from clawed.wiki import _save_compile_state, lint_wiki
 
         # Save state with wrong hash
-        _save_compile_state({
-            "Photosynthesis Lecture": {
-                "hash": "wrong_hash",
-                "compiled_at": "2026-01-01",
-                "article_file": "photosynthesis.md",
-            },
-            "Civil War Unit": {
-                "hash": "also_wrong",
-                "compiled_at": "2026-01-01",
-                "article_file": "civil_war.md",
-            },
-        })
+        _save_compile_state(
+            {
+                "Photosynthesis Lecture": {
+                    "hash": "wrong_hash",
+                    "compiled_at": "2026-01-01",
+                    "article_file": "photosynthesis.md",
+                },
+                "Civil War Unit": {
+                    "hash": "also_wrong",
+                    "compiled_at": "2026-01-01",
+                    "article_file": "civil_war.md",
+                },
+            }
+        )
         result = lint_wiki("default")
         assert len(result.stale) == 2
         assert result.healthy is False
@@ -231,13 +239,15 @@ class TestLintWiki:
         from clawed.wiki import _save_compile_state, lint_wiki
 
         # State references a document that doesn't exist in chunks
-        _save_compile_state({
-            "Deleted Document": {
-                "hash": "xyz",
-                "compiled_at": "2026-01-01",
-                "article_file": "deleted.md",
-            },
-        })
+        _save_compile_state(
+            {
+                "Deleted Document": {
+                    "hash": "xyz",
+                    "compiled_at": "2026-01-01",
+                    "article_file": "deleted.md",
+                },
+            }
+        )
         result = lint_wiki("default")
         assert len(result.orphaned) == 1
         assert result.orphaned[0]["doc_title"] == "Deleted Document"

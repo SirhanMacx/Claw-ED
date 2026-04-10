@@ -45,8 +45,27 @@ def test_in_academic_standards():
 def test_ccss_states():
     """States that adopted CCSS directly should return 'CCSS' for math."""
     ccss_states = [
-        "AL", "CO", "CT", "DE", "HI", "ID", "IL", "IA", "KS", "ME",
-        "MD", "MT", "NV", "NH", "ND", "OR", "RI", "SD", "VT", "WA", "WY",
+        "AL",
+        "CO",
+        "CT",
+        "DE",
+        "HI",
+        "ID",
+        "IL",
+        "IA",
+        "KS",
+        "ME",
+        "MD",
+        "MT",
+        "NV",
+        "NH",
+        "ND",
+        "OR",
+        "RI",
+        "SD",
+        "VT",
+        "WA",
+        "WY",
     ]
     for st in ccss_states:
         assert get_state_framework(st, "math") == "CCSS", f"{st} should use CCSS for math"

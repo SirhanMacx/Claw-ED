@@ -29,12 +29,16 @@ class TestGatewayStats:
 class TestActivityEvents:
     def test_emit_event(self):
         """Emit an event and verify it's in the event bus."""
+
         async def _inner():
             gateway = EduAgentGateway()
-            await gateway.emit("message_received", {
-                "teacher_id": "mr_mac",
-                "text": "plan a lesson on Imperialism",
-            })
+            await gateway.emit(
+                "message_received",
+                {
+                    "teacher_id": "mr_mac",
+                    "text": "plan a lesson on Imperialism",
+                },
+            )
 
             assert not gateway.event_bus.empty()
             event = await gateway.event_bus.get()
@@ -47,6 +51,7 @@ class TestActivityEvents:
 
     def test_event_bus_overflow(self):
         """When queue is full, oldest event should be dropped."""
+
         async def _inner():
             gateway = EduAgentGateway()
             # Fill the queue (maxsize=500)
@@ -66,6 +71,7 @@ class TestActivityEvents:
 
     def test_emit_error_event(self):
         """Error events should work."""
+
         async def _inner():
             gateway = EduAgentGateway()
             await gateway.emit("error", {"message": "connection failed"})
@@ -87,6 +93,7 @@ class TestGatewayInit:
 
     def test_gateway_start_demo_mode(self):
         """Starting without a token should enter demo mode and return."""
+
         async def _inner():
             gateway = EduAgentGateway()
             await gateway.start()
@@ -97,6 +104,7 @@ class TestGatewayInit:
 
     def test_gateway_stats_method(self):
         """The stats() method should return a dict with expected keys."""
+
         async def _inner():
             gateway = EduAgentGateway()
             s = await gateway.stats()
@@ -113,6 +121,7 @@ class TestGatewayInit:
 class TestGatewayProcessMessage:
     def test_process_message_increments_stats(self):
         """process_message should increment counters and populate active_sessions."""
+
         async def _inner():
             gateway = EduAgentGateway()
 

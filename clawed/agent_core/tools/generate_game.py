@@ -52,9 +52,7 @@ class GenerateGameTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         topic = params.get("topic", "").strip()
         if not topic:
             return ToolResult(text="ERROR: topic is required")
@@ -80,10 +78,7 @@ class GenerateGameTool:
             from clawed.master_content import MasterContent
 
             resolved_subject = subject or (context.persona or {}).get("subject_area", "")
-            resolved_grade = grade or (
-                (context.persona or {}).get("grade_levels", [""])[0]
-                if context.persona else ""
-            )
+            resolved_grade = grade or ((context.persona or {}).get("grade_levels", [""])[0] if context.persona else "")
             master = MasterContent(
                 title=f"{topic} Game",
                 subject=resolved_subject,

@@ -16,6 +16,7 @@ client ID. To enable it:
 For now, API key auth works perfectly:
   Get a free key at https://aistudio.google.com/apikey
 """
+
 from __future__ import annotations
 
 import logging

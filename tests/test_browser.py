@@ -84,11 +84,15 @@ class TestBrowserExecuteValidation:
     async def test_empty_url_returns_error(self):
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         tool = BrowserNavigateTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"url": ""}, ctx)
         assert "ERROR" in result.text
@@ -97,11 +101,15 @@ class TestBrowserExecuteValidation:
     async def test_empty_query_returns_error(self):
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         tool = BrowserSearchTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"query": ""}, ctx)
         assert "ERROR" in result.text
@@ -110,11 +118,15 @@ class TestBrowserExecuteValidation:
     async def test_empty_topic_returns_error(self):
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         tool = ResearchTopicTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"topic": ""}, ctx)
         assert "ERROR" in result.text
@@ -126,6 +138,7 @@ class TestToolDiscovery:
         from pathlib import Path
 
         from clawed.agent_core.tools.base import ToolRegistry
+
         reg = ToolRegistry()
         reg.discover(Path(__file__).parent.parent / "clawed" / "agent_core" / "tools")
         names = reg.tool_names()

@@ -30,9 +30,18 @@ class TestTaskTiers:
     def test_deep_tasks(self):
         """All generation tasks route to DEEP (Opus) — maximum intelligence."""
         deep_tasks = [
-            "lesson_plan", "unit_plan", "materials", "differentiation",
-            "assessment", "year_map", "pacing_guide", "curriculum_gaps",
-            "persona_extract", "evaluation", "master_content", "game_generate",
+            "lesson_plan",
+            "unit_plan",
+            "materials",
+            "differentiation",
+            "assessment",
+            "year_map",
+            "pacing_guide",
+            "curriculum_gaps",
+            "persona_extract",
+            "evaluation",
+            "master_content",
+            "game_generate",
         ]
         for task in deep_tasks:
             assert TASK_TIERS[task] == ModelTier.DEEP, f"{task} should be deep"
@@ -62,6 +71,7 @@ class TestResolveModel:
 
     def test_default_model_uses_provider_defaults(self):
         from clawed.model_router import PROVIDER_TIER_MODELS
+
         config = AppConfig(provider=LLMProvider.ANTHROPIC)
         model = resolve_model(ModelTier.DEEP, config)
         assert model == PROVIDER_TIER_MODELS["anthropic"]["deep"]
@@ -170,6 +180,7 @@ class TestRouteFunction:
 
     def test_route_with_anthropic_provider(self):
         from clawed.model_router import PROVIDER_TIER_MODELS
+
         config = AppConfig(provider=LLMProvider.ANTHROPIC)
         routed = route("quick_answer", config)
         # Model should be written to anthropic_model, not ollama_model

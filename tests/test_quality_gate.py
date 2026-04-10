@@ -88,35 +88,43 @@ def _good_master() -> MasterContent:
         guided_notes=[
             GuidedNote(
                 prompt="The ________ Estate paid all taxes.",
-                answer="Third", section_ref="The Three Estates",
+                answer="Third",
+                section_ref="The Three Estates",
             ),
             GuidedNote(
                 prompt="The First Estate was the ________.",
-                answer="clergy", section_ref="The Three Estates",
+                answer="clergy",
+                section_ref="The Three Estates",
             ),
             GuidedNote(
                 prompt="The Second Estate was the ________.",
-                answer="nobility", section_ref="The Three Estates",
+                answer="nobility",
+                section_ref="The Three Estates",
             ),
             GuidedNote(
                 prompt="The ________ class resented their lack of power.",
-                answer="middle", section_ref="The Three Estates",
+                answer="middle",
+                section_ref="The Three Estates",
             ),
             GuidedNote(
                 prompt="The Enlightenment promoted ideas of ________.",
-                answer="liberty", section_ref="The Three Estates",
+                answer="liberty",
+                section_ref="The Three Estates",
             ),
             GuidedNote(
                 prompt="The revolution began in ________.",
-                answer="1789", section_ref="The Three Estates",
+                answer="1789",
+                section_ref="The Three Estates",
             ),
             GuidedNote(
                 prompt="The ________ was the legislative body.",
-                answer="Estates-General", section_ref="The Three Estates",
+                answer="Estates-General",
+                section_ref="The Three Estates",
             ),
             GuidedNote(
                 prompt="Louis XVI was the ________ of France.",
-                answer="king", section_ref="The Three Estates",
+                answer="king",
+                section_ref="The Three Estates",
             ),
         ],
         stations=[
@@ -163,8 +171,7 @@ def _good_master() -> MasterContent:
         ],
         differentiation=DifferentiationNotes(
             struggling=[
-                "Provide a pre-filled graphic organizer with Cause/Effect "
-                "columns and two rows completed as models",
+                "Provide a pre-filled graphic organizer with Cause/Effect columns and two rows completed as models",
                 "Sentence starters for exit ticket: 'This reveals that...'",
             ],
             advanced=[
@@ -176,8 +183,7 @@ def _good_master() -> MasterContent:
             ],
         ),
         homework=(
-            "Write a paragraph comparing the grievances of the French "
-            "Third Estate with those of American colonists."
+            "Write a paragraph comparing the grievances of the French Third Estate with those of American colonists."
         ),
         materials_needed=["Printed primary source excerpts", "Graphic organizer handout"],
         creative_activity=CreativeActivity(
@@ -315,8 +321,7 @@ class TestQualityGateSelfContained:
     def test_refer_to_textbook_rejected(self):
         m = _good_master()
         m.primary_sources[0].content_text = (
-            "Please refer to textbook page 142 for the full text. "
-            "This section discusses the key principles of the era."
+            "Please refer to textbook page 142 for the full text. This section discusses the key principles of the era."
         )
         issues = _validate_quality(m)
         assert any("refer to textbook" in i for i in issues)
@@ -367,8 +372,7 @@ class TestQualityGateDiversity:
     def test_bias_flag_caught(self):
         m = _good_master()
         m.direct_instruction[0].content = (
-            "The primitive peoples of this region were uncivilized "
-            "until contact with European explorers."
+            "The primitive peoples of this region were uncivilized until contact with European explorers."
         )
         issues = _validate_quality(m)
         assert any("Diversity" in i for i in issues)

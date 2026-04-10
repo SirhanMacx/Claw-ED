@@ -4,6 +4,7 @@ Inspired by DeepTutor's Deep Research mode. Takes a broad topic, breaks
 it into 3-5 focused sub-questions, researches each in parallel, and
 produces a cited synthesis report for lesson grounding.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -34,6 +35,7 @@ async def deep_research(
     if not llm:
         from clawed.llm import LLMClient
         from clawed.models import AppConfig
+
         llm = LLMClient(config=AppConfig.load())
 
     # Step 1: Decompose into sub-questions
@@ -76,24 +78,18 @@ async def deep_research(
             kb_context = ""
             try:
                 from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
                 kb = CurriculumKB()
                 results = kb.search("default", question, top_k=3)
                 if results:
-                    kb_context = "\n".join(
-                        f"From '{r['doc_title']}': {r['chunk_text'][:200]}"
-                        for r in results
-                    )
+                    kb_context = "\n".join(f"From '{r['doc_title']}': {r['chunk_text'][:200]}" for r in results)
             except Exception:
                 pass
 
             # Then ask LLM to synthesize
-            research_prompt = (
-                f"Research question: {question}\n\n"
-            )
+            research_prompt = f"Research question: {question}\n\n"
             if kb_context:
-                research_prompt += (
-                    f"The teacher's own materials say:\n{kb_context}\n\n"
-                )
+                research_prompt += f"The teacher's own materials say:\n{kb_context}\n\n"
             research_prompt += (
                 "Provide a concise, factual answer (200-300 words) suitable "
                 f"for a {grade} grade {subject} teacher preparing a lesson. "
@@ -128,6 +124,7 @@ async def deep_research(
     # Humanize the report
     try:
         from clawed.humanize import humanize
+
         report = humanize(report)
     except Exception:
         pass

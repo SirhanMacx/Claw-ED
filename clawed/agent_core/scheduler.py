@@ -5,6 +5,7 @@ a clean interface for the gateway, tools, and tests.  When a scheduled
 task fires, the gateway's ``handle_system_event()`` routes it through the
 agent loop so Claw-ED can reason about what to do.
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,12 +28,14 @@ class AgentScheduler:
         """Return list of all scheduled tasks with their config."""
         tasks: list[dict[str, Any]] = []
         for name, cfg in self._config.items():
-            tasks.append({
-                "name": name,
-                "enabled": cfg.get("enabled", False),
-                "schedule": cfg.get("cron", {}),
-                "description": cfg.get("description", ""),
-            })
+            tasks.append(
+                {
+                    "name": name,
+                    "enabled": cfg.get("enabled", False),
+                    "schedule": cfg.get("cron", {}),
+                    "description": cfg.get("description", ""),
+                }
+            )
         return tasks
 
     # -- Mutate ---------------------------------------------------------------

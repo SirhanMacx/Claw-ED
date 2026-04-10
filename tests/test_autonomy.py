@@ -76,7 +76,9 @@ class TestApprovalTracker:
     def test_record_approval_with_payload(self, tmp_path):
         tracker = ApprovalTracker(db_path=tmp_path / "approvals.db")
         tracker.record_approval(
-            "generate_lesson", approved=True, teacher_id="t1",
+            "generate_lesson",
+            approved=True,
+            teacher_id="t1",
             payload={"tool": "lesson_gen", "args": {"topic": "math"}},
         )
         rates = tracker.get_rates()
@@ -121,6 +123,7 @@ class TestApprovalTracker:
 class TestStudentInsightsTool:
     def test_schema_valid(self):
         from clawed.agent_core.tools.student_insights import StudentInsightsTool
+
         tool = StudentInsightsTool()
         s = tool.schema()
         assert s["function"]["name"] == "student_insights"
@@ -131,11 +134,15 @@ class TestStudentInsightsTool:
         from clawed.agent_core.context import AgentContext
         from clawed.agent_core.tools.student_insights import StudentInsightsTool
         from clawed.models import AppConfig
+
         tool = StudentInsightsTool()
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         result = await tool.execute({"days": 7}, ctx)
         assert "No student questions" in result.text or isinstance(result.text, str)

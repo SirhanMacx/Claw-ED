@@ -106,7 +106,10 @@ def _collect_image_specs(master: "MasterContent") -> dict[str, str]:
 
 
 async def _fetch_one(
-    spec: str, subject: str = "", context: str = "", timeout: int = 15,
+    spec: str,
+    subject: str = "",
+    context: str = "",
+    timeout: int = 15,
 ) -> tuple[str, Path | None]:
     """Fetch a single image by spec. Returns (spec, path) or (spec, None).
 
@@ -179,7 +182,8 @@ async def fetch_all_images(
         if images:
             logger.info(
                 "Found %d/%d images from teacher's own materials",
-                len(images), len(spec_map),
+                len(images),
+                len(spec_map),
             )
 
     # Remove already-resolved specs from the fetch list
@@ -189,7 +193,9 @@ async def fetch_all_images(
     if remaining:
         logger.info(
             "Fetching %d images from external sources (timeout=%ds, subject=%s)",
-            len(remaining), timeout, subject,
+            len(remaining),
+            timeout,
+            subject,
         )
 
         semaphore = asyncio.Semaphore(_CONCURRENT_LIMIT)
@@ -233,8 +239,10 @@ async def fetch_all_images(
 
     logger.info(
         "Image pipeline: %d/%d resolved (%d from teacher, %d from web)",
-        len(images), len(spec_map),
-        len(spec_map) - len(remaining), len(images) - (len(spec_map) - len(remaining)),
+        len(images),
+        len(spec_map),
+        len(spec_map) - len(remaining),
+        len(images) - (len(spec_map) - len(remaining)),
     )
     return images
 
@@ -251,6 +259,7 @@ def _resolve_from_teacher_assets(
     """
     try:
         from clawed.asset_registry import AssetRegistry
+
         registry = AssetRegistry()
     except Exception:
         return {}
@@ -271,7 +280,9 @@ def _resolve_from_teacher_assets(
                 used_paths.add(path_str)
                 logger.debug(
                     "Teacher image found for '%s': %s (score: %.1f)",
-                    spec[:50], path.name, match.get("score", 0),
+                    spec[:50],
+                    path.name,
+                    match.get("score", 0),
                 )
                 break  # Use first unused match
 

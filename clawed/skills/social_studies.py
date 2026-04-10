@@ -6,8 +6,7 @@ skill = SubjectSkill(
     subject="social_studies",
     display_name="Social Studies",
     description=(
-        "DBQ analysis, primary source interpretation, MAIN acronym for "
-        "causation, Socratic questioning techniques."
+        "DBQ analysis, primary source interpretation, MAIN acronym for causation, Socratic questioning techniques."
     ),
     aliases=("social studies", "civics", "government", "geography", "economics"),
     system_prompt=(

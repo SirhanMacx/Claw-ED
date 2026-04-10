@@ -5,6 +5,7 @@ Every handler returns a GatewayResponse. Transports render it:
   - Web API: JSON serialization
   - CLI: rich.print + file paths
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

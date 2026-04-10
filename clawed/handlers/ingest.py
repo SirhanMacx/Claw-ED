@@ -4,6 +4,7 @@ v2.3.7: Background ingestion — returns immediately with acknowledgment,
 runs the heavy work in a background thread, and sends a completion
 message via progress_callback when finished.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -24,11 +25,13 @@ _ingest_semaphore = threading.Semaphore(3)
 
 def ingest_path(path, **kwargs):
     from clawed.ingestor import ingest_path as _ingest
+
     return _ingest(path, **kwargs)
 
 
 async def extract_persona(documents, config=None):
     from clawed.persona import extract_persona as _extract
+
     return await _extract(documents, config)
 
 
@@ -55,17 +58,18 @@ class IngestHandler:
                 if len(all_files) > MAX_INGEST_FILES:
                     logger.warning(
                         "Ingestion path has %d files, truncating to %d",
-                        len(all_files), MAX_INGEST_FILES,
+                        len(all_files),
+                        MAX_INGEST_FILES,
                     )
                     return GatewayResponse(
                         text=f"Found {len(all_files)} files, which exceeds the "
-                             f"maximum of {MAX_INGEST_FILES}. Please narrow the "
-                             f"folder or split into smaller batches."
+                        f"maximum of {MAX_INGEST_FILES}. Please narrow the "
+                        f"folder or split into smaller batches."
                     )
             if files and len(files) > MAX_INGEST_FILES:
                 return GatewayResponse(
                     text=f"Received {len(files)} files, which exceeds the "
-                         f"maximum of {MAX_INGEST_FILES}. Please send fewer files."
+                    f"maximum of {MAX_INGEST_FILES}. Please send fewer files."
                 )
         except Exception as e:
             logger.error("Pre-flight check failed: %s", e)
@@ -73,9 +77,7 @@ class IngestHandler:
 
         # Limit concurrent ingestions
         if not _ingest_semaphore.acquire(blocking=False):
-            return GatewayResponse(
-                text="I'm still processing previous files. Please wait a moment."
-            )
+            return GatewayResponse(text="I'm still processing previous files. Please wait a moment.")
 
         # Launch background ingestion and return immediately
         if files:
@@ -107,8 +109,7 @@ class IngestHandler:
                 return
 
             self._notify(
-                progress_callback,
-                f"Extracted {len(documents)} document(s). Now learning your teaching style..."
+                progress_callback, f"Extracted {len(documents)} document(s). Now learning your teaching style..."
             )
 
             style_info = self._extract_persona_sync(documents)
@@ -153,21 +154,17 @@ class IngestHandler:
                     logger.warning("Failed to parse %s: %s", f, e)
                     failures += 1
                 if progress_callback and len(files) > 1 and (i + 1) % 5 == 0:
-                    self._notify(
-                        progress_callback,
-                        f"Processed {i + 1}/{len(files)} files..."
-                    )
+                    self._notify(progress_callback, f"Processed {i + 1}/{len(files)} files...")
         return documents, failures
 
     def _extract_persona_sync(self, documents: list) -> str:
         """Extract persona from documents (runs async in sync context)."""
         try:
             from clawed.models import AppConfig
+
             loop = asyncio.new_event_loop()
             try:
-                persona = loop.run_until_complete(
-                    extract_persona(documents, AppConfig.load())
-                )
+                persona = loop.run_until_complete(extract_persona(documents, AppConfig.load()))
             finally:
                 loop.close()
 
@@ -180,9 +177,11 @@ class IngestHandler:
                 pass
             try:
                 from clawed.paths import workspace_dir as _ws_dir
+
                 _id_path = _ws_dir() / "identity.md"
                 if _id_path.exists():
                     import re as _re
+
                     _id_content = _id_path.read_text(encoding="utf-8")
                     _name_match = _re.match(r"^#\s+(.+)", _id_content)
                     if _name_match:
@@ -194,6 +193,7 @@ class IngestHandler:
 
             from clawed.paths import data_dir as _dd
             from clawed.persona import save_persona
+
             save_persona(persona, _dd())
 
             style_info = f"\nLearned teaching style: {persona.teaching_style}"
@@ -215,6 +215,7 @@ class IngestHandler:
         """Index documents into curriculum knowledge base with progress."""
         try:
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
             kb = CurriculumKB()
             total_chunks = 0
             for i, doc in enumerate(documents):
@@ -230,7 +231,7 @@ class IngestHandler:
                 if progress_callback and len(documents) > 20 and (i + 1) % 50 == 0:
                     self._notify(
                         progress_callback,
-                        f"Indexed {i + 1}/{len(documents)} documents ({total_chunks} searchable sections)..."
+                        f"Indexed {i + 1}/{len(documents)} documents ({total_chunks} searchable sections)...",
                     )
 
             stats = kb.stats(teacher_id)
@@ -248,6 +249,7 @@ class IngestHandler:
         """Register assets (files, images, YouTube links) for search."""
         try:
             from clawed.asset_registry import AssetRegistry
+
             registry = AssetRegistry()
             asset_count = 0
             for doc in documents:
@@ -256,6 +258,7 @@ class IngestHandler:
                 if doc.source_path:
                     try:
                         from clawed.ingestor import extract_rich
+
                         extraction = extract_rich(Path(doc.source_path))
                     except Exception:
                         pass

@@ -10,6 +10,7 @@ External callers (Telegram bot, tests, CLI) import these names:
 All generation logic lives in clawed.generation (the service layer).
 All routing lives in clawed.gateway (the brain).
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -133,6 +134,7 @@ async def handle_message(
 
     # Delegate to the gateway (the single brain)
     from clawed.gateway import Gateway
+
     gw = Gateway()
     response = await gw.handle(message, teacher_id)
     return response.text

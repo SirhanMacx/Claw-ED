@@ -1,4 +1,5 @@
 """Tool: sub_packet — wraps clawed.sub_packet.generate_sub_packet."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -17,8 +18,7 @@ class SubPacketTool:
             "function": {
                 "name": "sub_packet",
                 "description": (
-                    "Generate a complete substitute teacher packet with "
-                    "schedule, instructions, and emergency info."
+                    "Generate a complete substitute teacher packet with schedule, instructions, and emergency info."
                 ),
                 "parameters": {
                     "type": "object",
@@ -58,16 +58,19 @@ class SubPacketTool:
                         },
                     },
                     "required": [
-                        "teacher_name", "school", "class_name",
-                        "grade", "subject", "date", "period_or_time",
+                        "teacher_name",
+                        "school",
+                        "class_name",
+                        "grade",
+                        "subject",
+                        "date",
+                        "period_or_time",
                     ],
                 },
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.llm import LLMClient
         from clawed.sub_packet import (
             SubPacketRequest,

@@ -4,6 +4,7 @@ Produces a report that feels like a colleague sharing observations, not a
 database query.  Phase 1 of the quality layer adds an LLM pass that reads
 actual excerpts and returns qualitative observations a regex can never make.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,8 +40,8 @@ def generate_reading_report(
         "assessment_patterns": [],
         "interesting_finds": [],
         "doc_stats": {},
-        "llm_observations": None,     # None = not yet run, [] = ran but empty
-        "_excerpts_for_llm": [],       # populated for async LLM pass
+        "llm_observations": None,  # None = not yet run, [] = ran but empty
+        "_excerpts_for_llm": [],  # populated for async LLM pass
     }
 
     if not documents:
@@ -64,11 +65,37 @@ def generate_reading_report(
     # Only look in document headers/footers to avoid matching historical
     # figures in content (e.g., "Dr. King" from MLK lessons)
     historical_surnames = {
-        "King", "Lincoln", "Washington", "Jefferson", "Roosevelt", "Kennedy",
-        "Obama", "Trump", "Gandhi", "Churchill", "Hitler", "Napoleon",
-        "Caesar", "Alexander", "Columbus", "Martin", "Luther", "Franklin",
-        "Adams", "Hamilton", "Madison", "Monroe", "Jackson", "Grant", "Lee",
-        "Sherman", "Douglass", "Tubman", "Parks", "Malcolm", "Mandela",
+        "King",
+        "Lincoln",
+        "Washington",
+        "Jefferson",
+        "Roosevelt",
+        "Kennedy",
+        "Obama",
+        "Trump",
+        "Gandhi",
+        "Churchill",
+        "Hitler",
+        "Napoleon",
+        "Caesar",
+        "Alexander",
+        "Columbus",
+        "Martin",
+        "Luther",
+        "Franklin",
+        "Adams",
+        "Hamilton",
+        "Madison",
+        "Monroe",
+        "Jackson",
+        "Grant",
+        "Lee",
+        "Sherman",
+        "Douglass",
+        "Tubman",
+        "Parks",
+        "Malcolm",
+        "Mandela",
     }
 
     _title_name = r"((?:Mr\.|Ms\.|Mrs\.|Dr\.)[ ]+[A-Z][a-z]+(?:[ ]+[A-Z][a-z]+)?)"
@@ -135,10 +162,27 @@ def generate_reading_report(
     openers = do_now_pattern.findall(all_text)
 
     teacher_greeting_starters = {
-        "alright", "friends", "ok", "okay", "good morning", "good afternoon",
-        "scholars", "today", "let's", "welcome", "take out", "turn to",
-        "historians", "scientists", "mathematicians", "class", "everyone",
-        "hey", "hello", "hi", "team",
+        "alright",
+        "friends",
+        "ok",
+        "okay",
+        "good morning",
+        "good afternoon",
+        "scholars",
+        "today",
+        "let's",
+        "welcome",
+        "take out",
+        "turn to",
+        "historians",
+        "scientists",
+        "mathematicians",
+        "class",
+        "everyone",
+        "hey",
+        "hello",
+        "hi",
+        "team",
     }
 
     if openers:
@@ -152,9 +196,7 @@ def generate_reading_report(
 
     if openers:
         unique_openers = list(dict.fromkeys(openers[:10]))
-        report["voice_patterns"].append(
-            f"Often opens with: '{unique_openers[0].strip()}'"
-        )
+        report["voice_patterns"].append(f"Often opens with: '{unique_openers[0].strip()}'")
 
     # Address terms
     address_terms = {
@@ -172,9 +214,7 @@ def generate_reading_report(
     for term, pattern in address_terms.items():
         count = len(re.findall(pattern, all_text, re.IGNORECASE))
         if count >= 3:
-            report["voice_patterns"].append(
-                f"Calls students '{term}' ({count} times across your files)"
-            )
+            report["voice_patterns"].append(f"Calls students '{term}' ({count} times across your files)")
 
     # ── Topic coverage ───────────────────────────────────────────────
     topics = {
@@ -196,9 +236,7 @@ def generate_reading_report(
         if count > 0:
             topic_counts[topic] = count
 
-    report["topic_coverage"] = dict(
-        sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
-    )
+    report["topic_coverage"] = dict(sorted(topic_counts.items(), key=lambda x: x[1], reverse=True))
 
     # Guess primary subject from topic coverage
     if topic_counts:
@@ -233,24 +271,17 @@ def generate_reading_report(
             strategy_counts[strategy] = count
 
     report["favorite_strategies"] = [
-        f"{s} ({c}x)"
-        for s, c in sorted(strategy_counts.items(), key=lambda x: x[1], reverse=True)
+        f"{s} ({c}x)" for s, c in sorted(strategy_counts.items(), key=lambda x: x[1], reverse=True)
     ]
 
     # ── Assessment patterns ──────────────────────────────────────────
-    exit_ticket_count = len(
-        re.findall(r"Exit Ticket|exit ticket", all_text, re.IGNORECASE)
-    )
+    exit_ticket_count = len(re.findall(r"Exit Ticket|exit ticket", all_text, re.IGNORECASE))
     if exit_ticket_count:
-        report["assessment_patterns"].append(
-            f"Uses exit tickets ({exit_ticket_count} found)"
-        )
+        report["assessment_patterns"].append(f"Uses exit tickets ({exit_ticket_count} found)")
 
     question_count = len(re.findall(r"\?\s", all_text))
     if question_count:
-        report["assessment_patterns"].append(
-            f"~{question_count} questions across all documents"
-        )
+        report["assessment_patterns"].append(f"~{question_count} questions across all documents")
 
     # ── Structural patterns (signature moves) ────────────────────────
     structural = {
@@ -267,17 +298,14 @@ def generate_reading_report(
     # ── Interesting finds ────────────────────────────────────────────
     if report["doc_stats"]["total"] > 100:
         report["interesting_finds"].append(
-            f"That's a LOT of materials — {report['doc_stats']['total']} files. "
-            "You've clearly been at this a while."
+            f"That's a LOT of materials — {report['doc_stats']['total']} files. You've clearly been at this a while."
         )
 
     if persona and persona.name and persona.name != "My Teaching Persona":
         if report["teacher_details"].get("name_used"):
             detected = report["teacher_details"]["name_used"]
             if detected.split()[-1] != persona.name.split()[-1]:
-                report["interesting_finds"].append(
-                    f"Your files reference {detected} — is that you, or a co-teacher?"
-                )
+                report["interesting_finds"].append(f"Your files reference {detected} — is that you, or a co-teacher?")
 
     # ── Prepare excerpts for the async LLM pass ──────────────────────
     report["_excerpts_for_llm"] = _select_representative_excerpts(documents)
@@ -351,9 +379,7 @@ def _build_llm_reading_prompt(
     type_str = ", ".join(f"{c} {t}" for t, c in by_type.items()) if by_type else "unknown mix"
 
     topics = regex_report.get("topic_coverage", {})
-    topic_str = ", ".join(
-        f"{t} ({c})" for t, c in list(topics.items())[:8]
-    ) if topics else "none detected"
+    topic_str = ", ".join(f"{t} ({c})" for t, c in list(topics.items())[:8]) if topics else "none detected"
 
     strategies = regex_report.get("favorite_strategies", [])
     strategy_str = ", ".join(strategies[:5]) if strategies else "none detected"
@@ -373,9 +399,7 @@ def _build_llm_reading_prompt(
         content = (doc.content or "")[:1500]
         if len(doc.content or "") > 1500:
             content += "\n[... truncated ...]"
-        excerpt_blocks.append(
-            f"--- Excerpt {i}: \"{title}\" ({doc_type}) ---\n{content}"
-        )
+        excerpt_blocks.append(f'--- Excerpt {i}: "{title}" ({doc_type}) ---\n{content}')
 
     excerpts_text = "\n\n".join(excerpt_blocks)
 
@@ -465,14 +489,8 @@ def format_reading_report(report: dict[str, Any]) -> str:
     stats = report["doc_stats"]
 
     # File stats
-    type_breakdown = ", ".join(
-        f"{count} {ext}" for ext, count in stats.get("by_type", {}).items()
-    )
-    lines.append(
-        f"I read through {stats['total']} files"
-        + (f" ({type_breakdown})" if type_breakdown else "")
-        + "."
-    )
+    type_breakdown = ", ".join(f"{count} {ext}" for ext, count in stats.get("by_type", {}).items())
+    lines.append(f"I read through {stats['total']} files" + (f" ({type_breakdown})" if type_breakdown else "") + ".")
 
     # Teacher name
     teacher_name = report.get("teacher_details", {}).get("name_used")
@@ -501,20 +519,12 @@ def format_reading_report(report: dict[str, Any]) -> str:
     # Topic coverage
     if report.get("strengths"):
         lines.append("")
-        lines.append(
-            "Your strongest coverage is in "
-            + ", ".join(report["strengths"])
-            + "."
-        )
+        lines.append("Your strongest coverage is in " + ", ".join(report["strengths"]) + ".")
 
     # Strategies
     if report.get("favorite_strategies"):
         lines.append("")
-        lines.append(
-            "Your go-to strategies: "
-            + ", ".join(report["favorite_strategies"][:5])
-            + "."
-        )
+        lines.append("Your go-to strategies: " + ", ".join(report["favorite_strategies"][:5]) + ".")
 
     # Assessment patterns
     if report.get("assessment_patterns"):
@@ -526,9 +536,7 @@ def format_reading_report(report: dict[str, Any]) -> str:
     if report.get("gaps"):
         lines.append("")
         lines.append(
-            "I didn't find much on "
-            + ", ".join(report["gaps"][:5])
-            + " — is that covered in a different quarter?"
+            "I didn't find much on " + ", ".join(report["gaps"][:5]) + " — is that covered in a different quarter?"
         )
 
     # Interesting finds

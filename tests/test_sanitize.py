@@ -2,9 +2,7 @@ from clawed.sanitize import sanitize_text
 
 
 def test_strips_cjk_mid_sentence():
-    result = sanitize_text(
-        "Black men after the Civil War?\u77ed\u6682\u83b7\u5f97\u6743\u5229 but then taken away"
-    )
+    result = sanitize_text("Black men after the Civil War?\u77ed\u6682\u83b7\u5f97\u6743\u5229 but then taken away")
     assert "\u77ed" not in result
     assert "Civil War" in result
     assert "taken away" in result

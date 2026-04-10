@@ -121,21 +121,33 @@ def compile_kahoot_csv(master: "MasterContent", output_dir: Path) -> Path:
             if gw not in distractors:
                 distractors.append(gw)
 
-        rows.append([
-            question, correct,
-            distractors[0], distractors[1], distractors[2],
-            "30", "1",
-        ])
+        rows.append(
+            [
+                question,
+                correct,
+                distractors[0],
+                distractors[1],
+                distractors[2],
+                "30",
+                "1",
+            ]
+        )
 
     # Exit ticket questions (open-ended → converted to review)
     for et in master.exit_ticket:
         question = et.question[:120]
         answer = et.answer[:75] if et.answer else "See lesson materials"
-        rows.append([
-            question, answer,
-            "I need to review this", "I'm not sure",
-            "Ask the teacher", "20", "1",
-        ])
+        rows.append(
+            [
+                question,
+                answer,
+                "I need to review this",
+                "I'm not sure",
+                "Ask the teacher",
+                "20",
+                "1",
+            ]
+        )
 
     safe = safe_filename(master.title)
     out_path = output_dir / f"{safe}_kahoot.csv"
@@ -143,10 +155,17 @@ def compile_kahoot_csv(master: "MasterContent", output_dir: Path) -> Path:
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         # Kahoot header
-        writer.writerow([
-            "Question", "Answer 1", "Answer 2", "Answer 3",
-            "Answer 4", "Time limit", "Correct answer(s)",
-        ])
+        writer.writerow(
+            [
+                "Question",
+                "Answer 1",
+                "Answer 2",
+                "Answer 3",
+                "Answer 4",
+                "Time limit",
+                "Correct answer(s)",
+            ]
+        )
         for row in rows:
             writer.writerow(row)
 

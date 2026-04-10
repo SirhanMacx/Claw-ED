@@ -1,4 +1,5 @@
 """NLAH failure taxonomy — structured failure codes for generation pipeline."""
+
 from __future__ import annotations
 
 from enum import Enum

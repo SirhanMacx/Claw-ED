@@ -56,10 +56,12 @@ def suggest_connections(
                 "entity_type": r.get("entity_type", "topic"),
             }
             if r.get("predicate") in ("prerequisite_for", "builds_on"):
-                result["prerequisites"].append({
-                    "name": r["entity"],
-                    "covered": True,  # If it's in the KG, teacher has covered it
-                })
+                result["prerequisites"].append(
+                    {
+                        "name": r["entity"],
+                        "covered": True,  # If it's in the KG, teacher has covered it
+                    }
+                )
             elif r.get("predicate") in ("contrasts_with", "related_to"):
                 result["cross_unit_links"].append(entry)
             else:
@@ -69,8 +71,7 @@ def suggest_connections(
         if result["prerequisites"]:
             prereq_names = [p["name"] for p in result["prerequisites"][:3]]
             result["previously_on"] = (
-                f"Remember when we studied {prereq_names[0]}? "
-                f"Today we're building on that foundation."
+                f"Remember when we studied {prereq_names[0]}? Today we're building on that foundation."
             )
             if len(prereq_names) > 1:
                 others = " and ".join(prereq_names[1:])
@@ -109,7 +110,7 @@ def inject_connections_into_prompt(
     if connections["previously_on"]:
         parts.append(
             "## Prior Learning Connection\n"
-            f"Suggested Do Now hook: \"{connections['previously_on']}\"\n"
+            f'Suggested Do Now hook: "{connections["previously_on"]}"\n'
             "Consider referencing this in the lesson's opening hook."
         )
 
@@ -123,8 +124,7 @@ def inject_connections_into_prompt(
 
     if connections["cross_unit_links"]:
         links = ", ".join(
-            f"{link['name']} ({link['relationship'].replace('_', ' ')})"
-            for link in connections["cross_unit_links"][:5]
+            f"{link['name']} ({link['relationship'].replace('_', ' ')})" for link in connections["cross_unit_links"][:5]
         )
         parts.append(
             "## Cross-Unit Connections\n"

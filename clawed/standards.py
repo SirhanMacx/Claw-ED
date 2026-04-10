@@ -531,7 +531,6 @@ NY_SOCIAL_STUDIES: dict[str, list[tuple[str, str, str]]] = {
         ("NYS-SS.6.2", "River valley civilizations: Mesopotamia, Egypt, Indus Valley, China", "6"),
         ("NYS-SS.6.3", "Classical civilizations: Greece, Rome, China, India", "6"),
         ("NYS-SS.6.4", "The role of geography in the development of civilizations", "6"),
-
         # Grade 7 — Geography of the Western Hemisphere
         ("NYS-SS.7.1", "Physical geography of the Western Hemisphere", "7"),
         ("NYS-SS.7.2", "Human geography: settlement patterns, movement of people", "7"),
@@ -540,7 +539,6 @@ NY_SOCIAL_STUDIES: dict[str, list[tuple[str, str, str]]] = {
         ("NYS-SS.7.5", "Forced migration: the transatlantic slave trade", "7"),
         ("NYS-SS.7.6", "Colonial economies and their impact", "7"),
         ("NYS-SS.7.7", "Causes and effects of the American Revolution", "7"),
-
         # Grade 8 — United States and New York State History
         ("NYS-SS.8.1", "Constitutional foundations of American democracy", "8"),
         ("NYS-SS.8.2", "Expansion and reform in the early 19th century", "8"),
@@ -550,7 +548,6 @@ NY_SOCIAL_STUDIES: dict[str, list[tuple[str, str, str]]] = {
         ("NYS-SS.8.6", "Progressive Era reforms", "8"),
         ("NYS-SS.8.7", "American imperialism and World War I", "8"),
         ("NYS-SS.8.8", "The Roaring Twenties and the Great Depression", "8"),
-
         # Grade 9-10 — Global History and Geography I
         ("NYS-SS.9.1", "The World in 1750: Regions, trade, and power", "9"),
         ("NYS-SS.9.2", "The Age of Revolution: Enlightenment, French Revolution, Haitian Revolution", "9"),
@@ -562,7 +559,6 @@ NY_SOCIAL_STUDIES: dict[str, list[tuple[str, str, str]]] = {
         ("NYS-SS.10.3", "The Cold War: ideology, proxy wars, decolonization", "10"),
         ("NYS-SS.10.4", "Decolonization and independence movements in Africa and Asia", "10"),
         ("NYS-SS.10.5", "Contemporary global issues: human rights, terrorism, globalization", "10"),
-
         # Grade 11 — United States History and Government
         ("NYS-SS.11.1", "Progressive Era through World War I", "11"),
         ("NYS-SS.11.2", "The Interwar period and World War II on the homefront", "11"),
@@ -571,7 +567,6 @@ NY_SOCIAL_STUDIES: dict[str, list[tuple[str, str, str]]] = {
         ("NYS-SS.11.5", "Vietnam War era and social movements", "11"),
         ("NYS-SS.11.6", "Conservative resurgence: Reagan Revolution", "11"),
         ("NYS-SS.11.7", "Post-Cold War America and the 21st century", "11"),
-
         # Grade 12 — Participation in Government / Economics
         ("NYS-SS.12.1", "The Constitution: structure and function of government", "12"),
         ("NYS-SS.12.2", "The political process: elections, voting, political parties", "12"),
@@ -629,13 +624,21 @@ def get_standards_for_lesson(
     subject_key = subject.lower().strip().replace(" ", "_")
     # Map common names to state_standards keys
     _subject_map = {
-        "math": "math", "mathematics": "math",
-        "ela": "ela", "english": "ela", "language_arts": "ela",
-        "reading": "ela", "writing": "ela",
-        "science": "science", "biology": "science",
-        "chemistry": "science", "physics": "science",
-        "history": "social_studies", "social_studies": "social_studies",
-        "civics": "social_studies", "economics": "social_studies",
+        "math": "math",
+        "mathematics": "math",
+        "ela": "ela",
+        "english": "ela",
+        "language_arts": "ela",
+        "reading": "ela",
+        "writing": "ela",
+        "science": "science",
+        "biology": "science",
+        "chemistry": "science",
+        "physics": "science",
+        "history": "social_studies",
+        "social_studies": "social_studies",
+        "civics": "social_studies",
+        "economics": "social_studies",
         "geography": "social_studies",
     }
     config_subject = _subject_map.get(subject_key, subject_key)
@@ -647,11 +650,23 @@ def get_standards_for_lesson(
 
     # Check if this is a CCSS/NGSS/C3 framework where we have actual standards
     ccss_frameworks = {
-        "CCSS", "NGSS", "C3",
+        "CCSS",
+        "NGSS",
+        "C3",
         # CCSS-aligned state variants still use CCSS standards
-        "CCSS_AZ", "CCSS_CA", "CCSS_LA", "CCSS_MS", "CCSS_NC",
-        "CCSS_NJ", "CCSS_NM", "CCSS_UT", "MA_CCSS", "PA_CCSS",
-        "KY_ACAS", "SC_CCRS", "WV_CSO",
+        "CCSS_AZ",
+        "CCSS_CA",
+        "CCSS_LA",
+        "CCSS_MS",
+        "CCSS_NC",
+        "CCSS_NJ",
+        "CCSS_NM",
+        "CCSS_UT",
+        "MA_CCSS",
+        "PA_CCSS",
+        "KY_ACAS",
+        "SC_CCRS",
+        "WV_CSO",
     }
 
     is_ccss_like = framework in ccss_frameworks or not framework
@@ -667,15 +682,10 @@ def get_standards_for_lesson(
         desc = get_framework_description(framework)
         state_cfg = STATE_STANDARDS_CONFIG.get(state.upper(), {})
         state_name = state_cfg.get("name", state)
-        results.append(
-            f"Align to {state_name} {desc} ({framework}): "
-            f"{subject.title()} Grade {grade}"
-        )
+        results.append(f"Align to {state_name} {desc} ({framework}): {subject.title()} Grade {grade}")
 
     if not results:
-        results.append(
-            f"Use appropriate grade-level standards for {subject.title()} Grade {grade}"
-        )
+        results.append(f"Use appropriate grade-level standards for {subject.title()} Grade {grade}")
 
     return results
 

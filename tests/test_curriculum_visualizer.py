@@ -1,4 +1,5 @@
 """Tests for clawed.agent_core.tools.curriculum_visualizer — canvas HTML renderer."""
+
 import json
 
 from clawed.agent_core.tools.curriculum_visualizer import _build_canvas_html
@@ -53,10 +54,7 @@ class TestCanvasHtmlContainsData:
 
     def test_canvas_html_has_stats(self):
         """The info panel should show node and edge counts."""
-        nodes = [
-            {"id": i, "label": f"Topic {i}", "type": "topic", "connections": 1}
-            for i in range(5)
-        ]
+        nodes = [{"id": i, "label": f"Topic {i}", "type": "topic", "connections": 1} for i in range(5)]
         edges = [{"source": 0, "target": 1, "label": "relates"}]
 
         html = _build_canvas_html(nodes, edges, "Test")
@@ -115,7 +113,8 @@ class TestJsonDoubleEncoding:
         # Extract the double-encoded JSON string from the HTML
         # Pattern: var D=JSON.parse(<json_string>);
         import re
-        match = re.search(r'var D=JSON\.parse\((.+?)\);', html)
+
+        match = re.search(r"var D=JSON\.parse\((.+?)\);", html)
         assert match is not None, "Could not find JSON.parse pattern in HTML"
 
         # The outer parse should yield a string
@@ -137,7 +136,8 @@ class TestJsonDoubleEncoding:
         html = _build_canvas_html(nodes, edges, "Test")
 
         import re
-        match = re.search(r'var D=JSON\.parse\((.+?)\);', html)
+
+        match = re.search(r"var D=JSON\.parse\((.+?)\);", html)
         assert match is not None
         outer = json.loads(match.group(1))
         inner = json.loads(outer)

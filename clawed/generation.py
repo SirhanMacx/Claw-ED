@@ -6,6 +6,7 @@ directly without going through the hermes_plugin dispatch loop.
 Every function takes a TeacherSession (or the pieces it needs) and returns a
 plain string.  No routing, no intent parsing — that belongs in the gateway.
 """
+
 from __future__ import annotations
 
 import logging
@@ -100,7 +101,7 @@ async def generate_unit(parsed: ParsedIntent, session: TeacherSession) -> str:
     topic = parsed.topic or "the current topic"
     has_grades = session.persona and session.persona.grade_levels
     grade = parsed.grade or (session.persona.grade_levels[0] if has_grades else "8")
-    subject = (session.persona.subject_area if session.persona and session.persona.subject_area else "General")
+    subject = session.persona.subject_area if session.persona and session.persona.subject_area else "General"
     weeks = parsed.weeks or 2
     persona = session.persona or TeacherPersona()
 
@@ -118,10 +119,7 @@ async def generate_unit(parsed: ParsedIntent, session: TeacherSession) -> str:
         return _fmt_unit_summary(unit)
     except (ConnectionError, TimeoutError) as e:
         logger.error("Network error generating unit plan: %s", e)
-        return (
-            "Couldn't reach the LLM provider. Check your internet connection "
-            "and API key (`/setup` to check)."
-        )
+        return "Couldn't reach the LLM provider. Check your internet connection and API key (`/setup` to check)."
     except ValueError as e:
         logger.error("Validation error generating unit plan: %s", e)
         return f"The unit plan didn't pass validation: {str(e)[:200]}"
@@ -154,7 +152,7 @@ async def generate_lesson(parsed: ParsedIntent, session: TeacherSession) -> str:
         # Create a minimal unit context for a standalone lesson
         topic = parsed.topic or "today's lesson"
         grade = parsed.grade or "8"
-        subject = (session.persona.subject_area if session.persona else "General")
+        subject = session.persona.subject_area if session.persona else "General"
         unit = UnitPlan(
             title=f"{topic} Unit",
             subject=subject,
@@ -282,18 +280,17 @@ async def generate_bellringer(parsed: ParsedIntent, session: TeacherSession) -> 
 
     # Extract specific fingerprint fields explicitly for the system prompt so the
     # model cannot ignore them even if they appear later in a long context.
-    do_now_style_hint = (
-        f"\n\nDo Now Style for this teacher: {persona.do_now_style}"
-        if persona.do_now_style else ""
-    )
+    do_now_style_hint = f"\n\nDo Now Style for this teacher: {persona.do_now_style}" if persona.do_now_style else ""
     activity_hint = (
         "\n\nThis teacher's activity patterns:\n" + "\n".join(f"- {p}" for p in persona.activity_patterns)
-        if persona.activity_patterns else ""
+        if persona.activity_patterns
+        else ""
     )
     voice_hint = (
         "\n\nVoice examples — write Do Nows that match this voice:\n"
         + "\n".join(f'  "{ex}"' for ex in persona.voice_examples[:3])
-        if persona.voice_examples else ""
+        if persona.voice_examples
+        else ""
     )
 
     grade = persona.grade_levels[0] if persona.grade_levels else "8"
@@ -390,7 +387,8 @@ async def generate_differentiation(parsed: ParsedIntent, session: TeacherSession
     scaffolding_hint = (
         "\n\nThis teacher's scaffolding moves (accommodations MUST build on these):\n"
         + "\n".join(f"- {m}" for m in persona.scaffolding_moves)
-        if persona.scaffolding_moves else ""
+        if persona.scaffolding_moves
+        else ""
     )
 
     # Load differentiation.txt prompt template
@@ -407,8 +405,7 @@ async def generate_differentiation(parsed: ParsedIntent, session: TeacherSession
     subject = persona.subject_area or "General"
 
     prompt = (
-        prompt_template
-        .replace("{persona}", persona_context + scaffolding_hint)
+        prompt_template.replace("{persona}", persona_context + scaffolding_hint)
         .replace("{lesson_title}", lesson.title)
         .replace("{objective}", lesson.objective)
         .replace("{grade_level}", str(grade))
@@ -510,6 +507,7 @@ async def handle_web_search(parsed: ParsedIntent, session: TeacherSession) -> st
     """Search the web for teaching resources."""
     try:
         from clawed.search import search_for_teacher
+
         results = await search_for_teacher(parsed.raw, session.persona)
         return results
     except Exception:
@@ -656,9 +654,7 @@ async def handle_set_hint_mode(parsed: ParsedIntent, session: TeacherSession) ->
     bot.set_hint_mode(class_code, not turning_off)
 
     if turning_off:
-        return (
-            "\u2705 Hint mode *disabled*. The student bot will now give full explanations and answers."
-        )
+        return "\u2705 Hint mode *disabled*. The student bot will now give full explanations and answers."
     return (
         "\u2705 Hint mode *enabled*! The student bot will now:\n"
         "\u2022 Give hints and guiding questions instead of direct answers\n"
@@ -726,17 +722,16 @@ async def handle_connect_drive(parsed: ParsedIntent, session: TeacherSession) ->
     # Trigger ingestion
     try:
         from clawed.drive import ingest_drive_folder
+
         docs = await ingest_drive_folder(parsed.url)
         if docs:
             from clawed.persona import extract_persona
+
             config = AppConfig.load()
             persona = await extract_persona(docs, config)
             session.persona = persona
             session.save()
-            return (
-                f"\u2705 Connected! I analyzed {len(docs)} documents from your Drive.\n\n"
-                + _fmt_persona(persona)
-            )
+            return f"\u2705 Connected! I analyzed {len(docs)} documents from your Drive.\n\n" + _fmt_persona(persona)
         else:
             return (
                 "I connected to Drive but couldn't find any lesson plan files"
@@ -772,10 +767,9 @@ async def handle_connect_local(
         from clawed.ingestor import SUPPORTED_EXTENSIONS
 
         supported = [
-            f for f in resolved.rglob("*")
-            if f.is_file()
-            and f.suffix.lower() in SUPPORTED_EXTENSIONS
-            and not f.name.startswith(("~$", "._"))
+            f
+            for f in resolved.rglob("*")
+            if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS and not f.name.startswith(("~$", "._"))
         ]
     except Exception:
         supported = []
@@ -792,10 +786,7 @@ async def handle_connect_local(
     # Cap message for very large directories
     cap_msg = ""
     if total_found > max_files:
-        cap_msg = (
-            f"Found {total_found:,} files. I'll analyze the {max_files} most "
-            f"recent to learn your style.\n\n"
-        )
+        cap_msg = f"Found {total_found:,} files. I'll analyze the {max_files} most recent to learn your style.\n\n"
 
     file_count = min(total_found, max_files)
 
@@ -818,10 +809,7 @@ async def handle_connect_local(
 
                 def _progress(current, total):
                     if current % batch_size == 0 or current == total:
-                        notify_callback(
-                            f"Processing files {current - batch_size + 1}-"
-                            f"{current} of {total}..."
-                        )
+                        notify_callback(f"Processing files {current - batch_size + 1}-{current} of {total}...")
 
                 docs = ingest_path(
                     resolved,
@@ -836,26 +824,18 @@ async def handle_connect_local(
                     persona = run_async_safe(extract_persona(docs, persona_cfg))
                     session.persona = persona
                     session.save()
-                    notify_callback(
-                        f"Analyzed {len(docs)} files from {resolved.name}/\n\n"
-                        + _fmt_persona(persona)
-                    )
+                    notify_callback(f"Analyzed {len(docs)} files from {resolved.name}/\n\n" + _fmt_persona(persona))
                 else:
                     notify_callback(
                         f"Found the folder but couldn't extract text from the files"
                         f" in `{resolved.name}/`. Try a different folder?"
                     )
             except Exception as e:
-                notify_callback(
-                    f"Had trouble reading files from {path}: {str(e)[:150]}"
-                )
+                notify_callback(f"Had trouble reading files from {path}: {str(e)[:150]}")
 
         t = threading.Thread(target=_bg_ingest, daemon=True)
         t.start()
-        return (
-            f"Scanning {resolved.name}/ ({file_count} files)... "
-            f"I'll message you when I'm done."
-        )
+        return f"Scanning {resolved.name}/ ({file_count} files)... I'll message you when I'm done."
 
     # Synchronous path (no callback)
     try:
@@ -868,11 +848,7 @@ async def handle_connect_local(
             persona = await extract_persona(docs, config)
             session.persona = persona
             session.save()
-            return (
-                cap_msg
-                + f"Analyzed {len(docs)} files from {resolved.name}/\n\n"
-                + _fmt_persona(persona)
-            )
+            return cap_msg + f"Analyzed {len(docs)} files from {resolved.name}/\n\n" + _fmt_persona(persona)
         else:
             return (
                 f"Found the folder but couldn't extract text from the files"
@@ -889,14 +865,45 @@ def _extract_subject_from_text(text: str) -> str:
     """Try to extract the subject from freeform text like 'I teach 8th grade science'."""
 
     subjects = [
-        "math", "mathematics", "algebra", "geometry", "calculus", "statistics",
-        "science", "biology", "chemistry", "physics", "earth science",
-        "english", "ela", "language arts", "reading", "writing", "literature",
-        "history", "social studies", "civics", "government", "geography", "economics",
-        "art", "music", "drama", "theater", "theatre",
-        "spanish", "french", "german", "chinese", "latin",
-        "computer science", "coding", "programming",
-        "pe", "physical education", "health",
+        "math",
+        "mathematics",
+        "algebra",
+        "geometry",
+        "calculus",
+        "statistics",
+        "science",
+        "biology",
+        "chemistry",
+        "physics",
+        "earth science",
+        "english",
+        "ela",
+        "language arts",
+        "reading",
+        "writing",
+        "literature",
+        "history",
+        "social studies",
+        "civics",
+        "government",
+        "geography",
+        "economics",
+        "art",
+        "music",
+        "drama",
+        "theater",
+        "theatre",
+        "spanish",
+        "french",
+        "german",
+        "chinese",
+        "latin",
+        "computer science",
+        "coding",
+        "programming",
+        "pe",
+        "physical education",
+        "health",
     ]
     lower = text.lower()
     for subj in subjects:

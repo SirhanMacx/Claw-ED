@@ -102,8 +102,7 @@ async def create_parent_comm(request: Request, req: ParentCommAPIRequest):
     resolved_type = type_map.get(req.comm_type.lower())
     if resolved_type is None:
         return JSONResponse(
-            {"error": f"Unknown comm_type: {req.comm_type}. "
-             f"Valid types: {', '.join(sorted(type_map.keys()))}"},
+            {"error": f"Unknown comm_type: {req.comm_type}. Valid types: {', '.join(sorted(type_map.keys()))}"},
             status_code=400,
         )
 

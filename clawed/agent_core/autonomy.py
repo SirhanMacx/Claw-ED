@@ -1,4 +1,5 @@
 """Autonomy progression — track approval rates and offer auto-approval."""
+
 from __future__ import annotations
 
 import json
@@ -10,9 +11,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 def _default_db():
     from clawed.paths import approvals_db
+
     return approvals_db()
+
 
 _DEFAULT_DB = None  # resolved lazily via _default_db()
 _MIN_SAMPLES = 10
@@ -79,9 +83,7 @@ class ApprovalTracker:
                     status = data.get("status", "")
                     if status not in ("approved", "rejected"):
                         continue
-                    action_type = data.get("action_payload", {}).get(
-                        "action_type", "unknown"
-                    )
+                    action_type = data.get("action_payload", {}).get("action_type", "unknown")
                     teacher_id = data.get("teacher_id", "")
                     payload = json.dumps(data.get("action_payload", {}))
                     created_at = data.get("created_at", datetime.now().isoformat())
@@ -179,11 +181,7 @@ class ApprovalTracker:
                         f"— you can offer to auto-approve this action type."
                     )
                 elif r["approval_rate"] >= 0.7:
-                    parts.append(
-                        f"- Teacher usually approves '{action_type}' ({pct}% rate)."
-                    )
+                    parts.append(f"- Teacher usually approves '{action_type}' ({pct}% rate).")
                 else:
-                    parts.append(
-                        f"- Teacher often rejects '{action_type}' ({pct}% rate) — always ask first."
-                    )
+                    parts.append(f"- Teacher often rejects '{action_type}' ({pct}% rate) — always ask first.")
         return "\n".join(parts) if parts else ""

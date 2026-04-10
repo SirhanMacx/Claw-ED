@@ -66,8 +66,13 @@ async def compile_teacher_view(
             for run in h.runs:
                 run.font.color.rgb = _hex_rgb(primary_hex)
 
-    def _para(text: str, bold: bool = False, italic: bool = False,
-               size_pt: int = 11, color: tuple[int, int, int] | None = None) -> None:
+    def _para(
+        text: str,
+        bold: bool = False,
+        italic: bool = False,
+        size_pt: int = 11,
+        color: tuple[int, int, int] | None = None,
+    ) -> None:
         p = doc.add_paragraph()
         run = p.add_run(text)
         run.bold = bold
@@ -96,15 +101,17 @@ async def compile_teacher_view(
     def _shaded_cell(cell, fill_hex: str) -> None:
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()  # noqa: N806
-        shd = tcPr.makeelement(qn("w:shd"), {
-            qn("w:val"): "clear",
-            qn("w:color"): "auto",
-            qn("w:fill"): fill_hex,
-        })
+        shd = tcPr.makeelement(
+            qn("w:shd"),
+            {
+                qn("w:val"): "clear",
+                qn("w:color"): "auto",
+                qn("w:fill"): fill_hex,
+            },
+        )
         tcPr.append(shd)
 
-    def _callout_box(title: str, items: list[str], fill_hex: str,
-                     title_hex: str = "FFFFFF") -> None:
+    def _callout_box(title: str, items: list[str], fill_hex: str, title_hex: str = "FFFFFF") -> None:
         """Render a colored callout box as a single-column table."""
         tbl = doc.add_table(rows=1 + len(items), cols=1)
         tbl.style = "Table Grid"
@@ -130,8 +137,7 @@ async def compile_teacher_view(
     doc.add_heading(master.title, level=0)
 
     meta_lines = [
-        f"Subject: {master.subject}  |  Grade: {master.grade_level}  |  "
-        f"Duration: {master.duration_minutes} min",
+        f"Subject: {master.subject}  |  Grade: {master.grade_level}  |  Duration: {master.duration_minutes} min",
         f"Topic: {master.topic}",
         f"Objective: {master.objective}",
     ]
@@ -175,9 +181,7 @@ async def compile_teacher_view(
     row1_cell = glance_table.rows[1].cells[0]
     _shaded_cell(row1_cell, accent_hex)
     row1_run = row1_cell.paragraphs[0].add_run(
-        f"Duration: {master.duration_minutes} min  |  "
-        f"Format: {glance_format_display}  |  "
-        f"Standards: {glance_standards}"
+        f"Duration: {master.duration_minutes} min  |  Format: {glance_format_display}  |  Standards: {glance_standards}"
     )
     row1_run.font.size = Pt(10)
     row1_run.font.name = "Calibri"
@@ -194,9 +198,7 @@ async def compile_teacher_view(
 
     row3_cell = glance_table.rows[3].cells[0]
     _shaded_cell(row3_cell, accent_hex)
-    row3_run = row3_cell.paragraphs[0].add_run(
-        f"Differentiation: {glance_iep}  |  {glance_ell}  |  {glance_gifted}"
-    )
+    row3_run = row3_cell.paragraphs[0].add_run(f"Differentiation: {glance_iep}  |  {glance_ell}  |  {glance_gifted}")
     row3_run.font.size = Pt(10)
     row3_run.font.name = "Calibri"
 
@@ -305,8 +307,10 @@ async def compile_teacher_view(
     if jigsaw:
         _heading("Jigsaw Activity Structure")
         _para(f"Expert Groups: {jigsaw.num_expert_groups} groups", bold=True)
-        _para(f"Expert Phase: {jigsaw.expert_phase_minutes} minutes  |  "
-              f"Teaching Phase: {jigsaw.teaching_phase_minutes} minutes")
+        _para(
+            f"Expert Phase: {jigsaw.expert_phase_minutes} minutes  |  "
+            f"Teaching Phase: {jigsaw.teaching_phase_minutes} minutes"
+        )
         if jigsaw.documents_per_group:
             _para("Documents per group: " + ", ".join(jigsaw.documents_per_group))
         if jigsaw.share_out_protocol:
@@ -326,8 +330,7 @@ async def compile_teacher_view(
     if creative and creative.title:
         _heading(f"Creative Activity: {creative.title}")
         if creative.activity_type:
-            _para(f"Type: {creative.activity_type.replace('_', ' ').title()}  |  "
-                  f"Time: {creative.time_minutes} minutes")
+            _para(f"Type: {creative.activity_type.replace('_', ' ').title()}  |  Time: {creative.time_minutes} minutes")
         if creative.scenario:
             _para("Scenario:", bold=True)
             _para(creative.scenario)
@@ -421,7 +424,9 @@ async def compile_teacher_view(
         _para(
             "Students often have these misunderstandings about this topic. "
             "Listen for them during discussion and address directly.",
-            size_pt=10, italic=True, color=(0x66, 0x66, 0x66),
+            size_pt=10,
+            italic=True,
+            color=(0x66, 0x66, 0x66),
         )
         for item in master.misconceptions:
             p = doc.add_paragraph(style="List Bullet")
@@ -433,9 +438,10 @@ async def compile_teacher_view(
     if getattr(master, "formative_checks", None):
         _heading("Mid-Lesson Check-for-Understanding")
         _para(
-            "Ask these during instruction — verbal or show-of-hands. "
-            "Catch confusion before it compounds.",
-            size_pt=10, italic=True, color=(0x66, 0x66, 0x66),
+            "Ask these during instruction — verbal or show-of-hands. Catch confusion before it compounds.",
+            size_pt=10,
+            italic=True,
+            color=(0x66, 0x66, 0x66),
         )
         for item in master.formative_checks:
             p = doc.add_paragraph(style="List Bullet")
@@ -447,9 +453,10 @@ async def compile_teacher_view(
     if getattr(master, "prerequisite_skills", None):
         _heading("Prerequisite Skills")
         _para(
-            "Students should have these before this lesson. "
-            "If not, plan a quick review.",
-            size_pt=10, italic=True, color=(0x66, 0x66, 0x66),
+            "Students should have these before this lesson. If not, plan a quick review.",
+            size_pt=10,
+            italic=True,
+            color=(0x66, 0x66, 0x66),
         )
         for item in master.prerequisite_skills:
             p = doc.add_paragraph(style="List Bullet")

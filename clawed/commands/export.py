@@ -27,12 +27,7 @@ export_app = typer.Typer()
 
 def _esc(text: str) -> str:
     """Escape HTML special characters."""
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _lesson_to_html(data: dict) -> str:
@@ -52,11 +47,7 @@ def _lesson_to_html(data: dict) -> str:
     exit_html = ""
     if exit_tickets:
         for et in exit_tickets:
-            q = (
-                et.get("question", "")
-                if isinstance(et, dict)
-                else str(et)
-            )
+            q = et.get("question", "") if isinstance(et, dict) else str(et)
             exit_html += f"<li>{_esc(q)}</li>"
         exit_html = f"<ol>{exit_html}</ol>"
 
@@ -66,10 +57,7 @@ def _lesson_to_html(data: dict) -> str:
         for key, val in diff.items():
             if val:
                 label = key.replace("_", " ").title()
-                diff_html += (
-                    f"<p><strong>{_esc(label)}:</strong>"
-                    f" {_esc(str(val))}</p>"
-                )
+                diff_html += f"<p><strong>{_esc(label)}:</strong> {_esc(str(val))}</p>"
 
     standards_html = ""
     if standards:
@@ -82,10 +70,7 @@ def _lesson_to_html(data: dict) -> str:
     def _section(heading: str, body: str) -> str:
         if not body:
             return ""
-        return (
-            f'<div class="section"><h3>{heading}</h3>'
-            f"<p>{_esc(body)}</p></div>"
-        )
+        return f'<div class="section"><h3>{heading}</h3><p>{_esc(body)}</p></div>'
 
     sections = [
         _section("Objective (SWBAT)", objective),
@@ -95,29 +80,16 @@ def _lesson_to_html(data: dict) -> str:
         _section("Independent Work", independent_work),
     ]
     if exit_html:
-        sections.append(
-            f'<div class="section"><h3>Exit Ticket</h3>{exit_html}</div>'
-        )
+        sections.append(f'<div class="section"><h3>Exit Ticket</h3>{exit_html}</div>')
     if homework:
         sections.append(_section("Homework", homework))
     if diff_html:
-        sections.append(
-            f'<div class="section">'
-            f"<h3>Differentiation</h3>{diff_html}</div>"
-        )
+        sections.append(f'<div class="section"><h3>Differentiation</h3>{diff_html}</div>')
 
     num_label = f"Lesson {lesson_number}: " if lesson_number else ""
 
-    standards_line = (
-        f"<strong>Standards:</strong> {standards_html}<br>"
-        if standards_html
-        else ""
-    )
-    materials_line = (
-        f"<strong>Materials:</strong> {materials_html}"
-        if materials_html
-        else ""
-    )
+    standards_line = f"<strong>Standards:</strong> {standards_html}<br>" if standards_html else ""
+    materials_line = f"<strong>Materials:</strong> {materials_html}" if materials_html else ""
 
     return f"""\
 <!DOCTYPE html>
@@ -297,9 +269,7 @@ github.com/SirhanMacx/Claw-ED</a></p>
 
 @export_app.command("export")
 def export_cmd(
-    lesson_file: str = typer.Option(
-        ..., "--lesson-file", "-l", help="Path to lesson JSON"
-    ),
+    lesson_file: str = typer.Option(..., "--lesson-file", "-l", help="Path to lesson JSON"),
     fmt: str = typer.Option(
         "classroom",
         "--format",
@@ -310,6 +280,7 @@ def export_cmd(
 ):
     """Export a lesson plan (e.g., to Google Classroom JSON)."""
     if json_output:
+
         def _export_json():
             p = Path(lesson_file).expanduser().resolve()
             if not p.exists():
@@ -320,6 +291,7 @@ def export_cmd(
                 "data": {"title": data.get("title", ""), "format": fmt},
                 "files": [str(out_path)] if out_path.exists() else [],
             }
+
         run_json_command("export", _export_json)
         return
 
@@ -333,9 +305,7 @@ def export_cmd(
     if fmt == "classroom":
         description_parts = [data.get("objective", "")]
         if data.get("standards"):
-            description_parts.append(
-                f"Standards: {', '.join(data['standards'])}"
-            )
+            description_parts.append(f"Standards: {', '.join(data['standards'])}")
         if data.get("homework"):
             description_parts.append(f"Homework: {data['homework']}")
 
@@ -350,9 +320,7 @@ def export_cmd(
         }
 
         output = json.dumps(coursework, indent=2)
-        console.print(
-            Panel(output, title="Google Classroom CourseWork JSON")
-        )
+        console.print(Panel(output, title="Google Classroom CourseWork JSON"))
 
         out_path = path.with_suffix(".classroom.json")
         out_path.write_text(output, encoding="utf-8")
@@ -373,9 +341,7 @@ def share(
         "-l",
         help="Path to a saved lesson JSON file",
     ),
-    lesson_id: Optional[str] = typer.Option(
-        None, "--lesson-id", help="Lesson ID from the database"
-    ),
+    lesson_id: Optional[str] = typer.Option(None, "--lesson-id", help="Lesson ID from the database"),
     host: str = typer.Option(
         "http://localhost:8000",
         "--host",
@@ -406,9 +372,7 @@ def share(
             raise typer.Exit(1)
         token = lesson.get("share_token")
         if not token:
-            console.print(
-                "[red]No share token available for this lesson.[/red]"
-            )
+            console.print("[red]No share token available for this lesson.[/red]")
             db.close()
             raise typer.Exit(1)
         share_url = f"{host}/shared/{token}"
@@ -416,18 +380,11 @@ def share(
         # Build Rich panel content
         panel_lines = [f"[bold green]Share URL:[/bold green] {share_url}"]
 
-        embed_snippet = (
-            f'<script src="{host}/widget.js"'
-            f' data-token="{token}" async></script>'
-        )
+        embed_snippet = f'<script src="{host}/widget.js" data-token="{token}" async></script>'
         if embed:
-            panel_lines.append(
-                f"\n[bold cyan]Embed snippet:[/bold cyan]\n{embed_snippet}"
-            )
+            panel_lines.append(f"\n[bold cyan]Embed snippet:[/bold cyan]\n{embed_snippet}")
 
-        panel_lines.append(
-            "\n[dim]Hint: Anyone with this link can view the lesson.[/dim]"
-        )
+        panel_lines.append("\n[dim]Hint: Anyone with this link can view the lesson.[/dim]")
 
         console.print(
             Panel(
@@ -452,9 +409,7 @@ def share(
         return
 
     if not lesson_file:
-        console.print(
-            "[red]Provide --lesson-file or --lesson-id.[/red]"
-        )
+        console.print("[red]Provide --lesson-file or --lesson-id.[/red]")
         raise typer.Exit(1)
 
     path = Path(lesson_file).expanduser().resolve()
@@ -488,9 +443,7 @@ def _extract_token(value: str) -> str:
 
 @export_app.command("import")
 def import_lesson(
-    source: str = typer.Argument(
-        ..., help="Share URL or token to import"
-    ),
+    source: str = typer.Argument(..., help="Share URL or token to import"),
     server: str = typer.Option(
         "http://localhost:8000",
         "--server",
@@ -519,15 +472,11 @@ def import_lesson(
         raise typer.Exit(1)
 
     if resp.status_code == 404:
-        console.print(
-            f"[red]Lesson not found for token:[/red] {token}"
-        )
+        console.print(f"[red]Lesson not found for token:[/red] {token}")
         raise typer.Exit(1)
 
     if resp.status_code != 200:
-        console.print(
-            f"[red]Server returned status {resp.status_code}[/red]"
-        )
+        console.print(f"[red]Server returned status {resp.status_code}[/red]")
         raise typer.Exit(1)
 
     try:
@@ -612,8 +561,7 @@ def demo(
     )
     unit_table.add_row(
         "Duration",
-        f"{unit_data.get('duration_weeks', '')} weeks"
-        f" / {len(unit_data.get('daily_lessons', []))} lessons",
+        f"{unit_data.get('duration_weeks', '')} weeks / {len(unit_data.get('daily_lessons', []))} lessons",
     )
     unit_table.add_row(
         "Essential Questions",
@@ -624,8 +572,7 @@ def demo(
         "\n".join(unit_data.get("enduring_understandings", [])),
     )
     lessons_summary = "\n".join(
-        f"L{lesson['lesson_number']}: {lesson['topic']}"
-        for lesson in unit_data.get("daily_lessons", [])
+        f"L{lesson['lesson_number']}: {lesson['topic']}" for lesson in unit_data.get("daily_lessons", [])
     )
     unit_table.add_row("Lesson Sequence", lessons_summary)
     console.print(unit_table)
@@ -640,33 +587,21 @@ def demo(
     )
     lesson_table.add_column("Component", style="bold")
     lesson_table.add_column("Content", max_width=70)
-    lesson_table.add_row(
-        "Objective (SWBAT)", lesson_data.get("objective", "")
-    )
-    lesson_table.add_row(
-        "Do-Now", lesson_data.get("do_now", "")
-    )
-    lesson_table.add_row(
-        "Direct Instruction", lesson_data.get("direct_instruction", "")
-    )
-    lesson_table.add_row(
-        "Guided Practice", lesson_data.get("guided_practice", "")
-    )
+    lesson_table.add_row("Objective (SWBAT)", lesson_data.get("objective", ""))
+    lesson_table.add_row("Do-Now", lesson_data.get("do_now", ""))
+    lesson_table.add_row("Direct Instruction", lesson_data.get("direct_instruction", ""))
+    lesson_table.add_row("Guided Practice", lesson_data.get("guided_practice", ""))
     exit_tickets = lesson_data.get("exit_ticket", [])
     if isinstance(exit_tickets, list):
         et_text = "\n".join(
-            f"{i + 1}. {t['question']}" if isinstance(t, dict) else str(t)
-            for i, t in enumerate(exit_tickets)
+            f"{i + 1}. {t['question']}" if isinstance(t, dict) else str(t) for i, t in enumerate(exit_tickets)
         )
     else:
         et_text = str(exit_tickets)
     lesson_table.add_row("Exit Ticket", et_text)
     diff = lesson_data.get("differentiation", {})
     if isinstance(diff, dict):
-        diff_text = "\n".join(
-            f"{k.title()}: {', '.join(v) if isinstance(v, list) else v}"
-            for k, v in diff.items()
-        )
+        diff_text = "\n".join(f"{k.title()}: {', '.join(v) if isinstance(v, list) else v}" for k, v in diff.items())
     else:
         diff_text = str(diff)
     lesson_table.add_row("Differentiation", diff_text)
@@ -732,9 +667,7 @@ def landing(
         "--serve",
         help="Serve the landing page on port 8080",
     ),
-    port: int = typer.Option(
-        8080, "--port", "-p", help="Port for serving"
-    ),
+    port: int = typer.Option(8080, "--port", "-p", help="Port for serving"),
 ):
     """View or serve the Claw-ED landing page."""
     import functools
@@ -752,10 +685,7 @@ def landing(
             directory=str(landing_dir),
         )
         with http.server.HTTPServer(("0.0.0.0", port), handler) as server:
-            console.print(
-                f"[green]Landing page serving at[/green]"
-                f" http://localhost:{port}"
-            )
+            console.print(f"[green]Landing page serving at[/green] http://localhost:{port}")
             console.print("[dim]Press Ctrl+C to stop[/dim]")
             try:
                 server.serve_forever()

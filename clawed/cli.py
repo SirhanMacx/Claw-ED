@@ -87,16 +87,14 @@ def main(
             provider = cfg.provider.value
             key = get_api_key(provider)
             if not key and provider != "ollama":
-                console.print(
-                    f"[yellow]No API key found for {provider}.[/yellow]\n"
-                    "Let's fix that.\n"
-                )
+                console.print(f"[yellow]No API key found for {provider}.[/yellow]\nLet's fix that.\n")
                 needs_setup = True
 
         interface = "terminal"  # default
 
         if needs_setup:
             from clawed.onboarding import quick_model_setup
+
             try:
                 interface = quick_model_setup()
             except (KeyboardInterrupt, EOFError):
@@ -113,6 +111,7 @@ def main(
             if token:
                 try:
                     from clawed.transports.telegram import run_bot
+
                     run_bot(token=token)
                 except KeyboardInterrupt:
                     console.print("\n[yellow]Bot stopped.[/yellow]")
@@ -125,6 +124,7 @@ def main(
         import asyncio
 
         from clawed.transports.cli import run_chat
+
         try:
             asyncio.run(run_chat())
         except (KeyboardInterrupt, EOFError):
@@ -162,9 +162,11 @@ def setup(
     """
     if reset:
         from clawed.onboarding import _clear_config
+
         _clear_config()
 
     from clawed.onboarding import quick_model_setup
+
     quick_model_setup()
 
 
@@ -224,6 +226,7 @@ def debug() -> None:
     console.print("\n  [dim]Testing connection...[/dim]")
     try:
         from clawed.config import test_llm_connection
+
         result = asyncio.run(test_llm_connection(cfg))
         if result["connected"]:
             console.print(f"  [green]Connected: {result.get('message', 'OK')}[/green]")
@@ -236,6 +239,7 @@ def debug() -> None:
     console.print("\n  [dim]Testing LLM call...[/dim]")
     try:
         from clawed.gateway import Gateway
+
         gw = Gateway(config=cfg)
         result = asyncio.run(gw.handle("say hello in one word", "debug-test"))
         if "went wrong" in result.text.lower() or "provider key" in result.text.lower():

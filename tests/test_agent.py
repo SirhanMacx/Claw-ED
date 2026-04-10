@@ -1,4 +1,5 @@
 """Tests for the conversational agent with tool use."""
+
 from unittest.mock import patch
 
 import pytest
@@ -72,8 +73,10 @@ class TestAgentLoop:
         with patch("clawed.agent._call_with_ollama_tools") as mock_call:
             mock_call.return_value = {"type": "text", "content": "Hey! How can I help today?"}
             result = await run_agent(
-                "hey", system="You are Claw-ED.",
-                teacher_id="t1", config=_ollama_config(),
+                "hey",
+                system="You are Claw-ED.",
+                teacher_id="t1",
+                config=_ollama_config(),
             )
             assert isinstance(result, str)
             assert "help" in result.lower() or "hey" in result.lower()
@@ -96,8 +99,10 @@ class TestAgentLoop:
 
         with patch("clawed.agent._call_with_ollama_tools", side_effect=mock_call):
             result = await run_agent(
-                "show me my persona", system="test",
-                teacher_id="t1", config=_ollama_config(),
+                "show me my persona",
+                system="test",
+                teacher_id="t1",
+                config=_ollama_config(),
             )
             assert isinstance(result, str)
             assert call_count == 2  # First call returned tool, second returned text
@@ -114,8 +119,10 @@ class TestAgentLoop:
 
         with patch("clawed.agent._call_with_ollama_tools", side_effect=always_tool):
             result = await run_agent(
-                "test", system="test",
-                teacher_id="t1", config=_ollama_config(),
+                "test",
+                system="test",
+                teacher_id="t1",
+                config=_ollama_config(),
             )
             assert "limit" in result.lower()
 
@@ -149,7 +156,9 @@ class TestAgentLoop:
             with patch("clawed.agent.execute_tool", side_effect=mock_execute):
                 await run_agent(
                     "look up standards and show my persona",
-                    system="test", teacher_id="t1", config=_ollama_config(),
+                    system="test",
+                    teacher_id="t1",
+                    config=_ollama_config(),
                 )
                 assert "search_standards" in executed_tools
                 assert "read_persona" in executed_tools

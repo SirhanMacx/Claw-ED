@@ -49,9 +49,7 @@ class ResearchTopicTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         topic = params.get("topic", "").strip()
         if not topic:
             return ToolResult(text="ERROR: topic is required")
@@ -91,11 +89,13 @@ class ResearchTopicTool:
                 try:
                     text = await _fetch_page_text(url, timeout_ms=10000)
                     if text and len(text.strip()) > 100:
-                        detailed.append({
-                            "title": r.get("title", ""),
-                            "url": url,
-                            "excerpt": text[:2000],
-                        })
+                        detailed.append(
+                            {
+                                "title": r.get("title", ""),
+                                "url": url,
+                                "excerpt": text[:2000],
+                            }
+                        )
                 except Exception:
                     pass
 

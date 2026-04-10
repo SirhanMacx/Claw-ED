@@ -1,4 +1,5 @@
 """Tests for the improve_lesson tool schema and metadata."""
+
 from __future__ import annotations
 
 from clawed.agent_core.tools.improve_lesson import ImproveLessonTool

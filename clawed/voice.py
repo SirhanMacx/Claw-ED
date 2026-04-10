@@ -55,19 +55,13 @@ async def transcribe_audio(audio_path: Path) -> str:
     if shutil.which("whisper"):
         return await _transcribe_whisper_cli(audio_path)
 
-    raise RuntimeError(
-        "Voice transcription requires faster-whisper.\n"
-        "Install it with: pip install 'clawed[voice]'"
-    )
+    raise RuntimeError("Voice transcription requires faster-whisper.\nInstall it with: pip install 'clawed[voice]'")
 
 
 async def _transcribe_faster_whisper(audio_path: Path) -> str:
     """Transcribe using the faster-whisper Python library."""
     if WhisperModel is None:
-        raise RuntimeError(
-            "Voice transcription requires faster-whisper.\n"
-            "Install it with: pip install 'clawed[voice]'"
-        )
+        raise RuntimeError("Voice transcription requires faster-whisper.\nInstall it with: pip install 'clawed[voice]'")
 
     loop = asyncio.get_event_loop()
 
@@ -84,9 +78,12 @@ async def _transcribe_whisper_cli(audio_path: Path) -> str:
     proc = await asyncio.create_subprocess_exec(
         "whisper",
         str(audio_path),
-        "--model", "base",
-        "--output_format", "txt",
-        "--output_dir", str(audio_path.parent),
+        "--model",
+        "base",
+        "--output_format",
+        "txt",
+        "--output_dir",
+        str(audio_path.parent),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )

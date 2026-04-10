@@ -1,4 +1,5 @@
 """Post-generation output validation for all Claw-ED generation types."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -9,10 +10,17 @@ if TYPE_CHECKING:
     from clawed.master_content import MasterContent
 
 DELEGATION_PHRASES = [
-    "teacher will distribute", "teacher will provide", "your teacher will give",
-    "refer to the textbook", "see page", "open your textbook",
-    "[insert primary source here]", "[insert", "teacher will hand out",
-    "ask your teacher", "check with your teacher for",
+    "teacher will distribute",
+    "teacher will provide",
+    "your teacher will give",
+    "refer to the textbook",
+    "see page",
+    "open your textbook",
+    "[insert primary source here]",
+    "[insert",
+    "teacher will hand out",
+    "ask your teacher",
+    "check with your teacher for",
 ]
 
 
@@ -65,9 +73,7 @@ def validate_alignment(mc: "MasterContent") -> tuple[float, list[str]]:
     issues = []
     total_notes = len(mc.guided_notes)
     matched = 0
-    all_instruction_text = " ".join(
-        s.content + " " + " ".join(s.key_points) for s in mc.direct_instruction
-    ).lower()
+    all_instruction_text = " ".join(s.content + " " + " ".join(s.key_points) for s in mc.direct_instruction).lower()
     for note in mc.guided_notes:
         if note.answer.lower() in all_instruction_text:
             matched += 1
@@ -76,9 +82,7 @@ def validate_alignment(mc: "MasterContent") -> tuple[float, list[str]]:
     source_ids = {s.id for s in mc.primary_sources}
     for station in mc.stations:
         if station.source_ref not in source_ids:
-            issues.append(
-                f"Station '{station.title}' references unknown source '{station.source_ref}'"
-            )
+            issues.append(f"Station '{station.title}' references unknown source '{station.source_ref}'")
     for i, q in enumerate(mc.exit_ticket):
         if not q.stimulus.strip():
             issues.append(f"Exit ticket question {i + 1} has empty stimulus")
@@ -95,9 +99,7 @@ def validate_quiz(quiz, topic: str, requested_count: int) -> list[str]:
     if not quiz.questions:
         errors.append("No questions generated in quiz")
     elif len(quiz.questions) != requested_count:
-        errors.append(
-            f"Wrong question count: expected {requested_count}, got {len(quiz.questions)}"
-        )
+        errors.append(f"Wrong question count: expected {requested_count}, got {len(quiz.questions)}")
     if topic.lower() not in quiz.topic.lower():
         errors.append(f"Topic drift: requested '{topic}', got '{quiz.topic}'")
     return errors
@@ -109,9 +111,7 @@ def validate_rubric(rubric, requested_criteria: int) -> list[str]:
     if not rubric.criteria:
         errors.append("No criteria generated in rubric")
     elif len(rubric.criteria) != requested_criteria:
-        errors.append(
-            f"Wrong criteria count: expected {requested_criteria}, got {len(rubric.criteria)}"
-        )
+        errors.append(f"Wrong criteria count: expected {requested_criteria}, got {len(rubric.criteria)}")
     return errors
 
 

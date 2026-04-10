@@ -47,9 +47,7 @@ class GenerateSimulationTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         scenario = params.get("scenario", "").strip()
         if not scenario:
             return ToolResult(text="ERROR: scenario is required")
@@ -73,10 +71,8 @@ class GenerateSimulationTool:
             master = {
                 "topic": scenario,
                 "subject": subject or (context.persona or {}).get("subject_area", ""),
-                "grade_level": grade or (
-                    (context.persona or {}).get("grade_levels", [""])[0]
-                    if context.persona else ""
-                ),
+                "grade_level": grade
+                or ((context.persona or {}).get("grade_levels", [""])[0] if context.persona else ""),
             }
 
             result_path = await compile_simulation(

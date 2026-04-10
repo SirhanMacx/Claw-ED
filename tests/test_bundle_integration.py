@@ -1,4 +1,5 @@
 """End-to-end bundle integration test with alignment validation."""
+
 import json
 from pathlib import Path
 
@@ -11,6 +12,7 @@ class TestBundleIntegration:
     def test_demo_master_content_fixture_loads(self):
         """demo_master_content.json loads and validates."""
         from clawed.master_content import MasterContent
+
         fixture_path = DEMO_DIR / "demo_master_content.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         mc = MasterContent.model_validate(data)
@@ -22,6 +24,7 @@ class TestBundleIntegration:
         """MasterContent can convert to DailyLesson."""
         from clawed.master_content import MasterContent
         from clawed.models import DailyLesson
+
         fixture_path = DEMO_DIR / "demo_master_content.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         mc = MasterContent.model_validate(data)
@@ -32,6 +35,7 @@ class TestBundleIntegration:
     def test_demo_quiz_fixture_validates(self):
         """demo_quiz.json validates against Quiz model."""
         from clawed.models import Quiz
+
         fixture_path = DEMO_DIR / "demo_quiz.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         quiz = Quiz.model_validate(data)
@@ -40,6 +44,7 @@ class TestBundleIntegration:
     def test_demo_rubric_fixture_validates(self):
         """demo_rubric.json validates against Rubric model."""
         from clawed.models import Rubric
+
         fixture_path = DEMO_DIR / "demo_rubric.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         rubric = Rubric.model_validate(data)
@@ -48,6 +53,7 @@ class TestBundleIntegration:
     def test_demo_year_map_fixture_validates(self):
         """demo_year_map.json validates against YearMap model."""
         from clawed.models import YearMap
+
         fixture_path = DEMO_DIR / "demo_year_map.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         ym = YearMap.model_validate(data)
@@ -56,6 +62,7 @@ class TestBundleIntegration:
     def test_demo_formative_fixture_validates(self):
         """demo_formative_assessment.json validates against FormativeAssessment."""
         from clawed.models import FormativeAssessment
+
         fixture_path = DEMO_DIR / "demo_formative_assessment.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         fa = FormativeAssessment.model_validate(data)
@@ -64,6 +71,7 @@ class TestBundleIntegration:
     def test_demo_pacing_guide_fixture_validates(self):
         """demo_pacing_guide.json validates against PacingGuide."""
         from clawed.models import PacingGuide
+
         fixture_path = DEMO_DIR / "demo_pacing_guide.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         pg = PacingGuide.model_validate(data)
@@ -73,6 +81,7 @@ class TestBundleIntegration:
         """validate_alignment returns a score for the demo fixture."""
         from clawed.master_content import MasterContent
         from clawed.validation import validate_alignment
+
         fixture_path = DEMO_DIR / "demo_master_content.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         mc = MasterContent.model_validate(data)
@@ -84,6 +93,7 @@ class TestBundleIntegration:
         """check_self_contained finds no delegation phrases in demo fixture."""
         from clawed.master_content import MasterContent
         from clawed.validation import check_self_contained
+
         fixture_path = DEMO_DIR / "demo_master_content.json"
         data = json.loads(fixture_path.read_text(encoding="utf-8"))
         mc = MasterContent.model_validate(data)
@@ -98,6 +108,7 @@ class TestBundleIntegration:
     def test_generation_report_model(self):
         """GenerationReport accumulates warnings and produces summary."""
         from clawed.generation_report import GenerationReport
+
         report = GenerationReport()
         assert report.warnings == []
         report.warnings.append("test warning")

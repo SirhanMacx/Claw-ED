@@ -53,8 +53,7 @@ class TestFormatResults:
 
     def test_formats_up_to_3(self):
         results = [
-            {"title": f"Result {i}", "url": f"https://example.com/{i}", "snippet": f"Snippet {i}"}
-            for i in range(5)
+            {"title": f"Result {i}", "url": f"https://example.com/{i}", "snippet": f"Snippet {i}"} for i in range(5)
         ]
         formatted = _format_results(results, max_results=3)
         assert "Result 0" in formatted
@@ -118,11 +117,13 @@ class TestSearchForTeacher:
     def test_returns_formatted_results_tavily(self, monkeypatch):
         monkeypatch.setenv("TAVILY_API_KEY", "tvly-test")
 
-        mock_response = _make_mock_response(json_data={
-            "results": [
-                {"title": "Photosynthesis Lesson", "url": "https://edu.com/photo", "content": "A great resource."}
-            ]
-        })
+        mock_response = _make_mock_response(
+            json_data={
+                "results": [
+                    {"title": "Photosynthesis Lesson", "url": "https://edu.com/photo", "content": "A great resource."}
+                ]
+            }
+        )
 
         with patch("clawed.search.httpx.AsyncClient") as mock_client_cls:
             mock_client_cls.return_value = _make_mock_client(mock_response)
@@ -166,9 +167,13 @@ class TestSearchStandardsWeb:
     def test_returns_standards_results(self, monkeypatch):
         monkeypatch.setenv("TAVILY_API_KEY", "tvly-test")
 
-        mock_response = _make_mock_response(json_data={
-            "results": [{"title": "NGSS Grade 8 Standards", "url": "https://ngss.org", "content": "Standards list."}]
-        })
+        mock_response = _make_mock_response(
+            json_data={
+                "results": [
+                    {"title": "NGSS Grade 8 Standards", "url": "https://ngss.org", "content": "Standards list."}
+                ]
+            }
+        )
 
         with patch("clawed.search.httpx.AsyncClient") as mock_client_cls:
             mock_client_cls.return_value = _make_mock_client(mock_response)
@@ -180,9 +185,13 @@ class TestFindLessonResource:
     def test_returns_resource_results(self, monkeypatch):
         monkeypatch.setenv("TAVILY_API_KEY", "tvly-test")
 
-        mock_response = _make_mock_response(json_data={
-            "results": [{"title": "Photosynthesis Lab Activity", "url": "https://edu.com/lab", "content": "Hands-on."}]
-        })
+        mock_response = _make_mock_response(
+            json_data={
+                "results": [
+                    {"title": "Photosynthesis Lab Activity", "url": "https://edu.com/lab", "content": "Hands-on."}
+                ]
+            }
+        )
 
         with patch("clawed.search.httpx.AsyncClient") as mock_client_cls:
             mock_client_cls.return_value = _make_mock_client(mock_response)

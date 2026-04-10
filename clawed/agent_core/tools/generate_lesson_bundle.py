@@ -1,4 +1,5 @@
 """Tool: generate_lesson_bundle — complete teaching package (lesson + handout + slides)."""
+
 from __future__ import annotations
 
 import logging
@@ -11,30 +12,29 @@ from clawed.failure_codes import FailureCode
 logger = logging.getLogger(__name__)
 
 _CJK_RANGES = [
-    (0x4E00, 0x9FFF),    # CJK Unified Ideographs
-    (0x3400, 0x4DBF),    # CJK Extension A
-    (0x3000, 0x303F),    # CJK Symbols
-    (0xFF00, 0xFFEF),    # Fullwidth Forms
-    (0xAC00, 0xD7AF),    # Korean Hangul
+    (0x4E00, 0x9FFF),  # CJK Unified Ideographs
+    (0x3400, 0x4DBF),  # CJK Extension A
+    (0x3000, 0x303F),  # CJK Symbols
+    (0xFF00, 0xFFEF),  # Fullwidth Forms
+    (0xAC00, 0xD7AF),  # Korean Hangul
 ]
 
 
 def _has_cjk(text: str) -> bool:
     """Check if text contains CJK characters."""
-    return any(
-        any(lo <= ord(c) <= hi for lo, hi in _CJK_RANGES)
-        for c in text
-    )
+    return any(any(lo <= ord(c) <= hi for lo, hi in _CJK_RANGES) for c in text)
 
 
 def _strip_cjk(text: str) -> str:
     """Remove CJK characters from text, preserving everything else."""
     import re
+
     # Remove CJK blocks and clean up resulting whitespace
     cleaned = re.sub(
         r"[\u3000-\u303F\u3400-\u4DBF\u4E00-\u9FFF"
         r"\uAC00-\uD7AF\uFF00-\uFFEF]+",
-        " ", text,
+        " ",
+        text,
     )
     return re.sub(r"  +", " ", cleaned).strip()
 
@@ -96,9 +96,7 @@ class GenerateLessonBundleTool:
                         },
                         "activity_type": {
                             "type": "string",
-                            "description": (
-                                "Activity structure for the lesson"
-                            ),
+                            "description": ("Activity structure for the lesson"),
                             "enum": [
                                 "jigsaw",
                                 "socratic_seminar",
@@ -122,9 +120,7 @@ class GenerateLessonBundleTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.models import LessonBrief, TeacherPersona, UnitPlan
         from clawed.standards import get_standards_for_lesson
 
@@ -136,11 +132,12 @@ class GenerateLessonBundleTool:
 
         # ── Notify user we're starting ────────────────────────────────
         context.notify_progress(
-            f"Working on your lesson materials for \"{topic}\" now — "
+            f'Working on your lesson materials for "{topic}" now — '
             f"this usually takes 2-4 minutes. I'll send everything when it's ready!"
         )
 
         from clawed.generation_report import GenerationReport
+
         report = GenerationReport()
 
         # ── Load config & persona from context ───────────────────────
@@ -172,6 +169,7 @@ class GenerateLessonBundleTool:
         # Asset-level search (complete files, YouTube links)
         try:
             from clawed.asset_registry import AssetRegistry
+
             registry = AssetRegistry()
             assets = registry.search_assets(context.teacher_id, topic, top_k=5)
             yt_links = registry.get_youtube_links(context.teacher_id, topic, top_k=3)
@@ -179,7 +177,9 @@ class GenerateLessonBundleTool:
                 kb_prompt_section = registry.format_asset_summary(assets, yt_links)
                 logger.info(
                     "Asset search found %d files, %d YouTube links for '%s'",
-                    len(assets), len(yt_links), topic,
+                    len(assets),
+                    len(yt_links),
+                    topic,
                 )
         except Exception as e:
             logger.warning("NLAH_FAILURE=%s: %s", FailureCode.ASSET_SEARCH_FAILED, e)
@@ -188,22 +188,16 @@ class GenerateLessonBundleTool:
         # KB chunk-level search (text excerpts)
         try:
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
             kb = CurriculumKB()
             kb_results = kb.search(context.teacher_id, topic, top_k=3)
             if kb_results:
                 kb_parts = [r for r in kb_results if r.get("similarity", 0) > 0.1]
                 if kb_parts:
-                    kb_context = (
-                        "\n\nRelevant materials from the teacher's files:\n"
-                        + "\n".join(
-                            f"From '{r['doc_title']}': {r['chunk_text'][:200]}"
-                            for r in kb_parts
-                        )
+                    kb_context = "\n\nRelevant materials from the teacher's files:\n" + "\n".join(
+                        f"From '{r['doc_title']}': {r['chunk_text'][:200]}" for r in kb_parts
                     )
-                    chunk_section = "\n\n".join(
-                        f"From \"{r['doc_title']}\":\n{r['chunk_text'][:500]}"
-                        for r in kb_parts
-                    )
+                    chunk_section = "\n\n".join(f'From "{r["doc_title"]}":\n{r["chunk_text"][:500]}' for r in kb_parts)
                     if kb_prompt_section:
                         kb_prompt_section += "\n\n" + chunk_section
                     else:
@@ -239,9 +233,7 @@ class GenerateLessonBundleTool:
         # ── Build a UnitPlan with standards ──────────────────────────
         description = f"Introduction to {topic}"
         if activity_type and activity_type != "general":
-            description = (
-                f"{activity_type.replace('_', ' ').title()} lesson on {topic}"
-            )
+            description = f"{activity_type.replace('_', ' ').title()} lesson on {topic}"
 
         unit = UnitPlan(
             title=f"{topic} Unit",
@@ -265,7 +257,9 @@ class GenerateLessonBundleTool:
 
         logger.info(
             "Generating master content for '%s' (grade=%s, subject=%s)",
-            topic, grade, subject,
+            topic,
+            grade,
+            subject,
         )
         try:
             master = await generate_master_content(
@@ -293,9 +287,7 @@ class GenerateLessonBundleTool:
             report.warnings.append(issue)
 
         # Check all text for delegation phrases
-        all_text = " ".join(
-            s.content for s in master.direct_instruction
-        )
+        all_text = " ".join(s.content for s in master.direct_instruction)
         delegation = check_self_contained(all_text)
         for d in delegation:
             report.warnings.append(d)
@@ -345,6 +337,7 @@ class GenerateLessonBundleTool:
         # 1. Teacher DOCX
         try:
             from clawed.compile_teacher import compile_teacher_view
+
             teacher_path = await compile_teacher_view(master, images, output_dir)
             generated_files.append(teacher_path)
             side_effects.append(f"Teacher lesson plan DOCX: {teacher_path.name}")
@@ -355,6 +348,7 @@ class GenerateLessonBundleTool:
         # 2. Student DOCX
         try:
             from clawed.compile_student import compile_student_view
+
             student_path = await compile_student_view(master, images, output_dir)
             generated_files.append(student_path)
             side_effects.append(f"Student packet DOCX: {student_path.name}")
@@ -365,6 +359,7 @@ class GenerateLessonBundleTool:
         # 3. Slideshow PPTX
         try:
             from clawed.compile_slides import compile_slides
+
             pptx_path = await compile_slides(master, images, output_dir)
             generated_files.append(pptx_path)
             side_effects.append(f"Slideshow PPTX: {pptx_path.name}")
@@ -376,6 +371,7 @@ class GenerateLessonBundleTool:
         if generated_files:
             try:
                 from clawed.agent_core.quality import record_generation
+
                 record_generation(
                     teacher_id=context.teacher_id,
                     generation_type="lesson_bundle",
@@ -386,7 +382,8 @@ class GenerateLessonBundleTool:
                 )
                 logger.info(
                     "Tracked lesson generation: topic='%s', format='%s'",
-                    topic, activity_type,
+                    topic,
+                    activity_type,
                 )
             except Exception as e:
                 logger.debug("Lesson count tracking failed: %s", e)
@@ -419,9 +416,7 @@ class GenerateLessonBundleTool:
             voice_score = await score_voice_match(all_text, persona_ctx, llm)
             report.voice_check_passed = voice_score >= 3.0
             if voice_score < 3.0:
-                report.warnings.append(
-                    f"[{FailureCode.VOICE_MISMATCH}] Voice match score: {voice_score:.1f}/5.0"
-                )
+                report.warnings.append(f"[{FailureCode.VOICE_MISMATCH}] Voice match score: {voice_score:.1f}/5.0")
                 logger.warning("Voice match: %.1f/5.0 — below threshold", voice_score)
             else:
                 logger.info("Voice match: %.1f/5.0", voice_score)
@@ -458,23 +453,22 @@ class GenerateLessonBundleTool:
                         diff_text = await diff_llm.generate(diff_prompt)
                         if diff_text and len(diff_text) > 50:
                             from clawed.humanize import humanize
+
                             diff_text = humanize(diff_text)
-                            diff_path = (
-                                output_dir / f"{safe_title}_diff_{diff_type}.docx"
-                            )
+                            diff_path = output_dir / f"{safe_title}_diff_{diff_type}.docx"
                             from docx import Document as DocxDocument
+
                             doc = DocxDocument()
                             doc.add_heading(
-                                f"{master.title} — {diff_label}", 0,
+                                f"{master.title} — {diff_label}",
+                                0,
                             )
                             for line in diff_text.split("\n"):
                                 if line.strip():
                                     doc.add_paragraph(line.strip())
                             doc.save(str(diff_path))
                             generated_files.append(diff_path)
-                            side_effects.append(
-                                f"{diff_label}: {diff_path.name}"
-                            )
+                            side_effects.append(f"{diff_label}: {diff_path.name}")
                     except Exception as e:
                         logger.debug("Diff %s failed: %s", diff_type, e)
             except Exception as e:
@@ -502,7 +496,9 @@ class GenerateLessonBundleTool:
             from clawed.compile_journey import compile_journey
 
             journey_path = await compile_journey(
-                master=master, persona=persona, output_dir=output_dir,
+                master=master,
+                persona=persona,
+                output_dir=output_dir,
             )
             if journey_path and journey_path.exists():
                 generated_files.append(journey_path)
@@ -541,8 +537,11 @@ class GenerateLessonBundleTool:
                     from clawed.state_standards import (
                         get_standards_context_for_prompt,
                     )
+
                     standards_ctx = get_standards_context_for_prompt(
-                        state, [subject], [grade],
+                        state,
+                        [subject],
+                        [grade],
                     )
                     if standards_ctx:
                         logger.info("Standards aligned for %s/%s/%s", state, subject, grade)
@@ -568,11 +567,9 @@ class GenerateLessonBundleTool:
             lines.append(f"{len(generated_files)} files generated:\n")
 
             # Categorize files for clean display
-            core = [f for f in generated_files if f.suffix in (".docx", ".pptx")
-                    and "diff_" not in f.name]
+            core = [f for f in generated_files if f.suffix in (".docx", ".pptx") and "diff_" not in f.name]
             diffs = [f for f in generated_files if "diff_" in f.name]
-            extras = [f for f in generated_files
-                      if f.suffix in (".html", ".md") or f not in core + diffs]
+            extras = [f for f in generated_files if f.suffix in (".html", ".md") or f not in core + diffs]
 
             if core:
                 lines.append("Core lesson:")
@@ -610,10 +607,7 @@ class GenerateLessonBundleTool:
             if quality_parts:
                 lines.append(f"\nQuality: {' | '.join(quality_parts)}")
         elif generated_files:
-            lines.append(
-                f"Generated {len(generated_files)} of 3 files for: "
-                f"{master.title}"
-            )
+            lines.append(f"Generated {len(generated_files)} of 3 files for: {master.title}")
             lines.append("Files created:")
             for f in generated_files:
                 lines.append(f"  - {f.name} ({f.suffix.upper().lstrip('.')})")
@@ -623,9 +617,7 @@ class GenerateLessonBundleTool:
                     clean = str(err).split("\n")[0][:150]
                     lines.append(f"  - {clean}")
         else:
-            lines.append(
-                f"Failed to generate package for: {master.title}"
-            )
+            lines.append(f"Failed to generate package for: {master.title}")
             for err in errors:
                 lines.append(f"  - {err}")
 

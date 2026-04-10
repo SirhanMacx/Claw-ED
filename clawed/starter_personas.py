@@ -210,10 +210,7 @@ def get_starter_persona(subject: str) -> TeacherPersona | None:
     for key, persona in STARTER_PERSONAS.items():
         if key in subject_lower or subject_lower in key:
             return persona
-        if (
-            persona.subject_area.lower() in subject_lower
-            or subject_lower in persona.subject_area.lower()
-        ):
+        if persona.subject_area.lower() in subject_lower or subject_lower in persona.subject_area.lower():
             return persona
 
     # Default fallback

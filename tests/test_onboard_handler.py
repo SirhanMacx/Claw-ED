@@ -19,7 +19,9 @@ class TestOnboardValidation:
         text = "hello world"
         grade_match = re.search(r"(\d{1,2})", text)
         k_match = re.search(
-            r"(?:kindergarten|kinder|pre-?k)", text, re.IGNORECASE,
+            r"(?:kindergarten|kinder|pre-?k)",
+            text,
+            re.IGNORECASE,
         )
         assert grade_match is None
         assert k_match is None

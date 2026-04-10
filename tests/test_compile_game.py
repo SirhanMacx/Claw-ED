@@ -1,4 +1,5 @@
 """Tests for compile_game — focuses on pure functions (no LLM calls)."""
+
 from unittest.mock import MagicMock
 
 from clawed.compile_game import _extract_game_content, _repair_html_structure, _validate_game_html
@@ -146,8 +147,7 @@ def test_extract_game_content_empty_master():
 def test_repair_html_structure_well_formed_passthrough():
     """Well-formed HTML passes through unchanged."""
     html = (
-        "<!DOCTYPE html><html><head><style>body{}</style></head>"
-        "<body><script>function init(){}</script></body></html>"
+        "<!DOCTYPE html><html><head><style>body{}</style></head><body><script>function init(){}</script></body></html>"
     )
     result = _repair_html_structure(html)
     assert "<head>" in result

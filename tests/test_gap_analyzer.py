@@ -70,10 +70,7 @@ class TestCurriculumGapModel:
         assert len(gaps) == 0
 
     def test_gap_list_multiple(self):
-        gaps = [
-            CurriculumGap(standard=f"STD.{i}", description=f"Gap {i}", severity="medium")
-            for i in range(5)
-        ]
+        gaps = [CurriculumGap(standard=f"STD.{i}", description=f"Gap {i}", severity="medium") for i in range(5)]
         assert len(gaps) == 5
         assert gaps[2].standard == "STD.2"
 
@@ -104,9 +101,7 @@ class TestCurriculumMapper:
             },
         ]
 
-        with patch(
-            "clawed.curriculum_map.LLMClient"
-        ) as mock_llm:
+        with patch("clawed.curriculum_map.LLMClient") as mock_llm:
             instance = mock_llm.return_value
             instance.generate_json = AsyncMock(return_value=mock_gaps)
 
@@ -441,9 +436,12 @@ class TestGapAnalyzeCLI:
                 app,
                 [
                     "gap-analyze",
-                    "--subject", "Math",
-                    "--grade", "8",
-                    "--materials-dir", "/nonexistent/path/xyz",
+                    "--subject",
+                    "Math",
+                    "--grade",
+                    "8",
+                    "--materials-dir",
+                    "/nonexistent/path/xyz",
                 ],
             )
         assert result.exit_code != 0
@@ -460,17 +458,18 @@ class TestGapAnalyzeCLI:
             mock_p.return_value = self._mock_persona()
             mock_config.load.return_value = MagicMock(active_teacher_id=None)
             mapper_instance = mock_mapper.return_value
-            mapper_instance.identify_curriculum_gaps = AsyncMock(
-                return_value=self._mock_gaps()
-            )
+            mapper_instance.identify_curriculum_gaps = AsyncMock(return_value=self._mock_gaps())
 
             result = runner.invoke(
                 app,
                 [
                     "gap-analyze",
-                    "--subject", "Social Studies",
-                    "--grade", "8",
-                    "--standards", "SS.8.A.1.1 - Civil War",
+                    "--subject",
+                    "Social Studies",
+                    "--grade",
+                    "8",
+                    "--standards",
+                    "SS.8.A.1.1 - Civil War",
                 ],
             )
 
@@ -495,9 +494,12 @@ class TestGapAnalyzeCLI:
                 app,
                 [
                     "gap-analyze",
-                    "--subject", "Math",
-                    "--grade", "9",
-                    "--standards", "CCSS.Math.9",
+                    "--subject",
+                    "Math",
+                    "--grade",
+                    "9",
+                    "--standards",
+                    "CCSS.Math.9",
                 ],
             )
 
@@ -525,9 +527,12 @@ class TestGapAnalyzeCLI:
                 app,
                 [
                     "gap-analyze",
-                    "--subject", "Social Studies",
-                    "--grade", "8",
-                    "--standards", str(standards_file),
+                    "--subject",
+                    "Social Studies",
+                    "--grade",
+                    "8",
+                    "--standards",
+                    str(standards_file),
                 ],
             )
 
@@ -561,9 +566,12 @@ class TestGapAnalyzeCLI:
                 app,
                 [
                     "gap-analyze",
-                    "--subject", "Social Studies",
-                    "--grade", "8",
-                    "--materials-dir", str(mat_dir),
+                    "--subject",
+                    "Social Studies",
+                    "--grade",
+                    "8",
+                    "--materials-dir",
+                    str(mat_dir),
                 ],
             )
 
@@ -584,17 +592,18 @@ class TestGapAnalyzeCLI:
             mock_p.return_value = self._mock_persona()
             mock_config.load.return_value = MagicMock(active_teacher_id=None)
             mapper_instance = mock_mapper.return_value
-            mapper_instance.identify_curriculum_gaps = AsyncMock(
-                return_value=self._mock_gaps()
-            )
+            mapper_instance.identify_curriculum_gaps = AsyncMock(return_value=self._mock_gaps())
 
             result = runner.invoke(
                 app,
                 [
                     "gap-analyze",
-                    "--subject", "Science",
-                    "--grade", "7",
-                    "--format", "markdown",
+                    "--subject",
+                    "Science",
+                    "--grade",
+                    "7",
+                    "--format",
+                    "markdown",
                 ],
             )
 
@@ -617,16 +626,16 @@ class TestGapAnalyzeCLI:
             mock_p.return_value = self._mock_persona()
             mock_config.load.return_value = MagicMock(active_teacher_id=None)
             mapper_instance = mock_mapper.return_value
-            mapper_instance.identify_curriculum_gaps = AsyncMock(
-                return_value=self._mock_gaps()
-            )
+            mapper_instance.identify_curriculum_gaps = AsyncMock(return_value=self._mock_gaps())
 
             result = runner.invoke(
                 app,
                 [
                     "gap-analyze",
-                    "--subject", "Social Studies",
-                    "--grade", "8",
+                    "--subject",
+                    "Social Studies",
+                    "--grade",
+                    "8",
                 ],
             )
 

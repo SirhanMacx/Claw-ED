@@ -1,4 +1,5 @@
 """Tool: generate_assessment — wraps clawed.assessment.AssessmentGenerator.generate_quiz."""
+
 from __future__ import annotations
 
 import json
@@ -18,8 +19,7 @@ class GenerateAssessmentTool:
             "function": {
                 "name": "generate_assessment",
                 "description": (
-                    "Generate a quiz or assessment with questions and scoring "
-                    "for a given topic and grade level."
+                    "Generate a quiz or assessment with questions and scoring for a given topic and grade level."
                 ),
                 "parameters": {
                     "type": "object",
@@ -44,9 +44,7 @@ class GenerateAssessmentTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.assessment import AssessmentGenerator
 
         topic = params["topic"]

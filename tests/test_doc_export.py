@@ -361,6 +361,7 @@ class TestPPTXWithImages:
         assert path.stat().st_size > 0
 
         from pptx import Presentation
+
         prs = Presentation(str(path))
         assert len(prs.slides) >= 5
 
@@ -377,6 +378,7 @@ class TestPPTXWithImages:
         assert path.stat().st_size > 0
 
         from pptx import Presentation
+
         prs = Presentation(str(path))
         # Should still have all slides even without images
         assert len(prs.slides) >= 5

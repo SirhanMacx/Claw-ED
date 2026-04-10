@@ -10,8 +10,13 @@ skill = SubjectSkill(
         "causation/continuity/change analysis, periodization."
     ),
     aliases=(
-        "us history", "world history", "american history", "european history",
-        "ap history", "ap us history", "apush",
+        "us history",
+        "world history",
+        "american history",
+        "european history",
+        "ap history",
+        "ap us history",
+        "apush",
     ),
     system_prompt=(
         "You are an expert history educator. Teach students to think historically, not "

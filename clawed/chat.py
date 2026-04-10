@@ -37,9 +37,7 @@ async def student_chat(
     standards = lesson_json.get("standards", [])
 
     exit_ticket = lesson_json.get("exit_ticket", [])
-    et_text = "\n".join(
-        f"- {q['question']}" for q in exit_ticket if isinstance(q, dict)
-    ) if exit_ticket else "None"
+    et_text = "\n".join(f"- {q['question']}" for q in exit_ticket if isinstance(q, dict)) if exit_ticket else "None"
 
     lesson_context = (
         f"Lesson: {title}\n"

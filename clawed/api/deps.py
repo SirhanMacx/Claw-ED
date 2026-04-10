@@ -3,6 +3,7 @@
 Provides: rate limiter, auth guard, database access.
 Route modules import from here to avoid circular imports with server.py.
 """
+
 from __future__ import annotations
 
 import os
@@ -71,9 +72,7 @@ class _RateLimiter:
                         _cleanup_rate_store(window)
 
                     # Prune old timestamps for this key
-                    _rate_store[key] = [
-                        t for t in _rate_store[key] if t > now - window
-                    ]
+                    _rate_store[key] = [t for t in _rate_store[key] if t > now - window]
 
                     if len(_rate_store[key]) >= max_calls:
                         raise HTTPException(
@@ -83,7 +82,9 @@ class _RateLimiter:
                     _rate_store[key].append(now)
 
                 return await func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
 
@@ -92,9 +93,7 @@ limiter = _RateLimiter()
 
 # ── Auth Token ───────────────────────────────────────────────────────
 
-_TOKEN_FILE = Path(
-    os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-) / "api_token"
+_TOKEN_FILE = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))) / "api_token"
 
 
 def _get_or_create_token() -> str:

@@ -1,4 +1,5 @@
 """Tool: drive_organize — create a folder in Google Drive."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -16,10 +17,7 @@ class DriveOrganizeTool:
             "type": "function",
             "function": {
                 "name": "drive_organize",
-                "description": (
-                    "Create a new folder in Google Drive for organizing files. "
-                    "Returns the folder ID."
-                ),
+                "description": ("Create a new folder in Google Drive for organizing files. Returns the folder ID."),
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -38,9 +36,7 @@ class DriveOrganizeTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.agent_core.drive.client import DriveClient
 
         folder_name = params["folder_name"]
@@ -57,9 +53,7 @@ class DriveOrganizeTool:
             return ToolResult(
                 text=f"Created folder '{name}' (id={folder_id})",
                 data=result,
-                side_effects=[
-                    f"Created Drive folder '{name}' under {parent_id}"
-                ],
+                side_effects=[f"Created Drive folder '{name}' under {parent_id}"],
             )
         except Exception as e:
             return ToolResult(text=f"Failed to create folder: {e}")

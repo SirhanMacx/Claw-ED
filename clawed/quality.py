@@ -32,9 +32,7 @@ class LessonQualityScore:
     def __init__(self, config: AppConfig | None = None):
         self.client = LLMClient(config)
 
-    async def score(
-        self, lesson: DailyLesson, materials: LessonMaterials | None = None
-    ) -> dict[str, Any]:
+    async def score(self, lesson: DailyLesson, materials: LessonMaterials | None = None) -> dict[str, Any]:
         """Score each dimension 1-5 with brief explanation.
 
         Returns:
@@ -47,9 +45,7 @@ class LessonQualityScore:
         lesson_text = self._lesson_to_text(lesson)
         materials_text = self._materials_to_text(materials) if materials else "No materials provided."
 
-        dimensions_block = "\n".join(
-            f"- {dim}: {desc}" for dim, desc in self.dimension_descriptions.items()
-        )
+        dimensions_block = "\n".join(f"- {dim}: {desc}" for dim, desc in self.dimension_descriptions.items())
 
         prompt = (
             "You are an expert instructional coach evaluating a lesson plan.\n\n"

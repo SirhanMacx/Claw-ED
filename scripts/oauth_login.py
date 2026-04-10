@@ -7,6 +7,7 @@ Usage:
 Opens a browser URL for you to authorize. Paste the code back.
 Saves credentials to ~/.claude/.credentials.json
 """
+
 import json
 import os
 import secrets
@@ -32,9 +33,8 @@ def main():
     code_verifier = secrets.token_urlsafe(64)
     import base64
     import hashlib
-    code_challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(code_verifier.encode()).digest()
-    ).rstrip(b"=").decode()
+
+    code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).rstrip(b"=").decode()
 
     state = secrets.token_urlsafe(32)
 
@@ -70,13 +70,18 @@ def main():
 
     # Exchange code for tokens
     print("\n  Exchanging code for tokens...")
-    resp = httpx.post(TOKEN_URL, json={
-        "grant_type": "authorization_code",
-        "code": auth_code,
-        "client_id": CLIENT_ID,
-        "redirect_uri": REDIRECT_URL,
-        "code_verifier": code_verifier,
-    }, headers={"Content-Type": "application/json"}, timeout=15)
+    resp = httpx.post(
+        TOKEN_URL,
+        json={
+            "grant_type": "authorization_code",
+            "code": auth_code,
+            "client_id": CLIENT_ID,
+            "redirect_uri": REDIRECT_URL,
+            "code_verifier": code_verifier,
+        },
+        headers={"Content-Type": "application/json"},
+        timeout=15,
+    )
 
     if resp.status_code != 200:
         print(f"  Error: {resp.status_code} — {resp.text[:200]}")
@@ -116,7 +121,8 @@ def main():
 
     # Quick test
     print("\n  Testing API access...")
-    test = httpx.post("https://api.anthropic.com/v1/messages",
+    test = httpx.post(
+        "https://api.anthropic.com/v1/messages",
         headers={
             "Authorization": f"Bearer {access_token}",
             "anthropic-version": "2023-06-01",
@@ -128,7 +134,9 @@ def main():
             "model": "claude-haiku-4-5-20251001",
             "max_tokens": 20,
             "messages": [{"role": "user", "content": "Say OK"}],
-        }, timeout=15)
+        },
+        timeout=15,
+    )
 
     if test.status_code == 200:
         print(f"  API works! Response: {test.json()['content'][0]['text']}")

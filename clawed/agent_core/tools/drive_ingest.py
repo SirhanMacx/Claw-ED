@@ -38,30 +38,29 @@ class DriveIngestTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         folder_input = params.get("folder_id", "")
         if not folder_input:
             return ToolResult(text="ERROR: folder_id is required")
 
         # Extract ID from URL if needed
         import re
+
         match = re.search(r"folders/([a-zA-Z0-9_-]+)", folder_input)
         folder_id = match.group(1) if match else folder_input
 
         try:
             from clawed.agent_core.drive.auth import is_authenticated
+
             if not is_authenticated():
                 from clawed.agent_core.drive.auth import get_auth_url
+
                 url = get_auth_url()
                 if url:
                     return ToolResult(
                         text=f"I need Google Drive access first. Please visit this URL to authorize:\n{url}"
                     )
-                return ToolResult(
-                    text="Google Drive is not set up yet. Run `clawed drive auth` to connect your Drive."
-                )
+                return ToolResult(text="Google Drive is not set up yet. Run `clawed drive auth` to connect your Drive.")
 
             from clawed.agent_core.drive.client import DriveClient
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB

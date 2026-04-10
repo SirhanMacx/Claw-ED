@@ -1,4 +1,5 @@
 """Tool: switch_model — change provider, model, or tier routing."""
+
 from __future__ import annotations
 
 import logging
@@ -33,8 +34,11 @@ class SwitchModelTool:
                         "action": {
                             "type": "string",
                             "enum": [
-                                "current", "list", "switch",
-                                "switch_provider", "set_tier",
+                                "current",
+                                "list",
+                                "switch",
+                                "switch_provider",
+                                "set_tier",
                                 "list_providers",
                             ],
                             "description": (
@@ -50,10 +54,7 @@ class SwitchModelTool:
                         },
                         "provider": {
                             "type": "string",
-                            "description": (
-                                "Provider name: ollama, anthropic, openai, "
-                                "google, openrouter"
-                            ),
+                            "description": ("Provider name: ollama, anthropic, openai, google, openrouter"),
                         },
                         "tier": {
                             "type": "string",
@@ -67,7 +68,9 @@ class SwitchModelTool:
         }
 
     async def execute(
-        self, params: dict[str, Any], context: AgentContext,
+        self,
+        params: dict[str, Any],
+        context: AgentContext,
     ) -> ToolResult:
         action = params.get("action", "current")
         config = context.config
@@ -145,6 +148,7 @@ class SwitchModelTool:
             return ToolResult(text="Specify a model_name to switch to.")
 
         from clawed.models import AppConfig
+
         cfg = AppConfig.load()
         field_map = {
             "ollama": "ollama_model",
@@ -173,8 +177,7 @@ class SwitchModelTool:
         key = get_api_key(provider)
         if not key and provider not in ("ollama",):
             return ToolResult(
-                text=f"No API key found for {provider}. "
-                f"Set one with: clawed setup",
+                text=f"No API key found for {provider}. Set one with: clawed setup",
             )
 
         try:
@@ -187,8 +190,7 @@ class SwitchModelTool:
             )
         except ValueError:
             return ToolResult(
-                text=f"Unknown provider: {provider}. "
-                "Options: ollama, anthropic, openai, google, openrouter",
+                text=f"Unknown provider: {provider}. Options: ollama, anthropic, openai, google, openrouter",
             )
 
     def _set_tier(self, params) -> ToolResult:
@@ -196,11 +198,11 @@ class SwitchModelTool:
         provider = params.get("provider", "")
         if not tier or not provider:
             return ToolResult(
-                text="Specify both tier and provider. "
-                "Example: tier=deep, provider=anthropic",
+                text="Specify both tier and provider. Example: tier=deep, provider=anthropic",
             )
 
         from clawed.models import AppConfig
+
         cfg = AppConfig.load()
         tiers = cfg.tier_providers or {}
         tiers[tier] = provider
@@ -215,7 +217,11 @@ class SwitchModelTool:
         from clawed.config import get_api_key
 
         providers = [
-            "ollama", "anthropic", "openai", "google", "openrouter",
+            "ollama",
+            "anthropic",
+            "openai",
+            "google",
+            "openrouter",
         ]
         lines = ["Configured providers:"]
         for p in providers:

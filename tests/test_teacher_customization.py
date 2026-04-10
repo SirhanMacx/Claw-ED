@@ -135,9 +135,7 @@ class TestScheduleTimeParser:
         pass
 
 
-@pytest.mark.skip(
-    reason="Function _parse_day_of_week removed during gateway extraction."
-)
+@pytest.mark.skip(reason="Function _parse_day_of_week removed during gateway extraction.")
 class TestParseDayOfWeek:
     def test_sunday(self):
         pass
@@ -176,9 +174,7 @@ class TestCronToHuman:
         assert "12:00 PM" in result
 
 
-@pytest.mark.skip(
-    reason="Function _match_task_name removed during gateway extraction."
-)
+@pytest.mark.skip(reason="Function _match_task_name removed during gateway extraction.")
 class TestMatchTaskName:
     def test_morning_prep(self):
         pass
@@ -280,9 +276,7 @@ class TestTrackLessonMetadata:
                 lesson_number=i,
                 objective="Test",
                 do_now="A fairly long do-now activity for testing" if i < 2 else "",
-                exit_ticket=[
-                    ExitTicketQuestion(question="Q?", expected_response="A")
-                ] * (i + 1),
+                exit_ticket=[ExitTicketQuestion(question="Q?", expected_response="A")] * (i + 1),
             )
             track_lesson_metadata(lesson, rating=5)
 
@@ -421,8 +415,7 @@ class TestModelSwitchIntent:
 
 
 @pytest.mark.skip(
-    reason="bot._cmd_model_switch() removed during gateway extraction; "
-    "model switching now goes through the Gateway."
+    reason="bot._cmd_model_switch() removed during gateway extraction; model switching now goes through the Gateway."
 )
 class TestModelSwitchCommand:
     def test_switch_to_ollama(self, tmp_path):

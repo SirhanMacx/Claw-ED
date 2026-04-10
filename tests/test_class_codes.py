@@ -282,10 +282,12 @@ class TestWebDatabaseClassCodes:
 class TestClassCLI:
     def test_class_app_importable(self):
         from clawed.commands.config import class_app
+
         assert class_app is not None
 
     def test_class_commands_registered(self):
         from clawed.commands.config import class_app
+
         cmd_names = [cmd.name for cmd in class_app.registered_commands]
         assert "create" in cmd_names
         assert "revoke" in cmd_names
@@ -295,6 +297,7 @@ class TestClassCLI:
 
     def test_class_app_in_main_cli(self):
         from clawed.cli import app
+
         group_names = [cmd.name for cmd in app.registered_groups]
         assert "class" in group_names
 
@@ -320,6 +323,7 @@ class TestOnboardingDetection:
         with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-ant-test"}, clear=True):
             provider, msg = _detect_available_models()
             from clawed.models import LLMProvider
+
             assert provider == LLMProvider.ANTHROPIC
             assert "Anthropic" in msg
 
@@ -329,6 +333,7 @@ class TestOnboardingDetection:
         with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}, clear=True):
             provider, msg = _detect_available_models()
             from clawed.models import LLMProvider
+
             assert provider == LLMProvider.OPENAI
             assert "OpenAI" in msg
 
@@ -337,9 +342,7 @@ class TestOnboardingDetection:
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = {
-            "models": [{"name": "llama3.2:latest"}]
-        }
+        mock_resp.json.return_value = {"models": [{"name": "llama3.2:latest"}]}
 
         with (
             patch.dict("os.environ", {}, clear=True),
@@ -347,6 +350,7 @@ class TestOnboardingDetection:
         ):
             provider, msg = _detect_available_models()
             from clawed.models import LLMProvider
+
             assert provider == LLMProvider.OLLAMA
             assert "llama3.2" in msg
 

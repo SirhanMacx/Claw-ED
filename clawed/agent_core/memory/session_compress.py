@@ -7,6 +7,7 @@ compression to prevent unbounded DB growth.
 
 Inspired by MemPalace's AAAK compression concept, adapted for teaching sessions.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,9 +27,7 @@ COMPRESS_THRESHOLD = 40
 
 
 def _db_path() -> Path:
-    data_dir = os.environ.get(
-        "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")
-    )
+    data_dir = os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
     return Path(data_dir) / "memory" / "sessions.db"
 
 
@@ -154,6 +153,7 @@ def _heuristic_summary(turns: list[dict[str, Any]], fields: dict[str, list[str]]
 
 # ── Core compression ─────────────────────────────────────────────────
 
+
 def compress_old_sessions(teacher_id: str, keep_recent: int = KEEP_RECENT) -> int:
     """Compress oldest conversation turns into a structured summary.
 
@@ -206,6 +206,7 @@ def compress_old_sessions(teacher_id: str, keep_recent: int = KEEP_RECENT) -> in
         import struct
 
         from clawed.agent_core.memory.embeddings import get_embedder
+
         vec = get_embedder().embed(summary_text)
         embedding_blob = struct.pack(f"<{len(vec)}f", *vec)
     except Exception:
@@ -225,13 +226,17 @@ def compress_old_sessions(teacher_id: str, keep_recent: int = KEEP_RECENT) -> in
             "compressed_text, embedding, original_turn_ids, created_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
-                teacher_id, session_date, len(turns),
+                teacher_id,
+                session_date,
+                len(turns),
                 json.dumps(fields["topics"]),
                 json.dumps(fields["materials_generated"]),
                 json.dumps(fields["decisions"]),
                 json.dumps(fields["feedback"]),
-                summary_text, embedding_blob,
-                json.dumps(turn_ids), now,
+                summary_text,
+                embedding_blob,
+                json.dumps(turn_ids),
+                now,
             ),
         )
 
@@ -244,7 +249,9 @@ def compress_old_sessions(teacher_id: str, keep_recent: int = KEEP_RECENT) -> in
 
     logger.info(
         "Compressed %d turns for %s into summary (date: %s)",
-        len(turns), teacher_id, session_date,
+        len(turns),
+        teacher_id,
+        session_date,
     )
     return len(turns)
 
@@ -259,6 +266,7 @@ def maybe_compress_sessions(teacher_id: str) -> int:
 
 
 # ── Search and recall ────────────────────────────────────────────────
+
 
 def search_session_history(
     teacher_id: str,
@@ -348,13 +356,15 @@ def get_full_session_timeline(
             (teacher_id, summary_limit),
         ).fetchall()
         for s in reversed(summaries):
-            timeline.append({
-                "type": "summary",
-                "date": s["session_date"],
-                "turn_count": s["turn_count"],
-                "topics": json.loads(s["topics"] or "[]"),
-                "text": s["compressed_text"],
-            })
+            timeline.append(
+                {
+                    "type": "summary",
+                    "date": s["session_date"],
+                    "turn_count": s["turn_count"],
+                    "topics": json.loads(s["topics"] or "[]"),
+                    "text": s["compressed_text"],
+                }
+            )
 
         # Recent verbatim turns (newer)
         turns = conn.execute(
@@ -364,12 +374,14 @@ def get_full_session_timeline(
             (teacher_id, recent_limit),
         ).fetchall()
         for t in reversed(turns):
-            timeline.append({
-                "type": "turn",
-                "role": t["role"],
-                "content": t["content"],
-                "timestamp": t["timestamp"],
-                "transport": t["transport"],
-            })
+            timeline.append(
+                {
+                    "type": "turn",
+                    "role": t["role"],
+                    "content": t["content"],
+                    "timestamp": t["timestamp"],
+                    "transport": t["transport"],
+                }
+            )
 
     return timeline

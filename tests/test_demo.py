@@ -58,6 +58,7 @@ class TestDemoMode:
     def test_demo_mode_no_keys(self):
         # Remove any existing keys from env
         import os
+
         os.environ.pop("ANTHROPIC_API_KEY", None)
         os.environ.pop("OPENAI_API_KEY", None)
         # is_demo_mode checks config for ollama too, but without config file it should be True
@@ -77,30 +78,35 @@ class TestDemoMode:
 class TestLLMDemoFallback:
     def test_demo_response_social_studies(self):
         from clawed.llm import LLMClient
+
         response = LLMClient._demo_response("Generate a social studies lesson")
         data = json.loads(response)
         assert data["subject"] == "Social Studies"
 
     def test_demo_response_science(self):
         from clawed.llm import LLMClient
+
         response = LLMClient._demo_response("Generate a science lesson")
         data = json.loads(response)
         assert data["subject"] == "Science"
 
     def test_demo_response_assessment(self):
         from clawed.llm import LLMClient
+
         response = LLMClient._demo_response("Create a DBQ assessment")
         data = json.loads(response)
         assert data["assessment_type"] == "dbq"
 
     def test_demo_response_unit(self):
         from clawed.llm import LLMClient
+
         response = LLMClient._demo_response("Build a unit plan")
         data = json.loads(response)
         assert "daily_lessons" in data
 
     def test_demo_response_default(self):
         from clawed.llm import LLMClient
+
         response = LLMClient._demo_response("Generate something")
         data = json.loads(response)
         # Default is social studies

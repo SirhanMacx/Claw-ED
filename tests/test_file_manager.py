@@ -46,12 +46,16 @@ class TestFileListTool:
     async def test_list_files(self, output_dir, monkeypatch):
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         config = AppConfig()
         config.output_dir = str(output_dir)
         ctx = AgentContext(
-            teacher_id="t1", config=config,
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=config,
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         tool = FileListTool()
         result = await tool.execute({}, ctx)
@@ -62,12 +66,16 @@ class TestFileListTool:
     async def test_list_subdirectory(self, output_dir, monkeypatch):
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         config = AppConfig()
         config.output_dir = str(output_dir)
         ctx = AgentContext(
-            teacher_id="t1", config=config,
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=config,
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         tool = FileListTool()
         result = await tool.execute({"path": "sub"}, ctx)
@@ -84,12 +92,16 @@ class TestFileOrganizeTool:
     async def test_create_folder(self, output_dir):
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         config = AppConfig()
         config.output_dir = str(output_dir)
         ctx = AgentContext(
-            teacher_id="t1", config=config,
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=config,
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         tool = FileOrganizeTool()
         result = await tool.execute({"action": "create_folder", "destination": "history/unit1"}, ctx)
@@ -100,19 +112,26 @@ class TestFileOrganizeTool:
     async def test_move_file(self, output_dir):
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         config = AppConfig()
         config.output_dir = str(output_dir)
         ctx = AgentContext(
-            teacher_id="t1", config=config,
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=config,
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         tool = FileOrganizeTool()
-        result = await tool.execute({
-            "action": "move_file",
-            "source": "lesson1.docx",
-            "destination": "sub/lesson1.docx",
-        }, ctx)
+        result = await tool.execute(
+            {
+                "action": "move_file",
+                "source": "lesson1.docx",
+                "destination": "sub/lesson1.docx",
+            },
+            ctx,
+        )
         assert "Moved" in result.text
         assert (output_dir / "sub" / "lesson1.docx").exists()
         assert not (output_dir / "lesson1.docx").exists()
@@ -133,10 +152,14 @@ class TestWorkspaceStatusTool:
         (ws / "soul.md").write_text("Teaching philosophy here")
         from clawed.agent_core.context import AgentContext
         from clawed.models import AppConfig
+
         ctx = AgentContext(
-            teacher_id="t1", config=AppConfig(),
-            teacher_profile={}, persona=None,
-            session_history=[], improvement_context="",
+            teacher_id="t1",
+            config=AppConfig(),
+            teacher_profile={},
+            persona=None,
+            session_history=[],
+            improvement_context="",
         )
         tool = WorkspaceStatusTool()
         result = await tool.execute({}, ctx)
@@ -147,6 +170,7 @@ class TestWorkspaceStatusTool:
 class TestToolDiscovery:
     def test_file_tools_discovered(self):
         from clawed.agent_core.tools.base import ToolRegistry
+
         reg = ToolRegistry()
         reg.discover(Path(__file__).parent.parent / "clawed" / "agent_core" / "tools")
         names = reg.tool_names()

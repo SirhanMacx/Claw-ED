@@ -26,10 +26,7 @@ def _good_packet() -> StudentPacket:
     """
     return StudentPacket(
         title="Causes of the Civil War — Student Packet",
-        aim=(
-            "How did the debate over slavery lead to the outbreak of the "
-            "Civil War?"
-        ),
+        aim=("How did the debate over slavery lead to the outbreak of the Civil War?"),
         do_now_prompt=(
             "Imagine two neighbors share a fence. One neighbor wants to "
             "build a tall wall; the other wants to tear the fence down. "
@@ -42,10 +39,7 @@ def _good_packet() -> StudentPacket:
         vocabulary=[
             VocabularyTerm(
                 term="Sectionalism",
-                definition=(
-                    "Loyalty to one's own region (North or South) over "
-                    "the nation as a whole."
-                ),
+                definition=("Loyalty to one's own region (North or South) over the nation as a whole."),
             ),
             VocabularyTerm(
                 term="Abolitionist",
@@ -118,8 +112,7 @@ def _good_packet() -> StudentPacket:
                 author="John C. Calhoun",
                 date="March 4, 1850",
                 context=(
-                    "Calhoun, a South Carolina senator, argued against "
-                    "northern restrictions on slavery's expansion."
+                    "Calhoun, a South Carolina senator, argued against northern restrictions on slavery's expansion."
                 ),
                 full_text=(
                     "The South asks for justice, simple justice, and less she "
@@ -229,16 +222,12 @@ class TestDoNowQuality:
         """
         packet = _good_packet()
         assert packet.do_now_prompt.strip(), "do_now_prompt must not be empty"
-        assert len(packet.do_now_prompt) > 10, (
-            f"do_now_prompt is only {len(packet.do_now_prompt)} chars — must be > 10"
-        )
+        assert len(packet.do_now_prompt) > 10, f"do_now_prompt is only {len(packet.do_now_prompt)} chars — must be > 10"
 
     def test_bad_packet_do_now_too_short(self):
         """Bad packet has a Do Now prompt that is too short (<= 10 chars)."""
         packet = _bad_packet()
-        assert len(packet.do_now_prompt) <= 10, (
-            f"Expected do_now_prompt <= 10 chars, got {len(packet.do_now_prompt)}"
-        )
+        assert len(packet.do_now_prompt) <= 10, f"Expected do_now_prompt <= 10 chars, got {len(packet.do_now_prompt)}"
 
 
 class TestVocabularyQuality:
@@ -252,16 +241,12 @@ class TestVocabularyQuality:
         vocabulary or the lesson lacked domain-specific language.
         """
         packet = _good_packet()
-        assert len(packet.vocabulary) >= 2, (
-            f"Expected >= 2 vocabulary terms, got {len(packet.vocabulary)}"
-        )
+        assert len(packet.vocabulary) >= 2, f"Expected >= 2 vocabulary terms, got {len(packet.vocabulary)}"
 
     def test_bad_packet_vocabulary_too_few(self):
         """Bad packet has fewer than 2 vocabulary terms."""
         packet = _bad_packet()
-        assert len(packet.vocabulary) < 2, (
-            f"Expected < 2 vocabulary terms, got {len(packet.vocabulary)}"
-        )
+        assert len(packet.vocabulary) < 2, f"Expected < 2 vocabulary terms, got {len(packet.vocabulary)}"
 
 
 class TestExitTicketQuality:
@@ -276,16 +261,14 @@ class TestExitTicketQuality:
         """
         packet = _good_packet()
         assert len(packet.exit_ticket_questions) >= 2, (
-            f"Expected >= 2 exit ticket questions, got "
-            f"{len(packet.exit_ticket_questions)}"
+            f"Expected >= 2 exit ticket questions, got {len(packet.exit_ticket_questions)}"
         )
 
     def test_bad_packet_exit_ticket_too_few(self):
         """Bad packet has fewer than 2 exit ticket questions."""
         packet = _bad_packet()
         assert len(packet.exit_ticket_questions) < 2, (
-            f"Expected < 2 exit ticket questions, got "
-            f"{len(packet.exit_ticket_questions)}"
+            f"Expected < 2 exit ticket questions, got {len(packet.exit_ticket_questions)}"
         )
 
 
@@ -304,17 +287,14 @@ class TestSourceQuality:
         for station in packet.stations:
             text = station.full_text.strip()
             assert len(text) > 30, (
-                f"Station '{station.document_label}' full_text is only "
-                f"{len(text)} chars — must be > 30"
+                f"Station '{station.document_label}' full_text is only {len(text)} chars — must be > 30"
             )
             text_lower = text.lower()
             assert "see textbook" not in text_lower, (
-                f"Station '{station.document_label}' says 'see textbook' — "
-                "must include actual source text"
+                f"Station '{station.document_label}' says 'see textbook' — must include actual source text"
             )
             assert "see page" not in text_lower, (
-                f"Station '{station.document_label}' says 'see page' — "
-                "must include actual source text"
+                f"Station '{station.document_label}' says 'see page' — must include actual source text"
             )
 
     def test_bad_packet_sources_are_lazy(self):
@@ -326,9 +306,7 @@ class TestSourceQuality:
             if "see textbook" in text_lower or "see page" in text_lower:
                 lazy_found = True
                 break
-        assert lazy_found, (
-            "Expected at least one station with 'see textbook' or 'see page'"
-        )
+        assert lazy_found, "Expected at least one station with 'see textbook' or 'see page'"
 
 
 class TestGraphicOrganizerQuality:
@@ -342,9 +320,7 @@ class TestGraphicOrganizerQuality:
         relationships, comparisons, or categorization.
         """
         packet = _good_packet()
-        assert packet.graphic_organizer is not None, (
-            "Graphic organizer must be present"
-        )
+        assert packet.graphic_organizer is not None, "Graphic organizer must be present"
         assert len(packet.graphic_organizer.columns) >= 2, (
             f"Expected >= 2 columns, got {len(packet.graphic_organizer.columns)}"
         )

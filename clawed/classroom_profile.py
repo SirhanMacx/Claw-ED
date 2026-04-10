@@ -19,9 +19,12 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-_BASE = Path(os.environ.get(
-    "EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"),
-))
+_BASE = Path(
+    os.environ.get(
+        "EDUAGENT_DATA_DIR",
+        str(Path.home() / ".eduagent"),
+    )
+)
 _PROFILE_PATH = _BASE / "classroom_profile.json"
 
 
@@ -31,7 +34,7 @@ class ClassroomProfile(BaseModel):
     # Physical environment
     room_number: str = ""
     student_count: int = 0
-    seating_arrangement: str = ""       # "rows", "clusters", "u-shape", "flexible"
+    seating_arrangement: str = ""  # "rows", "clusters", "u-shape", "flexible"
     has_smartboard: bool = False
     has_projector: bool = False
     has_chromebooks: bool = False
@@ -44,7 +47,7 @@ class ClassroomProfile(BaseModel):
     iep_count: int = 0
     plan_504_count: int = 0
     gifted_count: int = 0
-    reading_level_range: str = ""       # "Grade 5-9" — spread in the room
+    reading_level_range: str = ""  # "Grade 5-9" — spread in the room
 
     # Scheduling
     period_length_minutes: int = 40
@@ -52,19 +55,19 @@ class ClassroomProfile(BaseModel):
     school_name: str = ""
 
     # Curriculum context
-    textbook: str = ""                  # "McGraw-Hill US History"
-    lms_platform: str = ""             # "Google Classroom", "Canvas", "Schoology"
-    standards_framework: str = ""       # "NYS", "Common Core", "NGSS"
-    state: str = ""                     # "NY", "CA", "TX"
+    textbook: str = ""  # "McGraw-Hill US History"
+    lms_platform: str = ""  # "Google Classroom", "Canvas", "Schoology"
+    standards_framework: str = ""  # "NYS", "Common Core", "NGSS"
+    state: str = ""  # "NY", "CA", "TX"
 
     # Teacher preferences (learned over time)
-    preferred_grouping: str = ""        # "pairs", "table groups of 4", "whole class"
-    noise_tolerance: str = ""          # "quiet work", "structured talk", "lively discussion"
+    preferred_grouping: str = ""  # "pairs", "table groups of 4", "whole class"
+    noise_tolerance: str = ""  # "quiet work", "structured talk", "lively discussion"
     preferred_activities: list[str] = Field(default_factory=list)
     avoided_activities: list[str] = Field(default_factory=list)
 
     # Notes
-    notes: str = ""                     # Free-text for anything else
+    notes: str = ""  # Free-text for anything else
 
 
 def load_profile() -> ClassroomProfile:
@@ -167,7 +170,6 @@ def profile_to_prompt_context() -> str:
         return ""
 
     return (
-        "## Classroom Context (from saved profile)\n"
-        + "\n".join(f"- {p}" for p in parts) + "\n"
+        "## Classroom Context (from saved profile)\n" + "\n".join(f"- {p}" for p in parts) + "\n"
         "Design ALL activities to work in THIS specific classroom."
     )

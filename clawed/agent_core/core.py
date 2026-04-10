@@ -5,6 +5,7 @@ Deterministic paths (file ingestion, onboarding, approval callbacks)
 are handled without touching the LLM. Only natural-language messages
 go through the agent tool-use loop.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -61,7 +62,9 @@ class _LLMClientAdapter:
             _agent_mod.TOOL_DEFINITIONS = tools or []
         try:
             if self._config.provider in (
-                LLMProvider.ANTHROPIC, LLMProvider.OPENAI, LLMProvider.OPENROUTER,
+                LLMProvider.ANTHROPIC,
+                LLMProvider.OPENAI,
+                LLMProvider.OPENROUTER,
             ):
                 return await _call_with_native_tools(messages, system, self._config)
             else:
@@ -92,6 +95,7 @@ class Gateway:
         # Eagerly initialize databases so they're never left as 0-byte files
         try:
             from clawed.state import init_db as init_state_db
+
             init_state_db()
         except Exception as e:
             logger.debug("Eager init failed for state DB: %s", e)
@@ -100,18 +104,21 @@ class Gateway:
             from clawed.agent_core.memory.sessions import (
                 _ensure_db as init_sessions_db,
             )
+
             init_sessions_db()
         except Exception as e:
             logger.debug("Eager init failed for sessions DB: %s", e)
             pass
         try:
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
             CurriculumKB()  # Creates DB + tables on init
         except Exception as e:
             logger.debug("Eager init failed for curriculum KB: %s", e)
             pass
         try:
             from clawed.agent_core.quality import _ensure_db as init_quality_db
+
             init_quality_db()
         except Exception as e:
             logger.debug("Eager init failed for quality DB: %s", e)
@@ -125,9 +132,7 @@ class Gateway:
         # Load custom teacher tools from ~/.eduagent/tools/
         import os
 
-        custom_tools_dir = Path(
-            os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-        ) / "tools"
+        custom_tools_dir = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))) / "tools"
         self._registry.discover_custom(custom_tools_dir)
 
         # Callback handlers for deterministic paths
@@ -164,6 +169,7 @@ class Gateway:
         """Process any message from any transport."""
         # Normalize teacher_id so CLI, Telegram, and MCP all share one brain
         from clawed.agent_core.identity import get_teacher_id
+
         teacher_id = get_teacher_id()
         self._last_transport = transport
 
@@ -171,17 +177,18 @@ class Gateway:
         self.active_sessions[teacher_id] = {
             "last_activity": datetime.now().isoformat(),
         }
-        await self.emit("message_received", {
-            "teacher_id": teacher_id,
-            "text": message[:200],
-        })
+        await self.emit(
+            "message_received",
+            {
+                "teacher_id": teacher_id,
+                "text": message[:200],
+            },
+        )
 
         try:
             # 1. Files → ingest (deterministic, no LLM, runs in background)
             if files:
-                return await self._ingest.handle(
-                    teacher_id, files, progress_callback=progress_callback
-                )
+                return await self._ingest.handle(teacher_id, files, progress_callback=progress_callback)
 
             # 2. Onboarding state machine (deterministic, no LLM)
             if self._onboard.is_onboarding(teacher_id):
@@ -189,6 +196,7 @@ class Gateway:
                 # Save onboarding turns so Ed remembers the conversation
                 try:
                     from clawed.agent_core.memory.sessions import save_turn
+
                     save_turn(teacher_id, "user", message, transport=transport)
                     save_turn(teacher_id, "assistant", result.text, transport=transport)
                 except Exception as e:
@@ -202,6 +210,7 @@ class Gateway:
                     result = await self._onboard.step(teacher_id, message)
                     try:
                         from clawed.agent_core.memory.sessions import save_turn
+
                         save_turn(teacher_id, "user", message, transport=transport)
                         save_turn(teacher_id, "assistant", result.text, transport=transport)
                     except Exception as e:
@@ -237,21 +246,15 @@ class Gateway:
             if "401" in err or "unauthorized" in err or "api key" in err:
                 return GatewayResponse(
                     text="Your AI provider key doesn't seem to be working. "
-                         "Run `clawed setup --reset` to reconfigure it."
+                    "Run `clawed setup --reset` to reconfigure it."
                 )
             if "connection" in err or "connect" in err or "timeout" in err:
                 return GatewayResponse(
-                    text="Can't connect to your AI provider right now. "
-                         "Check your internet connection and try again."
+                    text="Can't connect to your AI provider right now. Check your internet connection and try again."
                 )
             if "rate limit" in err or "429" in err:
-                return GatewayResponse(
-                    text="Your AI provider is temporarily overloaded. "
-                         "Wait a minute and try again."
-                )
-            return GatewayResponse(
-                text="Something went wrong. Please try again."
-            )
+                return GatewayResponse(text="Your AI provider is temporarily overloaded. Wait a minute and try again.")
+            return GatewayResponse(text="Something went wrong. Please try again.")
 
     async def handle_callback(self, callback_data: str, teacher_id: str) -> GatewayResponse:
         """Handle button press callbacks (approval, rate, export, model, etc.)."""
@@ -328,7 +331,10 @@ class Gateway:
     # Backward compatibility methods
 
     async def process_message(
-        self, text: str, teacher_id: str = "cli", teacher_name: str = "Teacher",
+        self,
+        text: str,
+        teacher_id: str = "cli",
+        teacher_name: str = "Teacher",
     ) -> str:
         """Backward-compatible: process message and return text string."""
         r = await self.handle(text, teacher_id)
@@ -358,10 +364,7 @@ class Gateway:
 
         # Build a descriptive message for the agent
         task_name = (payload or {}).get("task_name", event_type)
-        message = (
-            f"[SYSTEM] Scheduled task '{task_name}' has fired. "
-            "Check what needs to be done and take action."
-        )
+        message = f"[SYSTEM] Scheduled task '{task_name}' has fired. Check what needs to be done and take action."
 
         try:
             return await self._agent_loop(message, teacher_id)
@@ -385,6 +388,7 @@ class Gateway:
 
         # Load cross-transport session history from unified store
         from clawed.agent_core.memory.sessions import format_for_prompt, load_recent_for_llm
+
         session_history = load_recent_for_llm(teacher_id, limit=10)
         recent_conversation = format_for_prompt(teacher_id, limit=10)
 
@@ -393,11 +397,7 @@ class Gateway:
 
         memory_ctx = load_memory_context(teacher_id, message)
 
-        teacher_name = (
-            (persona_dict or {}).get("name")
-            or (teacher_profile or {}).get("name")
-            or "Teacher"
-        )
+        teacher_name = (persona_dict or {}).get("name") or (teacher_profile or {}).get("name") or "Teacher"
 
         identity_summary = ""
         if persona_dict:
@@ -416,6 +416,7 @@ class Gateway:
         reading_report_context = ""
         try:
             from clawed.paths import workspace_dir
+
             report_path = workspace_dir() / "reading_report.md"
             if report_path.exists():
                 reading_report_context = report_path.read_text(encoding="utf-8")[:1500]
@@ -427,6 +428,7 @@ class Gateway:
         soul_context = ""
         try:
             from clawed.paths import workspace_dir as _ws_dir
+
             soul_path = _ws_dir() / "soul.md"
             if soul_path.exists():
                 soul_context = soul_path.read_text(encoding="utf-8")[:2000]
@@ -456,11 +458,10 @@ class Gateway:
         # 2c. Detect un-ingested materials — kick off background ingest
         try:
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+
             kb = CurriculumKB()
             kb_stats = kb.stats(teacher_id)
-            materials_paths = getattr(
-                self.config.teacher_profile, "materials_paths", []
-            )
+            materials_paths = getattr(self.config.teacher_profile, "materials_paths", [])
             if kb_stats["doc_count"] == 0 and materials_paths:
                 # Start background ingest (non-blocking)
                 self._maybe_background_ingest(materials_paths, teacher_id)
@@ -550,10 +551,13 @@ class Gateway:
         llm = self._llm or _LLMClientAdapter(self.config)
 
         # 5. Run the agent loop
-        await self.emit("generation_started", {
-            "teacher_id": teacher_id,
-            "intent": "agent_loop",
-        })
+        await self.emit(
+            "generation_started",
+            {
+                "teacher_id": teacher_id,
+                "intent": "agent_loop",
+            },
+        )
 
         result = await run_agent_loop(
             message=message,
@@ -567,6 +571,7 @@ class Gateway:
 
         # 6. Save conversation context to cross-transport session store
         from clawed.agent_core.memory.sessions import save_turn
+
         save_turn(teacher_id, "user", message, transport=transport)
         save_turn(teacher_id, "assistant", result.text, transport=transport)
         # Also save to legacy TeacherSession for backward compat
@@ -628,10 +633,7 @@ class Gateway:
         }
         current_model = model_map.get(current, "unknown")
 
-        text = (
-            f"Current: **{current_model}** ({current})\n\n"
-            "Choose a provider to see available models:"
-        )
+        text = f"Current: **{current_model}** ({current})\n\nChoose a provider to see available models:"
         buttons = [
             Button(label="Ollama Cloud", callback_data="models:ollama"),
             Button(label="OpenRouter", callback_data="models:openrouter"),
@@ -645,7 +647,9 @@ class Gateway:
         )
 
     async def handle_model_callback(
-        self, callback_data: str, teacher_id: str,
+        self,
+        callback_data: str,
+        teacher_id: str,
     ) -> GatewayResponse:
         """Handle model selection callbacks from Telegram buttons."""
         from clawed.gateway_response import Button
@@ -661,6 +665,7 @@ class Gateway:
         if action == "models" and provider and not model_name:
             # Show models for this provider
             from clawed.model_discovery import list_all_models
+
             all_models = list_all_models(self.config)
             models = all_models.get(provider, [])
 
@@ -670,7 +675,9 @@ class Gateway:
                 )
 
             current = getattr(
-                self.config, f"{provider}_model", "",
+                self.config,
+                f"{provider}_model",
+                "",
             )
             buttons = []
             for m in models[:12]:  # Cap at 12 buttons
@@ -678,15 +685,17 @@ class Gateway:
                 label = name
                 if name == current:
                     label = f"{name} ✓"
-                buttons.append(Button(
-                    label=label[:30],
-                    callback_data=f"setmodel:{provider}:{name}",
-                ))
+                buttons.append(
+                    Button(
+                        label=label[:30],
+                        callback_data=f"setmodel:{provider}:{name}",
+                    )
+                )
 
             # Arrange in rows of 2
             rows = []
             for i in range(0, len(buttons), 2):
-                rows.append(buttons[i:i + 2])
+                rows.append(buttons[i : i + 2])
 
             return GatewayResponse(
                 text=f"**{provider.title()}** models:",
@@ -696,6 +705,7 @@ class Gateway:
         if action == "setmodel" and provider and model_name:
             # Switch to selected model
             from clawed.models import AppConfig, LLMProvider
+
             cfg = AppConfig.load()
 
             try:
@@ -722,9 +732,7 @@ class Gateway:
 
     _ingest_started: bool = False
 
-    def _maybe_background_ingest(
-        self, materials_paths: list[str], teacher_id: str
-    ) -> None:
+    def _maybe_background_ingest(self, materials_paths: list[str], teacher_id: str) -> None:
         """Start a background thread to ingest materials. Runs once per process."""
         if Gateway._ingest_started:
             return
@@ -734,14 +742,17 @@ class Gateway:
 
         def _do_ingest() -> None:
             import asyncio
+
             for path_str in materials_paths:
                 try:
                     from pathlib import Path
+
                     p = Path(path_str).expanduser()
                     if not p.exists():
                         continue
                     logger.info("Background ingest starting: %s", p)
                     from clawed.ingestor import ingest_path
+
                     result = ingest_path(p)
                     # ingest_path may return a list or coroutine
                     if asyncio.iscoroutine(result):
@@ -752,14 +763,11 @@ class Gateway:
                         from clawed.agent_core.memory.curriculum_kb import (
                             CurriculumKB,
                         )
+
                         kb = CurriculumKB()
                         for doc in docs:
                             try:
-                                doc_type = (
-                                    doc.doc_type.value
-                                    if hasattr(doc.doc_type, "value")
-                                    else str(doc.doc_type)
-                                )
+                                doc_type = doc.doc_type.value if hasattr(doc.doc_type, "value") else str(doc.doc_type)
                                 kb.index(
                                     teacher_id=teacher_id,
                                     doc_title=doc.title,
@@ -771,7 +779,8 @@ class Gateway:
                                 logger.debug("Chunk index failed: %s", e)
                         logger.info(
                             "Background ingest done: %d docs from %s",
-                            len(docs), p,
+                            len(docs),
+                            p,
                         )
                 except Exception as e:
                     logger.warning("Background ingest failed for %s: %s", path_str, e)
@@ -794,6 +803,7 @@ class Gateway:
         # 1. Try the database first (Telegram bot's canonical store)
         try:
             from clawed.database import Database
+
             db = Database()
             profile = db.get_default_teacher()
             if profile and profile.get("name"):
@@ -804,6 +814,7 @@ class Gateway:
         # 2. Fall back to config.json (CLI onboarding saves here)
         try:
             from clawed.models import AppConfig
+
             config = AppConfig.load()
             tp = config.teacher_profile
             if tp and (tp.name or tp.subjects or tp.grade_levels):
@@ -834,6 +845,7 @@ class Gateway:
         """Load conversation history from TeacherSession."""
         try:
             from clawed.state import TeacherSession
+
             session = TeacherSession.load(teacher_id)
             return session.get_context_for_llm(max_turns=4)
         except Exception as e:
@@ -845,6 +857,7 @@ class Gateway:
         """Load improvement context from the memory engine."""
         try:
             from clawed.memory_engine import build_improvement_context
+
             return build_improvement_context()
         except Exception as e:
             logger.debug("Could not load improvement context: %s", e)
@@ -855,6 +868,7 @@ class Gateway:
         """Save conversation turn to TeacherSession."""
         try:
             from clawed.state import TeacherSession
+
             session = TeacherSession.load(teacher_id)
             session.add_context("user", user_msg)
             session.add_context("assistant", assistant_msg[:500])

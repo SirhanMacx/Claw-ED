@@ -45,9 +45,7 @@ def client(app):
 def _seed_lesson(db: Database, title: str = "Photosynthesis") -> str:
     tid = db.upsert_teacher("T", "{}")
     uid = db.insert_unit(tid, "U", "Sci", "8", "Cells", "{}")
-    return db.insert_lesson(
-        uid, 1, title, json.dumps({"title": title, "objective": "Learn"})
-    )
+    return db.insert_lesson(uid, 1, title, json.dumps({"title": title, "objective": "Learn"}))
 
 
 def _mock_async_client(mock_resp):
@@ -205,9 +203,7 @@ class TestShareCommand:
         lid = _seed_lesson(db, "Embed Test")
 
         with patch("clawed.commands.export.Database", return_value=db):
-            result = runner.invoke(
-                export_app, ["share", "--lesson-id", lid, "--embed"]
-            )
+            result = runner.invoke(export_app, ["share", "--lesson-id", lid, "--embed"])
         assert result.exit_code == 0
         assert "widget.js" in result.output
         assert "data-token" in result.output
@@ -217,9 +213,7 @@ class TestShareCommand:
         lid = _seed_lesson(db, "URL Test")
 
         with patch("clawed.commands.export.Database", return_value=db):
-            result = runner.invoke(
-                export_app, ["share", "--lesson-id", lid]
-            )
+            result = runner.invoke(export_app, ["share", "--lesson-id", lid])
         assert result.exit_code == 0
         assert "/shared/" in result.output
 

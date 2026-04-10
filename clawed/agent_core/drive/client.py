@@ -1,4 +1,5 @@
 """Google Drive API client with rate limiting."""
+
 from __future__ import annotations
 
 import logging
@@ -42,15 +43,11 @@ class DriveClient:
 
     def _check_auth(self) -> None:
         if not is_authenticated(self._token_path):
-            raise RuntimeError(
-                "Google Drive not authenticated. Run: clawed drive auth"
-            )
+            raise RuntimeError("Google Drive not authenticated. Run: clawed drive auth")
 
     def _check_rate(self) -> None:
         if not self._limiter.allow():
-            raise RuntimeError(
-                "Drive rate limit exceeded. Try again later."
-            )
+            raise RuntimeError("Drive rate limit exceeded. Try again later.")
 
     def _get_service(self):
         """Build the Google Drive API service.
@@ -61,9 +58,7 @@ class DriveClient:
             from google.oauth2.credentials import Credentials
             from googleapiclient.discovery import build
         except ImportError:
-            raise ImportError(
-                "Google Drive support requires: pip install 'clawed[google]'"
-            )
+            raise ImportError("Google Drive support requires: pip install 'clawed[google]'")
 
         token_data = load_token(self._token_path)
         creds = Credentials(

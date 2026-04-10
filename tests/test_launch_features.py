@@ -83,11 +83,13 @@ class TestDemoMode:
 
     def test_load_demo(self):
         from clawed.demo import load_demo
+
         data = load_demo("lesson_social_studies_g8")
         assert data["title"] == "The Causes of the American Revolution"
 
     def test_load_all_demos(self):
         from clawed.demo import load_all_demos
+
         demos = load_all_demos()
         assert len(demos) >= 4
         assert "lesson_social_studies_g8" in demos
@@ -97,6 +99,7 @@ class TestDemoMode:
 
     def test_list_demo_files(self):
         from clawed.demo import list_demo_files
+
         files = list_demo_files()
         assert len(files) >= 4
 
@@ -104,12 +107,14 @@ class TestDemoMode:
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         from clawed.demo import is_demo_mode
+
         # May or may not be demo mode depending on config, but shouldn't crash
         result = is_demo_mode()
         assert isinstance(result, bool)
 
     def test_demo_response_in_llm(self):
         from clawed.llm import LLMClient
+
         # Test the static _demo_response method
         response = LLMClient._demo_response("Generate a social studies lesson")
         data = json.loads(response)
@@ -117,12 +122,14 @@ class TestDemoMode:
 
     def test_demo_response_science(self):
         from clawed.llm import LLMClient
+
         response = LLMClient._demo_response("Create a science lesson about water")
         data = json.loads(response)
         assert data["subject"] == "Science"
 
     def test_demo_response_assessment(self):
         from clawed.llm import LLMClient
+
         response = LLMClient._demo_response("Generate a DBQ assessment")
         data = json.loads(response)
         assert data["assessment_type"] == "dbq"
@@ -133,16 +140,16 @@ class TestDemoMode:
 
 class TestShareableURLs:
     def test_share_token_on_insert(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
-        lid = db.insert_lesson(uid, 1, "L1", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
+        lid = db.insert_lesson(uid, 1, "L1", "{}")
         lesson = db.get_lesson(lid)
         assert lesson["share_token"] is not None
         assert len(lesson["share_token"]) == 32
 
     def test_get_by_share_token(self, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lid = db.insert_lesson(uid, 1, "L1", '{"title": "Test"}')
         lesson = db.get_lesson(lid)
         by_token = db.get_lesson_by_token(lesson["share_token"])
@@ -150,8 +157,8 @@ class TestShareableURLs:
         assert by_token["id"] == lid
 
     def test_share_api_create(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lid = db.insert_lesson(uid, 1, "L1", '{"title": "Hello"}')
         resp = client.post(f"/api/lessons/{lid}/share")
         assert resp.status_code == 200
@@ -166,8 +173,9 @@ class TestShareableURLs:
 
     def test_shared_page_renders(self, client, db):
         from clawed.models import DailyLesson
+
         tid = db.upsert_teacher("T", '{"name": "T"}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lesson = DailyLesson(title="Shared Test", lesson_number=1, objective="Test sharing")
         lid = db.insert_lesson(uid, 1, "Shared Test", lesson.model_dump_json())
         row = db.get_lesson(lid)
@@ -180,8 +188,8 @@ class TestShareableURLs:
         assert resp.status_code == 404
 
     def test_share_api_json(self, client, db):
-        tid = db.upsert_teacher("T", '{}')
-        uid = db.insert_unit(tid, "U", "S", "8", "T", '{}')
+        tid = db.upsert_teacher("T", "{}")
+        uid = db.insert_unit(tid, "U", "S", "8", "T", "{}")
         lid = db.insert_lesson(uid, 1, "L1", '{"title": "JSON Test"}')
         lesson = db.get_lesson(lid)
         resp = client.get(f"/api/share/{lesson['share_token']}")

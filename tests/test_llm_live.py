@@ -107,8 +107,7 @@ class TestLessonGeneration:
             topic="Photosynthesis",
             duration_weeks=2,
             overview=(
-                "A two-week unit exploring how plants convert light "
-                "energy into chemical energy through photosynthesis."
+                "A two-week unit exploring how plants convert light energy into chemical energy through photosynthesis."
             ),
             essential_questions=[
                 "How do plants make their own food?",
@@ -147,15 +146,11 @@ class TestLessonGeneration:
 
         # Differentiation should be populated
         diff = lesson.differentiation
-        assert (
-            diff.struggling or diff.advanced or diff.ell
-        ), "Should have at least one differentiation category"
+        assert diff.struggling or diff.advanced or diff.ell, "Should have at least one differentiation category"
 
         # Time estimates should sum to something reasonable (25-60 min)
         total_time = sum(lesson.time_estimates.values())
-        assert 20 <= total_time <= 90, (
-            f"Total lesson time {total_time} min seems unreasonable"
-        )
+        assert 20 <= total_time <= 90, f"Total lesson time {total_time} min seems unreasonable"
 
 
 @pytest.mark.skipif(not _LIVE, reason=_REASON)

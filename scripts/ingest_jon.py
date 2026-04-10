@@ -32,12 +32,13 @@ SAMPLE_STRATEGY = {
     "Pre AP World": 30,
 }
 
+
 def run_ssh(cmd: str) -> str:
     result = subprocess.run(
-        ["ssh", "-o", "ConnectTimeout=30", SIRHAN_HOST, cmd],
-        capture_output=True, text=True, timeout=60
+        ["ssh", "-o", "ConnectTimeout=30", SIRHAN_HOST, cmd], capture_output=True, text=True, timeout=60
     )
     return result.stdout.strip()
+
 
 def copy_files(remote_dir: str, local_dir: Path, max_files: int = 30) -> list[Path]:
     """Copy up to max_files from remote_dir to local_dir."""
@@ -47,14 +48,14 @@ def copy_files(remote_dir: str, local_dir: Path, max_files: int = 30) -> list[Pa
     file_list_cmd = (
         f'find "{remote_dir}" -maxdepth 3 -type f'
         f' \\( -name "*.pdf" -o -name "*.docx" -o -name "*.pptx" -o -name "*.txt" \\)'
-        f' 2>/dev/null | head -n {max_files}'
+        f" 2>/dev/null | head -n {max_files}"
     )
     output = run_ssh(file_list_cmd)
 
     if not output:
         return []
 
-    files = [f.strip() for f in output.split('\n') if f.strip()]
+    files = [f.strip() for f in output.split("\n") if f.strip()]
     copied = []
 
     for i, remote_file in enumerate(files[:max_files]):
@@ -65,15 +66,15 @@ def copy_files(remote_dir: str, local_dir: Path, max_files: int = 30) -> list[Pa
             continue
         # SCP the file
         result = subprocess.run(
-            ["scp", "-q", f"{SIRHAN_HOST}:{remote_file}", str(local_path)],
-            capture_output=True, timeout=30
+            ["scp", "-q", f"{SIRHAN_HOST}:{remote_file}", str(local_path)], capture_output=True, timeout=30
         )
         if result.returncode == 0:
             copied.append(local_path)
         if (i + 1) % 10 == 0:
-            print(f"  Copied {i+1}/{len(files)} files...", flush=True)
+            print(f"  Copied {i + 1}/{len(files)} files...", flush=True)
 
     return copied
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -109,14 +110,21 @@ def main():
     elif args.full:
         print("⚠️  Full ingestion: this will copy ~23K files. Starting in background.")
         # Just copy everything
-        result = subprocess.Popen([
-            "rsync", "-av", "--progress",
-            f"{SIRHAN_HOST}:{CURRICULA_BASE}/",
-            str(LOCAL_CACHE),
-            "--include=*.pdf", "--include=*.docx", "--include=*.pptx",
-            "--include=*.txt", "--include=*/",
-            "--exclude=*"
-        ])
+        result = subprocess.Popen(
+            [
+                "rsync",
+                "-av",
+                "--progress",
+                f"{SIRHAN_HOST}:{CURRICULA_BASE}/",
+                str(LOCAL_CACHE),
+                "--include=*.pdf",
+                "--include=*.docx",
+                "--include=*.pptx",
+                "--include=*.txt",
+                "--include=*/",
+                "--exclude=*",
+            ]
+        )
         print(f"Rsync PID: {result.pid}. Running in background.")
         print("Monitor: ps aux | grep rsync")
         return
@@ -134,16 +142,14 @@ def _run_extraction():
         return
 
     # Count files
-    files = list(LOCAL_CACHE.rglob("*.pdf")) + \
-            list(LOCAL_CACHE.rglob("*.docx")) + \
-            list(LOCAL_CACHE.rglob("*.pptx"))
+    files = list(LOCAL_CACHE.rglob("*.pdf")) + list(LOCAL_CACHE.rglob("*.docx")) + list(LOCAL_CACHE.rglob("*.pptx"))
     print(f"Found {len(files)} cached files")
 
     # Run eduagent ingest
     result = subprocess.run(
         [sys.executable, "-m", "eduagent.cli", "ingest", str(LOCAL_CACHE)],
         cwd=Path(__file__).parent.parent,
-        capture_output=False
+        capture_output=False,
     )
 
     if result.returncode == 0:

@@ -51,9 +51,7 @@ def evolved_persona() -> TeacherPersona:
 
 
 class TestComparePersonas:
-    def test_compare_personas_detects_changes(
-        self, base_persona: TeacherPersona, evolved_persona: TeacherPersona
-    ):
+    def test_compare_personas_detects_changes(self, base_persona: TeacherPersona, evolved_persona: TeacherPersona):
         changes = _compare_personas(base_persona, evolved_persona)
         changed_fields = {c["field"] for c in changes}
 
@@ -104,9 +102,7 @@ class TestBuildCandidateChanges:
 
 
 class TestRecordAndConfirmCycle:
-    def test_record_and_confirm_cycle(
-        self, base_persona: TeacherPersona, evolved_persona: TeacherPersona
-    ):
+    def test_record_and_confirm_cycle(self, base_persona: TeacherPersona, evolved_persona: TeacherPersona):
         # First ingestion — confirmations = 1
         record_ingestion_changes(base_persona, evolved_persona)
         confirmed = get_confirmed_changes()

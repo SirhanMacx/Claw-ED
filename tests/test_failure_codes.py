@@ -7,10 +7,19 @@ class TestFailureCodes:
     def test_all_nlah_codes_exist(self):
         """All 13 NLAH failure codes exist and are strings."""
         expected = [
-            "NO_PERSONA", "SCHEMA_ERROR", "TOPIC_DRIFT", "DEMO_FIXTURE",
-            "EXPORT_INCOMPLETE", "EXPORT_ERROR", "REVIEW_FAILED",
-            "CONTEXT_EXCEEDED", "API_FAILURE", "VOICE_MISMATCH",
-            "PERSONA_PARSE_ERROR", "KB_SEARCH_FAILED", "ASSET_SEARCH_FAILED",
+            "NO_PERSONA",
+            "SCHEMA_ERROR",
+            "TOPIC_DRIFT",
+            "DEMO_FIXTURE",
+            "EXPORT_INCOMPLETE",
+            "EXPORT_ERROR",
+            "REVIEW_FAILED",
+            "CONTEXT_EXCEEDED",
+            "API_FAILURE",
+            "VOICE_MISMATCH",
+            "PERSONA_PARSE_ERROR",
+            "KB_SEARCH_FAILED",
+            "ASSET_SEARCH_FAILED",
         ]
         for code in expected:
             assert hasattr(FailureCode, code), f"Missing: {code}"

@@ -41,9 +41,7 @@ class BrowserNavigateTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         url = params.get("url", "").strip()
         if not url:
             return ToolResult(text="ERROR: url is required")
@@ -93,9 +91,7 @@ class BrowserSearchTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         query = params.get("query", "").strip()
         if not query:
             return ToolResult(text="ERROR: query is required")
@@ -149,14 +145,14 @@ async def _fetch_page_text(url: str, timeout_ms: int = 15000) -> str:
 async def _fetch_with_httpx(url: str) -> str:
     """Simple HTTP fetch fallback when Playwright unavailable."""
     import httpx
+
     async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-        resp = await client.get(url, headers={
-            "User-Agent": "Mozilla/5.0 (compatible; Claw-ED/4.4; Educational Agent)"
-        })
+        resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; Claw-ED/4.4; Educational Agent)"})
         resp.raise_for_status()
         # Basic HTML to text
         text = resp.text
         import re
+
         text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL)
         text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
         text = re.sub(r"<[^>]+>", " ", text)
@@ -174,9 +170,9 @@ async def _search_web(query: str) -> list[dict]:
     search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
 
     async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-        resp = await client.get(search_url, headers={
-            "User-Agent": "Mozilla/5.0 (compatible; Claw-ED/4.4; Educational Agent)"
-        })
+        resp = await client.get(
+            search_url, headers={"User-Agent": "Mozilla/5.0 (compatible; Claw-ED/4.4; Educational Agent)"}
+        )
         resp.raise_for_status()
         html = resp.text
 

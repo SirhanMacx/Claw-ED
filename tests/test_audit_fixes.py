@@ -30,8 +30,10 @@ class _ReadOnlyTool:
     risk_level = RISK_READ_ONLY
 
     def schema(self):
-        return {"type": "function", "function": {"name": "safe_tool",
-                "description": "t", "parameters": {"type": "object", "properties": {}}}}
+        return {
+            "type": "function",
+            "function": {"name": "safe_tool", "description": "t", "parameters": {"type": "object", "properties": {}}},
+        }
 
     async def execute(self, params, context):
         return ToolResult(text="safe output")
@@ -41,8 +43,10 @@ class _WriteTool:
     risk_level = RISK_WRITE_LOCAL
 
     def schema(self):
-        return {"type": "function", "function": {"name": "write_tool",
-                "description": "t", "parameters": {"type": "object", "properties": {}}}}
+        return {
+            "type": "function",
+            "function": {"name": "write_tool", "description": "t", "parameters": {"type": "object", "properties": {}}},
+        }
 
     async def execute(self, params, context):
         return ToolResult(text="wrote something")
@@ -52,8 +56,14 @@ class _DangerousTool:
     risk_level = RISK_PACKAGE_INSTALL
 
     def schema(self):
-        return {"type": "function", "function": {"name": "install_tool",
-                "description": "t", "parameters": {"type": "object", "properties": {}}}}
+        return {
+            "type": "function",
+            "function": {
+                "name": "install_tool",
+                "description": "t",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }
 
     async def execute(self, params, context):
         return ToolResult(text="installed something")
@@ -141,38 +151,47 @@ class TestUDLVocabSimplification:
         from clawed.models import DifferentiationNotes
 
         mc = MasterContent(
-            title="T", subject="S", grade_level="8", topic="T",
+            title="T",
+            subject="S",
+            grade_level="8",
+            topic="T",
             objective="O",
             vocabulary=[
                 VocabularyEntry(
                     term="MLK",
-                    definition=(
-                        "Dr. Martin Luther King Jr. was a civil "
-                        "rights leader. He led the movement."
-                    ),
+                    definition=("Dr. Martin Luther King Jr. was a civil rights leader. He led the movement."),
                     context_sentence="C.",
                 ),
             ],
             primary_sources=[],
             do_now=DoNow(
-                stimulus="S", stimulus_type="t",
-                questions=["Q"], answers=["A"],
+                stimulus="S",
+                stimulus_type="t",
+                questions=["Q"],
+                answers=["A"],
             ),
             direct_instruction=[
                 InstructionSection(
-                    heading="H", content="C",
-                    teacher_script="Ask?", image_spec="t",
+                    heading="H",
+                    content="C",
+                    teacher_script="Ask?",
+                    image_spec="t",
                 ),
             ],
             guided_notes=[GuidedNote(prompt="P", answer="A", section_ref="H")] * 5,
             exit_ticket=[
                 StimulusQuestion(
-                    stimulus="S" * 60, stimulus_type="text",
-                    question="Q", answer="A", cognitive_level="recall",
+                    stimulus="S" * 60,
+                    stimulus_type="text",
+                    question="Q",
+                    answer="A",
+                    cognitive_level="recall",
                 ),
             ],
             differentiation=DifferentiationNotes(
-                struggling=["x"], advanced=["y"], ell=["z"],
+                struggling=["x"],
+                advanced=["y"],
+                ell=["z"],
             ),
         )
 
@@ -201,17 +220,25 @@ class TestCommonCartridgeExport:
         from clawed.models import DifferentiationNotes
 
         mc = MasterContent(
-            title="CC Test", subject="History", grade_level="8",
-            topic="Rev", objective="SWBAT test",
+            title="CC Test",
+            subject="History",
+            grade_level="8",
+            topic="Rev",
+            objective="SWBAT test",
             vocabulary=[VocabularyEntry(term="T", definition="D.", context_sentence="C.")],
             primary_sources=[],
             do_now=DoNow(stimulus="S", stimulus_type="t", questions=["Q"], answers=["A"]),
             direct_instruction=[InstructionSection(heading="H", content="C", teacher_script="Ask?", image_spec="t")],
             guided_notes=[GuidedNote(prompt="P", answer="A", section_ref="H")] * 5,
-            exit_ticket=[StimulusQuestion(
-                stimulus="S" * 60, stimulus_type="text",
-                question="Q", answer="A", cognitive_level="recall",
-            )],
+            exit_ticket=[
+                StimulusQuestion(
+                    stimulus="S" * 60,
+                    stimulus_type="text",
+                    question="Q",
+                    answer="A",
+                    cognitive_level="recall",
+                )
+            ],
             differentiation=DifferentiationNotes(struggling=["x"], advanced=["y"], ell=["z"]),
         )
 

@@ -134,7 +134,8 @@ class TestExtractLessonPatterns:
 
     def test_low_rating_with_edited_sections(self, poor_lesson):
         patterns = extract_lesson_patterns(
-            poor_lesson, rating=2,
+            poor_lesson,
+            rating=2,
             edited_sections=["guided_practice", "exit_ticket"],
         )
         structural = [p for p in patterns if p["section"] == SECTION_STRUCTURAL_PREFS]
@@ -152,7 +153,8 @@ class TestExtractLessonPatterns:
 
     def test_rating_4_with_edits(self, sample_lesson):
         patterns = extract_lesson_patterns(
-            sample_lesson, rating=4,
+            sample_lesson,
+            rating=4,
             edited_sections=["do_now"],
         )
         structural = [p for p in patterns if p["section"] == SECTION_STRUCTURAL_PREFS]
@@ -195,11 +197,7 @@ class TestAppendToSection:
         assert "- First entry" in result
 
     def test_append_before_stats_section(self):
-        content = (
-            "# Teaching Memory\n\n"
-            f"## {SECTION_GENERATION_STATS}\n"
-            "- Total lessons rated: 0\n"
-        )
+        content = f"# Teaching Memory\n\n## {SECTION_GENERATION_STATS}\n- Total lessons rated: 0\n"
         result = _append_to_section(content, "New Section", "An entry")
         # New section should appear before stats
         stats_pos = result.index(SECTION_GENERATION_STATS)
@@ -221,10 +219,7 @@ class TestExtractSectionEntries:
         assert entries == ["Pattern one", "Pattern two", "Pattern three"]
 
     def test_skips_placeholders(self):
-        content = (
-            f"## {SECTION_WHAT_WORKS}\n"
-            "*(Patterns from your highest-rated lessons appear here automatically.)*\n"
-        )
+        content = f"## {SECTION_WHAT_WORKS}\n*(Patterns from your highest-rated lessons appear here automatically.)*\n"
         entries = _extract_section_entries(content, SECTION_WHAT_WORKS)
         assert entries == []
 
@@ -268,21 +263,13 @@ class TestComputeStats:
         assert stats["trend"] == "--"
 
     def test_with_five_star_entries(self):
-        content = (
-            "- Lesson 'A' rated 5-star\n"
-            "- Lesson 'B' rated 5-star\n"
-            "- Lesson 'C' rated 1-star\n"
-        )
+        content = "- Lesson 'A' rated 5-star\n- Lesson 'B' rated 5-star\n- Lesson 'C' rated 1-star\n"
         stats = _compute_stats(content)
         assert stats["total_rated"] == 3
         assert stats["trend"] == "improving"
 
     def test_declining_trend(self):
-        content = (
-            "- Lesson 'A' rated 1-star\n"
-            "- Lesson 'B' rated 2-star\n"
-            "- Lesson 'C' rated 1-star\n"
-        )
+        content = "- Lesson 'A' rated 1-star\n- Lesson 'B' rated 2-star\n- Lesson 'C' rated 1-star\n"
         stats = _compute_stats(content)
         assert stats["trend"] == "needs attention"
 
@@ -326,7 +313,8 @@ class TestProcessFeedback:
 
     def test_two_star_with_edited_sections(self, poor_lesson, tmp_memory):
         process_feedback(
-            poor_lesson, rating=2,
+            poor_lesson,
+            rating=2,
             edited_sections=["guided_practice", "exit_ticket"],
         )
         content = tmp_memory.read_text()
@@ -335,7 +323,8 @@ class TestProcessFeedback:
 
     def test_four_star_with_notes(self, sample_lesson, tmp_memory):
         patterns = process_feedback(
-            sample_lesson, rating=4,
+            sample_lesson,
+            rating=4,
             notes="Good but needs more scaffolding for struggling readers",
         )
         assert len(patterns) > 0
@@ -377,7 +366,8 @@ class TestBuildImprovementContext:
 
     def test_subject_filtering(self, sample_lesson, tmp_memory):
         process_feedback(
-            sample_lesson, rating=4,
+            sample_lesson,
+            rating=4,
             notes="Great for social studies specifically",
         )
         result = build_improvement_context(subject="Social Studies")
@@ -419,36 +409,34 @@ class TestRatingMath:
     def test_single_two_star_averages_to_two(self, poor_lesson, tmp_memory):
         process_feedback(poor_lesson, rating=2)
         stats = get_improvement_stats()
-        assert stats["avg_rating"] == 2.0, (
-            f"A single 2-star lesson should average 2.0, got {stats['avg_rating']}"
-        )
+        assert stats["avg_rating"] == 2.0, f"A single 2-star lesson should average 2.0, got {stats['avg_rating']}"
 
     def test_single_one_star_averages_to_one(self, poor_lesson, tmp_memory):
         process_feedback(poor_lesson, rating=1, notes="Awful")
         stats = get_improvement_stats()
-        assert stats["avg_rating"] == 1.0, (
-            f"A single 1-star lesson should average 1.0, got {stats['avg_rating']}"
-        )
+        assert stats["avg_rating"] == 1.0, f"A single 1-star lesson should average 1.0, got {stats['avg_rating']}"
 
     def test_five_and_two_averages_to_three_point_five(
-        self, sample_lesson, poor_lesson, tmp_memory,
+        self,
+        sample_lesson,
+        poor_lesson,
+        tmp_memory,
     ):
         process_feedback(sample_lesson, rating=5)
         process_feedback(poor_lesson, rating=2)
         stats = get_improvement_stats()
-        assert stats["avg_rating"] == 3.5, (
-            f"5★ + 2★ should average 3.5, got {stats['avg_rating']}"
-        )
+        assert stats["avg_rating"] == 3.5, f"5★ + 2★ should average 3.5, got {stats['avg_rating']}"
 
     def test_five_and_one_averages_to_three(
-        self, sample_lesson, poor_lesson, tmp_memory,
+        self,
+        sample_lesson,
+        poor_lesson,
+        tmp_memory,
     ):
         process_feedback(sample_lesson, rating=5)
         process_feedback(poor_lesson, rating=1, notes="Bad")
         stats = get_improvement_stats()
-        assert stats["avg_rating"] == 3.0, (
-            f"5★ + 1★ should average 3.0, got {stats['avg_rating']}"
-        )
+        assert stats["avg_rating"] == 3.0, f"5★ + 1★ should average 3.0, got {stats['avg_rating']}"
 
 
 # ── Cross-subject contamination ─────────────────────────────────────

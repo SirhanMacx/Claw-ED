@@ -81,8 +81,7 @@ async def generate_worksheet(
     """Generate a student worksheet for a lesson."""
     prompt_template = (PROMPT_DIR / "worksheet.txt").read_text(encoding="utf-8")
     prompt = (
-        prompt_template
-        .replace("{persona}", persona.to_prompt_context())
+        prompt_template.replace("{persona}", persona.to_prompt_context())
         .replace("{lesson_title}", lesson.title)
         .replace("{objective}", lesson.objective)
         .replace("{grade_level}", ", ".join(persona.grade_levels) or "Not specified")
@@ -114,8 +113,7 @@ async def generate_assessment(
     """Generate a quiz/assessment with optional rubric for a lesson."""
     prompt_template = (PROMPT_DIR / "assessment.txt").read_text(encoding="utf-8")
     prompt = (
-        prompt_template
-        .replace("{persona}", persona.to_prompt_context())
+        prompt_template.replace("{persona}", persona.to_prompt_context())
         .replace("{lesson_title}", lesson.title)
         .replace("{objective}", lesson.objective)
         .replace("{grade_level}", ", ".join(persona.grade_levels) or "Not specified")
@@ -192,8 +190,7 @@ async def generate_iep_notes(
     )
 
     prompt = (
-        prompt_template
-        .replace("{persona}", persona.to_prompt_context())
+        prompt_template.replace("{persona}", persona.to_prompt_context())
         .replace("{lesson_title}", lesson.title)
         .replace("{objective}", lesson.objective)
         .replace("{grade_level}", ", ".join(persona.grade_levels) or "Not specified")

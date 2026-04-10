@@ -110,6 +110,7 @@ async def save_settings(req: SaveSettingsRequest):
     cfg.ollama_model = req.ollama_model
     # Validate and normalize ollama_base_url: strip trailing slashes and paths
     from urllib.parse import urlparse
+
     _parsed = urlparse(req.ollama_base_url)
     cfg.ollama_base_url = f"{_parsed.scheme}://{_parsed.netloc}".rstrip("/")
     cfg.include_homework = req.include_homework

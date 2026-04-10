@@ -1,4 +1,5 @@
 .git
+.github
 .venv
 .pytest_cache
 .ruff_cache
@@ -8,11 +9,16 @@ __pycache__
 dist
 build
 .env
+.editorconfig
 eduagent_output
 output
 examples
 tests
 docs
 scripts
+cli
+daemon
+extension
+node_modules
 *.md
 !README.md

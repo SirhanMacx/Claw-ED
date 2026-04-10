@@ -3,6 +3,7 @@
 All imports like ``from eduagent.X import Y`` are transparently
 redirected to ``from clawed.X import Y`` via the import hook in _compat.
 """
+
 from eduagent._compat import install as _install_compat
 
 _install_compat()

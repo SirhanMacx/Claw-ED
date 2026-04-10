@@ -6,6 +6,7 @@ raw Path.write_text() to guarantee:
 - Safe filenames (no colons, no NTFS ADS bugs)
 - Consistent output directory (~/.eduagent/output/ or EDUAGENT_DATA_DIR)
 """
+
 import os
 import re
 from pathlib import Path
@@ -23,6 +24,7 @@ def output_dir() -> Path:
     """
     try:
         from clawed.models import AppConfig
+
         cfg = AppConfig.load()
         if cfg.output_dir:
             d = Path(cfg.output_dir).expanduser().resolve()
@@ -36,7 +38,7 @@ def output_dir() -> Path:
 
 
 def safe_filename(name: str, max_len: int = 80) -> str:
-    safe = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', name)
+    safe = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", name)
     safe = safe.strip().replace(" ", "_")[:max_len]
     return safe or "untitled"
 

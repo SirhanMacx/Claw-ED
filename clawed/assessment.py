@@ -44,8 +44,7 @@ class AssessmentGenerator:
         cfg = config or self.config
         prompt_template = (PROMPT_DIR / "formative_assessment.txt").read_text(encoding="utf-8")
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{lesson_title}", lesson.title)
             .replace("{objective}", lesson.objective)
             .replace("{grade_level}", ", ".join(persona.grade_levels) or "Not specified")
@@ -72,14 +71,11 @@ class AssessmentGenerator:
         cfg = config or self.config
         prompt_template = (PROMPT_DIR / "summative_assessment.txt").read_text(encoding="utf-8")
 
-        objectives_str = "\n".join(
-            f"  - {obj}" for obj in unit.enduring_understandings
-        ) or "See unit overview"
+        objectives_str = "\n".join(f"  - {obj}" for obj in unit.enduring_understandings) or "See unit overview"
         standards_str = ", ".join(unit.standards) or "Not specified"
 
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{unit_title}", unit.title)
             .replace("{subject}", unit.subject)
             .replace("{grade_level}", unit.grade_level)
@@ -109,8 +105,7 @@ class AssessmentGenerator:
         cfg = config or self.config
         prompt_template = (PROMPT_DIR / "dbq_assessment.txt").read_text(encoding="utf-8")
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{topic}", topic)
             .replace("{grade_level}", grade_level)
             .replace("{subject}", persona.subject_area or "Social Studies")
@@ -140,8 +135,7 @@ class AssessmentGenerator:
         cfg = config or self.config
         prompt_template = (PROMPT_DIR / "rubric.txt").read_text(encoding="utf-8")
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{task_description}", task_description)
             .replace("{criteria_count}", str(criteria_count))
             .replace("{grade_level}", grade_level or ", ".join(persona.grade_levels) or "Not specified")
@@ -172,8 +166,7 @@ class AssessmentGenerator:
         persona = persona or TeacherPersona()
         prompt_template = (PROMPT_DIR / "quiz.txt").read_text(encoding="utf-8")
         prompt = (
-            prompt_template
-            .replace("{persona}", persona.to_prompt_context())
+            prompt_template.replace("{persona}", persona.to_prompt_context())
             .replace("{topic}", topic)
             .replace("{grade_level}", grade)
             .replace("{subject}", persona.subject_area or "General")

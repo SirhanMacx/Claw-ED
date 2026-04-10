@@ -1,4 +1,5 @@
 """Tests for feature flag routing between legacy and agent gateway."""
+
 from clawed.models import AppConfig
 
 
@@ -9,11 +10,13 @@ class TestFeatureFlag:
 
     def test_legacy_gateway_when_flag_off(self):
         from clawed.gateway import Gateway
+
         gw = Gateway(config=AppConfig(agent_gateway=False))
         assert gw.__class__.__module__ == "clawed._legacy_gateway"
 
     def test_shim_reexports_compat_names(self):
         from clawed.gateway import ActivityEvent, EduAgentGateway, GatewayStats
+
         assert EduAgentGateway is not None
         assert ActivityEvent is not None
         assert GatewayStats is not None
@@ -24,6 +27,7 @@ class TestFlagOffParity:
 
     def test_gateway_is_legacy_class(self):
         from clawed.gateway import Gateway
+
         gw = Gateway(config=AppConfig(agent_gateway=False))
         assert gw.__class__.__name__ == "Gateway"
         assert gw.__class__.__module__ == "clawed._legacy_gateway"
@@ -47,6 +51,7 @@ class TestFlagOffParity:
 
     async def test_handle_callback_works(self):
         from clawed.gateway import Gateway
+
         gw = Gateway(config=AppConfig())
         result = await gw.handle_callback("unknown:action", "t1")
         assert result is not None
@@ -57,6 +62,7 @@ class TestFlagOnAgent:
 
     def test_gateway_is_agent_class(self):
         from clawed.gateway import Gateway
+
         gw = Gateway(config=AppConfig(agent_gateway=True))
         assert gw.__class__.__module__ == "clawed.agent_core.core"
 
@@ -79,6 +85,7 @@ class TestFlagOnAgent:
 
     async def test_agent_callback_approval(self):
         from clawed.gateway import Gateway
+
         gw = Gateway(config=AppConfig(agent_gateway=True))
         result = await gw.handle_callback("approve:nonexistent", "t1")
         assert result is not None
@@ -86,6 +93,7 @@ class TestFlagOnAgent:
 
     async def test_agent_stats(self):
         from clawed.gateway import Gateway
+
         gw = Gateway(config=AppConfig(agent_gateway=True))
         s = await gw.stats()
         assert isinstance(s, dict)

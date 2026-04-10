@@ -50,14 +50,25 @@ def _detect_subject(persona: "TeacherPersona") -> str:
 _TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     # Exploration / nautical topics
     (
-        ["exploration", "nautical", "voyage", "navigation", "maritime",
-         "columbus", "magellan", "ocean", "sailing", "expedition", "discover"],
+        [
+            "exploration",
+            "nautical",
+            "voyage",
+            "navigation",
+            "maritime",
+            "columbus",
+            "magellan",
+            "ocean",
+            "sailing",
+            "expedition",
+            "discover",
+        ],
         {
-            "primary": "1a3a5c",       # Navy blue
-            "secondary": "c9a96e",     # Gold accent
-            "accent": "e8eef5",        # Light blue-gray
-            "bg_dark": "0f2440",       # Deep navy
-            "bg_light": "f0f3f8",      # Soft blue-white
+            "primary": "1a3a5c",  # Navy blue
+            "secondary": "c9a96e",  # Gold accent
+            "accent": "e8eef5",  # Light blue-gray
+            "bg_dark": "0f2440",  # Deep navy
+            "bg_light": "f0f3f8",  # Soft blue-white
             "text_dark": "1A1A1A",
             "text_light": "FFFFFF",
             "text_dim": "888888",
@@ -65,32 +76,63 @@ _TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     ),
     # Renaissance / art / history topics — Jon's warm brown palette
     (
-        ["renaissance", "art", "painting", "sculpture", "michelangelo",
-         "da vinci", "medici", "baroque", "classical art", "gallery",
-         "fresco", "patron", "reform", "movement", "amendment",
-         "constitution", "rights", "abolition", "suffrage", "progressive"],
+        [
+            "renaissance",
+            "art",
+            "painting",
+            "sculpture",
+            "michelangelo",
+            "da vinci",
+            "medici",
+            "baroque",
+            "classical art",
+            "gallery",
+            "fresco",
+            "patron",
+            "reform",
+            "movement",
+            "amendment",
+            "constitution",
+            "rights",
+            "abolition",
+            "suffrage",
+            "progressive",
+        ],
         {
-            "primary": "8B6914",       # Warm brown (Jon's palette)
-            "secondary": "DAA520",     # Goldenrod
-            "accent": "F5E6C8",        # Warm cream (Jon's palette)
-            "bg_dark": "2C1810",       # Dark brown (Jon's palette)
-            "bg_light": "FFF8F0",      # Warm cream
-            "text_dark": "2C1810",     # Body text
+            "primary": "8B6914",  # Warm brown (Jon's palette)
+            "secondary": "DAA520",  # Goldenrod
+            "accent": "F5E6C8",  # Warm cream (Jon's palette)
+            "bg_dark": "2C1810",  # Dark brown (Jon's palette)
+            "bg_light": "FFF8F0",  # Warm cream
+            "text_dark": "2C1810",  # Body text
             "text_light": "FFFFFF",
             "text_dim": "888888",
         },
     ),
     # Revolution / war topics
     (
-        ["revolution", "war", "battle", "conflict", "military", "independence",
-         "civil war", "rebellion", "uprising", "army", "combat", "wwi", "wwii",
-         "world war"],
+        [
+            "revolution",
+            "war",
+            "battle",
+            "conflict",
+            "military",
+            "independence",
+            "civil war",
+            "rebellion",
+            "uprising",
+            "army",
+            "combat",
+            "wwi",
+            "wwii",
+            "world war",
+        ],
         {
-            "primary": "8b0000",       # Dark red
-            "secondary": "ffd700",     # Gold accent
-            "accent": "fce8e8",        # Light red tint
-            "bg_dark": "4a0000",       # Deep red
-            "bg_light": "fdf5f5",      # Soft rose
+            "primary": "8b0000",  # Dark red
+            "secondary": "ffd700",  # Gold accent
+            "accent": "fce8e8",  # Light red tint
+            "bg_dark": "4a0000",  # Deep red
+            "bg_light": "fdf5f5",  # Soft rose
             "text_dark": "1A1A1A",
             "text_light": "FFFFFF",
             "text_dim": "888888",
@@ -98,15 +140,27 @@ _TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     ),
     # Science topics
     (
-        ["science", "biology", "chemistry", "physics", "experiment",
-         "hypothesis", "laboratory", "cell", "atom", "molecule",
-         "ecosystem", "evolution", "genetics"],
+        [
+            "science",
+            "biology",
+            "chemistry",
+            "physics",
+            "experiment",
+            "hypothesis",
+            "laboratory",
+            "cell",
+            "atom",
+            "molecule",
+            "ecosystem",
+            "evolution",
+            "genetics",
+        ],
         {
-            "primary": "1a4a4a",       # Dark teal
-            "secondary": "00c853",     # Bright green accent
-            "accent": "e0f5ef",        # Light teal tint
-            "bg_dark": "0f2e2e",       # Deep teal
-            "bg_light": "f0faf5",      # Soft mint
+            "primary": "1a4a4a",  # Dark teal
+            "secondary": "00c853",  # Bright green accent
+            "accent": "e0f5ef",  # Light teal tint
+            "bg_dark": "0f2e2e",  # Deep teal
+            "bg_light": "f0faf5",  # Soft mint
             "text_dark": "1A1A1A",
             "text_light": "FFFFFF",
             "text_dim": "888888",
@@ -114,15 +168,26 @@ _TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
     ),
     # Math topics
     (
-        ["math", "algebra", "geometry", "calculus", "equation", "fraction",
-         "polynomial", "trigonometry", "statistics", "probability",
-         "arithmetic", "number"],
+        [
+            "math",
+            "algebra",
+            "geometry",
+            "calculus",
+            "equation",
+            "fraction",
+            "polynomial",
+            "trigonometry",
+            "statistics",
+            "probability",
+            "arithmetic",
+            "number",
+        ],
         {
-            "primary": "2a1a4a",       # Dark purple
-            "secondary": "ff9800",     # Orange accent
-            "accent": "f0e8f8",        # Light purple tint
-            "bg_dark": "1a0f30",       # Deep purple
-            "bg_light": "f8f5fc",      # Soft lavender
+            "primary": "2a1a4a",  # Dark purple
+            "secondary": "ff9800",  # Orange accent
+            "accent": "f0e8f8",  # Light purple tint
+            "bg_dark": "1a0f30",  # Deep purple
+            "bg_light": "f8f5fc",  # Soft lavender
             "text_dark": "1A1A1A",
             "text_light": "FFFFFF",
             "text_dim": "888888",
@@ -131,11 +196,11 @@ _TOPIC_THEMES: list[tuple[list[str], dict[str, str]]] = [
 ]
 
 _DEFAULT_TOPIC_THEME: dict[str, str] = {
-    "primary": "2D5F3C",       # Deep green
-    "secondary": "D4A843",     # Warm gold
-    "accent": "EAF0E4",        # Soft green tint
-    "bg_dark": "1A3D25",       # Dark green
-    "bg_light": "F4F7F2",      # Light sage
+    "primary": "2D5F3C",  # Deep green
+    "secondary": "D4A843",  # Warm gold
+    "accent": "EAF0E4",  # Soft green tint
+    "bg_dark": "1A3D25",  # Dark green
+    "bg_light": "F4F7F2",  # Light sage
     "text_dark": "1A1A1A",
     "text_light": "FFFFFF",
     "text_dim": "888888",
@@ -191,8 +256,7 @@ def _split_text(text: str, max_len: int = 550) -> list[str]:
     return chunks or [text]
 
 
-def _section_divider(prs, slide_num, text, theme, slide_w, slide_h,
-                     sub_text: str = ""):
+def _section_divider(prs, slide_num, text, theme, slide_w, slide_h, sub_text: str = ""):
     """Create a section divider slide with label + optional sub-instruction."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Emu, Inches, Pt
@@ -212,7 +276,10 @@ def _section_divider(prs, slide_num, text, theme, slide_w, slide_h,
     band_h = slide_h - band_top
     band = slide.shapes.add_shape(
         1,  # MSO_SHAPE_TYPE.RECTANGLE
-        Emu(0), band_top, slide_w, band_h,
+        Emu(0),
+        band_top,
+        slide_w,
+        band_h,
     )
     band.line.fill.background()
     bfill = band.fill
@@ -226,7 +293,10 @@ def _section_divider(prs, slide_num, text, theme, slide_w, slide_h,
     time_hint = parts[1].strip() if len(parts) > 1 else ""
 
     tb = slide.shapes.add_textbox(
-        Inches(1.0), Inches(1.8), slide_w - Inches(2.0), Inches(1.6),
+        Inches(1.0),
+        Inches(1.8),
+        slide_w - Inches(2.0),
+        Inches(1.6),
     )
     tf = tb.text_frame
     tf.word_wrap = True
@@ -242,7 +312,10 @@ def _section_divider(prs, slide_num, text, theme, slide_w, slide_h,
     # Time hint — smaller, below label
     if time_hint:
         tb_time = slide.shapes.add_textbox(
-            Inches(1.0), Inches(3.5), Inches(4.0), Inches(0.6),
+            Inches(1.0),
+            Inches(3.5),
+            Inches(4.0),
+            Inches(0.6),
         )
         p_t = tb_time.text_frame.paragraphs[0]
         run_t = p_t.add_run()
@@ -254,7 +327,10 @@ def _section_divider(prs, slide_num, text, theme, slide_w, slide_h,
     # Sub-instruction text (e.g. activity directions) in the light band
     if sub_text:
         tb_sub = slide.shapes.add_textbox(
-            Inches(1.0), int(slide_h * 0.65), slide_w - Inches(2.0), int(slide_h * 0.30),
+            Inches(1.0),
+            int(slide_h * 0.65),
+            slide_w - Inches(2.0),
+            int(slide_h * 0.30),
         )
         tf_sub = tb_sub.text_frame
         tf_sub.word_wrap = True
@@ -454,9 +530,9 @@ def export_lesson_pptx(
         text = re.sub(r"(_{2,})\s*\([A-Z][^)]{1,40}\)", r"\1", text)
         return text.strip()
 
-
     # Sanitize all lesson text fields into local vars — never mutate the input
     import copy as _copy
+
     lesson = _copy.deepcopy(lesson)
     lesson.title = sanitize_text(lesson.title)
     lesson.objective = sanitize_text(lesson.objective)
@@ -500,6 +576,7 @@ def export_lesson_pptx(
     else:
         try:
             from clawed.models import AppConfig as _AppConfig
+
             _cfg = _AppConfig.load()
             if _cfg.teacher_profile and _cfg.teacher_profile.name:
                 teacher_display_name = _cfg.teacher_profile.name
@@ -528,6 +605,7 @@ def export_lesson_pptx(
     # No images on: Objectives, Guided Practice, Exit Ticket, Closing
     if include_images:
         from clawed.slide_images import _fetch_wikimedia, extract_image_subjects
+
         entities = extract_image_subjects(lesson)
 
         # Phase 1: Try teacher's own extracted images first
@@ -535,6 +613,7 @@ def export_lesson_pptx(
         if teacher_id:
             try:
                 from clawed.asset_registry import AssetRegistry
+
                 registry = AssetRegistry()
                 used_paths: set[str] = set()
                 for i, entity in enumerate(entities[:5]):
@@ -551,7 +630,8 @@ def export_lesson_pptx(
                 if teacher_images:
                     logger.info(
                         "Found %d/%d images from teacher's own materials",
-                        len(teacher_images), len(entities[:5]),
+                        len(teacher_images),
+                        len(entities[:5]),
                     )
             except Exception as e:
                 logger.debug("Teacher asset lookup failed: %s", e)
@@ -594,12 +674,14 @@ def export_lesson_pptx(
         else:
             # No entities found — use lesson title direct Wikipedia lookup
             try:
+
                 async def _fetch_title_image() -> dict[str, Optional[Path]]:
                     path = await asyncio.wait_for(
                         _fetch_wikimedia(lesson.title),
                         timeout=8.0,
                     )
                     return {"entity_0": path}
+
                 images = run_async_safe(_fetch_title_image())
             except Exception:
                 images = {}
@@ -638,7 +720,11 @@ def export_lesson_pptx(
 
     def _bar(slide, left, top, width, height, hex_color: str):
         shape = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE, left, top, width, height,
+            MSO_SHAPE.RECTANGLE,
+            left,
+            top,
+            width,
+            height,
         )
         shape.line.fill.background()
         _add_shape_fill(shape, hex_color)
@@ -646,7 +732,11 @@ def export_lesson_pptx(
 
     def _rounded_card(slide, left, top, width, height, hex_color: str):
         shape = slide.shapes.add_shape(
-            MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height,
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            left,
+            top,
+            width,
+            height,
         )
         shape.line.fill.background()
         _add_shape_fill(shape, hex_color)
@@ -687,6 +777,7 @@ def export_lesson_pptx(
             import tempfile
 
             from PIL import Image as PILImage
+
             data = image_path.read_bytes()
             if len(data) < 1000:
                 return None
@@ -710,7 +801,11 @@ def export_lesson_pptx(
             return
         try:
             pic = slide.shapes.add_picture(
-                str(safe), Emu(0), Emu(0), slide_w, slide_h,
+                str(safe),
+                Emu(0),
+                Emu(0),
+                slide_w,
+                slide_h,
             )
         except Exception as e:
             logger.debug("_add_bg_image failed: %s", e)
@@ -722,7 +817,11 @@ def export_lesson_pptx(
         from pptx.oxml.ns import qn
 
         overlay = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE, Emu(0), Emu(0), slide_w, slide_h,
+            MSO_SHAPE.RECTANGLE,
+            Emu(0),
+            Emu(0),
+            slide_w,
+            slide_h,
         )
         overlay.line.fill.background()
         fill_obj = overlay.fill
@@ -735,6 +834,7 @@ def export_lesson_pptx(
                 srgb = solid_fill.find(qn("a:sysClr"))
             if srgb is not None:
                 from lxml import etree
+
                 alpha = etree.SubElement(srgb, qn("a:alpha"))
                 alpha.set("val", overlay_alpha)
 
@@ -748,12 +848,18 @@ def export_lesson_pptx(
         img_height = int(slide_h - Inches(2.4))
         try:
             slide.shapes.add_picture(
-                str(safe), img_left, img_top, img_width, img_height,
+                str(safe),
+                img_left,
+                img_top,
+                img_width,
+                img_height,
             )
             if caption:
                 cap_tb = slide.shapes.add_textbox(
-                    img_left, img_top + img_height + Inches(0.05),
-                    img_width, Inches(0.35),
+                    img_left,
+                    img_top + img_height + Inches(0.05),
+                    img_width,
+                    Inches(0.35),
                 )
                 cap_p = cap_tb.text_frame.paragraphs[0]
                 cap_p.alignment = PP_ALIGN.CENTER
@@ -775,12 +881,18 @@ def export_lesson_pptx(
         img_height = Inches(2.2)
         try:
             slide.shapes.add_picture(
-                str(safe), img_left, img_top, img_width, img_height,
+                str(safe),
+                img_left,
+                img_top,
+                img_width,
+                img_height,
             )
             if caption:
                 cap_tb = slide.shapes.add_textbox(
-                    img_left, img_top + img_height + Inches(0.05),
-                    img_width, Inches(0.3),
+                    img_left,
+                    img_top + img_height + Inches(0.05),
+                    img_width,
+                    Inches(0.3),
                 )
                 cap_p = cap_tb.text_frame.paragraphs[0]
                 cap_p.alignment = PP_ALIGN.CENTER
@@ -810,7 +922,10 @@ def export_lesson_pptx(
 
     # Lesson title -- 44pt white bold, centered
     tb = slide.shapes.add_textbox(
-        Inches(1.5), Inches(1.5), slide_w - Inches(3.0), Inches(2.5),
+        Inches(1.5),
+        Inches(1.5),
+        slide_w - Inches(3.0),
+        Inches(2.5),
     )
     tf = tb.text_frame
     tf.word_wrap = True
@@ -830,7 +945,10 @@ def export_lesson_pptx(
         aim_display = ""
     if aim_display:
         tb_aim = slide.shapes.add_textbox(
-            Inches(1.5), Inches(4.0), slide_w - Inches(3.0), Inches(1.0),
+            Inches(1.5),
+            Inches(4.0),
+            slide_w - Inches(3.0),
+            Inches(1.0),
         )
         tf_aim = tb_aim.text_frame
         tf_aim.word_wrap = True
@@ -843,17 +961,17 @@ def export_lesson_pptx(
 
     # Subtitle: "Teacher Name | Date" -- 16pt
     tb2 = slide.shapes.add_textbox(
-        Inches(1.5), Inches(5.2), slide_w - Inches(3.0), Inches(0.8),
+        Inches(1.5),
+        Inches(5.2),
+        slide_w - Inches(3.0),
+        Inches(0.8),
     )
     tf2 = tb2.text_frame
     tf2.word_wrap = True
     p2 = tf2.paragraphs[0]
     p2.alignment = PP_ALIGN.CENTER
     run2 = p2.add_run()
-    run2.text = (
-        f"{teacher_display_name}  |  "
-        f"{date.today().strftime('%B %d, %Y')}"
-    )
+    run2.text = f"{teacher_display_name}  |  {date.today().strftime('%B %d, %Y')}"
     _set_text_props(run2, 16, "BBBBBB")
 
     # Bottom accent bar in subject color
@@ -873,7 +991,10 @@ def export_lesson_pptx(
 
     # "Today's Objectives" header -- 36pt, subject color
     tb = slide.shapes.add_textbox(
-        Inches(1.0), Inches(0.8), slide_w - Inches(2.0), Inches(1.0),
+        Inches(1.0),
+        Inches(0.8),
+        slide_w - Inches(2.0),
+        Inches(1.0),
     )
     p = tb.text_frame.paragraphs[0]
     run = p.add_run()
@@ -883,12 +1004,17 @@ def export_lesson_pptx(
     # SWBAT card -- colored rounded rectangle
     _rounded_card(
         slide,
-        Inches(1.0), Inches(2.2),
-        slide_w - Inches(2.0), Inches(1.8),
+        Inches(1.0),
+        Inches(2.2),
+        slide_w - Inches(2.0),
+        Inches(1.8),
         theme["accent"],
     )
     tb = slide.shapes.add_textbox(
-        Inches(1.4), Inches(2.5), slide_w - Inches(2.8), Inches(1.2),
+        Inches(1.4),
+        Inches(2.5),
+        slide_w - Inches(2.8),
+        Inches(1.2),
     )
     tf = tb.text_frame
     tf.word_wrap = True
@@ -901,7 +1027,10 @@ def export_lesson_pptx(
     # Standards below in 16pt gray
     if lesson.standards:
         tb = slide.shapes.add_textbox(
-            Inches(1.0), Inches(4.4), slide_w - Inches(2.0), Inches(2.5),
+            Inches(1.0),
+            Inches(4.4),
+            slide_w - Inches(2.0),
+            Inches(2.5),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -930,8 +1059,10 @@ def export_lesson_pptx(
         # "Do Now" badge -- rounded rectangle, subject color, white text
         badge = _rounded_card(
             slide,
-            Inches(0.8), Inches(0.6),
-            Inches(2.5), Inches(0.7),
+            Inches(0.8),
+            Inches(0.6),
+            Inches(2.5),
+            Inches(0.7),
             theme["primary"],
         )
         badge_tf = badge.text_frame
@@ -945,7 +1076,10 @@ def export_lesson_pptx(
         do_now_img = images.get("entity_1")
 
         tb = slide.shapes.add_textbox(
-            Inches(0.8), Inches(1.8), slide_w - Inches(2.0), Inches(4.2),
+            Inches(0.8),
+            Inches(1.8),
+            slide_w - Inches(2.0),
+            Inches(4.2),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -956,7 +1090,7 @@ def export_lesson_pptx(
         dn_text = _clean_slide_text(lesson.do_now)
         if len(dn_text) > 300:
             cutoff = dn_text[:300].rfind(". ")
-            dn_display = dn_text[:cutoff + 1] if cutoff > 80 else dn_text[:300].rsplit(" ", 1)[0] + "..."
+            dn_display = dn_text[: cutoff + 1] if cutoff > 80 else dn_text[:300].rsplit(" ", 1)[0] + "..."
         else:
             dn_display = dn_text
         run.text = dn_display
@@ -972,6 +1106,7 @@ def export_lesson_pptx(
 
         if do_now_img:
             from clawed.slide_images import _extract_key_concepts
+
             concepts = _extract_key_concepts(lesson.do_now)
             caption = ", ".join(concepts[:2]) if concepts else ""
             _add_accent_image(slide, do_now_img, caption=caption)
@@ -979,8 +1114,10 @@ def export_lesson_pptx(
         # Timer indicator
         minutes = lesson.time_estimates.get("do_now", 5)
         tb_timer = slide.shapes.add_textbox(
-            slide_w - Inches(2.5), slide_h - Inches(1.0),
-            Inches(2.0), Inches(0.5),
+            slide_w - Inches(2.5),
+            slide_h - Inches(1.0),
+            Inches(2.0),
+            Inches(0.5),
         )
         p_t = tb_timer.text_frame.paragraphs[0]
         p_t.alignment = PP_ALIGN.RIGHT
@@ -1005,8 +1142,10 @@ def export_lesson_pptx(
         # "Direct Instruction" badge (subject color, rounded)
         badge = _rounded_card(
             slide,
-            Inches(0.8), Inches(0.6),
-            Inches(4.5), Inches(0.7),
+            Inches(0.8),
+            Inches(0.6),
+            Inches(4.5),
+            Inches(0.7),
             theme["primary"],
         )
         badge_tf = badge.text_frame
@@ -1024,6 +1163,7 @@ def export_lesson_pptx(
         if img_path:
             text_width = int(slide_w * 0.60)
             from clawed.slide_images import _extract_key_concepts
+
             concepts = _extract_key_concepts(di_text)
             caption = ", ".join(concepts[:2]) if concepts else ""
             _add_sidebar_image(slide, img_path, caption=caption)
@@ -1044,7 +1184,7 @@ def export_lesson_pptx(
                 if len(item) > 20:
                     # Truncate at word boundary, not mid-word
                     if len(item) > 140:
-                        item = item[:140].rsplit(' ', 1)[0] + '...'
+                        item = item[:140].rsplit(" ", 1)[0] + "..."
                     bullets.append(item)
             if bullets:
                 return bullets
@@ -1062,7 +1202,10 @@ def export_lesson_pptx(
         bullets = _extract_di_bullets(di_clean)
 
         tb = slide.shapes.add_textbox(
-            Inches(1.0), Inches(1.8), text_width, Inches(4.8),
+            Inches(1.0),
+            Inches(1.8),
+            text_width,
+            Inches(4.8),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -1095,24 +1238,51 @@ def export_lesson_pptx(
         if not vocab_pairs:
             di_text_raw = lesson.direct_instruction or ""
             vocab_patterns = re.findall(
-                r'\*\*([A-Z][^*]{2,30})\*\*\s*[-—:]+\s*([^*\n]{15,200})',
+                r"\*\*([A-Z][^*]{2,30})\*\*\s*[-—:]+\s*([^*\n]{15,200})",
                 di_text_raw,
             )
             if not vocab_patterns:
                 vocab_patterns = re.findall(
-                    r'(?:^|\n)\s*\*?\*?([A-Z][a-z]+(?:\s+[A-Za-z]+){0,3})\*?\*?\s*[-—:]+\s+'
-                    r'([A-Za-z][^\n]{15,200})',
+                    r"(?:^|\n)\s*\*?\*?([A-Z][a-z]+(?:\s+[A-Za-z]+){0,3})\*?\*?\s*[-—:]+\s+"
+                    r"([A-Za-z][^\n]{15,200})",
                     di_text_raw,
                 )
             INSTRUCTIONAL_WORDS = {
-                "check", "ask", "call", "facilitate", "transition", "minutes",
-                "discuss", "display", "distribute", "brief", "move", "moved",
-                "students", "responses", "excellent", "turn", "now", "let",
-                "today", "good", "morning", "scholars", "friends", "class",
-                "next", "first", "take", "look", "read", "write", "complete",
+                "check",
+                "ask",
+                "call",
+                "facilitate",
+                "transition",
+                "minutes",
+                "discuss",
+                "display",
+                "distribute",
+                "brief",
+                "move",
+                "moved",
+                "students",
+                "responses",
+                "excellent",
+                "turn",
+                "now",
+                "let",
+                "today",
+                "good",
+                "morning",
+                "scholars",
+                "friends",
+                "class",
+                "next",
+                "first",
+                "take",
+                "look",
+                "read",
+                "write",
+                "complete",
             }
             vocab_pairs = [
-                (term.strip(), defn.strip()) for term, defn in vocab_patterns
+                (term.strip(), defn.strip())
+                for term, defn in vocab_patterns
                 if 1 <= len(term.split()) <= 4
                 and len(defn.split()) >= 3
                 and not any(w in defn.lower().split()[:3] for w in INSTRUCTIONAL_WORDS)
@@ -1123,10 +1293,7 @@ def export_lesson_pptx(
             # Split vocabulary across multiple slides (max 4 terms per slide)
             # to prevent overcrowding when lessons have many terms.
             VOCAB_PER_SLIDE = 4
-            vocab_chunks = [
-                vocab_pairs[i:i + VOCAB_PER_SLIDE]
-                for i in range(0, len(vocab_pairs), VOCAB_PER_SLIDE)
-            ]
+            vocab_chunks = [vocab_pairs[i : i + VOCAB_PER_SLIDE] for i in range(0, len(vocab_pairs), VOCAB_PER_SLIDE)]
             total_vocab_slides = len(vocab_chunks)
 
             for chunk_idx, chunk in enumerate(vocab_chunks):
@@ -1139,7 +1306,8 @@ def export_lesson_pptx(
                     badge_label = f"Key Vocabulary ({chunk_idx + 1}/{total_vocab_slides})"
                 badge = _rounded_card(
                     slide,
-                    Inches(0.8), Inches(0.6),
+                    Inches(0.8),
+                    Inches(0.6),
                     Inches(3.5) if total_vocab_slides == 1 else Inches(4.5),
                     Inches(0.7),
                     theme["secondary"],
@@ -1167,7 +1335,10 @@ def export_lesson_pptx(
 
                     # Term — left column, bold, primary color
                     tb_term = slide.shapes.add_textbox(
-                        Inches(0.9), y, LEFT_COL_W, row_h,
+                        Inches(0.9),
+                        y,
+                        LEFT_COL_W,
+                        row_h,
                     )
                     tf_term = tb_term.text_frame
                     tf_term.word_wrap = True
@@ -1179,7 +1350,10 @@ def export_lesson_pptx(
 
                     # Definition — right column, normal weight
                     tb_def = slide.shapes.add_textbox(
-                        Inches(4.9), y, RIGHT_COL_W, row_h,
+                        Inches(4.9),
+                        y,
+                        RIGHT_COL_W,
+                        row_h,
                     )
                     tf_def = tb_def.text_frame
                     tf_def.word_wrap = True
@@ -1195,8 +1369,9 @@ def export_lesson_pptx(
 
                     # Light separator line between rows
                     if idx < len(chunk) - 1:
-                        _bar(slide, Inches(0.9), y + row_h - Inches(0.04),
-                             slide_w - Inches(1.8), Inches(0.02), "EEEEEE")
+                        _bar(
+                            slide, Inches(0.9), y + row_h - Inches(0.04), slide_w - Inches(1.8), Inches(0.02), "EEEEEE"
+                        )
 
                 _add_footer(slide, slide_num[0])
 
@@ -1232,8 +1407,10 @@ def export_lesson_pptx(
             badge_text = ps_title or "Primary Source"
             badge = _rounded_card(
                 slide,
-                Inches(0.8), Inches(0.5),
-                Inches(5.0), Inches(0.7),
+                Inches(0.8),
+                Inches(0.5),
+                Inches(5.0),
+                Inches(0.7),
                 theme["primary"],
             )
             badge_tf = badge.text_frame
@@ -1250,7 +1427,10 @@ def export_lesson_pptx(
                 attribution += f", {ps_date}" if attribution else ps_date
             if attribution:
                 tb_attr = slide.shapes.add_textbox(
-                    Inches(0.8), Inches(1.3), Inches(8.0), Inches(0.4),
+                    Inches(0.8),
+                    Inches(1.3),
+                    Inches(8.0),
+                    Inches(0.4),
                 )
                 p_attr = tb_attr.text_frame.paragraphs[0]
                 run_attr = p_attr.add_run()
@@ -1274,7 +1454,10 @@ def export_lesson_pptx(
 
             y_start = Inches(1.8) if attribution else Inches(1.5)
             tb = slide.shapes.add_textbox(
-                Inches(1.0), y_start, text_width, Inches(3.5),
+                Inches(1.0),
+                y_start,
+                text_width,
+                Inches(3.5),
             )
             tf = tb.text_frame
             tf.word_wrap = True
@@ -1290,7 +1473,10 @@ def export_lesson_pptx(
             if ps_questions:
                 q_y = slide_h - Inches(2.0)
                 tb_q = slide.shapes.add_textbox(
-                    Inches(1.0), q_y, slide_w - Inches(2.0), Inches(1.2),
+                    Inches(1.0),
+                    q_y,
+                    slide_w - Inches(2.0),
+                    Inches(1.2),
                 )
                 tf_q = tb_q.text_frame
                 tf_q.word_wrap = True
@@ -1301,7 +1487,7 @@ def export_lesson_pptx(
                     q_text = _clean_slide_text(question)
                     if len(q_text) > 100:
                         q_text = q_text[:97].rsplit(" ", 1)[0] + "…"
-                    run_q.text = f"Q{qi+1}: {q_text}"
+                    run_q.text = f"Q{qi + 1}: {q_text}"
                     _set_text_props(run_q, 14, theme["text_dark"], bold=True)
 
             _add_footer(slide, slide_num[0])
@@ -1317,8 +1503,12 @@ def export_lesson_pptx(
         if len(gp_first_line) > 120:
             gp_first_line = gp_first_line[:117].rsplit(" ", 1)[0] + "…"
         _section_divider(
-            prs, slide_num, f"Let's Practice Together\n({gp_min} minutes)",
-            theme, slide_w, slide_h,
+            prs,
+            slide_num,
+            f"Let's Practice Together\n({gp_min} minutes)",
+            theme,
+            slide_w,
+            slide_h,
             sub_text=gp_first_line,
         )
 
@@ -1332,8 +1522,10 @@ def export_lesson_pptx(
         # "Your Turn" badge
         badge = _rounded_card(
             slide,
-            Inches(0.8), Inches(0.6),
-            Inches(3.0), Inches(0.7),
+            Inches(0.8),
+            Inches(0.6),
+            Inches(3.0),
+            Inches(0.7),
             theme["secondary"],
         )
         badge_tf = badge.text_frame
@@ -1355,7 +1547,10 @@ def export_lesson_pptx(
             gp_lines = gp_lines[:MAX_GP_LINES]
 
         tb = slide.shapes.add_textbox(
-            Inches(0.8), Inches(1.8), slide_w - Inches(2.0), Inches(4.8),
+            Inches(0.8),
+            Inches(1.8),
+            slide_w - Inches(2.0),
+            Inches(4.8),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -1378,8 +1573,10 @@ def export_lesson_pptx(
         # Time estimate
         minutes = lesson.time_estimates.get("guided_practice", 15)
         tb_time = slide.shapes.add_textbox(
-            slide_w - Inches(2.5), slide_h - Inches(1.0),
-            Inches(2.0), Inches(0.5),
+            slide_w - Inches(2.5),
+            slide_h - Inches(1.0),
+            Inches(2.0),
+            Inches(0.5),
         )
         p_t = tb_time.text_frame.paragraphs[0]
         p_t.alignment = PP_ALIGN.RIGHT
@@ -1399,8 +1596,10 @@ def export_lesson_pptx(
         # "Independent Practice" badge
         badge = _rounded_card(
             slide,
-            Inches(0.8), Inches(0.6),
-            Inches(4.5), Inches(0.7),
+            Inches(0.8),
+            Inches(0.6),
+            Inches(4.5),
+            Inches(0.7),
             theme["primary"],
         )
         badge_tf = badge.text_frame
@@ -1420,12 +1619,15 @@ def export_lesson_pptx(
         if len(iw_text) > 250:
             cutoff = iw_text[:250].rfind(". ")
             if cutoff > 80:
-                iw_summary = iw_text[:cutoff + 1]
+                iw_summary = iw_text[: cutoff + 1]
             else:
                 iw_summary = iw_text[:250].rsplit(" ", 1)[0] + "..."
 
         tb = slide.shapes.add_textbox(
-            Inches(1.0), Inches(1.8), slide_w - Inches(2.0), Inches(4.5),
+            Inches(1.0),
+            Inches(1.8),
+            slide_w - Inches(2.0),
+            Inches(4.5),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -1444,13 +1646,17 @@ def export_lesson_pptx(
         minutes = lesson.time_estimates.get("independent_work", 10)
         _rounded_card(
             slide,
-            slide_w - Inches(3.0), slide_h - Inches(1.2),
-            Inches(2.2), Inches(0.6),
+            slide_w - Inches(3.0),
+            slide_h - Inches(1.2),
+            Inches(2.2),
+            Inches(0.6),
             theme["accent"],
         )
         tb_time = slide.shapes.add_textbox(
-            slide_w - Inches(3.0), slide_h - Inches(1.2),
-            Inches(2.2), Inches(0.6),
+            slide_w - Inches(3.0),
+            slide_h - Inches(1.2),
+            Inches(2.2),
+            Inches(0.6),
         )
         p_t = tb_time.text_frame.paragraphs[0]
         p_t.alignment = PP_ALIGN.CENTER
@@ -1477,7 +1683,10 @@ def export_lesson_pptx(
         # Full-width colored banner for "Exit Ticket"
         _bar(slide, Emu(0), Emu(0), slide_w, Inches(1.2), theme["primary"])
         tb = slide.shapes.add_textbox(
-            Inches(0.8), Inches(0.15), slide_w - Inches(1.6), Inches(0.9),
+            Inches(0.8),
+            Inches(0.15),
+            slide_w - Inches(1.6),
+            Inches(0.9),
         )
         p = tb.text_frame.paragraphs[0]
         p.alignment = PP_ALIGN.LEFT
@@ -1498,16 +1707,20 @@ def export_lesson_pptx(
             # Card background
             _rounded_card(
                 slide,
-                Inches(0.8), q_top,
-                slide_w - Inches(1.6), card_h - Inches(0.1),
+                Inches(0.8),
+                q_top,
+                slide_w - Inches(1.6),
+                card_h - Inches(0.1),
                 theme["accent"],
             )
 
             # Number circle — properly sized
             circle = slide.shapes.add_shape(
                 MSO_SHAPE.OVAL,
-                Inches(1.1), q_top + Inches(0.12),
-                Inches(0.55), Inches(0.55),
+                Inches(1.1),
+                q_top + Inches(0.12),
+                Inches(0.55),
+                Inches(0.55),
             )
             circle.line.fill.background()
             _add_shape_fill(circle, theme["secondary"])
@@ -1525,8 +1738,10 @@ def export_lesson_pptx(
             q_font = 16 if len(q_text) > 100 else 18
 
             tb = slide.shapes.add_textbox(
-                Inches(1.85), q_top + Inches(0.10),
-                slide_w - Inches(3.0), Inches(0.65),
+                Inches(1.85),
+                q_top + Inches(0.10),
+                slide_w - Inches(3.0),
+                Inches(0.65),
             )
             tf = tb.text_frame
             tf.word_wrap = True
@@ -1536,15 +1751,16 @@ def export_lesson_pptx(
 
             # Answer line underneath question
             answer_y = q_top + Inches(0.75)
-            _bar(slide, Inches(1.85), answer_y,
-                 slide_w - Inches(3.0), Inches(0.02), "CCCCCC")
+            _bar(slide, Inches(1.85), answer_y, slide_w - Inches(3.0), Inches(0.02), "CCCCCC")
 
             q_top += card_h
 
         # "Turn in before you leave" footer note
         tb = slide.shapes.add_textbox(
-            Inches(0.8), slide_h - Inches(0.75),
-            slide_w - Inches(1.6), Inches(0.4),
+            Inches(0.8),
+            slide_h - Inches(0.75),
+            slide_w - Inches(1.6),
+            Inches(0.4),
         )
         p = tb.text_frame.paragraphs[0]
         p.alignment = PP_ALIGN.CENTER
@@ -1566,7 +1782,10 @@ def export_lesson_pptx(
     if lesson.homework:
         # "Tonight's Homework" with details
         tb = slide.shapes.add_textbox(
-            Inches(1.5), Inches(1.5), slide_w - Inches(3.0), Inches(1.5),
+            Inches(1.5),
+            Inches(1.5),
+            slide_w - Inches(3.0),
+            Inches(1.5),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -1577,12 +1796,19 @@ def export_lesson_pptx(
         _set_text_props(run, 36, theme["text_light"], bold=True)
 
         _bar(
-            slide, Inches(1.5), Inches(3.2),
-            Inches(4.0), Inches(0.06), theme["secondary"],
+            slide,
+            Inches(1.5),
+            Inches(3.2),
+            Inches(4.0),
+            Inches(0.06),
+            theme["secondary"],
         )
 
         tb = slide.shapes.add_textbox(
-            Inches(1.5), Inches(3.6), slide_w - Inches(3.0), Inches(3.0),
+            Inches(1.5),
+            Inches(3.6),
+            slide_w - Inches(3.0),
+            Inches(3.0),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -1593,7 +1819,7 @@ def export_lesson_pptx(
         hw_text = lesson.homework
         if len(hw_text) > 200:
             cutoff = hw_text[:200].rfind(". ")
-            hw_display = hw_text[:cutoff + 1] if cutoff > 60 else hw_text[:200].rsplit(" ", 1)[0] + "..."
+            hw_display = hw_text[: cutoff + 1] if cutoff > 60 else hw_text[:200].rsplit(" ", 1)[0] + "..."
         else:
             hw_display = hw_text
         run.text = hw_display
@@ -1605,7 +1831,10 @@ def export_lesson_pptx(
     else:
         # "Key Takeaway" or "Questions?"
         tb = slide.shapes.add_textbox(
-            Inches(1.5), Inches(2.5), slide_w - Inches(3.0), Inches(2.0),
+            Inches(1.5),
+            Inches(2.5),
+            slide_w - Inches(3.0),
+            Inches(2.0),
         )
         tf = tb.text_frame
         tf.word_wrap = True
@@ -1618,8 +1847,10 @@ def export_lesson_pptx(
     # Teacher name and subject in footer
     teacher_subject = subject.title() if subject else "Education"
     tb = slide.shapes.add_textbox(
-        Inches(1.0), slide_h - Inches(1.0),
-        slide_w - Inches(2.0), Inches(0.5),
+        Inches(1.0),
+        slide_h - Inches(1.0),
+        slide_w - Inches(2.0),
+        Inches(0.5),
     )
     p = tb.text_frame.paragraphs[0]
     p.alignment = PP_ALIGN.CENTER
@@ -1629,8 +1860,10 @@ def export_lesson_pptx(
 
     # Watermark
     tb_wm = slide.shapes.add_textbox(
-        Inches(1.0), slide_h - Inches(0.55),
-        slide_w - Inches(2.0), Inches(0.3),
+        Inches(1.0),
+        slide_h - Inches(0.55),
+        slide_w - Inches(2.0),
+        Inches(0.3),
     )
     p_wm = tb_wm.text_frame.paragraphs[0]
     p_wm.alignment = PP_ALIGN.CENTER

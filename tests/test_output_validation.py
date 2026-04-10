@@ -1,4 +1,5 @@
 """Tests for clawed/validation.py — post-generation output validators."""
+
 from __future__ import annotations
 
 from clawed.master_content import (
@@ -204,9 +205,7 @@ def test_validate_master_content_topic_match_in_topic_field():
             questions=["Q"],
             answers=["A"],
         ),
-        direct_instruction=[
-            InstructionSection(heading="H", content="C", teacher_script="S", key_points=["k"])
-        ],
+        direct_instruction=[InstructionSection(heading="H", content="C", teacher_script="S", key_points=["k"])],
         guided_notes=[GuidedNote(prompt="P", answer="A", section_ref="H")],
         primary_sources=[
             PrimarySource(
@@ -323,10 +322,7 @@ def _make_quiz(topic: str = "WWI", count: int = 3) -> Quiz:
     return Quiz(
         topic=topic,
         grade_level="8",
-        questions=[
-            AssessmentQuestion(question_number=i + 1, question=f"Q{i + 1}?")
-            for i in range(count)
-        ],
+        questions=[AssessmentQuestion(question_number=i + 1, question=f"Q{i + 1}?") for i in range(count)],
         answer_key={i + 1: f"A{i + 1}" for i in range(count)},
         total_points=count,
     )
@@ -363,10 +359,7 @@ def test_validate_quiz_wrong_count():
 def _make_rubric(criteria_count: int = 4) -> Rubric:
     return Rubric(
         task_description="Evaluate the essay.",
-        criteria=[
-            RubricCriterion(criterion=f"Criterion {i + 1}")
-            for i in range(criteria_count)
-        ],
+        criteria=[RubricCriterion(criterion=f"Criterion {i + 1}") for i in range(criteria_count)],
         total_points=criteria_count * 4,
     )
 
@@ -396,10 +389,7 @@ def _make_year_map(subject: str = "US History", unit_count: int = 4) -> YearMap:
     return YearMap(
         subject=subject,
         grade_level="8",
-        units=[
-            YearMapUnit(unit_number=i + 1, title=f"Unit {i + 1}", duration_weeks=4)
-            for i in range(unit_count)
-        ],
+        units=[YearMapUnit(unit_number=i + 1, title=f"Unit {i + 1}", duration_weeks=4) for i in range(unit_count)],
     )
 
 
@@ -427,6 +417,7 @@ def test_validate_year_map_subject_drift():
 
 def _make_unit_plan(topic: str = "Reconstruction") -> UnitPlan:
     from clawed.models import LessonBrief
+
     return UnitPlan(
         title=f"Unit on {topic}",
         subject="US History",
@@ -465,9 +456,7 @@ def _make_formative() -> FormativeAssessment:
     return FormativeAssessment(
         lesson_title="Reconstruction Lesson 1",
         objective="Students can identify Reconstruction goals.",
-        questions=[
-            AssessmentQuestion(question_number=1, question="What was Reconstruction?")
-        ],
+        questions=[AssessmentQuestion(question_number=1, question="What was Reconstruction?")],
         answer_key={1: "The period of rebuilding after the Civil War."},
     )
 
@@ -497,14 +486,13 @@ def test_validate_formative_missing_objective():
 
 def _make_summative() -> SummativeAssessment:
     from clawed.models import SummativeQuestion
+
     return SummativeAssessment(
         unit_title="Reconstruction Unit",
         subject="US History",
         grade_level="8",
         objectives=["Understand Reconstruction goals"],
-        questions=[
-            SummativeQuestion(question_number=1, question="What was the 13th Amendment?")
-        ],
+        questions=[SummativeQuestion(question_number=1, question="What was the 13th Amendment?")],
         total_points=10,
     )
 
@@ -534,6 +522,7 @@ def test_validate_summative_empty_objectives():
 
 def _make_dbq() -> DBQAssessment:
     from clawed.models import DBQDocument
+
     return DBQAssessment(
         topic="Reconstruction",
         grade_level="8",
@@ -575,12 +564,11 @@ def test_validate_dbq_missing_essay_prompt():
 
 def _make_lesson_materials() -> LessonMaterials:
     from clawed.models import WorksheetItem
+
     return LessonMaterials(
         lesson_title="Reconstruction Day 1",
         worksheet_items=[WorksheetItem(item_number=1, item_type="short_answer", prompt="Describe Reconstruction.")],
-        assessment_questions=[
-            AssessmentQuestion(question_number=1, question="What happened in 1865?")
-        ],
+        assessment_questions=[AssessmentQuestion(question_number=1, question="What happened in 1865?")],
     )
 
 
@@ -609,6 +597,7 @@ def test_validate_lesson_materials_empty_assessment_questions():
 
 def _make_pacing_guide() -> PacingGuide:
     from clawed.models import PacingWeek
+
     return PacingGuide(
         subject="US History",
         grade_level="8",

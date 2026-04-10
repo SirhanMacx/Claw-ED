@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 # ── Status & task type enums ──────────────────────────────────────────
 
+
 class TaskStatus(str, Enum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -37,6 +38,7 @@ class TaskType(str, Enum):
 
 
 # ── Task model ────────────────────────────────────────────────────────
+
 
 class Task(BaseModel):
     """A single queued generation task."""
@@ -110,8 +112,7 @@ class TaskQueue:
         )
         conn = self._get_conn()
         conn.execute(
-            "INSERT INTO tasks (id, task_type, payload_json, status, created_at) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO tasks (id, task_type, payload_json, status, created_at) VALUES (?, ?, ?, ?, ?)",
             (task.id, task.task_type.value, json.dumps(task.payload), task.status.value, task.created_at),
         )
         conn.commit()
@@ -221,6 +222,7 @@ async def _execute_task(task: Task) -> dict[str, Any]:
         from clawed.paths import data_dir
         from clawed.persona import load_persona
         from clawed.planner import plan_unit, save_unit
+
         persona_path = Path(payload.get("persona_path", data_dir() / "persona.json"))
         persona = load_persona(persona_path)
         unit = await plan_unit(

@@ -146,8 +146,13 @@ async def compile_student_view(
     def _heading(text: str, level: int = 1) -> None:
         doc.add_heading(text, level=level)
 
-    def _para(text: str, bold: bool = False, italic: bool = False,
-               size_pt: int = 11, color: tuple[int, int, int] | None = None) -> None:
+    def _para(
+        text: str,
+        bold: bool = False,
+        italic: bool = False,
+        size_pt: int = 11,
+        color: tuple[int, int, int] | None = None,
+    ) -> None:
         p = doc.add_paragraph()
         run = p.add_run(text)
         run.bold = bold
@@ -172,18 +177,20 @@ async def compile_student_view(
     def _shaded_cell(cell, fill_hex: str) -> None:
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()  # noqa: N806
-        shd = tcPr.makeelement(qn("w:shd"), {
-            qn("w:val"): "clear",
-            qn("w:color"): "auto",
-            qn("w:fill"): fill_hex,
-        })
+        shd = tcPr.makeelement(
+            qn("w:shd"),
+            {
+                qn("w:val"): "clear",
+                qn("w:color"): "auto",
+                qn("w:fill"): fill_hex,
+            },
+        )
         tcPr.append(shd)
 
     def _page_break() -> None:
         doc.add_page_break()
 
-    def _callout_box(title: str, items: list[str], fill_hex: str,
-                     title_hex: str = "FFFFFF") -> None:
+    def _callout_box(title: str, items: list[str], fill_hex: str, title_hex: str = "FFFFFF") -> None:
         """Render a colored callout box as a single-column table."""
         tbl = doc.add_table(rows=1 + len(items), cols=1)
         tbl.style = "Table Grid"
@@ -223,8 +230,7 @@ async def compile_student_view(
     for line in meta_lines:
         _para(line)
 
-    _para(f"Reading Level: {reading_level}", italic=True, size_pt=9,
-          color=(100, 100, 100))
+    _para(f"Reading Level: {reading_level}", italic=True, size_pt=9, color=(100, 100, 100))
 
     doc.add_paragraph("Name: ___________________________  Date: ___________  Period: _____")
     doc.add_paragraph("")
@@ -319,11 +325,9 @@ async def compile_student_view(
             # so students have the document RIGHT HERE (matching Jon's style)
             ref_source = _source_lookup.get(station.source_ref)
             if ref_source and ref_source.content_text:
-                _para(f"Document: {ref_source.title}", bold=True, italic=True,
-                      size_pt=10, color=(80, 80, 80))
+                _para(f"Document: {ref_source.title}", bold=True, italic=True, size_pt=10, color=(80, 80, 80))
                 if ref_source.attribution:
-                    _para(f"— {ref_source.attribution}", italic=True, size_pt=9,
-                          color=(100, 100, 100))
+                    _para(f"— {ref_source.attribution}", italic=True, size_pt=9, color=(100, 100, 100))
                 _para(ref_source.content_text)
                 _embed_image(ref_source.image_spec)
                 doc.add_paragraph("")

@@ -226,14 +226,14 @@ class TestRunOnboarding:
         # Ollama key prompt (empty = skip), alternative choice "3" (local),
         # retry/skip on failed connection, materials (skip)
         side_effects = [
-            "Global History",        # subjects
-            "10",                    # grade levels
-            "New York",              # state
-            "y",                     # persona preview confirmation
-            "",                      # Ollama key prompt (skip to alternatives)
-            "3",                     # alternative: local Ollama
-            "skip",                  # retry/skip on connection test
-            "",                      # materials (skip)
+            "Global History",  # subjects
+            "10",  # grade levels
+            "New York",  # state
+            "y",  # persona preview confirmation
+            "",  # Ollama key prompt (skip to alternatives)
+            "3",  # alternative: local Ollama
+            "skip",  # retry/skip on connection test
+            "",  # materials (skip)
         ]
 
         with (
@@ -313,12 +313,12 @@ class TestSetupWizard:
         config_file = tmp_path / "config.json"
 
         side_effects = [
-            "Social Studies, ELA",   # subjects
-            "7, 8",                  # grade levels
-            "New York",              # state
-            "y",                     # persona preview confirmation
+            "Social Studies, ELA",  # subjects
+            "7, 8",  # grade levels
+            "New York",  # state
+            "y",  # persona preview confirmation
             "ollama-cloud-key-123",  # Ollama Cloud key (entered at recommended prompt)
-            "",                      # materials (skip)
+            "",  # materials (skip)
         ]
 
         with (
@@ -342,13 +342,13 @@ class TestSetupWizard:
         config_file = tmp_path / "config.json"
 
         side_effects = [
-            "Math",                  # subjects
-            "6",                     # grade levels
-            "California",            # state
-            "y",                     # persona preview confirmation
-            "",                      # Ollama key (skip)
-            "4",                     # Skip for now
-            "",                      # materials (skip)
+            "Math",  # subjects
+            "6",  # grade levels
+            "California",  # state
+            "y",  # persona preview confirmation
+            "",  # Ollama key (skip)
+            "4",  # Skip for now
+            "",  # materials (skip)
         ]
 
         with (
@@ -370,14 +370,14 @@ class TestSetupWizard:
         config_file.write_text('{"provider": "openai"}')
 
         side_effects = [
-            "Science",               # subjects
-            "9",                     # grade levels
-            "Texas",                 # state
-            "y",                     # persona preview confirmation
-            "",                      # Ollama key (skip)
-            "3",                     # local Ollama
-            "skip",                  # retry/skip
-            "",                      # materials (skip)
+            "Science",  # subjects
+            "9",  # grade levels
+            "Texas",  # state
+            "y",  # persona preview confirmation
+            "",  # Ollama key (skip)
+            "3",  # local Ollama
+            "skip",  # retry/skip
+            "",  # materials (skip)
         ]
 
         with (
@@ -398,11 +398,11 @@ class TestSetupWizard:
         config_file = tmp_path / "config.json"
 
         side_effects = [
-            "ELA",                   # subjects
-            "5",                     # grade levels
-            "Florida",               # state
-            "y",                     # persona preview confirmation
-            "",                      # materials (skip)
+            "ELA",  # subjects
+            "5",  # grade levels
+            "Florida",  # state
+            "y",  # persona preview confirmation
+            "",  # materials (skip)
         ]
 
         with (

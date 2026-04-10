@@ -41,9 +41,7 @@ class SelfDistillTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         context.notify_progress("Analyzing past outputs for patterns...")
 
         try:
@@ -53,13 +51,13 @@ class SelfDistillTool:
             llm_fn = None
             try:
                 from clawed.llm import LLMClient
+
                 client = LLMClient(context.config)
 
                 def _generate(prompt):
                     import asyncio
-                    return asyncio.get_event_loop().run_until_complete(
-                        client.generate(prompt, system="You are Ed.")
-                    )
+
+                    return asyncio.get_event_loop().run_until_complete(client.generate(prompt, system="You are Ed."))
 
                 llm_fn = _generate
             except Exception:

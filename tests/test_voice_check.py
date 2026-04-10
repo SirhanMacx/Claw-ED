@@ -11,6 +11,7 @@ from clawed.voice_check import (
 
 # ── Helper: build a persona with voice data ──────────────────────────────
 
+
 def _persona(
     voice_sample: str = "",
     do_now_style: str = "",
@@ -24,6 +25,7 @@ def _persona(
 
 
 # ── Address term tests ───────────────────────────────────────────────────
+
 
 class TestAddressTermPresent:
     """Persona says 'friends', output uses 'friends' -> ok."""
@@ -58,6 +60,7 @@ class TestAddressTermMissing:
 
 
 # ── Do Now style tests ───────────────────────────────────────────────────
+
 
 class TestDoNowStyleMismatch:
     """Persona says 'scenario/analogy', Do Now is a recall question -> fail."""
@@ -94,6 +97,7 @@ class TestDoNowStyleMatch:
 
 # ── Overall pass ─────────────────────────────────────────────────────────
 
+
 class TestOverallPass:
     """Everything matches -> passed=True, issues=[]."""
 
@@ -117,6 +121,7 @@ class TestOverallPass:
 
 # ── No voice data — skip gracefully ──────────────────────────────────────
 
+
 class TestNoVoiceSampleSkipsGracefully:
     """Empty persona -> passed=True (nothing to check)."""
 
@@ -128,6 +133,7 @@ class TestNoVoiceSampleSkipsGracefully:
 
 
 # ── Unit tests for internal helpers ──────────────────────────────────────
+
 
 class TestDetectDoNowType:
     def test_scenario(self):

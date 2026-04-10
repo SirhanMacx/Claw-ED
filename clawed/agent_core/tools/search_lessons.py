@@ -1,4 +1,5 @@
 """Tool: search_lessons — queries Database for lesson history."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -33,9 +34,7 @@ class SearchLessonsTool:
             },
         }
 
-    async def execute(
-        self, params: dict[str, Any], context: AgentContext
-    ) -> ToolResult:
+    async def execute(self, params: dict[str, Any], context: AgentContext) -> ToolResult:
         from clawed.database import Database
 
         unit_id = params["unit_id"]

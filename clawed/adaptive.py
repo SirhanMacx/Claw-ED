@@ -136,14 +136,12 @@ def generate_adjustment_context(
         )
     else:
         parts.append(
-            "\nStudents are ready to proceed. Consider a brief 2-minute "
-            "connection to previous learning in the Do Now."
+            "\nStudents are ready to proceed. Consider a brief 2-minute connection to previous learning in the Do Now."
         )
 
     if weak:
         parts.append(
-            f"\nWeak cognitive areas: {', '.join(weak)}\n"
-            "Strengthen these in today's lesson with additional practice."
+            f"\nWeak cognitive areas: {', '.join(weak)}\nStrengthen these in today's lesson with additional practice."
         )
 
     return "\n".join(parts)

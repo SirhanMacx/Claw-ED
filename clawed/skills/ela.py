@@ -6,12 +6,16 @@ skill = SubjectSkill(
     subject="ela",
     display_name="English Language Arts",
     description=(
-        "Close reading protocols, textual evidence integration, "
-        "writing workshop model, reading-writing connection."
+        "Close reading protocols, textual evidence integration, writing workshop model, reading-writing connection."
     ),
     aliases=(
-        "english", "english language arts", "language arts", "reading",
-        "writing", "literacy", "literature",
+        "english",
+        "english language arts",
+        "language arts",
+        "reading",
+        "writing",
+        "literacy",
+        "literature",
     ),
     system_prompt=(
         "You are an expert English Language Arts educator. Ground all instruction in "
