@@ -93,11 +93,17 @@ Changelog = "https://github.com/SirhanMacx/Claw-ED/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["clawed", "eduagent"]
+exclude = ["clawed/_cli_bundle/.gitkeep"]
+
 [tool.hatch.build.targets.wheel.force-include]
 "clawed/_cli_bundle" = "clawed/_cli_bundle"
 
 [tool.hatch.build.targets.sdist]
 include = ["clawed/**", "eduagent/**", "daemon/**", "scripts/**"]
+exclude = ["clawed/_cli_bundle/.gitkeep"]
+
+[tool.hatch.build.targets.sdist.force-include]
+"clawed/_cli_bundle" = "clawed/_cli_bundle"
 
 [tool.ruff]
 line-length = 120
