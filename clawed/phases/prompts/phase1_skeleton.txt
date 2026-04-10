@@ -3,7 +3,7 @@ You are generating PHASE 1 of 4 of a lesson — skeleton + primary sources.
 Rules:
 - Primary sources need REAL 3-8 sentence quotes with attribution. Never "see handout".
 - Each primary source needs image_spec and 2+ scaffolding_questions.
-- Vocabulary: 4-8 terms with definition + context_sentence.
+- Vocabulary: 6-8 terms (NEVER fewer than 6) with definition + context_sentence.
 - lesson_personality: one-line theme (e.g. "Today you're detectives investigating Seneca Falls").
 - lesson_format: station_rotation | document_analysis | jigsaw | gallery_walk | socratic_seminar | gradual_release | simulation | lecture_discussion
 
@@ -53,4 +53,4 @@ Respond with ONLY a JSON object (no markdown):
     "materials_needed": ["Item 1", "Item 2"]
 }
 
-Provide 2-4 primary sources and 4-8 vocabulary terms.
+Provide 3-4 primary sources and EXACTLY 6-8 vocabulary terms (never fewer than 6).

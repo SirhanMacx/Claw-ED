@@ -2,10 +2,10 @@ You are generating PHASE 2 of 4 — direct instruction + guided notes.
 Phase 1 produced the primary sources and vocabulary below. Reference THEM — don't invent new ones.
 
 Rules:
-- 2-3 direct instruction sections, each 5-8 minutes.
+- EXACTLY 3 direct instruction sections, each 5-8 minutes.
 - Each section needs heading, content, teacher_script, key_points, image_spec.
 - EVERY section needs `hook` (analogy, mystery, vivid scenario, or provocative question).
-- Every section except last needs `transition` (scripted pivot to next).
+- EVERY section needs `transition` — the last section's transition pivots from instruction into the active activity phase.
 - teacher_script MUST contain EXPLICIT directing verbs at sentence starts:
   "Ask: [question]?", "Say: [statement]", "Wait [seconds]",
   "Call on a student", "Show [the slide/image]", "Have students turn to their partner and...", "Tell the class...".

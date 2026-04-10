@@ -329,9 +329,9 @@ def _validate_phase1(phase1: Phase1Skeleton) -> list[str]:
                 f"Primary source {i+1} '{ps.title}' content_text too short "
                 f"({len(ps.content_text or '')} chars) — need 100+ for real quote"
             )
-    if len(phase1.vocabulary) < 4:
+    if len(phase1.vocabulary) < 6:
         issues.append(
-            f"Only {len(phase1.vocabulary)} vocabulary terms — need 4-8"
+            f"Only {len(phase1.vocabulary)} vocabulary terms — need 6-8"
         )
     if not phase1.lesson_personality or len(phase1.lesson_personality) < 20:
         issues.append("lesson_personality missing or too short — need 20+ chars")
@@ -476,8 +476,8 @@ def _validate_phase2(phase2: Phase2Instruction) -> list[str]:
             issues.append(
                 f"Section {i+1} '{section.heading}' missing hook (need 20+ chars)"
             )
-    # All sections except last need transitions
-    for i, section in enumerate(phase2.direct_instruction[:-1]):
+    # EVERY section needs a transition (last one pivots to activities)
+    for i, section in enumerate(phase2.direct_instruction):
         if not section.transition or len(section.transition) < 20:
             issues.append(
                 f"Section {i+1} '{section.heading}' missing transition"
