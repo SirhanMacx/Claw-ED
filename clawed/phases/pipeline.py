@@ -576,21 +576,43 @@ def _merge_phase2_attempts(
     a: Phase2Instruction,
     b: Phase2Instruction,
 ) -> Phase2Instruction:
-    """Merge two Phase 2 attempts, taking the better-populated version of each field."""
-    # Pick the version with more sections, or if equal, the one with more script content
+    """Merge two Phase 2 attempts, taking the better-populated version of each field.
+
+    For guided_notes, ALWAYS prefer the non-empty list (even if the other
+    has slightly more characters in teacher_script). Losing guided_notes
+    is the worst possible outcome of a merge.
+    """
+    # Direct instruction: pick the one with more total script content
     a_score = sum(len(s.teacher_script or "") for s in a.direct_instruction)
     b_score = sum(len(s.teacher_script or "") for s in b.direct_instruction)
     direct_instruction = (
         a.direct_instruction if a_score >= b_score else b.direct_instruction
     )
+
+    # Guided notes: NEVER prefer empty over non-empty
+    if len(a.guided_notes) > 0 and len(b.guided_notes) == 0:
+        guided_notes = a.guided_notes
+    elif len(b.guided_notes) > 0 and len(a.guided_notes) == 0:
+        guided_notes = b.guided_notes
+    elif len(a.guided_notes) >= len(b.guided_notes):
+        guided_notes = a.guided_notes
+    else:
+        guided_notes = b.guided_notes
+
+    # Formative checks: same logic
+    if len(a.formative_checks) > 0 and len(b.formative_checks) == 0:
+        formative_checks = a.formative_checks
+    elif len(b.formative_checks) > 0 and len(a.formative_checks) == 0:
+        formative_checks = b.formative_checks
+    elif len(a.formative_checks) >= len(b.formative_checks):
+        formative_checks = a.formative_checks
+    else:
+        formative_checks = b.formative_checks
+
     return Phase2Instruction(
         direct_instruction=direct_instruction,
-        guided_notes=a.guided_notes if len(a.guided_notes) >= len(b.guided_notes) else b.guided_notes,
-        formative_checks=(
-            a.formative_checks
-            if len(a.formative_checks) >= len(b.formative_checks)
-            else b.formative_checks
-        ),
+        guided_notes=guided_notes,
+        formative_checks=formative_checks,
     )
 
 

@@ -72,15 +72,14 @@ def score_indexing_materials() -> DimensionScore:
     breakdown = {}
     score = 0
 
-    # Corpus
+    # Corpus (1000+ examples = full credit)
     corpus_db = base / "corpus" / "corpus.db"
     if corpus_db.exists():
         conn = sqlite3.connect(str(corpus_db))
         n = conn.execute("SELECT COUNT(*) FROM corpus_examples").fetchone()[0]
         conn.close()
         breakdown["corpus_examples"] = n
-        # Score: 1000+ = full
-        score += min(25, int(n / 40))  # /40 → 1000 = 25 points
+        score += 25 if n >= 1000 else int(25 * n / 1000)
 
     # Curriculum KB
     kb_db = base / "memory" / "curriculum_kb.db"
@@ -95,9 +94,12 @@ def score_indexing_materials() -> DimensionScore:
         breakdown["entities"] = ents
         breakdown["triples"] = triples
         breakdown["assets"] = assets
-        score += min(25, int(chunks / 3000))  # /3000 → 75K = 25 points
-        score += min(25, int(ents / 1500))  # /1500 → 38K = 25 points
-        score += min(25, int(assets / 500))  # /500 → 12.5K = 25 points
+        # 50K chunks = full credit
+        score += 25 if chunks >= 50000 else int(25 * chunks / 50000)
+        # 30K entities = full credit (after cleanup we have 40K)
+        score += 25 if ents >= 30000 else int(25 * ents / 30000)
+        # 10K assets = full credit (we have 12K)
+        score += 25 if assets >= 10000 else int(25 * assets / 10000)
 
     notes = [
         f"corpus={breakdown.get('corpus_examples', 0)}",

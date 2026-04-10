@@ -32,18 +32,19 @@ Misconceptions to address:
 
 {persona_voice_hint}
 
-Respond with ONLY a JSON object:
+Respond with ONLY a JSON object. CRITICAL: produce ALL 3 fields below.
+guided_notes is the SECOND most important field and MUST contain 10-12 entries:
 
 {
     "direct_instruction": [
         {
             "heading": "Section heading",
             "content": "Substantive content referencing primary sources by title",
-            "teacher_script": "Scripted dialogue with 3+ questions for CFU",
+            "teacher_script": "Ask: [opening question]? Wait. Call on 2 students. Say: [statement]. Show [the slide]. Ask: [follow-up]?",
             "key_points": ["point 1", "point 2", "point 3"],
             "image_spec": "specific image search query",
-            "hook": "REQUIRED on first section — analogy/mystery/provocative question",
-            "transition": "Scripted pivot to next section (except last)"
+            "hook": "Analogy or vivid scenario (REQUIRED on every section)",
+            "transition": "Scripted pivot to next section (REQUIRED except last)"
         }
     ],
     "guided_notes": [
@@ -59,4 +60,7 @@ Respond with ONLY a JSON object:
     ]
 }
 
-Provide 2-3 direct_instruction sections, 8-12 guided_notes, 2-3 formative_checks.
+REQUIRED MINIMUMS:
+- direct_instruction: 2-3 sections, EVERY section has hook, every-except-last has transition
+- guided_notes: 10-12 entries (MUST be filled in — do not leave empty)
+- formative_checks: 2-3 entries
