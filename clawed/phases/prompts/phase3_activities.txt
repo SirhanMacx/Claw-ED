@@ -1,0 +1,129 @@
+You are generating PHASE 3 of 4 of a lesson plan. Phases 1 and 2 have
+produced the skeleton, primary sources, and direct instruction. Your
+job is the ACTIVE engagement parts — Do Now, stations, creative
+activity, jigsaw (if applicable), independent work, and minute-by-minute
+pacing.
+
+## Quality Standard — THE GOLD BAR
+
+Rules for THIS phase:
+
+### Do Now
+- MUST be stimulus-based. Include the actual stimulus text/data/scenario
+  in the `stimulus` field.
+- NOT "What did we learn yesterday?" or any recall opener.
+- Must activate thinking, not test prior knowledge.
+- Often PREVIEWS one of Phase 1's primary sources (connects to today's
+  content).
+- MUST use a REAL historical quote, data point, or vivid scenario —
+  NEVER a hypothetical.
+
+### Stations
+- 3-4 stations, each tied to a Phase 1 primary source via source_ref.
+- Each station needs:
+  - `title`: "STATION A: [source short title]"
+  - `source_ref`: MUST match an id from Phase 1 primary_sources
+    (e.g. "source_a")
+  - `task`: what students are doing (sourcing, contextualizing,
+    corroborating, close reading)
+  - `student_directions`: step-by-step, substitute-teacher-readable,
+    including all the questions students answer
+  - `teacher_answer_key`: COMPLETE expected responses for all questions
+
+### Creative Activity (REQUIRED — every lesson)
+- Types: time_travel, role_play, debate, podcast_script, social_media,
+  gallery_walk, mock_trial
+- Needs scenario, roles, student_directions, deliverable, debrief,
+  time_minutes
+- AI-RESISTANT: tasks ChatGPT cannot complete for students. Include
+  personal experience, local context, in-class collaboration, physical
+  creation, or live performance.
+
+### Jigsaw (REQUIRED if lesson_format == "jigsaw")
+- num_expert_groups (3-4)
+- documents_per_group: reference Phase 1 primary_source IDs
+- Expert phase ~10 min, teaching phase ~10 min
+- graphic_organizer: column structure (e.g. "Movement | Problem | Solution | Evidence")
+- share_out_protocol: exact what each expert says/does
+- debrief_question: whole-class question connecting all sources
+
+### Independent Work
+- Clear step-by-step task
+- rubric_snippet: 2-3 criteria describing proficient work
+- exemplar: brief model answer
+
+### Minute-by-Minute Pacing
+- Time blocks summing to {duration_minutes}
+- Each block: {"time": "0:00-3:00", "activity": "Do Now", "teacher_moves": "..."}
+
+## Phase 1 & 2 Output (Context)
+
+### Lesson Metadata
+- **Title:** {title}
+- **Duration:** {duration_minutes} min
+- **Format:** {lesson_format}
+- **Personality:** {lesson_personality}
+
+### Primary Sources (reference by id)
+{primary_sources_block}
+
+### Direct Instruction (reference headings)
+{direct_instruction_block}
+
+CRITICAL: Stations MUST reference primary_source ids from Phase 1.
+Do Now should ideally use one of those sources as stimulus.
+creative_activity is REQUIRED — never null.
+
+## Output Format
+
+Respond with ONLY a JSON object (no markdown fencing):
+
+{
+    "do_now": {
+        "stimulus": "Full text of the stimulus — real quote/data/scenario, NOT hypothetical",
+        "stimulus_type": "text_excerpt | scenario | data | image | map | diagram",
+        "questions": ["Q1 anchored to stimulus", "Q2"],
+        "answers": ["Expected answer 1", "Expected answer 2"]
+    },
+
+    "stations": [
+        {
+            "title": "STATION A: Source Title",
+            "source_ref": "source_a (must match Phase 1 id)",
+            "task": "What students are doing (sourcing/contextualizing/corroborating)",
+            "student_directions": "Step-by-step directions including all questions students answer",
+            "teacher_answer_key": "Complete expected responses"
+        }
+    ],
+
+    "jigsaw": null,
+
+    "creative_activity": {
+        "activity_type": "time_travel | role_play | debate | podcast_script | social_media | gallery_walk | mock_trial",
+        "title": "Name of the activity",
+        "scenario": "The setup students enter — real context",
+        "roles": ["Role 1 — description", "Role 2 — description"],
+        "student_directions": "Step-by-step instructions",
+        "deliverable": "What students produce",
+        "debrief": "How the teacher wraps up and connects back to the objective",
+        "time_minutes": 15
+    },
+
+    "independent_work": {
+        "task": "Clear task with all questions",
+        "rubric_snippet": "2-3 criteria for proficient work",
+        "exemplar": "Brief model answer"
+    },
+
+    "minute_by_minute": [
+        {"time": "0:00-3:00", "activity": "Do Now", "teacher_moves": "Circulate, check responses"},
+        {"time": "3:00-5:00", "activity": "Do Now Debrief", "teacher_moves": "Cold call, bridge to lesson"},
+        {"time": "5:00-18:00", "activity": "Direct Instruction", "teacher_moves": "Deliver with embedded CFUs"},
+        {"time": "18:00-32:00", "activity": "Stations / Activity", "teacher_moves": "Facilitate, monitor timer"},
+        {"time": "32:00-38:00", "activity": "Exit Ticket", "teacher_moves": "Independent writing"},
+        {"time": "38:00-{duration_minutes}:00", "activity": "Closing", "teacher_moves": "Preview tomorrow"}
+    ]
+}
+
+Fill in `jigsaw` ONLY if lesson_format is "jigsaw". Otherwise leave as null.
+creative_activity is REQUIRED for every lesson — pick the type that fits the topic.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from clawed.corpus import get_few_shot_context
@@ -318,10 +319,15 @@ async def generate_master_content(
 ) -> MasterContent:
     """Generate a MasterContent object — single source-of-truth for a lesson.
 
+    As of v4.10.2026.1, uses the 4-phase split pipeline by default for
+    smaller per-call output tokens and much higher reliability on slow
+    cloud models (GLM 5.1, etc.). Falls back to the legacy single-call
+    path if any phase fails after retries.
+
+    Set ``CLAWED_SINGLE_CALL_GEN=1`` to force legacy single-call behavior.
+
     All output documents (teacher plan, student packet, slides) are compiled
-    as views of the returned ``MasterContent``.  Parameters mirror
-    ``generate_lesson()`` for drop-in compatibility, with the addition of
-    *objective*.
+    as views of the returned ``MasterContent``.
 
     Args:
         lesson_number: Which lesson in the unit (1-indexed).
@@ -337,6 +343,47 @@ async def generate_master_content(
     Returns:
         A fully populated MasterContent.
     """
+    # v4.10.2026.1: Try the 4-phase split pipeline first
+    if not os.environ.get("CLAWED_SINGLE_CALL_GEN"):
+        try:
+            from clawed.phases.pipeline import generate_master_content_phased
+            logger.info("Using 4-phase split generation pipeline")
+            master = await generate_master_content_phased(
+                lesson_number=lesson_number,
+                unit=unit,
+                persona=persona,
+                include_homework=include_homework,
+                config=config,
+                task_type=task_type,
+                state=state,
+                teacher_materials=teacher_materials,
+            )
+            # Run post-generation brain writes (same as single-call path)
+            try:
+                from clawed.brain.store import BrainStore
+                from clawed.brain.writer import write_lesson_to_brain
+                written = write_lesson_to_brain(
+                    master=master,
+                    unit_title=unit.title,
+                    lesson_number=lesson_number,
+                    store=BrainStore(),
+                )
+                logger.info(
+                    "Brain updated: %d lesson, %d topic, %d concept pages",
+                    len(written.get("lessons", [])),
+                    len(written.get("topics", [])),
+                    len(written.get("concepts", [])),
+                )
+            except Exception as exc:
+                logger.debug("Brain writer skipped: %s", exc)
+            return master
+        except Exception as phased_error:
+            logger.warning(
+                "4-phase pipeline failed (%s: %s). Falling back to single-call.",
+                type(phased_error).__name__, phased_error,
+            )
+
+    # Legacy single-call path (fallback)
     # Find the matching lesson brief from the unit plan
     lesson_brief = None
     for brief in unit.daily_lessons:

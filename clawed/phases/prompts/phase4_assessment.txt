@@ -1,0 +1,133 @@
+You are generating PHASE 4 of 4 of a lesson plan. Phases 1-3 have
+produced the skeleton, direct instruction, and activities. Your job
+is the ASSESSMENT and SUPPORT parts — exit ticket, differentiation,
+and homework.
+
+## Quality Standard — THE GOLD BAR
+
+Rules for THIS phase:
+
+### Exit Ticket
+- EXACTLY 3 StimulusQuestion items.
+- Cognitive progression REQUIRED: recall → application → analysis.
+- Every question has a non-empty `stimulus` field (text/data/scenario).
+- Q1 (recall): identify/describe based on the stimulus
+- Q2 (application): explain/analyze using evidence from the stimulus
+- Q3 (analysis): evaluate/argue using stimulus AND outside knowledge
+- `sentence_starters` REQUIRED on every question — match the teacher's
+  writing framework (TEA, RACE, CER, or Claim/Evidence).
+- For Social Studies: structure as CRQ (Constructed Response Questions)
+- For NY state: reference Enduring Issues framework when relevant.
+
+### Differentiation (MANDATORY — all three groups)
+
+- `struggling` (IEP/504): 3-4 SPECIFIC accommodations a teacher can
+  implement immediately. NAME THE EXACT SCAFFOLD.
+  GOOD: "Provide a partially completed T-chart with 'Cause' and 'Effect'
+  pre-labeled and 2 rows modeled. Student completes remaining 3 rows."
+  BAD: "Provide extra time." (generic, banned)
+  BAD: "Modify as needed." (useless)
+
+- `advanced` (gifted): 3-4 genuine extensions that DEEPEN thinking,
+  not repeat work.
+  GOOD: "Research a second primary source from the Library of Congress
+  and write a 1-paragraph comparison using Claim and Evidence."
+  BAD: "Write more." (punishment, not enrichment)
+
+- `ell` (English Language Learners): 3-4 concrete language supports.
+  GOOD: "Provide sentence frames: 'The author argues that ___ because
+  ___.' Visual glossary with Spanish cognates for: reform, suffrage,
+  abolition, temperance."
+  BAD: "Provide vocabulary support." (which vocab? how?)
+
+### Homework
+- AI-RESISTANT: tasks ChatGPT cannot complete for students
+- Include at least ONE of:
+  - Personal experience: "Interview a family member about..."
+  - Local context: "Find an example of this in YOUR school/city..."
+  - Physical creation: "Draw, build, or design..."
+  - Live performance/observation
+- Should connect today's learning to outside school or preview tomorrow.
+- NOT busywork. NOT a repeat of classwork.
+- May be null if the teacher doesn't assign homework.
+
+## Phase 1-3 Output (Context)
+
+### Lesson Metadata
+- **Title:** {title}
+- **Subject:** {subject}  |  **Grade:** {grade_level}
+- **Objective:** {objective}
+- **Writing Framework:** {writing_framework}
+
+### Primary Sources (use for exit_ticket stimuli)
+{primary_sources_block}
+
+### Vocabulary taught today (reference in ELL differentiation)
+{vocabulary_terms}
+
+### Direct Instruction covered
+{direct_instruction_headings}
+
+CRITICAL: Exit ticket questions MUST have non-empty stimulus fields.
+Differentiation MUST be specific (no "extra time", no "modify as needed",
+no "additional support"). Use SPECIFIC scaffolds.
+
+## Output Format
+
+Respond with ONLY a JSON object (no markdown fencing):
+
+{
+    "exit_ticket": [
+        {
+            "stimulus": "The actual text, data excerpt, or scenario students read before answering. Must be non-empty.",
+            "stimulus_type": "text_excerpt | scenario | data | image | map | diagram",
+            "stimulus_image_spec": "Optional image description or empty string",
+            "question": "Question anchored to the stimulus above?",
+            "answer": "Expected proficient response",
+            "cognitive_level": "recall",
+            "sentence_starters": ["According to the source, ___", "The author states that ___"],
+            "response_framework": "TEA | RACE | CER | Claim and Evidence"
+        },
+        {
+            "stimulus": "Different or extended stimulus — may reuse a primary source with a new angle.",
+            "stimulus_type": "text_excerpt | scenario | data | image | map | diagram",
+            "question": "Application-level question — explain/analyze using evidence",
+            "answer": "Expected proficient response",
+            "cognitive_level": "application",
+            "sentence_starters": ["This evidence suggests that ___", "The relationship between X and Y shows ___"],
+            "response_framework": ""
+        },
+        {
+            "stimulus": "New stimulus requiring synthesis or outside knowledge.",
+            "stimulus_type": "text_excerpt | scenario | data | image | map | diagram",
+            "question": "Analysis or transfer question — requires going beyond the text",
+            "answer": "Expected proficient response",
+            "cognitive_level": "analysis",
+            "sentence_starters": ["I claim that ___", "The evidence for this is ___", "This matters because ___"]
+        }
+    ],
+
+    "differentiation": {
+        "struggling": [
+            "SPECIFIC scaffold 1 — name the tool, structure, or sentence frame",
+            "SPECIFIC scaffold 2 — modified assessment or chunked task",
+            "SPECIFIC scaffold 3 — pre-filled graphic organizer or word bank"
+        ],
+        "advanced": [
+            "Specific enrichment 1 — deepens thinking, doesn't repeat",
+            "Specific enrichment 2 — researches additional source",
+            "Specific enrichment 3 — applies to new context"
+        ],
+        "ell": [
+            "Specific language support 1 — sentence frame for EVERY written response",
+            "Specific language support 2 — visual glossary with cognates",
+            "Specific language support 3 — simplified source text or partner protocol"
+        ]
+    },
+
+    "homework": "A meaningful AI-resistant extension connecting today's learning to outside school. Include personal experience, local context, or physical creation. May be null if no homework."
+}
+
+Provide EXACTLY 3 exit_ticket questions in recall → application → analysis order.
+Provide 3-4 items in EACH of struggling/advanced/ell.
+Homework: AI-resistant or null.
