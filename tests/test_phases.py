@@ -250,11 +250,12 @@ def test_render_primary_sources_block():
     rendered = _render_primary_sources_block(sources)
     assert "source_a" in rendered
     assert "Test Source" in rendered
-    assert "1832" in rendered
+    # Compressed rendering omits attribution to save tokens
+    assert "Industrial Revolution" in rendered
 
 
 def test_render_primary_sources_truncates_long_content():
-    """Ensure primary source block caps content at 500 chars."""
+    """Ensure primary source block aggressively caps content (compressed for downstream phases)."""
     long_text = "x" * 2000
     sources = [
         PrimarySource(
@@ -267,8 +268,8 @@ def test_render_primary_sources_truncates_long_content():
         ),
     ]
     rendered = _render_primary_sources_block(sources)
-    # Should be truncated — full 2000 chars shouldn't appear
-    assert len(rendered) < 1500
+    # Compressed to ~150 chars per source
+    assert len(rendered) < 500
     assert "..." in rendered
 
 

@@ -63,30 +63,43 @@ def _render_vocabulary_list(vocab: list) -> str:
     return "\n".join(lines)
 
 
-def _render_primary_sources_block(sources: list) -> str:
-    """Render Phase 1 primary sources as a block for downstream phases."""
+def _render_primary_sources_block(sources: list, content_chars: int = 150) -> str:
+    """Render Phase 1 primary sources for downstream phases.
+
+    Aggressively trimmed to keep downstream prompts <3KB. Downstream
+    phases mostly need to REFERENCE sources by id+title; full content
+    is rarely needed and bloats the input.
+    """
     if not sources:
-        return "_(no primary sources — this is a problem)_"
+        return "_(no primary sources)_"
     lines = []
     for ps in sources:
-        lines.append(f"### {ps.id}: {ps.title}")
-        lines.append(f"- **Attribution:** {ps.attribution}")
-        # Truncate content to avoid bloating the downstream prompt
-        content = ps.content_text[:500]
-        if len(ps.content_text) > 500:
+        content = ps.content_text[:content_chars].replace("\n", " ")
+        if len(ps.content_text) > content_chars:
             content += "..."
-        lines.append(f"- **Content:** {content}")
-        lines.append("")
+        lines.append(f"- {ps.id} | {ps.title} — {content}")
     return "\n".join(lines)
 
 
+def _render_primary_sources_mini(sources: list) -> str:
+    """Ultra-compact source list for Phase 3 (stations just need id+title)."""
+    if not sources:
+        return "_(none)_"
+    return "\n".join(f"- {ps.id}: {ps.title}" for ps in sources)
+
+
 def _render_direct_instruction_block(sections: list) -> str:
-    """Render Phase 2 direct instruction headings for Phase 3/4 context."""
+    """Render Phase 2 direct instruction headings for Phase 3/4 context.
+
+    Compact: heading + 100 chars of content. Phases 3/4 mostly need
+    to know WHAT was taught to align their activities and assessments.
+    """
     if not sections:
         return "_(no direct instruction)_"
     lines = []
     for i, sec in enumerate(sections, start=1):
-        lines.append(f"{i}. **{sec.heading}**: {sec.content[:200]}...")
+        snippet = sec.content[:100].replace("\n", " ")
+        lines.append(f"{i}. {sec.heading} — {snippet}...")
     return "\n".join(lines)
 
 
@@ -310,7 +323,7 @@ async def _phase3_activities(
         duration_minutes=phase1.duration_minutes,
         lesson_format=phase1.lesson_format,
         lesson_personality=phase1.lesson_personality,
-        primary_sources_block=_render_primary_sources_block(phase1.primary_sources),
+        primary_sources_block=_render_primary_sources_mini(phase1.primary_sources),
         direct_instruction_block=_render_direct_instruction_block(phase2.direct_instruction),
     )
     logger.info("Phase 3 prompt size: %d chars", len(prompt))
