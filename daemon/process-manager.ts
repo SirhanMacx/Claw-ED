@@ -4,7 +4,7 @@
  * Handles PID file management, logging, and service lifecycle
  * for the always-on background daemon.
  */
-import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync, createWriteStream } from 'fs'
+import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync, createWriteStream, statSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { execSync, spawn } from 'child_process'
@@ -86,11 +86,10 @@ export class ProcessManager {
       return
     }
 
-    // Get process uptime
+    // Get process uptime (from PID file mtime)
     let uptime = 'unknown'
     try {
-      const stat = readFileSync(PID_FILE)
-      const pidAge = Date.now() - (existsSync(PID_FILE) ? require('fs').statSync(PID_FILE).mtimeMs : Date.now())
+      const pidAge = Date.now() - statSync(PID_FILE).mtimeMs
       const hours = Math.floor(pidAge / 3600000)
       const mins = Math.floor((pidAge % 3600000) / 60000)
       uptime = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
@@ -205,7 +204,7 @@ Description=Claw-ED Teaching Assistant Daemon
 After=network.target
 
 [Service]
-ExecStart=node ${daemonPath} start
+ExecStart=node "${daemonPath}" start
 Restart=always
 RestartSec=10
 Environment=CLAWED_DAEMON_FOREGROUND=0

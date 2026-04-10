@@ -19,6 +19,9 @@ build/
 !eduagent/demo/*.json
 !clawed/demo/*.json
 !cli/**/*.json
+!daemon/*.json
+!extension/*.json
+!extension/**/*.json
 eduagent_output/
 clawed_output/
 eduagent_data/

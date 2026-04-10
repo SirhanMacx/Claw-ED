@@ -75,6 +75,10 @@ function showPanel(data) {
     a.href = "http://localhost:8000";
     a.target = "_blank";
     a.textContent = "Open Claw-ED Dashboard";
+    // Use the user's configured server URL if available
+    chrome.storage.sync.get(["apiUrl"], (cfg) => {
+      if (cfg && cfg.apiUrl) a.href = cfg.apiUrl;
+    });
     link.appendChild(a);
     body.appendChild(link);
   }
