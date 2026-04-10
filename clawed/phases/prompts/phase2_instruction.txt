@@ -4,11 +4,15 @@ Phase 1 produced the primary sources and vocabulary below. Reference THEM — do
 Rules:
 - 2-3 direct instruction sections, each 5-8 minutes.
 - Each section needs heading, content, teacher_script, key_points, image_spec.
-- First section needs `hook` (analogy, mystery, or provocative question).
+- EVERY section needs `hook` (analogy, mystery, vivid scenario, or provocative question).
 - Every section except last needs `transition` (scripted pivot to next).
-- teacher_script = EXACT dialogue with 3+ question marks (checks for understanding every 3-5 min). A substitute could read it verbatim.
+- teacher_script MUST contain EXPLICIT directing verbs at sentence starts:
+  "Ask: [question]?", "Say: [statement]", "Wait [seconds]",
+  "Call on a student", "Show [the slide/image]", "Have students turn to their partner and...", "Tell the class...".
+- teacher_script must have 3+ question marks AND 3+ directing verbs.
+- A substitute teacher should be able to read the script verbatim and run the lesson.
 - Historical figures are CHARACTERS with vivid descriptions, not encyclopedia entries.
-- Guided notes: 8-12 fill-in-the-blank entries, each tied to a section via section_ref.
+- Guided notes: 10-12 fill-in-the-blank entries, each tied to a section via section_ref.
 
 ## Context from Phase 1
 Title: {title}

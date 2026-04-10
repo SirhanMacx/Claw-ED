@@ -424,6 +424,21 @@ async def _phase1_skeleton(
 # ══════════════════════════════════════════════════════════════════════
 
 
+_DIALOGUE_VERBS = (
+    "ask:", "say:", "tell ", "show ", "wait", "call on", "have students",
+    "raise your", "thumbs up", "turn to your partner", "think-pair-share",
+    "display", "read aloud", "model",
+)
+
+
+def _count_dialogue_verbs(script: str) -> int:
+    """Count how many directing verbs appear in a teacher_script."""
+    if not script:
+        return 0
+    lower = script.lower()
+    return sum(lower.count(v) for v in _DIALOGUE_VERBS)
+
+
 def _validate_phase2(phase2: Phase2Instruction) -> list[str]:
     """Quality validator for Phase 2 output."""
     issues: list[str] = []
@@ -433,35 +448,44 @@ def _validate_phase2(phase2: Phase2Instruction) -> list[str]:
             f"Only {len(phase2.direct_instruction)} direct_instruction "
             f"sections — need 2-3"
         )
-    # Each section needs substantial teacher_script
+    # Each section needs substantial teacher_script with dialogue verbs
     for i, section in enumerate(phase2.direct_instruction):
-        script_len = len(section.teacher_script or "")
-        if script_len < 150:
+        script = section.teacher_script or ""
+        script_len = len(script)
+        if script_len < 200:
             issues.append(
                 f"Section {i+1} '{section.heading}' teacher_script is only "
-                f"{script_len} chars — need 200+ with 3+ questions"
+                f"{script_len} chars — need 250+ with 3+ questions"
             )
-        questions = (section.teacher_script or "").count("?")
+        questions = script.count("?")
         if questions < 3:
             issues.append(
                 f"Section {i+1} '{section.heading}' teacher_script has only "
                 f"{questions} question marks — need 3+ for CFUs"
             )
-    # First section needs a hook
-    if phase2.direct_instruction:
-        first = phase2.direct_instruction[0]
-        if not first.hook or len(first.hook) < 20:
-            issues.append("First direct_instruction section missing hook")
+        verbs = _count_dialogue_verbs(script)
+        if verbs < 3:
+            issues.append(
+                f"Section {i+1} '{section.heading}' teacher_script has only "
+                f"{verbs} directing verbs (Ask:, Say:, Wait, Call on, etc.) "
+                f"— need 3+"
+            )
+    # EVERY section needs a hook (not just the first)
+    for i, section in enumerate(phase2.direct_instruction):
+        if not section.hook or len(section.hook) < 20:
+            issues.append(
+                f"Section {i+1} '{section.heading}' missing hook (need 20+ chars)"
+            )
     # All sections except last need transitions
     for i, section in enumerate(phase2.direct_instruction[:-1]):
         if not section.transition or len(section.transition) < 20:
             issues.append(
                 f"Section {i+1} '{section.heading}' missing transition"
             )
-    # Guided notes: 8+
-    if len(phase2.guided_notes) < 8:
+    # Guided notes: 10+
+    if len(phase2.guided_notes) < 10:
         issues.append(
-            f"Only {len(phase2.guided_notes)} guided_notes — need 8-12"
+            f"Only {len(phase2.guided_notes)} guided_notes — need 10-12"
         )
     return issues
 
