@@ -6,7 +6,6 @@ Run on Windows with:
 import asyncio
 import json
 import os
-import sys
 
 os.environ["CLAWED_AUTO_APPROVE"] = "1"
 
@@ -68,20 +67,27 @@ UNITS = [
         ),
         essential_questions=[
             "What does it mean to 'reform' a society, and who gets to decide what needs changing?",
-            "How did movements like Women's Suffrage and Abolitionism use the 'Claim and Evidence' approach to change laws?",
+            "How did movements like Women's Suffrage and Abolitionism use "
+            "'Claim and Evidence' to change laws?",
         ],
         standards=["NYS K-8 SS Framework 8.7c", "C3 Framework D2.His.1.8-12"],
         daily_lessons=[
             LessonBrief(
                 lesson_number=1,
                 topic="Introduction to Reform Movements: Why People Fight for Change",
-                description="Station rotation analyzing primary sources from four reform movements (abolition, temperance, labor, suffrage)",
+                description=(
+                    "Station rotation analyzing primary sources from four "
+                    "reform movements (abolition, temperance, labor, suffrage)"
+                ),
                 lesson_type="station_rotation",
             ),
             LessonBrief(
                 lesson_number=2,
                 topic="The Women's Suffrage Movement: The Fight for the 19th Amendment",
-                description="Jigsaw activity analyzing Declaration of Sentiments, anti-suffrage pamphlets, 1913 march photo, 19th Amendment",
+                description=(
+                    "Jigsaw activity analyzing Declaration of Sentiments, "
+                    "anti-suffrage pamphlets, 1913 march photo, 19th Amendment"
+                ),
                 lesson_type="jigsaw",
             ),
             LessonBrief(
@@ -148,9 +154,9 @@ UNITS = [
 
 
 async def generate_one(unit, lesson_num, persona, output_dir):
-    from clawed.lesson import generate_master_content
-    from clawed.compile_teacher import compile_teacher_view
     from clawed.compile_student import compile_student_view
+    from clawed.compile_teacher import compile_teacher_view
+    from clawed.lesson import generate_master_content
 
     label = f"{unit.grade_level} {unit.subject}"
     lesson_brief = unit.daily_lessons[lesson_num - 1]
