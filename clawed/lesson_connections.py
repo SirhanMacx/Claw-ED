@@ -47,8 +47,12 @@ def suggest_connections(
 
         kg = CurriculumKG()
 
-        # Get related topics
+        # Get related topics — try teacher-specific ID first, fall back to
+        # "default" (which is what the ingestion process uses when no
+        # teacher profile was configured at ingest time).
         related = kg.query_related(teacher_id, topic, direction="both")
+        if not related and teacher_id and teacher_id != "default":
+            related = kg.query_related("default", topic, direction="both")
         for r in related[:10]:
             entry = {
                 "name": r.get("entity", ""),
