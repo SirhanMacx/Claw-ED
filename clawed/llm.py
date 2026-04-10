@@ -783,7 +783,7 @@ class LLMClient:
                 if system:
                     messages.append({"role": "system", "content": system})
                 messages.append({"role": "user", "content": prompt})
-                async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
+                async with httpx.AsyncClient(timeout=600.0, follow_redirects=True) as client:
                     # Normalize: strip trailing slashes, append /v1 exactly once
                     cloud_base = base.rstrip("/")
                     if not cloud_base.endswith("/v1"):
@@ -811,9 +811,9 @@ class LLMClient:
                         raise RuntimeError("Ollama Cloud returned an empty response")
                     return choices[0].get("message", {}).get("content", "")
             else:
-                # Local Ollama
+                # Local Ollama (or Ollama Cloud — cloud models need longer timeout)
                 full_prompt = f"{system}\n\n{prompt}" if system else prompt
-                async with httpx.AsyncClient(timeout=300.0) as client:
+                async with httpx.AsyncClient(timeout=600.0) as client:
                     resp = await client.post(
                         f"{base}/api/generate",
                         headers=headers,
