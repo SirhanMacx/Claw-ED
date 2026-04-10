@@ -10,9 +10,10 @@ import json
 import logging
 import os
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,21 @@ def _db_path() -> Path:
     return Path(data_dir) / "memory" / "quality.db"
 
 
-def _get_conn() -> sqlite3.Connection:
+@contextmanager
+def _get_conn() -> Iterator[sqlite3.Connection]:
+    """Open a quality DB connection with commit/rollback and guaranteed close."""
     path = _db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def _ensure_db() -> None:

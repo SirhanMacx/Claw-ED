@@ -22,19 +22,34 @@ import json
 import os
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Iterator, Optional
 
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
 CORPUS_DIR = _BASE_DIR / "corpus"
 CORPUS_DB = CORPUS_DIR / "corpus.db"
 
 
-def _get_conn() -> sqlite3.Connection:
+@contextmanager
+def _get_conn() -> Iterator[sqlite3.Connection]:
+    """Open a corpus DB connection, commit or rollback on exit, then close.
+
+    Note: sqlite3's built-in `with conn:` only commits/rolls back the
+    transaction — it does NOT close the connection. This wrapper ensures
+    connections are always closed to avoid resource leaks.
+    """
     CORPUS_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(CORPUS_DB))
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def init_corpus_db() -> None:
