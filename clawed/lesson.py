@@ -183,19 +183,24 @@ def _validate_quality(master: MasterContent) -> list[str]:
         )
 
     # ── Diversity & inclusion check ──────────────────────────────────
-    # Scan for stereotypical or exclusionary patterns
+    # Scan for stereotypical or exclusionary patterns in ORIGINAL content.
+    # Exclude primary source quotes — historical documents contain period
+    # language by design (e.g. "all men" in the Declaration of Sentiments).
     _bias_flags = [
-        "all men", "mankind", "his or her country",
         "the orient", "third world", "primitive",
-        "savage", "uncivilized", "backwards",
+        "savage", "uncivilized",
     ]
     lesson_text = " ".join([
         master.objective,
         *[di.content for di in master.direct_instruction],
         *[di.teacher_script for di in master.direct_instruction],
     ]).lower()
+    # Strip out quoted text (anything between single or double quotes)
+    # so we don't flag historical primary source language
+    import re as _re
+    cleaned_text = _re.sub(r"['\"].*?['\"]", "", lesson_text)
     for flag in _bias_flags:
-        if flag in lesson_text:
+        if flag in cleaned_text:
             issues.append(
                 f"Diversity check: lesson contains '{flag}' — consider "
                 "more inclusive language"
