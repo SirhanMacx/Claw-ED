@@ -191,6 +191,78 @@ class LLMClient:
                 logger.debug("Vision check failed (OpenAI): %s", e)
                 return "GOOD"
 
+        # Ollama vision (gemma4, boris, llava, qwen2.5-vl, minicpm-v, etc.)
+        if self.config.provider == LLMProvider.OLLAMA:
+            try:
+                # Pick a vision-capable model. Allow override via
+                # OLLAMA_VISION_MODEL env var.
+                import os as _os
+                vision_model = _os.environ.get("OLLAMA_VISION_MODEL", "")
+                if not vision_model:
+                    # Auto-detect: query /api/tags and pick a vision model
+                    async with httpx.AsyncClient(timeout=10) as c:
+                        tags_resp = await c.get(
+                            f"{self.config.ollama_base_url.rstrip('/')}/api/tags"
+                        )
+                    if tags_resp.status_code == 200:
+                        models = tags_resp.json().get("models", [])
+                        # Probe capabilities for each, in priority order
+                        vision_candidates = []
+                        for m in models:
+                            name = m.get("name", "")
+                            # Known vision model families
+                            if any(k in name.lower() for k in [
+                                "gemma4", "gemma3", "llava", "qwen2.5-vl",
+                                "minicpm-v", "cogvlm", "boris",
+                            ]):
+                                vision_candidates.append(name)
+                        if vision_candidates:
+                            # Prefer gemma4 (Google vision), then boris
+                            for pref in ["gemma4:latest", "gemma4", "boris:latest", "boris"]:
+                                for cand in vision_candidates:
+                                    if cand.startswith(pref):
+                                        vision_model = cand
+                                        break
+                                if vision_model:
+                                    break
+                            if not vision_model:
+                                vision_model = vision_candidates[0]
+
+                if not vision_model:
+                    logger.debug(
+                        "No vision-capable Ollama model found. Install one "
+                        "with 'ollama pull gemma3' or similar."
+                    )
+                    return "GOOD"
+
+                logger.debug("Using Ollama vision model: %s", vision_model)
+                base = self.config.ollama_base_url.rstrip("/")
+                async with httpx.AsyncClient(timeout=60) as client:
+                    resp = await client.post(
+                        f"{base}/api/generate",
+                        json={
+                            "model": vision_model,
+                            "prompt": prompt,
+                            "images": [b64],
+                            "stream": False,
+                            "options": {
+                                "temperature": temperature,
+                                "num_predict": max_tokens,
+                            },
+                        },
+                    )
+                    if resp.status_code != 200:
+                        logger.debug(
+                            "Ollama vision returned %d: %s",
+                            resp.status_code, resp.text[:200],
+                        )
+                        return "GOOD"
+                    data = resp.json()
+                    return data.get("response", "GOOD").strip() or "GOOD"
+            except Exception as e:
+                logger.debug("Vision check failed (Ollama): %s", e)
+                return "GOOD"
+
         # Providers without vision support — permissive fallback
         return "GOOD"
 

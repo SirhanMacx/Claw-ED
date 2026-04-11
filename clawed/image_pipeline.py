@@ -21,20 +21,25 @@ logger = logging.getLogger(__name__)
 _CONCURRENT_LIMIT = 5
 
 _VISION_QUALITY_PROMPT = (
-    "You are an image quality filter for educational materials. "
-    "A teacher is building a lesson and this image was fetched to illustrate "
-    "the topic described below.\n\n"
-    "Evaluate this image on three criteria:\n"
-    "1. RELEVANT — Does it match the educational topic?\n"
+    "You are an image quality filter for a K-12 lesson plan. "
+    "This image was fetched to illustrate the educational topic below. "
+    "Look carefully at the actual visual content.\n\n"
+    "Evaluate on three criteria:\n"
+    "1. RELEVANT — Does the ACTUAL VISUAL CONTENT match the topic? "
+    "(Don't just judge by filename or caption — look at what's in the image.)\n"
     "2. CLEAR — Is it high resolution, not blurry, not mostly text/watermarks?\n"
     "3. APPROPRIATE — Is it suitable for a K-12 classroom?\n\n"
-    "Respond with EXACTLY one word: GOOD, ACCEPTABLE, or REJECT.\n"
-    "Then a brief reason (under 15 words).\n\n"
+    "Respond with EXACTLY one word on the first line: GOOD, ACCEPTABLE, or REJECT.\n"
+    "Then a brief reason (under 20 words).\n\n"
+    "Be STRICT. If the image does not visually show the exact thing the topic "
+    "describes, REJECT. Reject random slide templates, agenda slides, "
+    "unrelated stock photos, or images of text.\n\n"
     "Examples:\n"
-    "GOOD — Clear historical painting of the signing of the Declaration\n"
-    "ACCEPTABLE — Low resolution but relevant diagram of photosynthesis\n"
-    "REJECT — Stock photo with watermark, not educationally relevant\n"
-    "REJECT — Blurry thumbnail, unreadable text\n\n"
+    "GOOD — Historical painting clearly showing the Declaration being signed\n"
+    "ACCEPTABLE — Low-res photograph of Frederick Douglass, subject clearly visible\n"
+    "REJECT — Classroom agenda slide with date, not the topic\n"
+    "REJECT — Generic background of a flag, no specific historical content\n"
+    "REJECT — Blurry thumbnail, unreadable, looks like a watermark\n\n"
     "Topic: {topic}\nSubject: {subject}"
 )
 
@@ -182,14 +187,43 @@ async def fetch_all_images(
         except Exception:
             teacher_id = "default"
 
-    # Phase 1: Try teacher's own images first (instant, no network)
-    # Try the configured teacher_id first, fall back to "default"
-    images: dict[str, Path] = _resolve_from_teacher_assets(spec_map, teacher_id)
-    if not images and teacher_id != "default":
-        images = _resolve_from_teacher_assets(spec_map, "default")
+    # Phase 1: Try teacher's own images first with VISION re-ranking.
+    # Get top 5 candidates for each spec (by text similarity), then let
+    # the VLM pick the best-matching one visually. This prevents wrong
+    # images from being selected based on tangential metadata.
+    images: dict[str, Path] = {}
+    used_paths: set[str] = set()
+    for spec, context in spec_map.items():
+        # Try configured teacher_id first, fall back to "default"
+        candidates = _get_teacher_asset_candidates(
+            spec, context, teacher_id, limit=5,
+        )
+        if not candidates and teacher_id != "default":
+            candidates = _get_teacher_asset_candidates(
+                spec, context, "default", limit=5,
+            )
+        # De-dupe already-used paths
+        candidates = [c for c in candidates if str(c) not in used_paths]
+        if not candidates:
+            continue
+
+        # Vision rerank: pick the best visual match
+        best = await _vision_rerank_candidates(
+            candidates=candidates,
+            spec=spec,
+            subject=subject,
+            config=config,
+        )
+        if best is not None:
+            images[spec] = best
+            used_paths.add(str(best))
+            logger.info(
+                "VLM picked teacher image for '%s': %s",
+                spec[:50], best.name,
+            )
     if images:
         logger.info(
-            "Found %d/%d images from teacher's own materials",
+            "Vision-validated %d/%d images from teacher's materials",
             len(images), len(spec_map),
         )
 
@@ -256,7 +290,9 @@ def _resolve_from_teacher_assets(
 ) -> dict[str, Path]:
     """Try to resolve image specs from teacher's own extracted images.
 
-    Instant — no network calls, just SQLite lookups.
+    Returns candidate matches for each spec based on text-based search
+    against image metadata. Caller should validate with vision model.
+
     Tracks already-used paths to prevent the same image appearing
     on multiple slides.
     """
@@ -267,12 +303,10 @@ def _resolve_from_teacher_assets(
         return {}
 
     resolved: dict[str, Path] = {}
-    used_paths: set[str] = set()  # Prevent same image on multiple slides
+    used_paths: set[str] = set()
 
     for spec, context in spec_map.items():
-        # Search using both the spec and context for better matching
         query = f"{spec} {context[:100]}"
-        # Request extra candidates so we can skip already-used ones
         matches = registry.search_images_for_topic(teacher_id, query, limit=10)
         for match in matches:
             path = Path(match["path"])
@@ -280,10 +314,81 @@ def _resolve_from_teacher_assets(
             if path.exists() and path_str not in used_paths:
                 resolved[spec] = path
                 used_paths.add(path_str)
-                logger.debug(
-                    "Teacher image found for '%s': %s (score: %.1f)",
-                    spec[:50], path.name, match.get("score", 0),
-                )
-                break  # Use first unused match
+                break
 
     return resolved
+
+
+def _get_teacher_asset_candidates(
+    spec: str,
+    context: str,
+    teacher_id: str,
+    limit: int = 5,
+) -> list[Path]:
+    """Return up to `limit` candidate images for a spec, ordered by text match.
+
+    Used for vision-model re-ranking — we get the top N text matches and
+    then let the VLM pick the best visually-matching one.
+    """
+    try:
+        from clawed.asset_registry import AssetRegistry
+        registry = AssetRegistry()
+    except Exception:
+        return []
+
+    query = f"{spec} {context[:100]}"
+    matches = registry.search_images_for_topic(teacher_id, query, limit=limit)
+    candidates: list[Path] = []
+    for m in matches:
+        p = Path(m["path"])
+        if p.exists() and p.stat().st_size > 5000:
+            candidates.append(p)
+    return candidates
+
+
+async def _vision_rerank_candidates(
+    candidates: list[Path],
+    spec: str,
+    subject: str = "",
+    config: "AppConfig | None" = None,
+) -> Path | None:
+    """Ask the VLM to score each candidate against the spec, return the best.
+
+    Uses the same vision model as check_image_quality. Returns the first
+    candidate that gets GOOD, or ACCEPTABLE if no GOOD exists, or None
+    if all REJECT.
+    """
+    if not candidates:
+        return None
+
+    acceptable: Path | None = None
+    for path in candidates:
+        try:
+            from clawed.llm import LLMClient
+            from clawed.model_router import route as route_model
+
+            cfg = config or AppConfig.load()
+            cfg = route_model("image_quality", cfg)
+            client = LLMClient(cfg)
+
+            prompt = _VISION_QUALITY_PROMPT.format(topic=spec, subject=subject)
+            result = await client.generate_with_image(
+                prompt=prompt,
+                image_path=path,
+                temperature=0.1,
+                max_tokens=80,
+            )
+            verdict = result.strip().split()[0].upper() if result.strip() else "GOOD"
+            logger.debug(
+                "Vision rerank %s -> %s (%s)",
+                path.name, verdict, result.strip()[:80],
+            )
+            if verdict == "GOOD":
+                return path
+            if verdict == "ACCEPTABLE" and acceptable is None:
+                acceptable = path
+        except Exception as e:
+            logger.debug("Vision rerank failed for %s: %s", path.name, e)
+            continue
+
+    return acceptable
