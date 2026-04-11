@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -18,6 +19,8 @@ from clawed.api.deps import get_db, require_auth
 from clawed.database import Database
 from clawed.models import DailyLesson
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["export"], dependencies=[Depends(require_auth)])
 public_router = APIRouter(tags=["public"])
 
@@ -31,6 +34,10 @@ class ImportRequest(BaseModel):
 @router.get("/export/{lesson_id}")
 async def export_lesson_endpoint(lesson_id: str, fmt: str = "markdown"):
     """Export a lesson as Markdown, PDF, or DOCX."""
+    import shutil
+
+    from starlette.background import BackgroundTask
+
     from clawed.export_markdown import export_lesson
 
     db = get_db()
@@ -39,22 +46,40 @@ async def export_lesson_endpoint(lesson_id: str, fmt: str = "markdown"):
         return JSONResponse({"error": "Lesson not found."}, status_code=404)
 
     lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
-    tmp_dir = Path(tempfile.mkdtemp())
+    tmp_dir = Path(tempfile.mkdtemp(prefix="clawed_export_"))
+
+    # v4.11.2026 fix: attach a BackgroundTask that deletes the tempdir
+    # after the response is sent. Previously, every /api/export call
+    # leaked one directory under /tmp (forever).
+    cleanup = BackgroundTask(shutil.rmtree, str(tmp_dir), ignore_errors=True)
 
     if fmt == "markdown":
         path = export_lesson(lesson, tmp_dir, fmt="markdown")
-        return FileResponse(str(path), filename=path.name, media_type="text/markdown")
+        return FileResponse(
+            str(path),
+            filename=path.name,
+            media_type="text/markdown",
+            background=cleanup,
+        )
     elif fmt == "pdf":
         path = export_lesson(lesson, tmp_dir, fmt="pdf")
-        return FileResponse(str(path), filename=path.name, media_type="application/pdf")
+        return FileResponse(
+            str(path),
+            filename=path.name,
+            media_type="application/pdf",
+            background=cleanup,
+        )
     elif fmt == "docx":
         path = export_lesson(lesson, tmp_dir, fmt="docx")
         return FileResponse(
             str(path),
             filename=path.name,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            background=cleanup,
         )
     else:
+        # Format not supported — clean up immediately.
+        shutil.rmtree(str(tmp_dir), ignore_errors=True)
         return JSONResponse({"error": f"Unsupported format: {fmt}"}, status_code=400)
 
 
@@ -136,25 +161,51 @@ async def import_lesson(req: ImportRequest):
             {"error": "Provide a url or token."}, status_code=400
         )
 
-    # Security: restrict fetch to localhost unless explicitly allowed
-    _allowed_prefixes = ["http://localhost", "http://127.0.0.1"]
+    # v4.11.2026 security fix: SSRF protection. The previous version
+    # used startswith() on the fetch_server string, which allowed a
+    # prefix-bypass attack: "http://localhost.attacker.com" matches the
+    # "http://localhost" prefix and resolves to an attacker-controlled
+    # host. This rewrite parses the host explicitly and matches against
+    # an exact set of loopback names.
+    parsed_server = urlparse(fetch_server)
+    host = (parsed_server.hostname or "").lower()
+    scheme = (parsed_server.scheme or "").lower()
+    _allowed_hosts = {"localhost", "127.0.0.1", "::1"}
     _extra = os.environ.get("EDUAGENT_IMPORT_ALLOW_URLS", "")
     if _extra:
-        _allowed_prefixes.extend(u.strip() for u in _extra.split(",") if u.strip())
-    if not any(fetch_server.startswith(prefix) for prefix in _allowed_prefixes):
+        for u in _extra.split(","):
+            u = u.strip()
+            if not u:
+                continue
+            try:
+                extra_host = urlparse(u).hostname
+                if extra_host:
+                    _allowed_hosts.add(extra_host.lower())
+            except Exception:
+                pass
+    if scheme not in {"http", "https"} or host not in _allowed_hosts:
         return JSONResponse(
-            {"error": "Import URL not allowed. Only localhost or configured URLs are permitted."},
+            {
+                "error": (
+                    "Import URL not allowed. Only localhost/127.0.0.1 "
+                    "or hosts explicitly configured via "
+                    "EDUAGENT_IMPORT_ALLOW_URLS are permitted."
+                )
+            },
             status_code=403,
         )
 
     fetch_url = f"{fetch_server}/share/{token}"
 
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        # follow_redirects=False prevents 302-pivot SSRF.
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
             resp = await client.get(fetch_url)
     except httpx.HTTPError as exc:
+        # v4.11.2026: don't leak raw exception text to the client.
+        logger.warning("Import fetch failed for %s: %s", fetch_url, exc)
         return JSONResponse(
-            {"error": f"Network error: {exc}"}, status_code=502
+            {"error": "Network error fetching shared lesson."}, status_code=502
         )
 
     if resp.status_code == 404:

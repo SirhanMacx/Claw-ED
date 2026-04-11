@@ -38,7 +38,11 @@ _RENDER_TIMEOUT = 120
 class GenerateAnimationTool:
     """Create animated educational videos using Manim Community Edition."""
 
-    risk_level = "read_only"
+    # v4.11.2026: elevated from "read_only" — this tool writes scene
+    # source files to disk and subprocess-exec's them via manim, so it
+    # both writes local files and can (via a template-injection attack)
+    # execute arbitrary Python. It must go through the approval gate.
+    risk_level = "write_local"
 
     def schema(self) -> dict[str, Any]:
         return {
@@ -117,7 +121,7 @@ class GenerateAnimationTool:
             return ToolResult(
                 text=(
                     "Animation requires Manim Community Edition. "
-                    "Install with: pip install 'manim>=0.18' pyav\n\n"
+                    "Install with: pip install 'manim>=0.18' av\n\n"
                     "On macOS you may also need: brew install cairo pango ffmpeg\n"
                     "On Ubuntu: apt install libcairo2-dev libpango1.0-dev ffmpeg"
                 ),
@@ -206,7 +210,7 @@ class GenerateAnimationTool:
             return ToolResult(
                 text=(
                     "Could not find 'manim' command. Make sure Manim is installed and on your PATH.\n"
-                    "Install with: pip install 'manim>=0.18' pyav"
+                    "Install with: pip install 'manim>=0.18' av"
                 ),
                 data={"failure_code": FailureCode.MISSING_DEPENDENCY.value},
             )
@@ -232,6 +236,36 @@ class GenerateAnimationTool:
             side_effects=[f"Rendered {animation_type} animation: {video_path.name}"],
         )
 
+    @staticmethod
+    def _safe_template_str(s: str, max_len: int = 120) -> str:
+        """Sanitize a string for safe embedding as a Python string literal value.
+
+        v4.11.2026 security fix (CVE-avoidance, pre-disclosure): the old
+        _build_scene passed LLM-provided ``topic`` / ``left_label`` /
+        ``right_label`` raw into ``template.format(title=topic[:60], ...)``.
+        The template wraps the substitution inside a Python source string
+        literal (``title = Text("{title}", font_size=42, ...)``). An
+        LLM-provided ``topic`` containing an unescaped ``"`` plus a newline
+        would break out of the literal, inject arbitrary Python, and the
+        whole file would then be exec'd by ``manim``.
+
+        This helper strips every character that can escape a Python string
+        literal: quotes, backslashes, newlines, tabs, carriage returns,
+        and any non-printable. The result is always a single-line printable
+        ASCII-ish string that is safe to embed inside ``"..."`` or
+        ``'...'`` in Python source.
+        """
+        if not isinstance(s, str):
+            s = str(s)
+        # Strip characters that could escape a Python string literal
+        for ch in ("\\", '"', "'", "\n", "\r", "\t", "\x00"):
+            s = s.replace(ch, " ")
+        # Drop remaining non-printable characters
+        s = "".join(c for c in s if c.isprintable())
+        # Collapse whitespace runs
+        s = " ".join(s.split())
+        return s[:max_len]
+
     def _build_scene(
         self,
         topic: str,
@@ -254,11 +288,17 @@ class GenerateAnimationTool:
         else:
             colors = COLORS
 
+        # Sanitize every LLM-provided string that will be embedded raw
+        # into the Python source template. Parsed list contents go
+        # through repr() below, which already escapes quotes correctly.
+        safe_topic60 = self._safe_template_str(topic, 60)
+        safe_topic30 = self._safe_template_str(topic, 30)
+
         # Parse key_points into template-specific data structures
         if animation_type == "timeline":
             events = self._parse_timeline_events(key_points)
             return template.format(
-                title=topic[:60],
+                title=safe_topic60,
                 events_repr=repr(events),
                 text_color=colors["text"],
                 accent_color=colors["accent"],
@@ -267,7 +307,7 @@ class GenerateAnimationTool:
         elif animation_type == "diagram":
             causes, effects = self._parse_cause_effect(key_points)
             return template.format(
-                title=topic[:60],
+                title=safe_topic60,
                 causes_repr=repr(causes),
                 effects_repr=repr(effects),
                 text_color=colors["text"],
@@ -277,7 +317,7 @@ class GenerateAnimationTool:
 
         elif animation_type == "process":
             return template.format(
-                title=topic[:60],
+                title=safe_topic60,
                 steps_repr=repr(key_points[:6]),
                 text_color=colors["text"],
                 accent_color=colors["accent"],
@@ -286,7 +326,7 @@ class GenerateAnimationTool:
 
         elif animation_type == "concept":
             return template.format(
-                center=topic[:30],
+                center=safe_topic30,
                 branches_repr=repr(key_points[:6]),
                 text_color=colors["text"],
                 accent_color=colors["accent"],
@@ -294,11 +334,13 @@ class GenerateAnimationTool:
             )
 
         elif animation_type == "comparison":
-            left, shared, right, left_label, right_label = self._parse_comparison(key_points, topic)
+            left, shared, right, left_label, right_label = self._parse_comparison(
+                key_points, topic
+            )
             return template.format(
-                title=topic[:60],
-                left_label=left_label,
-                right_label=right_label,
+                title=safe_topic60,
+                left_label=self._safe_template_str(left_label, 40),
+                right_label=self._safe_template_str(right_label, 40),
                 left_items_repr=repr(left),
                 shared_items_repr=repr(shared),
                 right_items_repr=repr(right),
@@ -311,7 +353,7 @@ class GenerateAnimationTool:
         elif animation_type == "vocabulary":
             vocab = self._parse_vocabulary(key_points)
             return template.format(
-                title=topic[:60],
+                title=safe_topic60,
                 vocab_repr=repr(vocab),
                 text_color=colors["text"],
                 accent_color=colors["accent"],

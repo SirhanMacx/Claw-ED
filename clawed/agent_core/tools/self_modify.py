@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from clawed.agent_core.context import AgentContext, ToolResult
 
@@ -238,6 +238,20 @@ class ReadFileTool:
             },
         }
 
+    # Sensitive filenames that must never be read through this tool,
+    # regardless of containment. Mirrors the block-list pattern in
+    # WriteFileTool and catches cases like "secrets.json" being supplied
+    # as a workspace-relative path.
+    _DENIED_FILENAMES: ClassVar[frozenset[str]] = frozenset({
+        "secrets.json",
+        "api_token",
+        ".env",
+        ".env.local",
+        "credentials.json",
+        "oauth_token.json",
+        "bot_token.json",
+    })
+
     async def execute(
         self, params: dict[str, Any], context: AgentContext
     ) -> ToolResult:
@@ -250,6 +264,22 @@ class ReadFileTool:
         ))
         output_dir = Path(getattr(context.config, "output_dir", "~/clawed_output")).expanduser()
 
+        # v4.11.2026 security fix: block sensitive filenames early, before
+        # any path resolution. Catches "secrets.json", "api_token", etc.
+        # regardless of which workspace prefix they would otherwise land in.
+        base_name = Path(rel_path).name.lower()
+        if base_name in self._DENIED_FILENAMES:
+            return ToolResult(
+                text=f"ERROR: access denied for sensitive file: {base_name}"
+            )
+
+        # Canonical allowed roots. Any read must resolve inside one of these.
+        try:
+            data_root = data_dir.resolve()
+            output_root = output_dir.resolve()
+        except Exception:
+            return ToolResult(text="ERROR: could not resolve data/output directories")
+
         # Try workspace first, then output
         candidates = [
             data_dir / rel_path,
@@ -260,6 +290,16 @@ class ReadFileTool:
         for full_path in candidates:
             try:
                 full_path = full_path.resolve()
+                # v4.11.2026 security fix: enforce containment. Without
+                # this, an attacker-supplied absolute path or a relative
+                # path containing "../" sequences could read arbitrary
+                # files on disk. WriteFileTool had this check; ReadFileTool
+                # did not.
+                if not (
+                    str(full_path).startswith(str(data_root))
+                    or str(full_path).startswith(str(output_root))
+                ):
+                    continue
                 if full_path.exists() and full_path.is_file():
                     content = full_path.read_text(encoding="utf-8")
                     return ToolResult(
@@ -269,4 +309,4 @@ class ReadFileTool:
             except Exception:
                 continue
 
-        return ToolResult(text=f"File not found: {rel_path}")
+        return ToolResult(text=f"File not found or out of bounds: {rel_path}")

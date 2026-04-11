@@ -12,9 +12,10 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from clawed.models import AppConfig  # runtime import — needed for AppConfig.load()
+
 if TYPE_CHECKING:
     from clawed.master_content import MasterContent
-    from clawed.models import AppConfig
 
 logger = logging.getLogger(__name__)
 

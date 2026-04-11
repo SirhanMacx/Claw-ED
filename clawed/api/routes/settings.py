@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -100,6 +101,59 @@ async def get_settings():
     }
 
 
+def _validate_ollama_url(raw: str) -> tuple[str | None, str | None]:
+    """Return (normalized_url, error). None error means valid.
+
+    v4.11.2026 SSRF protection. The previous version accepted any URL the
+    caller supplied and fed it into httpx for test-connection. An authed
+    user could aim it at internal endpoints like http://169.254.169.254
+    (cloud metadata), http://10.x.y.z (internal LAN), or
+    http://[::1]:<port> (loopback to another local service) and read the
+    response via error messages.
+
+    This validator enforces:
+    - scheme must be http or https
+    - hostname must not be empty
+    - hostname must resolve to a loopback address OR be explicitly
+      allowlisted via the EDUAGENT_OLLAMA_ALLOW_HOSTS env var
+    """
+    import ipaddress
+    from urllib.parse import urlparse
+
+    parsed = urlparse(raw)
+    if parsed.scheme not in {"http", "https"}:
+        return None, "ollama_base_url must use http:// or https://"
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return None, "ollama_base_url is missing a host"
+
+    allow_env = os.environ.get("EDUAGENT_OLLAMA_ALLOW_HOSTS", "")
+    extra_allowed = {h.strip().lower() for h in allow_env.split(",") if h.strip()}
+
+    # Loopback names are always allowed.
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        pass
+    elif host in extra_allowed:
+        pass
+    else:
+        # Try parsing as an IP and require it to be loopback.
+        try:
+            ip = ipaddress.ip_address(host)
+            if not ip.is_loopback:
+                return None, (
+                    "ollama_base_url must be a loopback address "
+                    "or be listed in EDUAGENT_OLLAMA_ALLOW_HOSTS."
+                )
+        except ValueError:
+            return None, (
+                "ollama_base_url must target localhost or an explicitly "
+                "allow-listed host (EDUAGENT_OLLAMA_ALLOW_HOSTS)."
+            )
+
+    normalized = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    return normalized, None
+
+
 @router.post("/settings", dependencies=[Depends(require_auth)])
 async def save_settings(req: SaveSettingsRequest):
     """Save settings and optionally update API key."""
@@ -108,10 +162,14 @@ async def save_settings(req: SaveSettingsRequest):
     cfg.anthropic_model = req.anthropic_model
     cfg.openai_model = req.openai_model
     cfg.ollama_model = req.ollama_model
-    # Validate and normalize ollama_base_url: strip trailing slashes and paths
-    from urllib.parse import urlparse
-    _parsed = urlparse(req.ollama_base_url)
-    cfg.ollama_base_url = f"{_parsed.scheme}://{_parsed.netloc}".rstrip("/")
+
+    # v4.11.2026 SSRF fix: validate and normalize ollama_base_url.
+    normalized_url, err = _validate_ollama_url(req.ollama_base_url)
+    if err:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"error": err}, status_code=400)
+    cfg.ollama_base_url = normalized_url
+
     cfg.include_homework = req.include_homework
     cfg.export_format = req.export_format
     cfg.save()

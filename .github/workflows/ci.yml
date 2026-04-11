@@ -100,7 +100,8 @@ jobs:
     needs: [python-tests]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v4.11.2026: harmonized with the other jobs which use @v5.
+      - uses: actions/checkout@v5
       - name: Build Docker image
         run: docker build -t clawed:test .
       - name: Smoke test container
@@ -123,9 +124,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: Publish to PyPI
+        # v4.11.2026 fix: dropped the '|| echo "Upload skipped"' tail
+        # which made every twine failure exit 0. --skip-existing still
+        # handles the benign "this version was already uploaded" case
+        # inside twine itself.
         run: |
           pip install twine
-          twine upload --skip-existing dist/* || echo "Upload skipped (version may already exist)"
+          twine upload --skip-existing dist/*
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}

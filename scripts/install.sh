@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 #
-# EDUagent one-line installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/eduagent/eduagent/main/scripts/install.sh | bash
+# Claw-ED one-line installer
+# Usage: curl -fsSL https://raw.githubusercontent.com/SirhanMacx/Claw-ED/main/scripts/install.sh | bash
+#
+# v4.11.2026 fix: this script used to point at the non-existent
+# github.com/eduagent/eduagent repo and run
+#   pip install eduagent[telegram]
+# which silently installed a completely unrelated package from PyPI.
+# The correct package is clawed and the repo is SirhanMacx/Claw-ED.
 #
 set -euo pipefail
 
@@ -103,24 +109,26 @@ if [[ -z "$PYTHON" ]]; then
 fi
 ok "Python: $($PYTHON --version)"
 
-# ── Install EDUagent ──────────────────────────────────────────────────────────
+# ── Install Claw-ED ────────────────────────────────────────────────────────────
 
-info "Installing EDUagent with Telegram support..."
+info "Installing Claw-ED from PyPI..."
 $PYTHON -m pip install --quiet --upgrade pip
-$PYTHON -m pip install --quiet 'eduagent[telegram]'
+# v4.11.2026 fix: install the real 'clawed' package, not the unrelated
+# 'eduagent' package that lives under that name on PyPI.
+$PYTHON -m pip install --quiet 'clawed[all]'
 
-if ! command -v eduagent &>/dev/null; then
+if ! command -v clawed &>/dev/null; then
     # pip installed to a path not in PATH — common on Mac
-    warn "eduagent not found in PATH. Checking pip location..."
-    PIPPATH=$($PYTHON -m pip show eduagent 2>/dev/null | grep Location | cut -d' ' -f2 || true)
+    warn "clawed not found in PATH. Checking pip location..."
+    PIPPATH=$($PYTHON -m pip show clawed 2>/dev/null | grep Location | cut -d' ' -f2 || true)
     if [[ -n "$PIPPATH" ]]; then
         BINDIR=$(dirname "$PIPPATH")/bin
-        if [[ -f "$BINDIR/eduagent" ]]; then
+        if [[ -f "$BINDIR/clawed" ]]; then
             warn "Add this to your shell profile: export PATH=\"$BINDIR:\$PATH\""
         fi
     fi
 fi
-ok "EDUagent installed"
+ok "Claw-ED installed"
 
 # ── Config directory ──────────────────────────────────────────────────────────
 
@@ -257,5 +265,5 @@ if [[ "$TELEGRAM_OK" == true ]]; then
 echo "  eduagent bot --token '...'    # Start Telegram bot"
 fi
 echo ""
-echo "Full docs: https://github.com/eduagent/eduagent"
+echo "Full docs: https://github.com/SirhanMacx/Claw-ED"
 echo ""

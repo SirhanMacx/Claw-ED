@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clawed"
-version = "4.10.2026.14"
+version = "4.11.2026"
 description = "Your AI co-teacher. Generate lessons, games, slides, and assessments from your terminal. Learns your teaching voice, aligns to your state standards, and works with any LLM provider."
 readme = "README.md"
 license = "MIT"
@@ -41,43 +41,59 @@ dependencies = [
     "httpx>=0.25.0,<1.0",
     "anthropic>=0.39.0,<1.0",
     "openai>=1.50.0,<2.0",
-    "PyMuPDF>=1.23.0,<2.0",
-    "python-docx>=1.0.0",
-    "python-pptx>=0.6.21",
-    "lxml>=4.9.0",
-    "reportlab>=4.0.0",
+    # v4.11.2026: replaced PyMuPDF (AGPL-3.0) with pypdf (MIT) for
+    # license compatibility with our declared MIT license.
+    "pypdf>=4.0.0,<6.0",
+    "python-docx>=1.0.0,<2.0",
+    "python-pptx>=0.6.21,<2.0",
+    "lxml>=4.9.0,<7.0",
+    "reportlab>=4.0.0,<5.0",
     "Jinja2>=3.1.0,<4.0",
     "fastapi>=0.110.0,<1.0",
-    "uvicorn[standard]>=0.27.0",
-    "python-multipart>=0.0.6",
-    "sse-starlette>=1.6.0",
-    "mcp>=1.0.0",
+    "uvicorn[standard]>=0.27.0,<1.0",
+    "python-multipart>=0.0.6,<1.0",
+    "sse-starlette>=1.6.0,<3.0",
+    "mcp>=1.0.0,<2.0",
     "json-repair>=0.30.0,<1.0",
     "pyyaml>=6.0,<7.0",
     "apscheduler>=3.10.0,<4.0",
-    "gTTS>=2.5.0",
+    "gTTS>=2.5.0,<3.0",
 ]
 
 [project.optional-dependencies]
-google = ["google-api-python-client>=2.0.0", "google-auth-oauthlib>=1.0.0"]
-browser = ["playwright>=1.40.0"]
-voice = ["faster-whisper>=0.10.0"]
-tui = ["textual>=0.56.0"]
-memory = ["onnxruntime>=1.16.0"]
-animations = ["manim>=0.18.0", "pyav>=12.0"]
-all = [
-    "faster-whisper>=0.10.0",
-    "textual>=0.56.0",
-    "keyring>=24.0.0",
-    "uvicorn[standard]>=0.27.0",
-    "onnxruntime>=1.16.0",
-    "qrcode[pil]>=7.0",
+google = [
+    "google-api-python-client>=2.0.0,<3.0",
+    "google-auth-oauthlib>=1.0.0,<2.0",
 ]
-formats = ["xlrd>=2.0.0", "striprtf>=0.0.26"]
-pdf = ["weasyprint>=60.0"]
-qr = ["qrcode[pil]>=7.0"]
-keyring = ["keyring>=24.0.0"]
-dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "pytest-cov>=4.0", "ruff>=0.1.0", "apscheduler>=3.10.0,<4.0", "faster-whisper>=0.10.0"]
+browser = ["playwright>=1.40.0,<2.0"]
+voice = ["faster-whisper>=0.10.0,<2.0"]
+tui = ["textual>=0.56.0,<2.0"]
+memory = ["onnxruntime>=1.16.0,<2.0"]
+animations = ["manim>=0.18.0,<1.0", "av>=12.0,<18.0"]
+all = [
+    "faster-whisper>=0.10.0,<2.0",
+    "textual>=0.56.0,<2.0",
+    "keyring>=24.0.0,<26.0",
+    "uvicorn[standard]>=0.27.0,<1.0",
+    "onnxruntime>=1.16.0,<2.0",
+    "qrcode[pil]>=7.0,<9.0",
+]
+formats = ["xlrd>=2.0.0,<3.0", "striprtf>=0.0.26,<1.0"]
+pdf = ["weasyprint>=60.0,<70.0"]
+qr = ["qrcode[pil]>=7.0,<9.0"]
+keyring = ["keyring>=24.0.0,<26.0"]
+# v4.11.2026: pdf-rich opt-in for PyMuPDF's richer extractor. Users
+# who need advanced PDF parsing can install this extra and accept the
+# AGPL license implications; the base install is MIT-clean via pypdf.
+pdf-rich = ["pymupdf>=1.23.0,<2.0"]
+dev = [
+    "pytest>=7.0.0,<9.0",
+    "pytest-asyncio>=0.21.0,<2.0",
+    "pytest-cov>=4.0,<7.0",
+    "ruff>=0.1.0,<1.0",
+    "apscheduler>=3.10.0,<4.0",
+    "faster-whisper>=0.10.0,<2.0",
+]
 
 [project.scripts]
 clawed = "clawed._entry_router:main"

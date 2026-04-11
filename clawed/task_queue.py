@@ -236,10 +236,28 @@ async def _execute_task(task: Task) -> dict[str, Any]:
         return {"title": unit.title, "saved_to": str(path), **unit.model_dump()}
 
     if task.task_type == TaskType.GENERATE_WORKSHEET:
-        return {"status": "completed", "message": "Worksheet generation via queue not yet wired"}
+        # v4.11.2026: previously this branch returned a stub that
+        # reported "completed" without generating anything. Now we
+        # surface an honest "not implemented" error so the teacher
+        # sees a real failure in the queue UI instead of a silent no-op.
+        return {
+            "status": "failed",
+            "error": (
+                "Worksheet generation via queue is not implemented. "
+                "Use `clawed lesson` to generate a lesson and then "
+                "export its worksheet materials directly."
+            ),
+        }
 
     if task.task_type == TaskType.GENERATE_ASSESSMENT:
-        return {"status": "completed", "message": "Assessment generation via queue not yet wired"}
+        return {
+            "status": "failed",
+            "error": (
+                "Assessment generation via queue is not implemented. "
+                "Use `clawed lesson` and export its exit-ticket section "
+                "instead."
+            ),
+        }
 
     return {"error": f"Unknown task type: {task.task_type}"}
 

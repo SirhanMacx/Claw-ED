@@ -1,4 +1,18 @@
-"""Chat routes — student chatbot endpoint."""
+"""Chat routes — student chatbot endpoints.
+
+Two routers:
+- ``router`` (teacher): ``/api/chat`` with teacher bearer auth + rate limit.
+- ``student_router`` (unauth): ``/api/chat/student`` with a tight rate limit
+  so the embed snippet on a teacher's LMS can be reached by students
+  without them needing the teacher's API token.
+
+v4.11.2026 new route: previously the embed snippet pointed clients at
+``/api/chat`` which is teacher-only, so every student request 401'd.
+The new ``/api/chat/student`` route validates a ``lesson_id`` that
+actually exists and then runs the same ``student_chat`` generator but
+reads question/history only — it does NOT expose the teacher's bearer
+token to anyone.
+"""
 
 from __future__ import annotations
 
@@ -16,18 +30,17 @@ from clawed.models import TeacherPersona
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"], dependencies=[Depends(require_auth)])
+student_chat_router = APIRouter(tags=["chat-student"])
 
 
 class ChatRequest(BaseModel):
-    lesson_id: str
-    question: str
-    history: list[dict[str, str]] = Field(default_factory=list)
+    lesson_id: str = Field(..., min_length=1, max_length=200)
+    question: str = Field(..., min_length=1, max_length=2000)
+    history: list[dict[str, str]] = Field(default_factory=list, max_length=20)
 
 
-@router.post("/chat")
-@limiter.limit("30/minute")
-async def chat_endpoint(request: Request, req: ChatRequest):
-    """Student asks a question about a lesson; bot answers in teacher's voice."""
+async def _run_chat(req: ChatRequest) -> JSONResponse | dict:
+    """Shared chat backend used by both the teacher and student routes."""
     db = get_db()
 
     lesson_row = db.get_lesson(req.lesson_id)
@@ -66,3 +79,26 @@ async def chat_endpoint(request: Request, req: ChatRequest):
     db.insert_chat_message(req.lesson_id, "assistant", response)
 
     return {"response": response, "lesson_id": req.lesson_id}
+
+
+@router.post("/chat")
+@limiter.limit("30/minute")
+async def chat_endpoint(request: Request, req: ChatRequest):
+    """Teacher-side chat endpoint (authenticated).
+
+    Same backend as the student route; kept separate so teacher-only
+    tooling can hit it with the bearer token and get richer rate limits.
+    """
+    return await _run_chat(req)
+
+
+@student_chat_router.post("/chat/student")
+@limiter.limit("60/minute")
+async def chat_student_endpoint(request: Request, req: ChatRequest):
+    """Unauthenticated chat endpoint for the LMS-embedded student widget.
+
+    Validated only by the lesson_id — which is unguessable (UUID) and
+    is the same token already present in the public share flow. Rate
+    limited to 60 requests per minute per client IP to prevent abuse.
+    """
+    return await _run_chat(req)

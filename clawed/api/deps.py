@@ -123,6 +123,8 @@ async def require_auth(request: Request) -> None:
 
     Localhost requests (127.0.0.1) bypass auth when
     EDUAGENT_LOCAL_AUTH_BYPASS=1 is set.
+
+    v4.11.2026: uses secrets.compare_digest for timing-safe comparison.
     """
     # Optional localhost bypass (also covers test clients)
     if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
@@ -134,7 +136,11 @@ async def require_auth(request: Request) -> None:
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing auth token")
     token = auth[7:]
-    if token != _get_or_create_token():
+    expected = _get_or_create_token()
+    # Timing-safe: compare_digest avoids leaking the first-diverging byte
+    # via wall-clock differences on mismatch. Both operands must be str
+    # (bytes also work) and must be the same type.
+    if not secrets.compare_digest(token, expected):
         raise HTTPException(status_code=401, detail="Invalid auth token")
 
 

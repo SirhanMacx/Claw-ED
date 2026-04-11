@@ -9,10 +9,10 @@ import re
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 
-from clawed.api.deps import get_db, require_auth
+from clawed.api.deps import get_db, limiter, require_auth
 from clawed.ingestor import ingest_path
 from clawed.persona import extract_persona
 
@@ -28,8 +28,17 @@ _MAX_FILES = 200
 
 
 @router.post("/ingest")
-async def ingest_files(files: list[UploadFile] = File(...)):
-    """Upload teaching materials and extract a teacher persona."""
+@limiter.limit("3/minute")
+async def ingest_files(
+    request: Request,  # required by rate limiter
+    files: list[UploadFile] = File(...),
+):
+    """Upload teaching materials and extract a teacher persona.
+
+    v4.11.2026: rate-limited at 3 requests per minute per client IP.
+    The previous version had no limit, so an authed client could push
+    500 MB per call repeatedly and exhaust disk + LLM credits.
+    """
     if not files:
         return JSONResponse({"error": "No files uploaded"}, status_code=400)
     if len(files) > _MAX_FILES:

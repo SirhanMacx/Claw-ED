@@ -100,20 +100,74 @@ async def extension_generate(req: ExtensionGenerateRequest):
             teacher_materials=source_context,
         )
 
+        # v4.11.2026 fix: previously this endpoint generated a lesson,
+        # spent minutes of LLM compute, then returned NOTHING the teacher
+        # could act on — no lesson_id, no DB row, no "open the dashboard
+        # to view" target. Now we persist the lesson through the same
+        # path used by the normal CLI/HTTP generation flow so the
+        # dashboard /lesson/{lesson_id} page actually resolves.
+        lesson_id: str | None = None
+        share_token: str | None = None
+        try:
+            from clawed.agent_core.identity import get_teacher_id
+            from clawed.state import TeacherSession
+
+            # Convert MasterContent to DailyLesson for the state API
+            try:
+                daily = master.to_daily_lesson()
+            except Exception:
+                # Older MasterContent revisions lacked to_daily_lesson;
+                # build a minimal DailyLesson from the fields we need.
+                from clawed.models import DailyLesson
+                daily = DailyLesson(
+                    lesson_number=1,
+                    title=master.title,
+                    objective=master.objective,
+                )
+
+            session = TeacherSession.load(get_teacher_id() or "default")
+            # Use a synthetic unit_id so we don't require a real unit row
+            import hashlib
+            unit_id = hashlib.md5(
+                f"extension:{topic}".encode("utf-8")
+            ).hexdigest()[:16]
+            lesson_id = session.save_lesson(daily, unit_id=unit_id)
+            # save_lesson writes a share_token row too; look it up
+            try:
+                from clawed.state import _get_conn
+                with _get_conn() as conn:
+                    row = conn.execute(
+                        "SELECT share_token FROM generated_lessons WHERE id = ?",
+                        (lesson_id,),
+                    ).fetchone()
+                    if row:
+                        share_token = row["share_token"]
+            except Exception as exc:
+                logger.debug("share_token lookup failed: %s", exc)
+        except Exception as exc:
+            logger.warning("Extension lesson persist failed: %s", exc)
+
         return {
+            "lesson_id": lesson_id,
+            "share_token": share_token,
             "title": master.title,
             "objective": master.objective,
             "topic": master.topic,
             "sources": len(master.primary_sources),
-            "files": [],  # Could add file paths if compiled
+            "files": [],
+            "dashboard_url": (
+                f"/lesson/{lesson_id}" if lesson_id else None
+            ),
             "message": (
-                f"Lesson '{master.title}' generated! "
-                f"Open the Claw-ED dashboard to view and export."
+                f"Lesson '{master.title}' generated and saved."
+                if lesson_id
+                else f"Lesson '{master.title}' generated (not persisted)."
             ),
         }
-    except Exception as exc:
+    except Exception:
+        # v4.11.2026 fix: never leak raw exception text to the extension.
         logger.exception("Extension generate failed")
-        return {"error": str(exc)[:200]}
+        return {"error": "Lesson generation failed. Please try again."}
 
 
 # Saved sources from extension (bounded to prevent OOM)
@@ -160,6 +214,14 @@ class ClassroomState(BaseModel):
 _MAX_SESSIONS = 100
 _classroom_sessions: dict[str, ClassroomState] = {}
 _classroom_connections: dict[str, list[WebSocket]] = {}
+
+# v4.11.2026 DoS protection (P1 from security audit): per-session response
+# cap and per-response length cap. Without these, an attacker who obtains
+# a class code can POST /classroom/{code}/respond in a tight loop with
+# multi-MB bodies until the process OOMs.
+_MAX_POLL_RESPONSES_PER_SESSION = 500
+_MAX_RESPONSE_LENGTH = 2000
+_MAX_STUDENT_ID_LENGTH = 100
 
 
 @router.post("/classroom/start")
@@ -248,10 +310,28 @@ async def classroom_launch_poll(code: str, question: str = ""):
 @student_router.post("/classroom/{code}/respond")
 async def classroom_respond(code: str, student_id: str = "", response: str = ""):
     """Student submits a poll response or exit ticket answer.
-    On student_router — no teacher auth required. Class code is the auth."""
+
+    On student_router — no teacher auth required. Class code is the auth.
+
+    v4.11.2026 hardening:
+    - per-response length cap (2000 chars)
+    - per-student_id length cap (100 chars)
+    - per-session poll_responses cap (500 items)
+    - student_id sanitization (no control chars)
+    """
     session = _classroom_sessions.get(code)
     if not session:
         return {"error": "Session not found"}
+
+    if len(session.poll_responses) >= _MAX_POLL_RESPONSES_PER_SESSION:
+        return {"error": "Too many responses for this session"}
+
+    # Truncate + strip control characters to prevent terminal injection
+    # and memory exhaustion via oversized payloads.
+    student_id = (student_id or "")[:_MAX_STUDENT_ID_LENGTH]
+    student_id = "".join(c for c in student_id if c.isprintable())
+    response = (response or "")[:_MAX_RESPONSE_LENGTH]
+
     session.poll_responses.append({
         "student_id": student_id,
         "response": response,
@@ -267,11 +347,41 @@ async def classroom_respond(code: str, student_id: str = "", response: str = "")
 @student_router.get("/classroom/{code}/state")
 async def classroom_state(code: str):
     """Get current classroom state (for student devices).
-    On student_router — no teacher auth required."""
+
+    On student_router — no teacher auth required.
+
+    v4.11.2026 fix: redact poll_responses (student PII) from the public
+    student state endpoint. Students should only see slide/timer/poll-
+    question state; raw responses with student_ids are teacher-only and
+    must be fetched via an authenticated /classroom/{code}/responses
+    route.
+    """
     session = _classroom_sessions.get(code)
     if not session:
         return {"error": "Session not found"}
-    return session.model_dump()
+    state = session.model_dump()
+    # Replace raw responses with just a count so we don't broadcast
+    # student names / open-ended answers to every student device.
+    state["poll_response_count"] = len(state.pop("poll_responses", []))
+    return state
+
+
+@router.get("/classroom/{code}/responses")
+async def classroom_responses(code: str):
+    """Teacher-only view of raw poll responses for the class session.
+
+    v4.11.2026 new route: separates PII-bearing student responses from
+    the public /state endpoint. Lives on the authenticated teacher router
+    (Depends(require_auth) at router level).
+    """
+    session = _classroom_sessions.get(code)
+    if not session:
+        return {"error": "Session not found"}
+    return {
+        "question": session.poll_question,
+        "count": len(session.poll_responses),
+        "responses": session.poll_responses,
+    }
 
 
 @student_router.websocket("/classroom/{code}/ws")

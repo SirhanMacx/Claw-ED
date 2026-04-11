@@ -337,7 +337,12 @@ class TeacherSession:
     def save_lesson(self, lesson: DailyLesson, unit_id: Optional[str] = None) -> str:
         """Save a generated lesson, return its ID."""
         lesson_id = str(uuid.uuid4())
-        share_token = str(uuid.uuid4())[:8]  # Short share token
+        # v4.11.2026 security fix: use the full uuid4 hex (128 bits of
+        # randomness) rather than a truncated 8-hex-char prefix (32
+        # bits), which would be brute-forceable in ~2 billion guesses.
+        # The old route was dormant in production, but the truncation
+        # made it a trap for any future wiring.
+        share_token = uuid.uuid4().hex  # 32-char hex, 128 bits
         self.current_lesson = lesson
         init_db()
         with _get_conn() as conn:

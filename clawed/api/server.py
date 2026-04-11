@@ -77,6 +77,9 @@ def create_app() -> FastAPI:
     # ── Import and include API routers ───────────────────────────────
 
     from clawed.api.routes.chat import router as chat_router
+    from clawed.api.routes.chat import (
+        student_chat_router as chat_student_router,
+    )
     from clawed.api.routes.export import public_router as export_public_router
     from clawed.api.routes.export import router as export_router
     from clawed.api.routes.extension import router as extension_router
@@ -93,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(ingest_router, prefix="/api")
     app.include_router(generate_router, prefix="/api")
     app.include_router(chat_router, prefix="/api")
+    app.include_router(chat_student_router, prefix="/api")  # No auth — student widget embed
     app.include_router(feedback_router, prefix="/api")
     app.include_router(export_router, prefix="/api")
     app.include_router(export_public_router, prefix="/api")
@@ -112,15 +116,20 @@ def create_app() -> FastAPI:
         F4 audit fix: ?token= query params are NO LONGER accepted for page
         auth. Use POST /api/auth/bootstrap or Bearer header instead.
         Tokens in URLs leak through browser history, bookmarks, referrers.
+
+        v4.11.2026: timing-safe comparisons via secrets.compare_digest.
         """
+        import secrets as _secrets
+
         from clawed.api.deps import get_api_token
         token = get_api_token()
         # Check cookie (primary method — set via POST /api/auth/bootstrap)
-        if request.cookies.get("clawed_token") == token:
+        cookie_val = request.cookies.get("clawed_token", "")
+        if cookie_val and _secrets.compare_digest(cookie_val, token):
             return True
         # Check Bearer header (for API-like access)
         auth = request.headers.get("authorization", "")
-        if auth.startswith("Bearer ") and auth[7:] == token:
+        if auth.startswith("Bearer ") and _secrets.compare_digest(auth[7:], token):
             return True
         # Check localhost bypass
         if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
@@ -534,11 +543,14 @@ select {{ padding: 6px 10px; border-radius: 4px;
             logger.warning("Failed to parse scores_json for %s: %s", lesson_id, exc)
             scores_data = None
         feedback_list = db.get_feedback_for_lesson(lesson_id)
-        # Build embed snippet for student chatbot
+        # v4.11.2026 fix: the embed snippet used to reference
+        # /static/student-chat-widget.js which does not exist
+        # (clawed/api/static/ only ships widget.js). The snippet copied
+        # into the teacher's LMS would silently 404.
         embed_snippet = (
-            f'<script src="/static/student-chat-widget.js" '
+            f'<script src="/static/widget.js" '
             f'data-lesson-id="{lesson_id}" '
-            f'data-api-url="/api/chat"></script>'
+            f'data-api-url="/api/chat/student"></script>'
         )
 
         # Get class codes for this lesson (if any are active)

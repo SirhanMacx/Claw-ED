@@ -88,51 +88,76 @@ def _extract_urls_from_text(text: str) -> list[ExtractedURL]:
 
 
 def _extract_pdf(path: Path) -> tuple[str, Optional[int]]:
-    """Extract text from a PDF using PyMuPDF."""
-    import fitz  # PyMuPDF
+    """Extract text from a PDF using pypdf (MIT).
 
-    doc = fitz.open(str(path))
+    v4.11.2026 license fix: previously used PyMuPDF (``fitz``) which is
+    dual-licensed AGPL-3.0 / commercial. Shipping PyMuPDF inside an
+    MIT-labeled wheel was a license compliance problem for downstream
+    users. pypdf is pure-Python MIT and handles text extraction cleanly.
+    """
+    from pypdf import PdfReader
+
+    reader = PdfReader(str(path))
     pages: list[str] = []
-    for page in doc:
-        text = page.get_text()
+    for page in reader.pages:
+        try:
+            text = page.extract_text() or ""
+        except Exception as exc:
+            logger.debug("pypdf page extract failed: %s", exc)
+            text = ""
         if text.strip():
             pages.append(text)
-    page_count = len(doc)
-    doc.close()
-    return "\n\n".join(pages), page_count
+    return "\n\n".join(pages), len(reader.pages)
 
 
 def _extract_pdf_rich(path: Path) -> ExtractionResult:
-    """Extract text, images, and URLs from a PDF."""
-    import fitz
+    """Extract text, images, and URLs from a PDF using pypdf (MIT).
 
-    doc = fitz.open(str(path))
+    Text extraction is always available. Image extraction iterates
+    ``page.images`` which pypdf 3.x+ exposes as a lazy sequence; if a
+    specific image can't be decoded we skip it rather than failing the
+    whole extraction.
+    """
+    from pypdf import PdfReader
+
+    reader = PdfReader(str(path))
     pages: list[str] = []
     images: list[ExtractedImage] = []
-    for page_num, page in enumerate(doc):
-        text = page.get_text()
+
+    for page in reader.pages:
+        try:
+            text = page.extract_text() or ""
+        except Exception as exc:
+            logger.debug("pypdf page extract failed: %s", exc)
+            text = ""
         slide_context = ""
         if text.strip():
             pages.append(text)
             slide_context = text.strip()
-        for img_info in page.get_images():
-            xref = img_info[0]
-            try:
-                base_image = doc.extract_image(xref)
-                if base_image and base_image.get("image"):
-                    img_bytes = base_image["image"]
-                    ext = base_image.get("ext", "png")
-                    if len(img_bytes) > 2000:  # Skip tiny icons
-                        images.append(ExtractedImage(
-                            image_bytes=img_bytes,
-                            format=ext,
-                            context_text=slide_context[:200] if slide_context else "",
-                        ))
-            except Exception as e:
-                logger.debug("Failed to extract image xref %d: %s", xref, e)
-    page_count = len(doc)
-    doc.close()
 
+        # Image extraction: pypdf exposes page.images as a sequence of
+        # ImageFile-like objects. Each has .data (bytes) and .name.
+        try:
+            for img in page.images:
+                try:
+                    img_bytes = getattr(img, "data", None) or b""
+                    if len(img_bytes) <= 2000:
+                        continue  # Skip tiny icons / rasterized glyphs
+                    ext = "png"
+                    img_name = getattr(img, "name", "") or ""
+                    if "." in img_name:
+                        ext = img_name.rsplit(".", 1)[-1].lower() or "png"
+                    images.append(ExtractedImage(
+                        image_bytes=img_bytes,
+                        format=ext,
+                        context_text=slide_context[:200] if slide_context else "",
+                    ))
+                except Exception as exc:
+                    logger.debug("Failed to extract inline PDF image: %s", exc)
+        except Exception as exc:
+            logger.debug("Failed to iterate page.images: %s", exc)
+
+    page_count = len(reader.pages)
     full_text = "\n\n".join(pages)
     urls = _extract_urls_from_text(full_text)
 

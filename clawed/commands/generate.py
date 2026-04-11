@@ -13,6 +13,7 @@ Split modules (imported at bottom):
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -30,6 +31,8 @@ from clawed.commands._helpers import (
 from clawed.commands._helpers import output_dir as _output_dir
 from clawed.commands._helpers import run_async as _run_async
 from clawed.models import AppConfig
+
+logger = logging.getLogger(__name__)
 
 generate_app = typer.Typer()
 
@@ -274,15 +277,30 @@ def lesson(
                     )
                 else:
                     daily = master.to_daily_lesson()
-                    # Also compile teacher-view DOCX as bonus output
+                    # v4.11.2026: when we already have the MasterContent
+                    # in hand (multi-agent path), produce the full
+                    # teacher DOCX + student DOCX + classroom PPTX
+                    # bundle, matching the batch generator. Before this
+                    # fix, only the teacher DOCX was written; the PPTX
+                    # wiring in generate_and_compile was unreachable
+                    # from any production CLI/HTTP call.
                     try:
+                        from clawed.compile_slides import compile_slides
+                        from clawed.compile_student import compile_student_view
+                        _out = _output_dir()
                         _run_async(
-                            compile_teacher_view(
-                                master, images={}, output_dir=_output_dir(),
-                            )
+                            compile_teacher_view(master, images={}, output_dir=_out)
                         )
-                    except Exception:
-                        pass  # Non-blocking — lesson is already compiled
+                        _run_async(
+                            compile_student_view(master, images={}, output_dir=_out)
+                        )
+                        _run_async(
+                            compile_slides(master, images={}, output_dir=_out)
+                        )
+                    except Exception as _exc:
+                        logger.debug(
+                            "Bundle compile (DOCX + PPTX) failed: %s", _exc
+                        )
             else:
                 daily = _run_async(
                     generate_lesson(

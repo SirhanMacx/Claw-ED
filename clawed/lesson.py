@@ -700,8 +700,17 @@ def _record_generation(
     unit: UnitPlan,
     lesson_number: int,
 ) -> None:
-    """Record a generated lesson in state.db for tracking."""
+    """Record a generated lesson in state.db for tracking.
+
+    v4.11.2026 fix: the previous INSERT referenced columns that do not
+    exist in the ``generated_lessons`` schema (subject, grade_level, topic,
+    unit_title) and omitted the NOT NULL columns (id, teacher_id,
+    lesson_json). Every batch lesson silently failed to record. This
+    rewrite uses the real schema defined in ``clawed/state.py:95``.
+    """
+    import hashlib
     import sqlite3
+    import uuid
 
     from clawed.config import _BASE_DIR
 
@@ -709,19 +718,34 @@ def _record_generation(
     if not db_path.exists():
         return
 
+    # Resolve teacher_id from the identity module; fall back to "default"
+    # so this function never raises on a fresh install.
+    try:
+        from clawed.agent_core.identity import get_teacher_id
+        teacher_id = get_teacher_id() or "default"
+    except Exception:
+        teacher_id = "default"
+
+    # Synthesize a stable unit_id from the unit title so repeated
+    # generations of the same unit share the same parent row.
+    unit_id = hashlib.md5(
+        f"{teacher_id}:{unit.title}".encode("utf-8")
+    ).hexdigest()[:16]
+
+    lesson_id = str(uuid.uuid4())
+
     with sqlite3.connect(str(db_path)) as conn:
         conn.execute(
             "INSERT OR IGNORE INTO generated_lessons "
-            "(title, subject, grade_level, topic, unit_title, "
-            "lesson_number, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
+            "(id, unit_id, teacher_id, lesson_number, title, lesson_json) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (
-                master.title,
-                master.subject,
-                master.grade_level,
-                master.topic,
-                unit.title,
+                lesson_id,
+                unit_id,
+                teacher_id,
                 lesson_number,
+                master.title,
+                master.model_dump_json(),
             ),
         )
 
