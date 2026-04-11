@@ -627,10 +627,11 @@ async def generate_and_compile(
     This is the recommended entry point for batch generation. It:
     1. Generates MasterContent via LLM
     2. Fetches images from teacher assets + web (if fetch_images=True)
-    3. Compiles teacher DOCX, student DOCX
+    3. Compiles teacher DOCX, student DOCX, and classroom PPTX deck
     4. Records the generation in state.db
 
-    Returns a dict with keys: master, teacher_path, student_path, images.
+    Returns a dict with keys: master, teacher_path, student_path,
+    slides_path (may be None if PPTX compile failed), images.
     """
     from pathlib import Path as _Path
 
@@ -669,6 +670,16 @@ async def generate_and_compile(
     teacher_path = await compile_teacher_view(master, images, output_dir)
     student_path = await compile_student_view(master, images, output_dir)
 
+    # Step 3b: Compile classroom-ready PPTX deck (non-fatal if it fails)
+    slides_path: Path | None = None
+    try:
+        from clawed.compile_slides import compile_slides
+
+        slides_path = await compile_slides(master, images, output_dir)
+        logger.info("PPTX slides compiled: %s", slides_path)
+    except Exception as exc:
+        logger.warning("PPTX compile failed, skipping: %s", exc)
+
     # Step 4: Record in state DB
     try:
         _record_generation(master, unit, lesson_number)
@@ -679,6 +690,7 @@ async def generate_and_compile(
         "master": master,
         "teacher_path": teacher_path,
         "student_path": student_path,
+        "slides_path": slides_path,
         "images": images,
     }
 

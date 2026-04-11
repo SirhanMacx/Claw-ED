@@ -261,3 +261,73 @@ def test_slide_count(tmp_path):
     assert slide_count == expected, (
         f"Expected {expected} slides, got {slide_count}"
     )
+
+
+# ── test 7: generate_and_compile wires PPTX into the batch path ────────────
+
+
+def test_generate_and_compile_includes_pptx(tmp_path, monkeypatch):
+    """Batch path must produce teacher DOCX + student DOCX + classroom PPTX."""
+    from clawed import lesson as lesson_module
+    from clawed.models import LessonBrief, TeacherPersona, UnitPlan
+
+    mc = _make_master()
+
+    async def fake_generate_master_content(**kwargs):
+        return mc
+
+    # Short-circuit the LLM call — we're testing wiring, not generation
+    monkeypatch.setattr(
+        lesson_module, "generate_master_content", fake_generate_master_content
+    )
+
+    unit = UnitPlan(
+        title="The Industrial Revolution",
+        subject="Social Studies",
+        grade_level="8",
+        topic="Industrial Revolution",
+        duration_weeks=2,
+        overview="A short unit covering industrialization.",
+        daily_lessons=[
+            LessonBrief(
+                lesson_number=1,
+                topic="Causes of the Industrial Revolution",
+                description="Why industrialization started in Britain.",
+                lesson_type="instruction",
+            ),
+        ],
+    )
+    persona = TeacherPersona(
+        name="Test Teacher",
+        subject_area="Social Studies",
+        grade_levels=["8"],
+    )
+
+    result = _run(
+        lesson_module.generate_and_compile(
+            lesson_number=1,
+            unit=unit,
+            persona=persona,
+            output_dir=tmp_path,
+            fetch_images=False,  # skip network / VLM
+        )
+    )
+
+    assert "slides_path" in result, (
+        "generate_and_compile must return a slides_path key"
+    )
+    slides_path = result["slides_path"]
+    assert slides_path is not None, (
+        "slides_path must be populated when compile_slides succeeds"
+    )
+    assert slides_path.exists(), (
+        f"PPTX file must exist on disk at {slides_path}"
+    )
+    assert slides_path.suffix == ".pptx"
+    assert slides_path.stat().st_size > 0, "PPTX must be non-empty"
+
+    # Teacher + student DOCX must still be produced alongside
+    assert result["teacher_path"].exists()
+    assert result["teacher_path"].suffix == ".docx"
+    assert result["student_path"].exists()
+    assert result["student_path"].suffix == ".docx"
