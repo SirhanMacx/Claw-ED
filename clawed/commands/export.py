@@ -735,6 +735,15 @@ def landing(
     port: int = typer.Option(
         8080, "--port", "-p", help="Port for serving"
     ),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help=(
+            "Interface to bind the landing server to (default 127.0.0.1, "
+            "localhost-only). Pass 0.0.0.0 to expose on your LAN — only do "
+            "this if you understand the risk."
+        ),
+    ),
 ):
     """View or serve the Claw-ED landing page."""
     import functools
@@ -747,14 +756,23 @@ def landing(
         raise typer.Exit(1)
 
     if serve_page:
+        # v4.11.2026.1 security fix (P2-3): the landing server used to
+        # bind 0.0.0.0 unconditionally, which violated the project-wide
+        # 127.0.0.1 default. Now defaults to localhost and warns loudly
+        # if the user opts into network exposure.
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            console.print(
+                f"[yellow]WARNING: binding landing page to {host} — "
+                "this exposes it beyond localhost. Ctrl+C to abort.[/yellow]"
+            )
         handler = functools.partial(
             http.server.SimpleHTTPRequestHandler,
             directory=str(landing_dir),
         )
-        with http.server.HTTPServer(("0.0.0.0", port), handler) as server:
+        with http.server.HTTPServer((host, port), handler) as server:
             console.print(
                 f"[green]Landing page serving at[/green]"
-                f" http://localhost:{port}"
+                f" http://{host}:{port}"
             )
             console.print("[dim]Press Ctrl+C to stop[/dim]")
             try:

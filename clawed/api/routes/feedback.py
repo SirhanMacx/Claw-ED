@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -12,6 +13,8 @@ from clawed.api.deps import get_db, require_auth
 from clawed.corpus import contribute_example
 from clawed.feedback import analyze_feedback, collect_feedback
 from clawed.improver import improve_prompts
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["feedback"], dependencies=[Depends(require_auth)])
 
@@ -106,18 +109,41 @@ async def feedback_analysis(days: int = 7):
     return {"analysis": analysis}
 
 
+def _server_side_teacher_id() -> str:
+    """Resolve the authenticated caller's teacher_id.
+
+    v4.11.2026.1 security fix (P1-6 remainder): the previous routes
+    accepted ``teacher_id`` as a free-form path / query parameter, so
+    any authed caller could read analytics for any other teacher in a
+    multi-teacher deployment. We now always resolve from the identity
+    module and ignore caller-supplied values.
+    """
+    try:
+        from clawed.agent_core.identity import get_teacher_id as _gtid
+        return _gtid() or "default"
+    except Exception:
+        return "default"
+
+
 @router.get("/stats")
-async def teacher_stats(teacher_id: str = "local-teacher"):
-    """Get comprehensive teacher analytics."""
+async def teacher_stats():
+    """Get comprehensive teacher analytics for the authenticated caller."""
     from clawed.analytics import get_teacher_stats
-    return get_teacher_stats(teacher_id)
+    return get_teacher_stats(_server_side_teacher_id())
 
 
 @router.get("/stats/{teacher_id}")
 async def teacher_stats_by_id(teacher_id: str):
-    """Get analytics for a specific teacher."""
+    """Get analytics for the authenticated caller.
+
+    The ``teacher_id`` path parameter is retained for URL-shape
+    backwards compatibility but is **ignored**. The server resolves
+    the caller's identity internally.
+    """
     from clawed.analytics import get_teacher_stats
-    return get_teacher_stats(teacher_id)
+    # teacher_id from the URL is intentionally ignored.
+    del teacher_id
+    return get_teacher_stats(_server_side_teacher_id())
 
 
 @router.post("/improve")
@@ -128,7 +154,13 @@ async def trigger_improvement(req: ImproveRequest | None = None):
 
     try:
         result = await improve_prompts(db, feedback_window_days=days)
-    except Exception as e:
-        return JSONResponse({"error": f"Improvement failed: {e}"}, status_code=500)
+    except Exception:
+        # v4.11.2026.1 security fix (P2-8): don't leak raw exception
+        # text to the client. Log it with exc_info for the operator.
+        logger.error("Prompt improvement cycle failed", exc_info=True)
+        return JSONResponse(
+            {"error": "Improvement cycle failed. See server logs for details."},
+            status_code=500,
+        )
 
     return result

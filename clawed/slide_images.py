@@ -20,12 +20,14 @@ look good without images.
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import logging
 import os
 import re
 import time
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,64 @@ _CACHE_DIR = Path(
 
 # Per-image network timeout (seconds)
 _FETCH_TIMEOUT = 15.0
+
+
+# ── SSRF guard (v4.11.2026.1 security fix P2-4) ──────────────────────
+# After DDG / Wikipedia / LoC return a search result, the first image
+# URL they hand us is followed with httpx.get(). Previously the only
+# check was .startswith("http"), so a compromised or MITM'd third party
+# returning an AWS metadata URL (169.254.169.254) or a private-RFC1918
+# address could pivot us to internal services. This helper rejects any
+# URL whose host is a loopback / link-local / private IP, unless the
+# operator explicitly opts in via EDUAGENT_IMAGE_FETCH_ALLOW_INTERNAL=1.
+
+
+def _is_safe_image_url(url: str) -> bool:
+    """Return True if ``url`` is safe to fetch as a remote image.
+
+    Rejects:
+    - non-http(s) schemes
+    - missing hostnames
+    - IP literals that are loopback / link-local / private / reserved
+    - IPv6 link-local and private-range equivalents
+
+    Hostnames are returned as-is (not resolved) — any attacker who can
+    control DNS for a public domain can still attack us via DNS
+    rebinding, but that is a much higher bar than passing a raw IP.
+    """
+    if not url or not isinstance(url, str):
+        return False
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = (parsed.hostname or "").strip()
+    if not host:
+        return False
+
+    if os.environ.get("EDUAGENT_IMAGE_FETCH_ALLOW_INTERNAL") == "1":
+        return True
+
+    # If it's an IP literal, require it to be a routable public address.
+    try:
+        ip = ipaddress.ip_address(host)
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            return False
+    except ValueError:
+        # Not an IP literal — it's a hostname. Reject a handful of
+        # explicit loopback names even if someone mapped them in /etc/hosts.
+        if host.lower() in {"localhost", "ip6-localhost"}:
+            return False
+    return True
 
 # ── Cache eviction settings ──────────────────────────────────────────
 MAX_CACHE_AGE_DAYS = 30
@@ -493,6 +553,14 @@ async def _fetch_loc(
                 logger.debug("No LOC results for query: %s", query)
                 return None
 
+            # v4.11.2026.1 SSRF guard
+            if not _is_safe_image_url(image_url):
+                logger.warning(
+                    "LOC returned unsafe image URL (blocked SSRF): %s",
+                    image_url,
+                )
+                return None
+
             img_resp = await client.get(image_url, timeout=_FETCH_TIMEOUT)
             img_resp.raise_for_status()
 
@@ -574,14 +642,22 @@ async def _fetch_wikimedia(
                         break
 
                 if image_url:
-                    dl = await client.get(image_url, timeout=_FETCH_TIMEOUT)
-                    dl.raise_for_status()
-                    path = _save_to_cache(dl.content, "wikimedia", query, cache_dir)
-                    logger.info(
-                        "Wikipedia article image for '%s' (article: '%s') -> %s",
-                        query, page_title, path,
-                    )
-                    return path
+                    # v4.11.2026.1 SSRF guard
+                    if not _is_safe_image_url(image_url):
+                        logger.warning(
+                            "Wikipedia returned unsafe image URL "
+                            "(blocked SSRF): %s",
+                            image_url,
+                        )
+                    else:
+                        dl = await client.get(image_url, timeout=_FETCH_TIMEOUT)
+                        dl.raise_for_status()
+                        path = _save_to_cache(dl.content, "wikimedia", query, cache_dir)
+                        logger.info(
+                            "Wikipedia article image for '%s' (article: '%s') -> %s",
+                            query, page_title, path,
+                        )
+                        return path
 
             # Commons file-namespace search is DISABLED.
             # It matches on file description text and returns completely
@@ -648,6 +724,14 @@ async def _fetch_unsplash(
 
             image_url = results[0]["urls"].get("regular") or results[0]["urls"].get("small")
             if not image_url:
+                return None
+
+            # v4.11.2026.1 SSRF guard
+            if not _is_safe_image_url(image_url):
+                logger.warning(
+                    "Unsplash returned unsafe image URL (blocked SSRF): %s",
+                    image_url,
+                )
                 return None
 
             img_resp = await client.get(image_url, timeout=_FETCH_TIMEOUT)
@@ -998,10 +1082,17 @@ async def _fetch_web_scrape(
                 return None
 
             # Pick the first result with a reasonable image
+            # v4.11.2026.1 SSRF guard: reject URLs whose host is a
+            # loopback / link-local / private / reserved IP literal.
             image_url = None
             for r in results[:5]:
                 url = r.get("image", "")
-                if url and url.startswith("http") and not url.endswith(".svg"):
+                if (
+                    url
+                    and url.startswith("http")
+                    and not url.endswith(".svg")
+                    and _is_safe_image_url(url)
+                ):
                     image_url = url
                     break
 

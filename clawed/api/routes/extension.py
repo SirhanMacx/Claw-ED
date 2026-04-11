@@ -452,6 +452,40 @@ _MAX_COMMUNITY_LESSONS = 1000
 _community_lessons: list[dict] = []
 
 
+# v4.11.2026.1 security fix (P2-6): the previous PII strip only popped
+# top-level keys and the first nested level of dicts. Nested lists
+# (e.g. materials, segments, stations) and deeper nesting leaked the
+# teacher's name straight through. This recursive scrub walks the whole
+# tree.
+_IDENTITY_FIELDS: frozenset[str] = frozenset({
+    "teacher_name",
+    "school",
+    "teacher_id",
+    "persona",
+    "teacher_email",
+    "name",
+    "author",
+    "author_email",
+    "creator",
+})
+
+
+def _scrub_pii(obj, _depth: int = 0):
+    """Recursively remove identity fields from nested dict/list structures."""
+    if _depth > 30:  # pathological nesting guard
+        return obj
+    if isinstance(obj, dict):
+        for k in list(obj.keys()):
+            if k in _IDENTITY_FIELDS:
+                obj.pop(k, None)
+            else:
+                obj[k] = _scrub_pii(obj[k], _depth + 1)
+        return obj
+    if isinstance(obj, list):
+        return [_scrub_pii(item, _depth + 1) for item in obj]
+    return obj
+
+
 @router.post("/community/share")
 async def community_share(req: ShareRequest):
     """Share a lesson with the teacher community (anonymized).
@@ -468,15 +502,8 @@ async def community_share(req: ShareRequest):
     if len(_community_lessons) >= _MAX_COMMUNITY_LESSONS:
         _community_lessons.pop(0)
 
-    # Strip teacher identity (deep — check nested objects too)
-    _identity_fields = {"teacher_name", "school", "teacher_id", "persona",
-                        "teacher_email", "name"}
-    for field in _identity_fields:
-        lesson_data.pop(field, None)
-    for key, val in list(lesson_data.items()):
-        if isinstance(val, dict):
-            for f in _identity_fields:
-                val.pop(f, None)
+    # v4.11.2026.1: deep-scrub identity fields out of the whole tree.
+    lesson_data = _scrub_pii(lesson_data)
 
     entry = {
         "id": len(_community_lessons) + 1,

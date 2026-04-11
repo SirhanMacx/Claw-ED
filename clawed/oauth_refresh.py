@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -100,6 +101,14 @@ def _refresh_token(refresh_token: str | None) -> str | None:
         existing_oauth["expiresAt"] = int(time.time() * 1000) + expires_in * 1000
         creds["claudeAiOauth"] = existing_oauth
         CREDENTIALS_PATH.write_text(json.dumps(creds, indent=2))
+        # v4.11.2026.1 security fix (P2-9): chmod 0600 after write so a
+        # fresh file inherits the same permissions that config.py's
+        # _save_secrets applies. Inherited umask on a shared system
+        # could otherwise leave credentials world-readable.
+        try:
+            os.chmod(CREDENTIALS_PATH, 0o600)
+        except OSError as exc:
+            logger.debug("chmod 0600 on credentials failed: %s", exc)
 
         # Also update secrets.json if it has the old token
         from clawed.paths import data_dir
@@ -110,6 +119,10 @@ def _refresh_token(refresh_token: str | None) -> str | None:
                 if secrets.get("anthropic_api_key", "").startswith("sk-ant-oat"):
                     secrets["anthropic_api_key"] = new_token
                     secrets_path.write_text(json.dumps(secrets, indent=2))
+                    try:
+                        os.chmod(secrets_path, 0o600)
+                    except OSError as exc:
+                        logger.debug("chmod 0600 on secrets.json failed: %s", exc)
             except (json.JSONDecodeError, OSError):
                 pass
 

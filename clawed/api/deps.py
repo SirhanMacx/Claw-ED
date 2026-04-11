@@ -5,6 +5,7 @@ Route modules import from here to avoid circular imports with server.py.
 """
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 import time
@@ -15,6 +16,8 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 
 from clawed.database import Database
+
+logger = logging.getLogger(__name__)
 
 # ── Rate Limiter (in-memory, per-process) ────────────────────────────
 
@@ -81,6 +84,22 @@ class _RateLimiter:
                             detail=f"Rate limit exceeded ({rate_string})",
                         )
                     _rate_store[key].append(now)
+                else:
+                    # v4.11.2026.1 security fix (P2-7): the old limiter
+                    # would silently no-op when the handler signature
+                    # didn't include a `Request` parameter, so forgetting
+                    # to add it disabled the rate limit with zero signal.
+                    # Now we log a warning every time a decorated handler
+                    # runs without a Request — noisy enough to catch in
+                    # dev but non-fatal so production traffic isn't
+                    # broken by a missing annotation.
+                    logger.warning(
+                        "Rate limiter on %s has no Request in signature; "
+                        "limit %s is NOT being enforced. Add "
+                        "`request: Request` to the handler.",
+                        func.__name__,
+                        rate_string,
+                    )
 
                 return await func(*args, **kwargs)
             return wrapper

@@ -24,6 +24,31 @@ clawed_output/
 eduagent_data/
 clawed_data/
 
+# v4.11.2026.1 — explicit entries for high-risk secrets, in case the
+# *.json wildcard above ever gets an allow-back added for a
+# subdirectory that would otherwise collide with these filenames.
+secrets.json
+**/secrets.json
+api_token
+**/api_token
+.credentials.json
+**/.credentials.json
+bot.lock
+**/bot.lock
+oauth_token.json
+**/oauth_token.json
+bot_token.json
+**/bot_token.json
+
+# SQLite databases — should never be committed. Ignore by extension
+# anywhere in the tree (matches state.db, approvals.db, clawed.db,
+# and any *-shm / *-wal WAL files created by SQLite).
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
 # IDE
 .vscode/
 .idea/

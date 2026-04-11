@@ -9,8 +9,8 @@ homework, and tracks what students are asking so the teacher can see patterns.
 from __future__ import annotations
 
 import json
-import random
 import re
+import secrets
 import string
 import uuid
 from dataclasses import dataclass, field
@@ -69,10 +69,18 @@ class StudentBot:
 
     @staticmethod
     def _generate_class_code() -> str:
-        """Generate a readable class code like AB-CDE-2."""
-        part1 = "".join(random.choices(string.ascii_uppercase, k=2))
-        part2 = "".join(random.choices(string.ascii_uppercase, k=3))
-        part3 = str(random.randint(1, 9))
+        """Generate a readable but cryptographically-random class code.
+
+        v4.11.2026.1 security fix (P2-5): previously used ``random.choices()``
+        which is a non-CSPRNG. A 5-letter + 1-digit code space (~107M) with
+        a predictable PRNG is both brute-forceable AND leaks future codes
+        once any single code is observed. Now uses ``secrets.choice`` and
+        widens the code to 3-4-4 (~7e10 codes) so enumeration is infeasible.
+        """
+        alphabet = string.ascii_uppercase
+        part1 = "".join(secrets.choice(alphabet) for _ in range(3))
+        part2 = "".join(secrets.choice(alphabet) for _ in range(4))
+        part3 = "".join(secrets.choice(string.digits) for _ in range(4))
         return f"{part1}-{part2}-{part3}"
 
     def create_class(
