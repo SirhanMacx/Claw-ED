@@ -237,7 +237,7 @@ class LLMClient:
 
                 logger.debug("Using Ollama vision model: %s", vision_model)
                 base = self.config.ollama_base_url.rstrip("/")
-                async with httpx.AsyncClient(timeout=60) as client:
+                async with httpx.AsyncClient(timeout=120) as client:
                     resp = await client.post(
                         f"{base}/api/generate",
                         json={
@@ -245,6 +245,11 @@ class LLMClient:
                             "prompt": prompt,
                             "images": [b64],
                             "stream": False,
+                            # CRITICAL: disable thinking mode. Gemma 4 and
+                            # other reasoning models will consume the entire
+                            # token budget on internal thoughts and return
+                            # an empty response otherwise.
+                            "think": False,
                             "options": {
                                 "temperature": temperature,
                                 "num_predict": max_tokens,
@@ -258,7 +263,15 @@ class LLMClient:
                         )
                         return "GOOD"
                     data = resp.json()
-                    return data.get("response", "GOOD").strip() or "GOOD"
+                    response_text = data.get("response", "").strip()
+                    if not response_text:
+                        logger.debug(
+                            "Ollama vision empty response. eval_count=%s think=%s",
+                            data.get("eval_count"),
+                            bool(data.get("thinking")),
+                        )
+                        return "GOOD"
+                    return response_text
             except Exception as e:
                 logger.debug("Vision check failed (Ollama): %s", e)
                 return "GOOD"
