@@ -174,7 +174,7 @@ def _detect_available_models() -> tuple[LLMProvider | None, str]:
                 return LLMProvider.OLLAMA, f"Ollama running with {models[0]}"
             return LLMProvider.OLLAMA, "Ollama running (no models pulled yet)"
     except Exception:
-        pass
+        pass  # Ollama detection is a probe; absence is normal
 
     return None, (
         "No LLM backend detected.\n"
@@ -198,7 +198,7 @@ def _open_folder_picker() -> str | None:
         root.destroy()
         return folder if folder else None
     except Exception:
-        return None
+        return None  # tkinter may not be available (headless, WSL); fall back to path input
 
 
 def _ask_materials() -> tuple[str | None, str | None]:
@@ -549,6 +549,7 @@ def _setup_local_ollama(local_ollama: bool) -> AppConfig:
                 console.print("  [yellow]No models found. Pull one: ollama pull qwen3.5[/yellow]")
                 config.ollama_model = "qwen3.5"
         except Exception:
+            logger.debug("Ollama model query failed; defaulting to qwen3.5", exc_info=True)
             config.ollama_model = "qwen3.5"
     else:
         console.print("  [yellow]Ollama not detected. Install it and pull a model first.[/yellow]")
@@ -656,7 +657,7 @@ def quick_model_setup() -> str:
         if resp.status_code == 200:
             local_ollama = True
     except Exception:
-        pass
+        pass  # Ollama not running is normal; just hide the menu option
 
     # Show provider menu
     console.print("\n[bold]Which AI service?[/bold]\n")
@@ -853,7 +854,7 @@ def run_setup_wizard(reset: bool = False) -> AppConfig:
             from clawed.agent_core.identity import reset_cache
             reset_cache()
         except Exception:
-            pass
+            pass  # Cache reset is best-effort; stale cache clears on next startup
         if local_path:
             _ingest_materials(local_path, config)
         if drive_url:
@@ -976,7 +977,7 @@ def _run_onboarding_legacy() -> AppConfig:
             from clawed.agent_core.identity import reset_cache
             reset_cache()
         except Exception:
-            pass
+            pass  # Cache reset is best-effort; stale cache clears on next startup
         if local_path:
             _ingest_materials(local_path, config)
         if drive_url:

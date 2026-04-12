@@ -36,7 +36,7 @@ def get_google_api_key() -> str | None:
         if stored:
             return stored
     except Exception:
-        pass
+        pass  # Key retrieval is optional; caller handles None
     return None
 
 

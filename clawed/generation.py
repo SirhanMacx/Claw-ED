@@ -449,6 +449,7 @@ async def generate_differentiation(parsed: ParsedIntent, session: TeacherSession
             if not isinstance(items, list):
                 items = []
         except Exception:
+            logger.debug("Failed to parse differentiation JSON; using empty list", exc_info=True)
             items = []
 
         struggling: list[str] = []
@@ -513,6 +514,7 @@ async def handle_web_search(parsed: ParsedIntent, session: TeacherSession) -> st
         results = await search_for_teacher(parsed.raw, session.persona)
         return results
     except Exception:
+        logger.debug("Web search failed or not configured", exc_info=True)
         return (
             "I'd like to search the web for that, but web search isn't configured yet.\n\n"
             "Set your Tavily API key to enable search:\n"
@@ -778,6 +780,7 @@ async def handle_connect_local(
             and not f.name.startswith(("~$", "._"))
         ]
     except Exception:
+        logger.warning("Failed to scan materials directory", exc_info=True)
         supported = []
 
     if not supported:

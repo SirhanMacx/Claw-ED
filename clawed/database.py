@@ -225,7 +225,7 @@ class Database:
 
     def _migrate_on(self, conn: sqlite3.Connection) -> None:
         """Apply any schema migrations for existing databases."""
-        # Add scores_json column if it doesn't exist
+        # Add scores_json column if it doesn't exist (exception = column missing)
         try:
             conn.execute("SELECT scores_json FROM lessons LIMIT 1")
         except Exception:

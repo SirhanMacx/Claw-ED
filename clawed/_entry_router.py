@@ -105,7 +105,7 @@ def _ed_greeting() -> None:
                 else:
                     name = parts[0]
     except Exception:
-        pass
+        pass  # Greeting personalization is cosmetic; fall back to default name
 
     greetings = [
         f"Hey {name}! What are we working on today?",
@@ -138,7 +138,7 @@ def _show_node_notice() -> None:
             provider = data.get("provider", "")
             model = data.get(f"{provider}_model", "") if provider else ""
     except Exception:
-        pass
+        pass  # Banner display is cosmetic; proceed with defaults
 
     print()
     print("  🍎 C L A W - E D")
@@ -241,7 +241,7 @@ def _check_telegram_token() -> bool:
         if token and token.strip():
             return True
     except Exception:
-        pass
+        pass  # Token check is best-effort; absence means "not configured"
 
     return False
 
@@ -289,7 +289,7 @@ def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
         if val:
             return val
     except Exception:
-        pass
+        pass  # keyring is optional; fall through to secrets.json/env
 
     # 4. secrets.json
     secrets_path = Path(_data_dir()) / "secrets.json"
@@ -569,7 +569,7 @@ def main() -> None:
                 from clawed.models import AppConfig
                 _auto = getattr(AppConfig.load(), "auto_approve_tools", False)
             except Exception:
-                _auto = False
+                _auto = False  # Config load failure means no bypass
         if _auto and "--dangerously-skip-permissions" not in args:
             args = ["--dangerously-skip-permissions", *args]
             import sys as _sys
@@ -587,7 +587,7 @@ def main() -> None:
                 if model:
                     args = ["--model", model, *args]
             except Exception:
-                pass
+                pass  # Model config is best-effort; Node CLI has its own default
 
         # Ed speaks first — proactive greeting before the TUI cursor appears.
         # This runs from Python (instant, no LLM call) so the teacher sees

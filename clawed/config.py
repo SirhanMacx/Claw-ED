@@ -47,7 +47,7 @@ def _try_keyring_get(key: str) -> str | None:
         import keyring
         return keyring.get_password(_SERVICE_NAME, key)
     except Exception:
-        return None
+        return None  # keyring is optional; silently fall through to env/file
 
 
 def _try_keyring_set(key: str, value: str) -> bool:
@@ -56,7 +56,7 @@ def _try_keyring_set(key: str, value: str) -> bool:
         keyring.set_password(_SERVICE_NAME, key, value)
         return True
     except Exception:
-        return False
+        return False  # keyring is optional; caller checks return value
 
 
 def _try_keyring_delete(key: str) -> bool:
@@ -65,7 +65,7 @@ def _try_keyring_delete(key: str) -> bool:
         keyring.delete_password(_SERVICE_NAME, key)
         return True
     except Exception:
-        return False
+        return False  # keyring is optional; caller checks return value
 
 
 def _resolve_claude_code_token() -> str | None:

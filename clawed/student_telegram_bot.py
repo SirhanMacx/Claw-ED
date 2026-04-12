@@ -37,7 +37,7 @@ def _log_error(error: Exception) -> None:
                 f"{type(error).__name__}: {error}\n"
             )
     except Exception:
-        pass
+        pass  # Last-resort error logger — cannot itself raise or log
 
 
 async def _send_response(update: Any, text: str) -> None:
