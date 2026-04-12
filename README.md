@@ -4,7 +4,7 @@
 
 An open-source CLI agent that generates complete lesson bundles — plans, handouts, slides, differentiated versions, games, and more — in your teaching voice. Feed it your files. It learns how you teach. Then it does the work for you.
 
-**Sibling project:** [Claw-STU](https://sirhanmacx.github.io/Claw-STU/) — the student-facing personal learning agent. Ed builds the lessons; Stuart delivers them.
+**Sibling project:** [Claw-STU](https://sirhanmacx.github.io/Claw-STU/) — the student-facing personal learning agent. Ed builds the lessons; Stuart helps students understand them.
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-v4.12.2026.2-blue" alt="Version">
