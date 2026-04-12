@@ -41,7 +41,13 @@
   },
   "license": "https://opensource.org/licenses/MIT",
   "downloadUrl": "https://pypi.org/project/clawed/",
-  "programmingLanguage": "Python"
+  "programmingLanguage": "Python",
+  "isRelatedTo": {
+    "@type": "SoftwareApplication",
+    "name": "Claw-STU",
+    "url": "https://sirhanmacx.github.io/Claw-STU/",
+    "description": "Student-facing counterpart. Stuart, a personal learning agent that runs an adaptive teach-assess-adapt loop."
+  }
 }
 </script>
 
@@ -148,6 +154,23 @@ header nav {
   gap: 1.5rem;
   flex-wrap: wrap;
   font-size: 0.9rem;
+}
+
+/* ── Sibling banner ─────────────────────────────── */
+.sibling {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.9rem 1.25rem;
+  margin: 1.5rem 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sibling a {
+  color: #d4a843;
+  font-weight: 600;
 }
 
 /* ── Install block ──────────────────────────────── */
@@ -338,6 +361,9 @@ footer a:hover { color: var(--text-bright); }
     <a href="FAQ.md">FAQ</a>
     <a href="https://github.com/SirhanMacx/Claw-ED">GitHub</a>
   </nav>
+  <div class="sibling">
+    Student-facing counterpart: <a href="https://sirhanmacx.github.io/Claw-STU/">Claw-STU</a> &mdash; meet Stuart, the personal learning agent.
+  </div>
 </header>
 
 <!-- ── What it is ─────────────────────────────────── -->
@@ -611,6 +637,7 @@ pytest</pre>
   <p>
     <a href="https://github.com/SirhanMacx/Claw-ED">GitHub</a> &middot;
     <a href="https://pypi.org/project/clawed/">PyPI</a> &middot;
+    <a href="https://sirhanmacx.github.io/Claw-STU/">Claw-STU</a> &middot;
     <a href="GETTING_STARTED.html">Getting Started</a> &middot;
     <a href="FAQ.html">FAQ</a> &middot;
     <a href="https://github.com/SirhanMacx/Claw-ED/issues">Issues</a> &middot;
