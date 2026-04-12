@@ -146,7 +146,7 @@ clawed
 
 It walks you through picking a provider and an API key.
 
-**Recommended:** [Ollama Pro](https://ollama.com/pro) ($20/mo) — unlimited access to good models, easiest setup. For best output quality, use an Anthropic or OpenAI API key (pay per use). OpenRouter lets you pick from any model. Google Gemini has a free tier. Local Ollama runs fully offline for free.
+**Recommended:** [Ollama Pro](https://ollama.com/pricing) ($20/mo) — unlimited access to good models, easiest setup. For best output quality, use an Anthropic or OpenAI API key (pay per use). OpenRouter lets you pick from any model. Google Gemini has a free tier. Local Ollama runs fully offline for free.
 
 ---
 
