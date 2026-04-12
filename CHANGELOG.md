@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.11.2026.2 — 2026-04-12
+## v4.12.2026.2 — 2026-04-12
 
 ### Hardened
 - Expanded ruff rule set to include UP, B, SIM, RUF categories; 528 auto-fixed violations

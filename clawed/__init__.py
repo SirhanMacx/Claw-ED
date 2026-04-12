@@ -14,7 +14,7 @@ if hasattr(sys.stderr, "reconfigure"):
     with contextlib.suppress(Exception):
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-__version__ = "4.11.2026.2"
+__version__ = "4.12.2026.2"
 __author__ = "Jon Maccarello & Claw-ED contributors"
 __description__ = "Your AI co-teacher. Generate lessons, games, slides, and assessments from your terminal."
 

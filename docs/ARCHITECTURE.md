@@ -4,7 +4,7 @@
 
 Claw-ED is a persistent AI teaching assistant. Ed lives in your terminal and on your phone, generating lessons, assessments, and materials in your teaching voice.
 
-This document describes the v4.11.2026.2 architecture -- how messages flow through the system, what each module does, and how components connect.
+This document describes the v4.12.2026.2 architecture -- how messages flow through the system, what each module does, and how components connect.
 
 ---
 
