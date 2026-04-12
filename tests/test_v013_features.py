@@ -470,3 +470,52 @@ class TestVersion:
         resp = client.get("/api/health")
         data = resp.json()
         assert data["version"] == "4.12.2026.2"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# AUDIT FIXES
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestED1WebSocketRedaction:
+    """ED-1 audit fix: WebSocket state sync must never contain poll_responses."""
+
+    def test_redact_student_state_removes_poll_responses(self):
+        from clawed.api.routes.extension import _redact_student_state
+
+        raw = {
+            "lesson_title": "Test",
+            "current_slide": 0,
+            "poll_responses": [
+                {"student_id": "alice", "response": "A"},
+                {"student_id": "bob", "response": "B"},
+            ],
+        }
+        redacted = _redact_student_state(raw)
+        assert "poll_responses" not in redacted
+        assert redacted["poll_response_count"] == 2
+
+    def test_redact_student_state_empty_responses(self):
+        from clawed.api.routes.extension import _redact_student_state
+
+        raw = {"lesson_title": "Test", "poll_responses": []}
+        redacted = _redact_student_state(raw)
+        assert "poll_responses" not in redacted
+        assert redacted["poll_response_count"] == 0
+
+    def test_websocket_state_sync_redacted(self, client):
+        """Integration test: classroom WS state_sync must not contain poll_responses."""
+        # Start a classroom session (teacher route — uses auth)
+        resp = client.post("/api/classroom/start?lesson_title=Test&total_slides=3")
+        assert resp.status_code == 200
+        code = resp.json()["class_code"]
+
+        # Add a poll response
+        client.post(f"/api/classroom/{code}/respond?student_id=alice&response=A")
+
+        # GET the student state endpoint — should be redacted
+        state_resp = client.get(f"/api/classroom/{code}/state")
+        assert state_resp.status_code == 200
+        state = state_resp.json()
+        assert "poll_responses" not in state
+        assert "poll_response_count" in state

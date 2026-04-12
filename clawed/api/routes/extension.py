@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -170,20 +171,67 @@ async def extension_generate(req: ExtensionGenerateRequest):
         return {"error": "Lesson generation failed. Please try again."}
 
 
+# ── In-memory store limits and TTL cleanup (ED-5 audit fix) ────────
+#
+# Single-process limitation: these in-memory stores do not survive
+# restarts and are not shared across workers. The upgrade path is to
+# move them to SQLite or Redis (v5.0 goal). For now, TTL-based
+# expiration (24h) and max-size caps prevent unbounded growth.
+_STORE_TTL_SECONDS = 86400  # 24 hours
+_MAX_SOURCES = 1000
+_MAX_COMMUNITY = 500
+
+
+def _cleanup_expired(store: list[dict], max_size: int) -> None:
+    """Remove entries older than _STORE_TTL_SECONDS and enforce max size."""
+    now = time.time()
+    cutoff = now - _STORE_TTL_SECONDS
+    # Remove expired entries (walk backwards to avoid index shift)
+    i = 0
+    while i < len(store):
+        if store[i].get("_created_at", now) < cutoff:
+            store.pop(i)
+        else:
+            i += 1
+    # Enforce max size — drop oldest entries
+    while len(store) > max_size:
+        store.pop(0)
+
+
+def _cleanup_expired_sessions() -> None:
+    """Remove classroom sessions older than TTL and enforce max count."""
+    now = time.time()
+    cutoff = now - _STORE_TTL_SECONDS
+    expired = [
+        code for code, sess_meta in _session_metadata.items()
+        if sess_meta < cutoff
+    ]
+    for code in expired:
+        _classroom_sessions.pop(code, None)
+        _classroom_connections.pop(code, None)
+        _session_metadata.pop(code, None)
+    # Enforce max sessions
+    while len(_classroom_sessions) > _MAX_SESSIONS:
+        oldest = next(iter(_classroom_sessions))
+        _classroom_sessions.pop(oldest, None)
+        _classroom_connections.pop(oldest, None)
+        _session_metadata.pop(oldest, None)
+
+
 # Saved sources from extension (bounded to prevent OOM)
-_MAX_SOURCES = 500
 _saved_sources: list[dict] = []
 
 
 @router.post("/extension/add-source")
 async def extension_add_source(req: ExtensionSourceRequest):
     """Save highlighted text as a primary source for future lessons."""
-    if len(_saved_sources) >= _MAX_SOURCES:
-        _saved_sources.pop(0)  # Remove oldest
+    # ED-5: cleanup expired sources and enforce size limits
+    _cleanup_expired(_saved_sources, _MAX_SOURCES)
     _saved_sources.append({
         "text": req.text[:50000],  # Cap text length
         "url": req.source_url,
         "title": req.source_title,
+        "_created_at": time.time(),
     })
     logger.info("Extension: saved source '%s' (%d chars)", req.source_title, len(req.text))
     return {"message": f"Source saved! ({len(_saved_sources)} total)"}
@@ -214,6 +262,7 @@ class ClassroomState(BaseModel):
 _MAX_SESSIONS = 100
 _classroom_sessions: dict[str, ClassroomState] = {}
 _classroom_connections: dict[str, list[WebSocket]] = {}
+_session_metadata: dict[str, float] = {}  # code -> creation timestamp
 
 # v4.11.2026 DoS protection (P1 from security audit): per-session response
 # cap and per-response length cap. Without these, an attacker who obtains
@@ -227,21 +276,18 @@ _MAX_STUDENT_ID_LENGTH = 100
 @router.post("/classroom/start")
 async def classroom_start(lesson_title: str = "", total_slides: int = 10):
     """Start a real-time classroom session. Returns class code."""
-    import secrets
+    import secrets as _secrets
 
-    # Enforce max sessions to prevent OOM
-    if len(_classroom_sessions) >= _MAX_SESSIONS:
-        # Remove oldest session
-        oldest = next(iter(_classroom_sessions))
-        del _classroom_sessions[oldest]
-        _classroom_connections.pop(oldest, None)
+    # ED-5: cleanup expired sessions before creating new ones
+    _cleanup_expired_sessions()
 
-    code = secrets.token_hex(6).upper()  # 12-char code (H3 audit fix)
+    code = _secrets.token_hex(6).upper()  # 12-char code (H3 audit fix)
     _classroom_sessions[code] = ClassroomState(
         lesson_title=lesson_title,
         total_slides=total_slides,
     )
     _classroom_connections[code] = []
+    _session_metadata[code] = time.time()
     logger.info("Classroom session started: %s (%s)", code, lesson_title)
     return {"class_code": code, "lesson_title": lesson_title}
 
@@ -344,6 +390,19 @@ async def classroom_respond(code: str, student_id: str = "", response: str = "")
     return {"received": True}
 
 
+def _redact_student_state(session_data: dict) -> dict:
+    """Redact poll_responses from session state for student-facing views.
+
+    ED-1 audit fix: both the HTTP /state endpoint and the WebSocket
+    state_sync message must use this helper so raw student responses
+    (containing student_ids and free-text answers) are never leaked
+    to other students.  Only a count is exposed.
+    """
+    redacted = dict(session_data)
+    redacted["poll_response_count"] = len(redacted.pop("poll_responses", []))
+    return redacted
+
+
 @student_router.get("/classroom/{code}/state")
 async def classroom_state(code: str):
     """Get current classroom state (for student devices).
@@ -359,11 +418,7 @@ async def classroom_state(code: str):
     session = _classroom_sessions.get(code)
     if not session:
         return {"error": "Session not found"}
-    state = session.model_dump()
-    # Replace raw responses with just a count so we don't broadcast
-    # student names / open-ended answers to every student device.
-    state["poll_response_count"] = len(state.pop("poll_responses", []))
-    return state
+    return _redact_student_state(session.model_dump())
 
 
 @router.get("/classroom/{code}/responses")
@@ -402,12 +457,12 @@ async def classroom_websocket(websocket: WebSocket, code: str):
     _classroom_connections[code].append(websocket)
 
     try:
-        # Send current state on connect
+        # Send current state on connect — ED-1 audit fix: redact poll_responses
         session = _classroom_sessions.get(code)
         if session:
             await websocket.send_json({
                 "type": "state_sync",
-                "state": session.model_dump(),
+                "state": _redact_student_state(session.model_dump()),
             })
 
         # Keep alive and listen for messages
@@ -448,7 +503,6 @@ class ShareRequest(BaseModel):
 
 
 # Community lesson store (bounded, in-memory — upgrade to SQLite for production)
-_MAX_COMMUNITY_LESSONS = 1000
 _community_lessons: list[dict] = []
 
 
@@ -498,9 +552,8 @@ async def community_share(req: ShareRequest):
     except json.JSONDecodeError:
         return {"error": "Invalid JSON"}
 
-    # Enforce max community lessons
-    if len(_community_lessons) >= _MAX_COMMUNITY_LESSONS:
-        _community_lessons.pop(0)
+    # ED-5: cleanup expired community lessons and enforce size limits
+    _cleanup_expired(_community_lessons, _MAX_COMMUNITY)
 
     # v4.11.2026.1: deep-scrub identity fields out of the whole tree.
     lesson_data = _scrub_pii(lesson_data)
@@ -515,6 +568,7 @@ async def community_share(req: ShareRequest):
         "lesson": lesson_data,
         "rating": 0.0,
         "uses": 0,
+        "_created_at": time.time(),
     }
     _community_lessons.append(entry)
 
@@ -551,9 +605,15 @@ async def community_browse(
     }
 
 
+class CommunityRatingRequest(BaseModel):
+    """ED-9 audit fix: validated rating request body."""
+    rating: float = Field(ge=1.0, le=5.0, description="Rating from 1.0 to 5.0")
+
+
 @router.post("/community/{lesson_id}/rate")
-async def community_rate(lesson_id: int, rating: float = 5.0):
+async def community_rate(lesson_id: int, req: CommunityRatingRequest):
     """Rate a community lesson (1-5 stars)."""
+    rating = req.rating
     for entry in _community_lessons:
         if entry["id"] == lesson_id:
             # Proper cumulative average (M2 audit fix)

@@ -43,7 +43,10 @@ class Database:
         # Initialize tables using a temporary connection
         with self._connect() as conn:
             conn.execute("PRAGMA journal_mode=WAL")
+            # ED-10 audit fix: enforce foreign key constraints
+            conn.execute("PRAGMA foreign_keys=ON")
             self._create_tables_on(conn)
+            self._create_indexes_on(conn)
             self._migrate_on(conn)
 
     @contextmanager
@@ -51,9 +54,11 @@ class Database:
         """Context manager yielding a new SQLite connection.
 
         Commits on success, rolls back on exception, always closes.
+        ED-10 audit fix: PRAGMA foreign_keys=ON on every connection.
         """
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
         try:
             yield conn
             conn.commit()
@@ -207,6 +212,17 @@ class Database:
             );
         """)
 
+    def _create_indexes_on(self, conn: sqlite3.Connection) -> None:
+        """ED-10 audit fix: create performance indexes for common query patterns."""
+        conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_lessons_share_token
+                ON lessons(share_token);
+            CREATE INDEX IF NOT EXISTS idx_lessons_unit_id
+                ON lessons(unit_id);
+            CREATE INDEX IF NOT EXISTS idx_units_teacher_id
+                ON units(teacher_id);
+        """)
+
     def _migrate_on(self, conn: sqlite3.Connection) -> None:
         """Apply any schema migrations for existing databases."""
         # Add scores_json column if it doesn't exist
@@ -255,6 +271,13 @@ class Database:
         return self._fetchone("SELECT * FROM teachers WHERE id=?", (teacher_id,))
 
     def get_default_teacher(self) -> dict[str, Any] | None:
+        """Return the single operator's teacher record.
+
+        Single-operator model (ED-4 audit): this app is designed for one
+        teacher per instance. All requests share the same teacher row.
+        Multi-teacher isolation requires per-request teacher identity,
+        which is a v5.0 goal.  See docs/ARCHITECTURE.md.
+        """
         return self._fetchone("SELECT * FROM teachers ORDER BY created_at DESC LIMIT 1")
 
     # -- units ------------------------------------------------------------

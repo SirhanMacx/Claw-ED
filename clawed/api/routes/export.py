@@ -196,10 +196,48 @@ async def import_lesson(req: ImportRequest):
 
     fetch_url = f"{fetch_server}/share/{token}"
 
+    # ED-7 audit fix: response-size limits, explicit timeouts, and
+    # Content-Type verification to prevent oversized/malformed responses.
+    max_import_bytes = 10 * 1024 * 1024  # 10 MB
+    connect_timeout = 10.0
+    read_timeout = 30.0
+
     try:
-        # follow_redirects=False prevents 302-pivot SSRF.
-        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
-            resp = await client.get(fetch_url)
+        timeout = httpx.Timeout(read_timeout, connect=connect_timeout)
+        async with (
+            httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client,
+            client.stream("GET", fetch_url) as resp,
+        ):
+                if resp.status_code == 404:
+                    return JSONResponse(
+                        {"error": "Lesson not found."}, status_code=404
+                    )
+                if resp.status_code != 200:
+                    return JSONResponse(
+                        {"error": f"Upstream returned {resp.status_code}"},
+                        status_code=502,
+                    )
+
+                # Verify Content-Type before reading body
+                content_type = resp.headers.get("content-type", "")
+                if "application/json" not in content_type:
+                    return JSONResponse(
+                        {"error": f"Unexpected content-type: {content_type}"},
+                        status_code=502,
+                    )
+
+                # Stream with byte budget to prevent OOM
+                chunks: list[bytes] = []
+                total_bytes = 0
+                async for chunk in resp.aiter_bytes():
+                    total_bytes += len(chunk)
+                    if total_bytes > max_import_bytes:
+                        return JSONResponse(
+                            {"error": "Response too large (>10 MB)."},
+                            status_code=502,
+                        )
+                    chunks.append(chunk)
+                body = b"".join(chunks)
     except httpx.HTTPError as exc:
         # v4.11.2026: don't leak raw exception text to the client.
         logger.warning("Import fetch failed for %s: %s", fetch_url, exc)
@@ -207,18 +245,8 @@ async def import_lesson(req: ImportRequest):
             {"error": "Network error fetching shared lesson."}, status_code=502
         )
 
-    if resp.status_code == 404:
-        return JSONResponse(
-            {"error": "Lesson not found."}, status_code=404
-        )
-    if resp.status_code != 200:
-        return JSONResponse(
-            {"error": f"Upstream returned {resp.status_code}"},
-            status_code=502,
-        )
-
     try:
-        data = resp.json()
+        data = json.loads(body)
     except (json.JSONDecodeError, ValueError):
         return JSONResponse(
             {"error": "Invalid JSON from upstream."}, status_code=502

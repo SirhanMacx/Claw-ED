@@ -218,3 +218,24 @@ Teachers ingest their existing curriculum materials. The system chunks them, ext
 | Bot | python-telegram-bot (polling mode) |
 | Linting | Ruff |
 | Testing | pytest + pytest-asyncio |
+
+---
+
+## Trust Model — Single-Operator Architecture (ED-4)
+
+Claw-ED is designed as a **single-teacher-per-instance** application. The `get_default_teacher()` function returns the most recently created teacher record and all API routes implicitly operate on that teacher's data. There is no per-request tenant isolation.
+
+**Current guarantees:**
+- One teacher persona governs all generation and chat.
+- Bearer token auth protects teacher-only routes; students access only their designated endpoints (class code, share token).
+- In-memory stores (classroom sessions, saved sources, community lessons) are process-global.
+
+**What this means:**
+- Running a single Claw-ED instance for multiple independent teachers would leak data across teachers.
+- Each teacher should run their own instance (separate process, separate database).
+
+**Upgrade path (v5.0):**
+1. Add `teacher_id` to every API request via a per-request auth middleware.
+2. Scope all DB queries and in-memory stores by `teacher_id`.
+3. Replace `get_default_teacher()` with `get_teacher_for_request(request)`.
+4. Migrate in-memory stores to a persistent, tenant-scoped backend (Redis or SQLite).

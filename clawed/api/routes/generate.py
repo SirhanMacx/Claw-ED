@@ -62,7 +62,13 @@ class CourseRequest(BaseModel):
 
 
 def _get_persona(db) -> tuple[TeacherPersona | None, str | None]:
-    """Load persona from the default teacher in the DB."""
+    """Load persona from the default teacher in the DB.
+
+    Single-operator model (ED-4 audit): this app is designed for one
+    teacher per instance. ``get_default_teacher()`` returns the single
+    operator's row. Multi-teacher isolation requires per-request teacher
+    identity, which is a v5.0 goal.  See docs/ARCHITECTURE.md.
+    """
     teacher = db.get_default_teacher()
     if not teacher or not teacher.get("persona_json"):
         return None, None
@@ -287,11 +293,17 @@ async def full_pipeline(request: Request, req: FullRequest):
                 title=lesson.title,
             )
 
+        # ED-6 audit fix: track material generation failures instead of
+        # silently swallowing them. Emit warnings and include a summary.
+        materials_total = 0
+        materials_failed = 0
+
         for lid in lesson_ids:
             lesson_row = db.get_lesson(lid)
             if not lesson_row:
                 continue
 
+            materials_total += 1
             yield _sse(
                 "progress", step="materials",
                 status="generating", lesson_id=lid,
@@ -300,6 +312,7 @@ async def full_pipeline(request: Request, req: FullRequest):
             lesson_obj = DailyLesson.model_validate_json(
                 lesson_row["lesson_json"]
             )
+            lesson_title = lesson_obj.title or f"Lesson {lid}"
 
             try:
                 materials = await generate_all_materials(
@@ -308,13 +321,27 @@ async def full_pipeline(request: Request, req: FullRequest):
                 db.update_lesson_materials(
                     lid, materials.model_dump_json()
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                materials_failed += 1
+                logger.warning(
+                    "materials generation failed for lesson %s: %s",
+                    lid, exc,
+                )
+                yield _sse(
+                    "warning",
+                    message=f"Materials generation failed for {lesson_title}",
+                )
 
             yield _sse(
                 "progress", step="materials",
                 status="done", lesson_id=lid,
             )
+
+        yield _sse(
+            "summary",
+            total=materials_total,
+            failed=materials_failed,
+        )
 
         yield _sse(
             "done", unit_id=unit_id,

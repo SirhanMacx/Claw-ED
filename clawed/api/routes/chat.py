@@ -12,12 +12,17 @@ The new ``/api/chat/student`` route validates a ``lesson_id`` that
 actually exists and then runs the same ``student_chat`` generator but
 reads question/history only — it does NOT expose the teacher's bearer
 token to anyone.
+
+ED-3 audit fix: the student route now also requires a ``share_token``
+that matches the lesson's share_token, so only holders of the share
+link (containing both lesson_id and share_token) can access student chat.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import secrets
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -37,6 +42,11 @@ class ChatRequest(BaseModel):
     lesson_id: str = Field(..., min_length=1, max_length=200)
     question: str = Field(..., min_length=1, max_length=2000)
     history: list[dict[str, str]] = Field(default_factory=list, max_length=20)
+
+
+class StudentChatRequest(ChatRequest):
+    """Student chat requires a share_token in addition to lesson_id (ED-3 audit fix)."""
+    share_token: str = Field(..., min_length=1, max_length=200)
 
 
 async def _run_chat(req: ChatRequest) -> JSONResponse | dict:
@@ -94,11 +104,20 @@ async def chat_endpoint(request: Request, req: ChatRequest):
 
 @student_chat_router.post("/chat/student")
 @limiter.limit("60/minute")
-async def chat_student_endpoint(request: Request, req: ChatRequest):
+async def chat_student_endpoint(request: Request, req: StudentChatRequest):
     """Unauthenticated chat endpoint for the LMS-embedded student widget.
 
-    Validated only by the lesson_id — which is unguessable (UUID) and
-    is the same token already present in the public share flow. Rate
-    limited to 60 requests per minute per client IP to prevent abuse.
+    ED-3 audit fix: requires both lesson_id AND share_token. Only someone
+    who has the share link (containing both values) can access student chat.
+    Rate limited to 60 requests per minute per client IP to prevent abuse.
     """
+    db = get_db()
+    lesson_row = db.get_lesson(req.lesson_id)
+    if not lesson_row:
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
+
+    stored_token = lesson_row.get("share_token") or ""
+    if not stored_token or not secrets.compare_digest(req.share_token, stored_token):
+        return JSONResponse({"error": "Invalid share token."}, status_code=403)
+
     return await _run_chat(req)

@@ -151,9 +151,12 @@ def create_app() -> FastAPI:
         Replaces the old ?token= query param flow to prevent token
         leakage through browser history, bookmarks, and referrers.
         """
+        import secrets as _secrets
+
         from clawed.api.deps import get_api_token
         expected = get_api_token()
-        if token != expected:
+        # ED-2 audit fix: timing-safe comparison prevents timing side-channel.
+        if not _secrets.compare_digest(token, expected):
             return JSONResponse({"error": "Invalid token"}, status_code=401)
 
         is_https = os.environ.get("HTTPS", "").lower() in ("1", "true")
