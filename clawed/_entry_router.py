@@ -13,11 +13,15 @@ Usage:
 from __future__ import annotations
 
 import contextlib
+import json
+import logging
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def _data_dir() -> str:
@@ -104,7 +108,7 @@ def _ed_greeting() -> None:
                     name = " ".join(parts[:2])
                 else:
                     name = parts[0]
-    except Exception:
+    except (KeyError, FileNotFoundError, json.JSONDecodeError):
         pass  # Greeting personalization is cosmetic; fall back to default name
 
     greetings = [
@@ -137,7 +141,7 @@ def _show_node_notice() -> None:
             name = tp.get("name", "")
             provider = data.get("provider", "")
             model = data.get(f"{provider}_model", "") if provider else ""
-    except Exception:
+    except (KeyError, FileNotFoundError, json.JSONDecodeError):
         pass  # Banner display is cosmetic; proceed with defaults
 
     print()
@@ -206,7 +210,7 @@ def _maybe_start_bot_background() -> None:
                 stdin=subprocess.DEVNULL,
                 start_new_session=True,
             )
-    except Exception:
+    except (ImportError, OSError):
         pass  # Never block the CLI — bot is best-effort
 
 
@@ -240,7 +244,7 @@ def _check_telegram_token() -> bool:
         token = get_api_key("telegram")
         if token and token.strip():
             return True
-    except Exception:
+    except (ImportError, KeyError, FileNotFoundError):
         pass  # Token check is best-effort; absence means "not configured"
 
     return False
@@ -288,7 +292,7 @@ def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
         val = keyring.get_password("eduagent", f"{provider}_api_key")
         if val:
             return val
-    except Exception:
+    except ImportError:
         pass  # keyring is optional; fall through to secrets.json/env
 
     # 4. secrets.json
@@ -556,7 +560,7 @@ def main() -> None:
         try:
             _inject_config_env()
         except Exception:
-            pass  # Never block startup
+            logger.debug("startup_probe_failed", exc_info=True)
 
         # Permission bypass: DISABLED by default (F3 audit fix).
         # Teachers must explicitly opt in via CLAWED_AUTO_APPROVE=1 env var
@@ -568,7 +572,7 @@ def main() -> None:
             try:
                 from clawed.models import AppConfig
                 _auto = getattr(AppConfig.load(), "auto_approve_tools", False)
-            except Exception:
+            except (FileNotFoundError, json.JSONDecodeError, KeyError):
                 _auto = False  # Config load failure means no bypass
         if _auto and "--dangerously-skip-permissions" not in args:
             args = ["--dangerously-skip-permissions", *args]
@@ -586,7 +590,7 @@ def main() -> None:
                 model = _get_configured_model()
                 if model:
                     args = ["--model", model, *args]
-            except Exception:
+            except (KeyError, FileNotFoundError, json.JSONDecodeError):
                 pass  # Model config is best-effort; Node CLI has its own default
 
         # Ed speaks first — proactive greeting before the TUI cursor appears.

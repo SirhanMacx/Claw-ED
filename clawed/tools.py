@@ -243,7 +243,7 @@ def _load_persona_for_tool(teacher_id: str = ""):
             session = TeacherSession.load(teacher_id)
             if session.persona:
                 return session.persona
-        except Exception:
+        except ImportError:
             pass
 
     # Fallback to file on disk
@@ -251,7 +251,7 @@ def _load_persona_for_tool(teacher_id: str = ""):
         from clawed.paths import data_dir
         from clawed.persona import load_persona
         return load_persona(data_dir() / "persona.json")
-    except Exception:
+    except ImportError:
         return TeacherPersona()
 
 
@@ -377,7 +377,7 @@ async def _tool_read_persona(teacher_id: str = "") -> str:
         if session.persona:
             return session.persona.to_prompt_context()
         return "No persona configured yet. Run 'clawed ingest <folder>' to learn your teaching style."
-    except Exception:
+    except ImportError:
         return "No persona available."
 
 
@@ -451,7 +451,7 @@ def _tool_search_files(query: str) -> str:
                     if query_lower in content.lower():
                         matches.append(f"  {f} (content match)")
             except Exception:
-                pass
+                logger.debug("operation_failed", exc_info=True)
             if len(matches) >= 15:
                 break
     if not matches:

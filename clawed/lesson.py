@@ -252,7 +252,7 @@ def _build_system_prompt(
         soul_path = Path(data_dir) / "workspace" / "soul.md"
         if soul_path.exists():
             soul_context = soul_path.read_text(encoding="utf-8")[:2000]
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
     # Base prompt — subject-neutral. Specific pedagogy comes from skills.
@@ -273,7 +273,7 @@ def _build_system_prompt(
             skill = library.get(effective_subject)
             if skill:
                 system_parts.append(skill.to_system_context())
-        except Exception:
+        except ImportError:
             pass
 
     if persona_context:
@@ -407,7 +407,7 @@ async def generate_master_content(
                 unit.standards = [
                     f"{code}: {desc}" for code, desc, _ in results[:5]
                 ]
-        except Exception:
+        except ImportError:
             pass
 
     # Pull few-shot examples from the corpus for this subject/grade
@@ -467,7 +467,7 @@ async def generate_master_content(
         classroom_ctx = profile_to_prompt_context()
         if classroom_ctx:
             prompt = classroom_ctx + "\n\n" + prompt
-    except Exception:
+    except ImportError:
         pass
 
     # Inject knowledge graph connections into prompt
@@ -481,7 +481,7 @@ async def generate_master_content(
         )
         if kg_ctx:
             prompt = kg_ctx + "\n\n" + prompt
-    except Exception:
+    except ImportError:
         pass
 
     # v4.10: Brain-first lookup — inject brain context before generation
@@ -723,7 +723,7 @@ def _record_generation(
     try:
         from clawed.agent_core.identity import get_teacher_id
         teacher_id = get_teacher_id() or "default"
-    except Exception:
+    except ImportError:
         teacher_id = "default"
 
     # Synthesize a stable unit_id from the unit title so repeated

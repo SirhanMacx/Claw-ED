@@ -10,6 +10,7 @@ Produces 384-dimensional dense vectors — compact, fast, high quality.
 """
 from __future__ import annotations
 
+import json
 import logging
 import math
 import os
@@ -332,7 +333,7 @@ def get_embedder() -> ONNXMiniLMEmbedder | OllamaEmbedder | TFIDFEmbedder:
             if embed_models:
                 logger.debug("Using Ollama embedder: %s", embed_models[0])
                 return OllamaEmbedder(model=embed_models[0])
-    except Exception:
+    except (json.JSONDecodeError, KeyError):
         pass
 
     # 3. TF-IDF fallback

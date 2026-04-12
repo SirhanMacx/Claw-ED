@@ -72,7 +72,7 @@ def workspace_regenerate(
         if pp.exists():
             persona = load_persona(pp)
             console.print(f"[dim]Loaded persona from {pp}[/dim]")
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
     if persona is None:
@@ -86,7 +86,7 @@ def workspace_regenerate(
                 from clawed.persona import load_persona
                 persona = load_persona(alt_path)
                 console.print(f"[dim]Loaded persona from {alt_path}[/dim]")
-            except Exception:
+            except ImportError:
                 pass
 
     if persona is None:

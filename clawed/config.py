@@ -46,7 +46,7 @@ def _try_keyring_get(key: str) -> str | None:
     try:
         import keyring
         return keyring.get_password(_SERVICE_NAME, key)
-    except Exception:
+    except ImportError:
         return None  # keyring is optional; silently fall through to env/file
 
 
@@ -55,7 +55,7 @@ def _try_keyring_set(key: str, value: str) -> bool:
         import keyring
         keyring.set_password(_SERVICE_NAME, key, value)
         return True
-    except Exception:
+    except ImportError:
         return False  # keyring is optional; caller checks return value
 
 
@@ -64,7 +64,7 @@ def _try_keyring_delete(key: str) -> bool:
         import keyring
         keyring.delete_password(_SERVICE_NAME, key)
         return True
-    except Exception:
+    except ImportError:
         return False  # keyring is optional; caller checks return value
 
 

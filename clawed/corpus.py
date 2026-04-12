@@ -207,7 +207,7 @@ def get_examples(
                 "framework": row["framework"],
             }
             examples.append(content)
-        except Exception:
+        except (json.JSONDecodeError, KeyError):
             continue
 
     # Update usage count
@@ -345,5 +345,5 @@ def _sanitize_content(content: dict) -> dict:
 
     try:
         return json.loads(content_str)
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         return content

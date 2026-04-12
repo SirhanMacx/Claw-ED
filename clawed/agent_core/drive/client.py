@@ -221,6 +221,6 @@ class DriveClient:
                     .execute()
                 )
                 content = export.decode("utf-8") if isinstance(export, bytes) else str(export)
-            except Exception:
+            except OSError:
                 pass
         return {**metadata, "content": content}

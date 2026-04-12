@@ -333,7 +333,7 @@ class LLMClient:
             ws_context = inject_workspace_context()
             if ws_context:
                 system = (system + ws_context) if system else ws_context
-        except Exception:
+        except ImportError:
             pass  # Workspace not available -- that's fine
 
         # Inject improvement context from the memory engine (feedback loop).
@@ -346,7 +346,7 @@ class LLMClient:
             improvement_ctx = build_improvement_context(subject=subject)
             if improvement_ctx:
                 system = (system + "\n" + improvement_ctx) if system else improvement_ctx
-        except Exception:
+        except ImportError:
             pass  # Memory engine not available -- that's fine
 
         return system
@@ -439,7 +439,7 @@ class LLMClient:
             if isinstance(result, (dict, list)):
                 return result
         except Exception:
-            pass
+            logger.debug("operation_failed", exc_info=True)
 
         # Step 3: raise a clear error with raw LLM output for debugging
         preview = raw[:500] + ("..." if len(raw) > 500 else "")
@@ -917,7 +917,7 @@ class LLMClient:
                         try:
                             err_body = resp.json()
                             err_msg = err_body.get("error", "")
-                        except Exception:
+                        except (json.JSONDecodeError, KeyError):
                             err_msg = ""
                         raise ConnectionError(
                             f"Ollama model '{model}' not installed.\n"

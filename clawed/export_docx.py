@@ -57,7 +57,7 @@ def _docx_add_image(
                 from docx.shared import RGBColor
                 cap_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
             return True
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass  # Images are a bonus, not a requirement
     return False
 
@@ -104,7 +104,7 @@ def _docx_add_content_image(
                 from docx.shared import RGBColor
                 cap_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
             return True
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
     return False
 
@@ -209,7 +209,7 @@ def export_lesson_docx(
             _cfg = _AppConfig.load()
             if _cfg.teacher_profile and _cfg.teacher_profile.name:
                 teacher_display_name = _cfg.teacher_profile.name
-        except Exception:
+        except ImportError:
             pass
     if not teacher_display_name:
         teacher_display_name = "Teacher"
@@ -240,7 +240,7 @@ def export_lesson_docx(
             },
         )
         header_para._p.get_or_add_pPr().append(_shd)
-    except Exception:
+    except ImportError:
         pass
 
     # ── Professional footer ──────────────────────────────────────────
@@ -291,7 +291,7 @@ def export_lesson_docx(
                     f"Aligned to {cfg.teacher_profile.state} "
                     f"{persona.subject_area or 'education'} standards"
                 ]
-        except Exception:
+        except ImportError:
             pass
 
     if lesson.standards:
@@ -426,7 +426,7 @@ def export_lesson_docx(
                         },
                     )
                     cell._tc.get_or_add_tcPr().append(_cell_shd)
-    except Exception:
+    except ImportError:
         pass  # Theming is cosmetic — don't break export
 
     out = _resolve_output(output_dir, lesson, ".docx")
@@ -525,7 +525,7 @@ def export_student_handout(
             _cfg = _AppConfig.load()
             if _cfg.teacher_profile and _cfg.teacher_profile.name:
                 _handout_teacher_name = _cfg.teacher_profile.name
-        except Exception:
+        except ImportError:
             pass
     if not _handout_teacher_name:
         _handout_teacher_name = "Teacher"

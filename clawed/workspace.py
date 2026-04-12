@@ -501,7 +501,7 @@ def init_workspace(
             pp = persona_path()
             if pp.exists():
                 persona = load_persona(pp)
-        except Exception:
+        except (FileNotFoundError, OSError):
             pass
 
     if persona is None:

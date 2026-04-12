@@ -36,7 +36,7 @@ def _log_error(error: Exception) -> None:
                 f"[{datetime.datetime.now(datetime.timezone.utc).isoformat()}] "
                 f"{type(error).__name__}: {error}\n"
             )
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass  # Last-resort error logger — cannot itself raise or log
 
 

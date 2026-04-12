@@ -35,7 +35,7 @@ def get_google_api_key() -> str | None:
         stored = get_api_key("google")
         if stored:
             return stored
-    except Exception:
+    except ImportError:
         pass  # Key retrieval is optional; caller handles None
     return None
 

@@ -352,7 +352,7 @@ def process_feedback(
             if cfg.teacher_profile and cfg.teacher_profile.subjects:
                 subject = cfg.teacher_profile.subjects[0]
         except Exception:
-            pass
+            logger.debug("operation_failed", exc_info=True)
 
     # Extract patterns from the rated lesson
     patterns = extract_lesson_patterns(lesson, rating, notes, edited_sections, subject=subject)

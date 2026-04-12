@@ -38,10 +38,13 @@ Each page follows the compiled-truth + timeline pattern:
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Valid page types
 PAGE_TYPES = (
@@ -251,6 +254,7 @@ class BrainStore:
         try:
             return BrainPage.parse(path.read_text(encoding="utf-8"))
         except Exception:
+            logger.debug("operation_failed", exc_info=True)
             return None
 
     def exists(self, page_type: str, slug: str) -> bool:

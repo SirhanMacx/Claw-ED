@@ -89,7 +89,7 @@ def _log_error(error: Exception) -> None:
             import datetime
 
             f.write(f"[{datetime.datetime.now(datetime.timezone.utc).isoformat()}] {type(error).__name__}: {error}\n")
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
 
@@ -296,7 +296,7 @@ class StudentTelegramBot:
             student_name = f"student_{student_id}"
             topic = f"[{code}] Q: {text[:100]}"
             update_student_profile(student_name, topic)
-        except Exception:
+        except ImportError:
             pass
 
 

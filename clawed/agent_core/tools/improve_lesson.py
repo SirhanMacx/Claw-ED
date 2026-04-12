@@ -222,7 +222,7 @@ class ImproveLessonTool:
 
                 persona = TeacherPersona(**context.persona)
                 persona_context = persona.to_prompt_context()
-            except Exception:
+            except ImportError:
                 pass
 
         prompt = (
@@ -276,7 +276,7 @@ class ImproveLessonTool:
             from clawed.humanize import humanize
 
             improved_text = humanize(improved_text)
-        except Exception:
+        except ImportError:
             pass
 
         # ── Build the response ───────────────────────────────────────

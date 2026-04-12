@@ -77,7 +77,7 @@ class ProgressHandler:
                 f"  Average rating: {stats.get('overall_avg_rating', 0):.1f}/5",
             ]
             return GatewayResponse(text="\n".join(lines))
-        except Exception:
+        except ImportError:
             return GatewayResponse(text="No progress data yet. Generate some lessons first!")
 
 class ModelSwitchHandler:

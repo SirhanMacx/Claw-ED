@@ -108,7 +108,7 @@ class ActivityLog(Static):
                 pass
             except asyncio.CancelledError:
                 return
-            except Exception:
+            except (KeyError, ValueError):
                 await asyncio.sleep(0.5)
 
     def clear_log(self) -> None:

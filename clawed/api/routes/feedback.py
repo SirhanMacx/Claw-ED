@@ -83,7 +83,7 @@ async def submit_feedback(req: FeedbackRequest):
                     source="teacher",
                 )
                 corpus_contributed = True
-        except Exception:
+        except (json.JSONDecodeError, KeyError):
             pass  # Corpus contribution is best-effort; never block feedback submission
 
     msg = "Feedback recorded. Thank you!"
@@ -121,7 +121,7 @@ def _server_side_teacher_id() -> str:
     try:
         from clawed.agent_core.identity import get_teacher_id as _gtid
         return _gtid() or "default"
-    except Exception:
+    except ImportError:
         return "default"
 
 

@@ -386,7 +386,7 @@ def _build_bundle_response(
                     std_str += f" (+{len(standards_list) - 4} more)"
                 quality_parts.append(f"Standards: {std_str}")
         except Exception:
-            pass
+            logger.debug("operation_failed", exc_info=True)
         if quality_parts:
             lines.append(f"\nQuality: {' | '.join(quality_parts)}")
     else:
@@ -585,7 +585,7 @@ class GenerateLessonBundleTool:
                     "consider regenerating with more specific instructions"
                 )
         except Exception:
-            pass
+            logger.debug("operation_failed", exc_info=True)
 
         return _build_bundle_response(
             master, generated_files, errors, side_effects,

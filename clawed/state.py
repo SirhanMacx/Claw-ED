@@ -56,6 +56,7 @@ def _get_conn():
         yield conn
         conn.commit()
     except Exception:
+        logger.debug("operation_failed", exc_info=True)
         conn.rollback()
         raise
     finally:

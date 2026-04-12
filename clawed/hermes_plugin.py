@@ -58,7 +58,7 @@ async def _transcribe_attachments(attachments: list[str]) -> str:
                 text = await transcribe_audio(Path(att))
                 if text:
                     parts.append(text)
-            except Exception:
+            except (FileNotFoundError, OSError):
                 pass  # Skip files that fail to transcribe
     return " ".join(parts)
 

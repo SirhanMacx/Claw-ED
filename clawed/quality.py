@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from clawed.llm import LLMClient
@@ -180,5 +181,5 @@ async def score_voice_match(
         result = _json.loads(cleaned)
         score = float(result.get("score", 3.0))
         return max(1.0, min(5.0, score))  # Clamp to valid range
-    except Exception:
+    except (json.JSONDecodeError, KeyError):
         return 3.0  # Fail neutral — NLAH: do not block delivery

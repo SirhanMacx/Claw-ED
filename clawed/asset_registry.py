@@ -315,7 +315,7 @@ class AssetRegistry:
 
         try:
             file_size = Path(source_path).stat().st_size if Path(source_path).exists() else 0
-        except Exception:
+        except (FileNotFoundError, OSError):
             file_size = 0
 
         completeness = 'complete' if material_type in ('slideshow', 'assessment', 'handout') else 'unknown'

@@ -166,7 +166,7 @@ def save_persona(persona: TeacherPersona, output_dir: Path) -> Path:
                 persona = persona.model_copy(
                     update={"name": f"{cfg.teacher_profile.name}'s Teaching Style"}
                 )
-        except Exception:
+        except ImportError:
             pass
 
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -137,7 +137,7 @@ class CurriculumKG:
                 from clawed.agent_core.memory.embeddings import get_embedder
                 vec = get_embedder().embed(name)
                 embedding_blob = _embed_to_blob(vec)
-            except Exception:
+            except ImportError:
                 pass
 
         with sqlite3.connect(self._db_path) as conn:
@@ -439,7 +439,7 @@ class CurriculumKG:
                 names.append(r["name"])
                 types.append(r["entity_type"])
                 ids.append(r["id"])
-            except Exception:
+            except (KeyError, ValueError):
                 continue
 
         if not vecs:
@@ -491,7 +491,7 @@ class CurriculumKG:
                         (blob, r["id"]),
                     )
                     count += 1
-                except Exception:
+                except (KeyError, ValueError):
                     continue
         logger.info("Batch embedded %d/%d entities", count, len(rows))
         return count

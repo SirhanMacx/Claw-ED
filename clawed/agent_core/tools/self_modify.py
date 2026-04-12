@@ -192,6 +192,7 @@ class WriteFileTool:
                     str(full_path).startswith(str(output_dir.resolve()))):
                 return ToolResult(text="ERROR: path must be within workspace or output directory")
         except Exception:
+            logger.debug("operation_failed", exc_info=True)
             return ToolResult(text="ERROR: invalid path")
 
         try:
@@ -278,6 +279,7 @@ class ReadFileTool:
             data_root = data_dir.resolve()
             output_root = output_dir.resolve()
         except Exception:
+            logger.debug("operation_failed", exc_info=True)
             return ToolResult(text="ERROR: could not resolve data/output directories")
 
         # Try workspace first, then output
@@ -306,7 +308,7 @@ class ReadFileTool:
                         text=f"Contents of {full_path}:\n\n{content[:8000]}",
                         data={"path": str(full_path), "size": len(content)},
                     )
-            except Exception:
+            except (FileNotFoundError, OSError):
                 continue
 
         return ToolResult(text=f"File not found or out of bounds: {rel_path}")

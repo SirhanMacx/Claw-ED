@@ -13,6 +13,7 @@ import logging
 import os
 from pathlib import Path
 
+import httpx
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
@@ -159,7 +160,6 @@ def _detect_available_models() -> tuple[LLMProvider | None, str]:
 
     # Check local Ollama
     try:
-        import httpx
         resp = httpx.get("http://localhost:11434/api/tags", timeout=3.0)
         if resp.status_code == 200:
             data = resp.json()
@@ -173,7 +173,7 @@ def _detect_available_models() -> tuple[LLMProvider | None, str]:
             if models:
                 return LLMProvider.OLLAMA, f"Ollama running with {models[0]}"
             return LLMProvider.OLLAMA, "Ollama running (no models pulled yet)"
-    except Exception:
+    except (ConnectionError, httpx.ConnectError, OSError):
         pass  # Ollama detection is a probe; absence is normal
 
     return None, (
@@ -197,7 +197,7 @@ def _open_folder_picker() -> str | None:
         )
         root.destroy()
         return folder if folder else None
-    except Exception:
+    except ImportError:
         return None  # tkinter may not be available (headless, WSL); fall back to path input
 
 
@@ -532,8 +532,6 @@ def _setup_ollama_cloud() -> AppConfig | None:
 
 def _setup_local_ollama(local_ollama: bool) -> AppConfig:
     """Configure local Ollama provider. Always returns a config."""
-    import httpx
-
     config = AppConfig(provider=LLMProvider.OLLAMA)
     config.ollama_base_url = "http://localhost:11434"
     if local_ollama:
@@ -652,11 +650,10 @@ def quick_model_setup() -> str:
     # Detect local Ollama
     local_ollama = False
     try:
-        import httpx
         resp = httpx.get("http://localhost:11434/api/tags", timeout=3.0)
         if resp.status_code == 200:
             local_ollama = True
-    except Exception:
+    except (ConnectionError, httpx.ConnectError, OSError):
         pass  # Ollama not running is normal; just hide the menu option
 
     # Show provider menu
@@ -853,8 +850,8 @@ def run_setup_wizard(reset: bool = False) -> AppConfig:
         try:
             from clawed.agent_core.identity import reset_cache
             reset_cache()
-        except Exception:
-            pass  # Cache reset is best-effort; stale cache clears on next startup
+        except OSError:
+            logger.debug("cache_reset_failed", exc_info=True)
         if local_path:
             _ingest_materials(local_path, config)
         if drive_url:
@@ -976,8 +973,8 @@ def _run_onboarding_legacy() -> AppConfig:
         try:
             from clawed.agent_core.identity import reset_cache
             reset_cache()
-        except Exception:
-            pass  # Cache reset is best-effort; stale cache clears on next startup
+        except OSError:
+            logger.debug("cache_reset_failed", exc_info=True)
         if local_path:
             _ingest_materials(local_path, config)
         if drive_url:
@@ -1017,7 +1014,7 @@ def _run_onboarding_legacy() -> AppConfig:
                     )
                 )
         except Exception:
-            pass  # Sample lesson is best-effort
+            logger.warning("sample_lesson_failed", exc_info=True)
 
     # ── Success ──
     console.print(
@@ -1053,8 +1050,8 @@ def check_first_run() -> bool:
         try:
             cfg = AppConfig()
             cfg.save()
-        except Exception:
-            pass
+        except OSError:
+            logger.debug("minimal_config_save_failed", exc_info=True)
         return True
 
     try:

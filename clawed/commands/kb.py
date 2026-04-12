@@ -32,7 +32,7 @@ def _load_curriculum_state() -> dict:
     if _CURRICULUM_STATE.exists():
         try:
             return json.loads(_CURRICULUM_STATE.read_text(encoding="utf-8"))
-        except Exception:
+        except (json.JSONDecodeError, FileNotFoundError, OSError):
             return {}
     return {}
 
@@ -68,7 +68,7 @@ def kb_stats() -> None:
             ):
                 corpus_types[r["content_type"]] = r["cnt"]
             conn.close()
-        except Exception:
+        except (sqlite3.OperationalError, OSError):
             pass
 
     # Count curriculum KB chunks
@@ -79,7 +79,7 @@ def kb_stats() -> None:
             row = conn.execute("SELECT COUNT(*) as cnt FROM chunks").fetchone()
             kb_chunks = row[0] if row else 0
             conn.close()
-        except Exception:
+        except (sqlite3.OperationalError, OSError):
             pass
 
     # Course info from curriculum state
@@ -200,7 +200,7 @@ def kb_search(
                     "created": r["created_at"] or "",
                 })
             conn.close()
-        except Exception:
+        except (sqlite3.OperationalError, OSError):
             pass
 
     # 2. Search curriculum_state.json

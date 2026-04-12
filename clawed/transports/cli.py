@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from rich.live import Live
 from rich.markdown import Markdown
@@ -13,6 +14,8 @@ from rich.spinner import Spinner
 from clawed.commands._helpers import console
 from clawed.gateway import Gateway
 from clawed.state import TeacherSession
+
+logger = logging.getLogger(__name__)
 
 _WELCOME = """\
 **Welcome back to Claw-ED!** Ready to plan some great lessons.
@@ -58,6 +61,7 @@ async def run_chat(teacher_id: str = "local-teacher") -> None:
             try:
                 result = await gateway.handle("hello", teacher_id)
             except Exception:
+                logger.debug("operation_failed", exc_info=True)
                 result = None
 
         if result and result.text and "provider key" not in result.text.lower():

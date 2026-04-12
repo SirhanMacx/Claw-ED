@@ -64,7 +64,7 @@ def get_teacher_name() -> str:
         tp = config.teacher_profile
         if tp and tp.name:
             return tp.name
-    except Exception:
+    except ImportError:
         pass
     return "Teacher"
 

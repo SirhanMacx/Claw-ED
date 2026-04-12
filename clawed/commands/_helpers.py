@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 from pathlib import Path
 
@@ -10,6 +11,8 @@ import typer
 from rich.console import Console
 
 from clawed.models import AppConfig, TeacherPersona
+
+logger = logging.getLogger(__name__)
 
 
 def _is_utf8_terminal() -> bool:
@@ -20,6 +23,7 @@ def _is_utf8_terminal() -> bool:
         encoding = locale.getpreferredencoding(False)
         return encoding.lower().replace("-", "") in ("utf8",)
     except Exception:
+        logger.warning("operation_failed", exc_info=True)
         return False
 
 
@@ -36,6 +40,7 @@ def _make_console() -> Console:
         # Force UTF-8 encoding on the output stream so Rich can render
         # Unicode content (→, —, ", etc.) even on cp1252 terminals.
         import io
+
         if hasattr(sys.stdout, "buffer"):
             sys.stdout = io.TextIOWrapper(
                 sys.stdout.buffer, encoding="utf-8", errors="replace"
@@ -82,7 +87,7 @@ def get_default_subject() -> str:
         if subjects:
             return subjects[0]
     except Exception:
-        pass
+        logger.warning("operation_failed", exc_info=True)
     return "General"
 
 
@@ -117,6 +122,7 @@ def check_api_key_or_exit() -> None:
     try:
         cfg = AppConfig.load()
     except Exception:
+        logger.warning("operation_failed", exc_info=True)
         console.print(
             "[red]Claw-ED is not configured yet.[/red]\n"
             "Run [bold]clawed setup[/bold] to pick your AI provider and add an API key."
@@ -182,7 +188,7 @@ def load_persona_or_exit() -> TeacherPersona:
                 )
                 return persona
     except Exception:
-        pass
+        logger.warning("operation_failed", exc_info=True)
 
     # Default starter
     persona = get_starter_persona("social_studies")

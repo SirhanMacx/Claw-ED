@@ -311,7 +311,7 @@ async def _task_morning_prep() -> str:
                 f"Lesson {next_brief.lesson_number}: {next_brief.topic}\n\n"
                 f"Reply 'show lesson {next_brief.lesson_number}' to review it."
             )
-        except Exception:
+        except ImportError:
             pass  # Telegram not configured — that's fine
 
     except Exception as exc:
@@ -403,7 +403,7 @@ async def _task_weekly_plan() -> str:
                 f"Generated {generated_count} lessons:\n{topics}\n\n"
                 f"Reply 'show lesson 1' to start reviewing."
             )
-        except Exception:
+        except ImportError:
             pass
 
     except Exception as exc:

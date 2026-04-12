@@ -177,7 +177,7 @@ class IngestHandler:
                 if config.teacher_profile and config.teacher_profile.name:
                     persona.name = f"{config.teacher_profile.name} Teaching Persona"
             except Exception:
-                pass
+                logger.debug("operation_failed", exc_info=True)
             try:
                 from clawed.paths import workspace_dir as _ws_dir
                 _id_path = _ws_dir() / "identity.md"
@@ -189,7 +189,7 @@ class IngestHandler:
                         _tname = _name_match.group(1).strip()
                         if _tname and _tname != "Teacher":
                             persona.name = f"{_tname} Teaching Persona"
-            except Exception:
+            except (FileNotFoundError, OSError):
                 pass
 
             from clawed.paths import data_dir as _dd
@@ -257,7 +257,7 @@ class IngestHandler:
                     try:
                         from clawed.ingestor import extract_rich
                         extraction = extract_rich(Path(doc.source_path))
-                    except Exception:
+                    except (FileNotFoundError, OSError):
                         pass
                 aid = registry.register_asset(
                     teacher_id=teacher_id,

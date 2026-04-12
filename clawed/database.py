@@ -11,12 +11,15 @@ Storage locations (consolidation planned for v0.2):
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def _default_db_path() -> Path:
@@ -63,6 +66,7 @@ class Database:
             yield conn
             conn.commit()
         except Exception:
+            logger.debug("operation_failed", exc_info=True)
             conn.rollback()
             raise
         finally:
@@ -228,7 +232,7 @@ class Database:
         # Add scores_json column if it doesn't exist (exception = column missing)
         try:
             conn.execute("SELECT scores_json FROM lessons LIMIT 1")
-        except Exception:
+        except sqlite3.OperationalError:
             conn.execute("ALTER TABLE lessons ADD COLUMN scores_json TEXT")
 
     def close(self) -> None:

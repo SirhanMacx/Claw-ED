@@ -369,7 +369,7 @@ async def query_wiki(question: str) -> QueryResult:
             try:
                 import json_repair
                 selected = json_repair.loads(pick_text)
-            except Exception:
+            except ImportError:
                 pass
     except (json.JSONDecodeError, TypeError):
         pass

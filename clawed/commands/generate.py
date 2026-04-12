@@ -13,6 +13,7 @@ Split modules (imported at bottom):
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -79,7 +80,7 @@ def _search_materials_cli(topic: str) -> str:
                 console.print(f"[dim]Found [{type_label}] \"{a['title']}\"[/dim]")
             for link in yt_links:
                 console.print(f"[dim]Found YouTube: {link['url']}[/dim]")
-    except Exception:
+    except ImportError:
         pass
     try:
         from clawed.agent_core.memory.curriculum_kb import CurriculumKB
@@ -101,7 +102,7 @@ def _search_materials_cli(topic: str) -> str:
                     )
                 if not assets:
                     console.print(f"[dim]Found {len(kb_parts)} related materials in knowledge base[/dim]")
-    except Exception:
+    except ImportError:
         pass
     return kb_prompt_section
 
@@ -121,6 +122,7 @@ def _run_multi_agent(topic, grade, subject, persona, kb_prompt_section, lesson_n
             )
         )
     except Exception:
+        logger.warning("operation_failed", exc_info=True)
         master = None
     if master is None:
         console.print("[yellow]Multi-agent didn't complete. Using single-agent instead...[/yellow]")
@@ -171,7 +173,7 @@ def _show_quality_review(export_path) -> None:
                         f"{issue['location']}: {issue['description']}"
                         f"[/{_sev.get(issue['severity'], 'dim')}]"
                     )
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
 
@@ -314,7 +316,7 @@ def lesson(
             if _voice_score and _voice_score > 0:
                 _color = "green" if _voice_score >= 3.5 else "yellow" if _voice_score >= 2.5 else "red"
                 console.print(f"  Voice match: [{_color}]{_voice_score:.1f}/5.0[/{_color}]")
-    except Exception:
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
         pass
 
     # Export

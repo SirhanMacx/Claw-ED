@@ -181,7 +181,7 @@ async def import_lesson(req: ImportRequest):
                 if extra_host:
                     _allowed_hosts.add(extra_host.lower())
             except Exception:
-                pass
+                logger.warning("operation_failed", exc_info=True)
     if scheme not in {"http", "https"} or host not in _allowed_hosts:
         return JSONResponse(
             {

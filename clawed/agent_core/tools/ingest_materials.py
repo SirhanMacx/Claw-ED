@@ -81,7 +81,7 @@ class IngestMaterialsTool:
                     if context.config and context.config.teacher_profile and context.config.teacher_profile.name:
                         persona.name = f"{context.config.teacher_profile.name} Teaching Persona"
                 except Exception:
-                    pass
+                    logger.debug("operation_failed", exc_info=True)
                 try:
                     from clawed.paths import workspace_dir
                     _id_path = workspace_dir() / "identity.md"
@@ -93,7 +93,7 @@ class IngestMaterialsTool:
                             _tname = _name_match.group(1).strip()
                             if _tname and _tname != "Teacher":
                                 persona.name = f"{_tname} Teaching Persona"
-                except Exception:
+                except (FileNotFoundError, OSError):
                     pass
                 from clawed.paths import data_dir
                 save_persona(persona, data_dir())
@@ -101,9 +101,9 @@ class IngestMaterialsTool:
                 try:
                     from clawed.persona_evolution import record_ingestion_changes
                     record_ingestion_changes(old_persona=None, new_persona=persona)
-                except Exception:
+                except ImportError:
                     pass
-            except Exception:
+            except ImportError:
                 pass
 
             # Generate reading report
@@ -125,7 +125,7 @@ class IngestMaterialsTool:
                     report_path = data_dir / "workspace" / "reading_report.md"
                     report_path.parent.mkdir(parents=True, exist_ok=True)
                     report_path.write_text(report_text, encoding="utf-8")
-            except Exception:
+            except (FileNotFoundError, OSError):
                 # Fallback to basic summary if report generation fails
                 if persona:
                     style = persona.teaching_style.value.replace("_", " ").title()

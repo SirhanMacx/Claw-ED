@@ -83,7 +83,7 @@ async def deep_research(
                         f"From '{r['doc_title']}': {r['chunk_text'][:200]}"
                         for r in results
                     )
-            except Exception:
+            except ImportError:
                 pass
 
             # Then ask LLM to synthesize
@@ -129,7 +129,7 @@ async def deep_research(
     try:
         from clawed.humanize import humanize
         report = humanize(report)
-    except Exception:
+    except ImportError:
         pass
 
     logger.info("Deep research complete: %d chars, %d findings", len(report), len(findings))

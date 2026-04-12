@@ -92,7 +92,7 @@ def standards_list(
             skill = lib.get(subject)
             if skill:
                 canonical = resolve_subject(skill.subject)
-        except Exception:
+        except ImportError:
             pass
     if canonical is None:
         console.print(

@@ -262,7 +262,7 @@ def rate_lesson(teacher_id: str, lesson_id: str, rating: int, notes: str = "") -
                     ).fetchone()
                     if unit_row and unit_row["subject"]:
                         subject = unit_row["subject"]
-            except Exception:
+            except (ConnectionError, OSError):
                 pass
             # Fallback to teacher profile if no unit subject found
             if not subject:
@@ -271,7 +271,7 @@ def rate_lesson(teacher_id: str, lesson_id: str, rating: int, notes: str = "") -
                     cfg = AppConfig.load()
                     if cfg.teacher_profile and cfg.teacher_profile.subjects:
                         subject = cfg.teacher_profile.subjects[0]
-                except Exception:
+                except ImportError:
                     pass
             memory_process(lesson_obj, rating, notes, subject=subject)
             # Track lesson metadata for rule-based quality insights

@@ -1021,6 +1021,7 @@ async def generate_master_content_phased(
         )
         standards_text = format_standards_for_prompt(standards_list)
     except Exception:
+        logger.debug("operation_failed", exc_info=True)
         standards_text = "\n".join(f"- {s}" for s in unit.standards)
 
     # Phase calls skip few-shot context entirely — the phase prompts have

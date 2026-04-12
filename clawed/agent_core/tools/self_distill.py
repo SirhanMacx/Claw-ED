@@ -62,7 +62,7 @@ class SelfDistillTool:
                     )
 
                 llm_fn = _generate
-            except Exception:
+            except ImportError:
                 pass
 
             result = self_distill(

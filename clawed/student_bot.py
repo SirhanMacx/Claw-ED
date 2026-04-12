@@ -12,6 +12,7 @@ import contextlib
 import json
 import re
 import secrets
+import sqlite3
 import string
 import uuid
 from dataclasses import dataclass, field
@@ -259,7 +260,7 @@ class StudentBot:
                     ).fetchone()
                     if row is not None:
                         return "hint" if row["hint_mode"] else "answer"
-                except Exception:
+                except (sqlite3.OperationalError, OSError):
                     pass  # Table may not exist yet
         info = self.get_class(class_code)
         if info and info.hint_mode:
@@ -656,7 +657,7 @@ class StudentBot:
                 last_active=progress.last_active,
                 struggle_topics=progress.struggle_topics,
             )
-        except Exception:
+        except ImportError:
             pass  # Progress tracking is best-effort
 
     def get_student_progress(self, class_code: str) -> list[dict]:
@@ -670,5 +671,5 @@ class StudentBot:
 
             store = StudentProgressStore()
             return store.get_class_progress(class_code)
-        except Exception:
+        except ImportError:
             return []

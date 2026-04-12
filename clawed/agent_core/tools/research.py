@@ -96,7 +96,7 @@ class ResearchTopicTool:
                             "url": url,
                             "excerpt": text[:2000],
                         })
-                except Exception:
+                except (ConnectionError, OSError):
                     pass
 
             # Build structured result

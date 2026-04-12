@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import typer
@@ -18,6 +19,8 @@ from clawed.commands._helpers import output_dir as _output_dir
 from clawed.commands._helpers import run_async as _run_async
 from clawed.commands.generate import generate_app
 from clawed.models import AppConfig
+
+logger = logging.getLogger(__name__)
 
 # ── Ingest command ───────────────────────────────────────────────────────
 
@@ -49,6 +52,7 @@ def _ingest_json(*, path):
             existing = load_persona(persona_path)
             persona = merge_persona(existing, new_persona)
         except Exception:
+            logger.warning("operation_failed", exc_info=True)
             persona = new_persona
     else:
         persona = new_persona
@@ -177,6 +181,7 @@ def ingest(
             persona = merge_persona(old_persona, new_persona)
             console.print("[cyan]Merged with existing persona.[/cyan]")
         except Exception:
+            logger.warning("operation_failed", exc_info=True)
             persona = new_persona
     else:
         persona = new_persona
@@ -187,7 +192,7 @@ def ingest(
         if cfg.teacher_profile and cfg.teacher_profile.name:
             persona.name = f"{cfg.teacher_profile.name} Teaching Persona"
     except Exception:
-        pass
+        logger.warning("operation_failed", exc_info=True)
     # Also check identity.md
     try:
         from clawed.paths import workspace_dir
@@ -200,7 +205,7 @@ def ingest(
                 teacher_name = name_match.group(1).strip()
                 if teacher_name and teacher_name != "Teacher":
                     persona.name = f"{teacher_name} Teaching Persona"
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
     out = save_persona(persona, _output_dir())
@@ -209,7 +214,7 @@ def ingest(
     try:
         from clawed.persona_evolution import record_ingestion_changes
         record_ingestion_changes(old_persona=old_persona, new_persona=persona)
-    except Exception:
+    except ImportError:
         pass
 
     # Full pipeline: images + assets + chunks + KG + wiki
@@ -239,7 +244,7 @@ def ingest(
             )
         if ingest_result["wiki_articles"]:
             kb_msg += f" · Wiki: {ingest_result['wiki_articles']} articles"
-    except Exception:
+    except ImportError:
         pass
 
     info_parts = [

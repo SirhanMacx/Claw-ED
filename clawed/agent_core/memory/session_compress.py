@@ -208,7 +208,7 @@ def compress_old_sessions(teacher_id: str, keep_recent: int = KEEP_RECENT) -> in
         from clawed.agent_core.memory.embeddings import get_embedder
         vec = get_embedder().embed(summary_text)
         embedding_blob = struct.pack(f"<{len(vec)}f", *vec)
-    except Exception:
+    except ImportError:
         pass
 
     # Determine session date from the turns
@@ -302,7 +302,7 @@ def search_session_history(
             vec = list(struct.unpack(f"<{n}f", blob))
             vecs.append(vec)
             summaries.append(dict(r))
-        except Exception:
+        except (KeyError, ValueError):
             continue
 
     if not vecs:

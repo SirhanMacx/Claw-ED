@@ -52,7 +52,7 @@ def _log_error(error: Exception) -> None:
                 f"[{datetime.datetime.now(datetime.timezone.utc).isoformat()}] "
                 f"{type(error).__name__}: {error}\n"
             )
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
 
@@ -80,7 +80,7 @@ def _is_clawed_process(pid: int) -> bool:
                 )
                 output = result.stdout.lower()
                 return "python" in output or "clawed" in output
-            except Exception:
+            except ImportError:
                 return True  # Can't check command name, assume it's ours
     except (OSError, SystemError):
         return False  # Process doesn't exist
@@ -115,7 +115,7 @@ def kill_bot_process() -> bool:
 
         _BOT_LOCK.unlink(missing_ok=True)
         return True
-    except Exception:
+    except (FileNotFoundError, OSError):
         _BOT_LOCK.unlink(missing_ok=True)
         return False
 
@@ -150,7 +150,7 @@ def _release_bot_lock() -> None:
             pid = int(_BOT_LOCK.read_text(encoding="utf-8").strip())
             if pid == os.getpid():
                 _BOT_LOCK.unlink()
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
 
@@ -274,6 +274,7 @@ class TelegramAPI:
                 try:
                     result = self._call("sendMessage", **kwargs)
                 except Exception:
+                    logger.debug("operation_failed", exc_info=True)
                     # Markdown failed — retry without parse_mode
                     kwargs["parse_mode"] = None
                     result = self._call("sendMessage", **kwargs)
@@ -288,6 +289,7 @@ class TelegramAPI:
                 reply_markup=reply_markup,
             )
         except Exception:
+            logger.debug("operation_failed", exc_info=True)
             # Markdown parse failed — retry as plain text
             return self._call(
                 "sendMessage",
@@ -444,7 +446,7 @@ class EduAgentTelegramBot:
                 from clawed.models import AppConfig
                 cfg = AppConfig.load()
                 token = cfg.telegram_bot_token
-            except Exception:
+            except ImportError:
                 pass
         if not token:
             raise ValueError(
@@ -496,7 +498,7 @@ class EduAgentTelegramBot:
                     except Exception as e:
                         logger.warning("Error processing pending: %s", e)
         except Exception:
-            pass
+            logger.debug("operation_failed", exc_info=True)
         _morning_prep_date = None
 
         while self._running:
@@ -510,7 +512,7 @@ class EduAgentTelegramBot:
                             and _morning_prep_date != date.today()):
                         _morning_prep_date = date.today()
                         self._send_morning_prep()
-                except Exception:
+                except ImportError:
                     pass
 
                 updates = self.api.get_updates(offset=offset, timeout=30)
@@ -596,6 +598,7 @@ class EduAgentTelegramBot:
                         try:
                             self.api.send_chat_action(chat_id, "typing")
                         except Exception:
+                            logger.debug("operation_failed", exc_info=True)
                             break
 
                 typing_thread = threading.Thread(target=_typing_loop, daemon=True)

@@ -117,7 +117,7 @@ class ConfigureProfileTool:
                         side_effects.append(
                             f"Loaded {state} state standards for {subject}"
                         )
-                except Exception:
+                except ImportError:
                     pass
 
             persona = TeacherPersona(name=teacher_name, subject_area=subject)
@@ -128,7 +128,7 @@ class ConfigureProfileTool:
             try:
                 from clawed.workspace import init_workspace
                 init_workspace(persona, config)
-            except Exception:
+            except ImportError:
                 pass
 
             # Update soul.md "Who I Am" section with identity

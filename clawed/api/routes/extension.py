@@ -59,7 +59,7 @@ async def extension_generate(req: ExtensionGenerateRequest):
             session = TeacherSession.load(get_teacher_id())
             if session.persona:
                 persona = session.persona
-        except Exception:
+        except ImportError:
             pass
 
         subject = persona.subject_area or "General"
@@ -117,6 +117,7 @@ async def extension_generate(req: ExtensionGenerateRequest):
             try:
                 daily = master.to_daily_lesson()
             except Exception:
+                logger.warning("operation_failed", exc_info=True)
                 # Older MasterContent revisions lacked to_daily_lesson;
                 # build a minimal DailyLesson from the fields we need.
                 from clawed.models import DailyLesson
@@ -486,6 +487,7 @@ async def _broadcast(code: str, message: dict) -> None:
         try:
             await ws.send_json(message)
         except Exception:
+            logger.warning("operation_failed", exc_info=True)
             dead.append(ws)
     for ws in dead:
         connections.remove(ws)
@@ -651,7 +653,7 @@ async def pipeline_status():
             lines = log_path.read_text(encoding="utf-8").strip().split("\n")
             recent_entries = lines[-20:]  # Last 20 log lines
         except Exception:
-            pass
+            logger.warning("operation_failed", exc_info=True)
 
     return {
         "pipeline_stages": [
@@ -715,7 +717,7 @@ async def pipeline_quality_report():
         session = TeacherSession.load(get_teacher_id())
         quality_data = session.config.get("last_quality_report", {})
         return quality_data or {"message": "No quality report available yet."}
-    except Exception:
+    except ImportError:
         return {"message": "No quality report available."}
 
 
@@ -743,5 +745,5 @@ async def scheduler_job_status():
             jobs.append(job)
 
         return {"jobs": jobs}
-    except Exception:
+    except ImportError:
         return {"jobs": [], "error": "Scheduler not available."}

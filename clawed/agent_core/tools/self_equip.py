@@ -119,7 +119,7 @@ class InstallPackageTool:
                         f"Package installed: {package} (reason: {reason or 'not specified'})",
                         category="self-equip",
                     )
-                except Exception:
+                except ImportError:
                     pass
                 return ToolResult(text=msg)
             else:

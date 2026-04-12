@@ -146,7 +146,7 @@ class CurriculumVisualizerTool:
             tp = context.teacher_profile or {}
             if tp.get("name"):
                 teacher_name = f"{tp['name']}'s Curriculum"
-        except Exception:
+        except (KeyError, ValueError):
             pass
 
         # Build self-contained HTML with canvas renderer

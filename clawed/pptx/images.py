@@ -46,7 +46,7 @@ def try_fetch_images(
                     timeout=5.0,
                 )
                 results[key] = path
-            except Exception:
+            except (ConnectionError, OSError):
                 results[key] = None
 
     try:
@@ -100,7 +100,7 @@ def try_fetch_content_images(
                 results[key] = path
                 if path:
                     found += 1
-            except Exception:
+            except (ConnectionError, OSError):
                 results[key] = None
 
     try:

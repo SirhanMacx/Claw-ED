@@ -36,7 +36,7 @@ def _load_persona(teacher_id: str) -> TeacherPersona | None:
         from clawed.state import TeacherSession
         session = TeacherSession.load(teacher_id)
         return session.persona
-    except Exception:
+    except ImportError:
         return None
 
 

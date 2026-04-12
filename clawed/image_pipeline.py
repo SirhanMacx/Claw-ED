@@ -132,7 +132,7 @@ async def _fetch_one(
                 if path and path.exists() and path.stat().st_size > 5000:
                     logger.info("Fetched content image for: %s", spec[:80])
                     return spec, path
-            except Exception:
+            except (FileNotFoundError, OSError):
                 pass  # Fall through to topic-based search
 
         path = await asyncio.wait_for(
@@ -185,7 +185,7 @@ async def fetch_all_images(
         try:
             from clawed.agent_core.identity import get_teacher_id
             teacher_id = get_teacher_id()
-        except Exception:
+        except ImportError:
             teacher_id = "default"
 
     # Phase 1: Try teacher's own images first with VISION re-ranking.
@@ -300,7 +300,7 @@ def _resolve_from_teacher_assets(
     try:
         from clawed.asset_registry import AssetRegistry
         registry = AssetRegistry()
-    except Exception:
+    except ImportError:
         return {}
 
     resolved: dict[str, Path] = {}
@@ -334,7 +334,7 @@ def _get_teacher_asset_candidates(
     try:
         from clawed.asset_registry import AssetRegistry
         registry = AssetRegistry()
-    except Exception:
+    except ImportError:
         return []
 
     query = f"{spec} {context[:100]}"

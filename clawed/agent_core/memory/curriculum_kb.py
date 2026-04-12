@@ -260,7 +260,7 @@ class CurriculumKB:
                             "VALUES (?, ?, ?)",
                             (cursor.lastrowid, chunk, doc_title),
                         )
-                    except Exception:
+                    except (sqlite3.OperationalError, OSError):
                         pass  # FTS table may not exist on old DBs
                     added += 1
 
@@ -380,7 +380,7 @@ class CurriculumKB:
                         "LIMIT 500",
                         (*params, fts_query),
                     ).fetchall()
-            except Exception:
+            except (ConnectionError, OSError):
                 pass  # FTS table may not exist
 
             # Stage 2: Fall back to brute-force if FTS found nothing

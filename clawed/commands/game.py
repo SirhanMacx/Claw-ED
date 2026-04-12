@@ -215,7 +215,7 @@ def create(
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
 
 

@@ -66,6 +66,7 @@ def _is_safe_image_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
     except Exception:
+        logger.debug("operation_failed", exc_info=True)
         return False
     if parsed.scheme not in ("http", "https"):
         return False
@@ -684,7 +685,7 @@ def _get_unsplash_key() -> str | None:
         from clawed.config import get_api_key
 
         return get_api_key("unsplash")
-    except Exception:
+    except ImportError:
         return None
 
 

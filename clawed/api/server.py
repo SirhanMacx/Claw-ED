@@ -6,6 +6,7 @@ import html as html_mod
 import json
 import logging
 import os
+import sqlite3
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -276,7 +277,7 @@ def _register_page_routes(app: FastAPI, templates: Jinja2Templates) -> None:
 
             cfg = AppConfig.load()
             config_school = cfg.teacher_profile.school
-        except Exception:
+        except (ImportError, FileNotFoundError, KeyError):
             pass
 
         return templates.TemplateResponse(request, "dashboard.html", {
@@ -492,7 +493,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
                     (teacher_id_for_codes,),
                 ).fetchall()
                 class_codes_list = [dict(r) for r in cc_rows2]
-        except Exception:
+        except (ImportError, sqlite3.OperationalError):
             pass
 
         return templates.TemplateResponse(request, "settings.html", {
@@ -573,7 +574,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
                     (lesson_id,),
                 ).fetchall()
                 class_codes = [{"code": r["class_code"], "name": r["name"]} for r in cc_rows]
-        except Exception:
+        except (ImportError, sqlite3.OperationalError):
             pass
 
         return templates.TemplateResponse(request, "lesson.html", {
@@ -742,7 +743,7 @@ def _register_community_endpoints(app: FastAPI, templates: Jinja2Templates) -> N
                     rows = conn.execute(sql, params).fetchall()
                     result = [dict(r) for r in rows]
                 return result
-            except Exception:
+            except (ImportError, sqlite3.OperationalError):
                 return []
 
         # Topic frequency
@@ -881,7 +882,7 @@ def _register_community_endpoints(app: FastAPI, templates: Jinja2Templates) -> N
 
             cfg = AppConfig.load()
             config_school = cfg.teacher_profile.school
-        except Exception:
+        except (ImportError, FileNotFoundError, KeyError):
             pass
 
         return templates.TemplateResponse(request, "dashboard.html", {

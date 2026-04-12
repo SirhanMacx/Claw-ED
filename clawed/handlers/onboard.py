@@ -203,7 +203,7 @@ class OnboardHandler:
         try:
             from clawed.agent_core.identity import reset_cache
             reset_cache()
-        except Exception:
+        except ImportError:
             pass
 
         try:
@@ -241,7 +241,7 @@ class OnboardHandler:
                 f"{', ' + us_state if us_state else ''}.",
                 transport="system",
             )
-        except Exception:
+        except ImportError:
             pass
 
         return GatewayResponse(

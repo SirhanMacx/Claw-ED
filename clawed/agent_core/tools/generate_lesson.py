@@ -87,7 +87,7 @@ class GenerateLessonTool:
             yt_links = registry.get_youtube_links(context.teacher_id, topic, top_k=3)
             if assets or yt_links:
                 kb_prompt_section = registry.format_asset_summary(assets, yt_links)
-        except Exception:
+        except ImportError:
             pass
 
         try:
@@ -111,7 +111,7 @@ class GenerateLessonTool:
                             + chunk_section
                             + "\n\nUse these materials as a foundation."
                         )
-        except Exception:
+        except ImportError:
             pass
 
         try:

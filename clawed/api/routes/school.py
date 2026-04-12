@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from clawed.agent_core.identity import get_teacher_id as _server_teacher_id
 from clawed.api.deps import get_db, require_auth
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["school"], dependencies=[Depends(require_auth)])
 
@@ -55,6 +59,7 @@ def _current_teacher_id() -> str:
     try:
         return _server_teacher_id() or "default"
     except Exception:
+        logger.warning("operation_failed", exc_info=True)
         return "default"
 
 

@@ -28,7 +28,7 @@ def output_dir() -> Path:
             d = Path(cfg.output_dir).expanduser().resolve()
             d.mkdir(parents=True, exist_ok=True)
             return d
-    except Exception:
+    except (FileNotFoundError, OSError):
         pass
     d = Path.home() / "clawed_output"
     d.mkdir(parents=True, exist_ok=True)

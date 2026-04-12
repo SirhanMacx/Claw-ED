@@ -57,6 +57,8 @@ def config_set_model(
     )
 
     # Ping the provider to verify connectivity
+    import json
+
     import httpx as _httpx
 
     if llm_provider == LLMProvider.OLLAMA:
@@ -89,7 +91,7 @@ def config_set_model(
                 resp = _httpx.get(f"{base}/api/version", timeout=5)
                 version = resp.json().get("version", "unknown")
                 console.print(f"[green]Connected to Ollama v{version}[/green]")
-            except Exception:
+            except (json.JSONDecodeError, KeyError):
                 console.print(
                     "[yellow]Warning: Can't reach Ollama at "
                     f"{cfg.ollama_base_url}. Is it running?[/yellow]"
