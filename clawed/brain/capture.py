@@ -21,7 +21,6 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime
-from typing import Optional
 
 from clawed.brain.store import BrainPage, BrainStore
 
@@ -87,11 +86,7 @@ def looks_like_original_thinking(message: str) -> bool:
             return False
 
     # Accept if any insight marker fires
-    for pattern in _INSIGHT_MARKERS:
-        if re.search(pattern, msg_lower):
-            return True
-
-    return False
+    return any(re.search(pattern, msg_lower) for pattern in _INSIGHT_MARKERS)
 
 
 def extract_slug_from_message(message: str, max_len: int = 60) -> str:
@@ -119,9 +114,9 @@ def capture_original(
     message: str,
     context: str = "",
     source_channel: str = "chat",
-    store: Optional[BrainStore] = None,
+    store: BrainStore | None = None,
     force: bool = False,
-) -> Optional[BrainPage]:
+) -> BrainPage | None:
     """Capture an original pedagogical insight to the brain.
 
     Args:

@@ -13,7 +13,6 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -161,9 +160,9 @@ async def generate_progress_update(
     student_name: str,
     strengths: list[str],
     areas_to_grow: list[str],
-    teacher_persona: Optional[TeacherPersona] = None,
+    teacher_persona: TeacherPersona | None = None,
     topic: str = "general progress",
-    config: Optional[AppConfig] = None,
+    config: AppConfig | None = None,
 ) -> ProgressUpdate:
     """Generate a parent progress update in the teacher's voice.
 

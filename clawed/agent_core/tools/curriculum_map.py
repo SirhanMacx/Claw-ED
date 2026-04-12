@@ -1,6 +1,7 @@
 """Tool: curriculum_map — wraps CurriculumMapper.generate_year_map."""
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -61,10 +62,8 @@ class CurriculumMapTool:
 
         persona = TeacherPersona()
         if context.persona:
-            try:
+            with contextlib.suppress(Exception):
                 persona = TeacherPersona(**context.persona)
-            except Exception:
-                pass
 
         try:
             mapper = CurriculumMapper(context.config)

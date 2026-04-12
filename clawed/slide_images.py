@@ -26,7 +26,6 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -101,7 +100,7 @@ MAX_CACHE_AGE_DAYS = 30
 _cache_cleaned_this_session = False
 
 
-def _cleanup_cache(cache_dir: Optional[Path] = None) -> None:
+def _cleanup_cache(cache_dir: Path | None = None) -> None:
     """Remove cached images older than MAX_CACHE_AGE_DAYS to prevent unbounded growth.
 
     Called once per session (guarded by module-level flag) at the start of
@@ -325,7 +324,7 @@ def extract_image_subjects(lesson) -> list[dict]:
         "Europe", "Europeans", "Asian", "African", "American",
         "Economic", "Political", "Religious", "Cultural", "Social",
         "Consequences", "Impact", "Significance", "Importance",
-        "Changes", "Developments", "Factors", "Events", "Period",
+        "Developments", "Factors", "Events", "Period",
     }
     people_patterns = [
         r"((?:King |Queen |Emperor |Empress |President |Pope |Tsar |Czar )"
@@ -436,13 +435,13 @@ def _build_search_query(topic: str, subject: str = "") -> str:
         # History: look for dates, specific events
         date_match = re.search(r'\b(1[0-9]{3}|20[0-2][0-9])\b', topic)
         if date_match:
-            extra = [date_match.group()] + extra[:1]
+            extra = [date_match.group(), *extra[:1]]
     elif style == "process_organism_diagram":
-        extra = ["diagram"] + extra[:1]
+        extra = ["diagram", *extra[:1]]
     elif style == "visual_representation":
-        extra = ["graph", "diagram"] + extra[:1]
+        extra = ["graph", "diagram", *extra[:1]]
     elif style == "author_literary_period":
-        extra = ["portrait", "literature"] + extra[:1]
+        extra = ["portrait", "literature", *extra[:1]]
 
     # Avoid duplicating words already in the query
     existing = set(query_base.split())
@@ -466,9 +465,10 @@ def _select_sources(subject: str, topic: str = "") -> list[str]:
     subject_lower = subject.strip().lower()
     if any(s in subject_lower for s in ("history", "social", "civics", "government")):
         return ["teacher_files", "web", "loc", "wikimedia", "unsplash"]
-    elif any(s in subject_lower for s in ("science", "biology", "chemistry", "physics")):
-        return ["teacher_files", "web", "wikimedia", "loc", "unsplash"]
-    elif any(s in subject_lower for s in ("art", "music")):
+    elif (
+        any(s in subject_lower for s in ("science", "biology", "chemistry", "physics"))
+        or any(s in subject_lower for s in ("art", "music"))
+    ):
         return ["teacher_files", "web", "wikimedia", "loc", "unsplash"]
     else:
         return ["teacher_files", "web", "loc", "wikimedia", "unsplash"]
@@ -477,14 +477,14 @@ def _select_sources(subject: str, topic: str = "") -> list[str]:
 # ── Cache helpers ────────────────────────────────────────────────────
 
 
-def _cache_path(source: str, query: str, base: Optional[Path] = None) -> Path:
+def _cache_path(source: str, query: str, base: Path | None = None) -> Path:
     """Return the local cache path for a given source + query."""
     h = hashlib.sha256(f"{source}:{query}".encode()).hexdigest()[:16]
     root = base or _CACHE_DIR
     return root / source / f"{h}.jpg"
 
 
-def _check_cache(source: str, query: str, base: Optional[Path] = None) -> Optional[Path]:
+def _check_cache(source: str, query: str, base: Path | None = None) -> Path | None:
     """Return cached image path if it exists and is non-empty."""
     path = _cache_path(source, query, base)
     if path.exists() and path.stat().st_size > 0:
@@ -494,7 +494,7 @@ def _check_cache(source: str, query: str, base: Optional[Path] = None) -> Option
 
 
 def _save_to_cache(
-    data: bytes, source: str, query: str, base: Optional[Path] = None,
+    data: bytes, source: str, query: str, base: Path | None = None,
 ) -> Path:
     """Write image bytes to the cache and return the path."""
     path = _cache_path(source, query, base)
@@ -507,8 +507,8 @@ def _save_to_cache(
 
 
 async def _fetch_loc(
-    query: str, cache_dir: Optional[Path] = None,
-) -> Optional[Path]:
+    query: str, cache_dir: Path | None = None,
+) -> Path | None:
     """Fetch an image from the Library of Congress free API.
 
     Endpoint returns JSON with ``results[].image_url`` (list) or
@@ -535,7 +535,7 @@ async def _fetch_loc(
             data = resp.json()
 
             results = data.get("results", [])
-            image_url: Optional[str] = None
+            image_url: str | None = None
             for item in results:
                 # Prefer image_url (list of URLs)
                 urls = item.get("image_url", [])
@@ -574,8 +574,8 @@ async def _fetch_loc(
 
 
 async def _fetch_wikimedia(
-    query: str, cache_dir: Optional[Path] = None,
-) -> Optional[Path]:
+    query: str, cache_dir: Path | None = None,
+) -> Path | None:
     """Fetch a relevant image from Wikipedia/Wikimedia for a given query.
 
     Strategy (in order):
@@ -634,7 +634,7 @@ async def _fetch_wikimedia(
                 img_resp.raise_for_status()
                 img_data = img_resp.json()
                 pages = img_data.get("query", {}).get("pages", {})
-                image_url: Optional[str] = None
+                image_url: str | None = None
                 for page in pages.values():
                     thumb = page.get("thumbnail", {})
                     if thumb.get("source"):
@@ -674,7 +674,7 @@ async def _fetch_wikimedia(
         return None
 
 
-def _get_unsplash_key() -> Optional[str]:
+def _get_unsplash_key() -> str | None:
     """Return the Unsplash access key from env or config, or None."""
     key = os.environ.get("UNSPLASH_ACCESS_KEY")
     if key:
@@ -689,8 +689,8 @@ def _get_unsplash_key() -> Optional[str]:
 
 
 async def _fetch_unsplash(
-    query: str, cache_dir: Optional[Path] = None,
-) -> Optional[Path]:
+    query: str, cache_dir: Path | None = None,
+) -> Path | None:
     """Fetch an image from the Unsplash API (requires API key)."""
     import httpx
 
@@ -783,10 +783,9 @@ def _score_teacher_image_row(
         if kw not in combined and kw not in filename:
             all_words = combined.split() + filename.split()
             for word in all_words:
-                if len(kw) >= 4 and len(word) >= 4:
-                    if kw in word or word in kw:
-                        score += 1
-                        break
+                if len(kw) >= 4 and len(word) >= 4 and (kw in word or word in kw):
+                    score += 1
+                    break
 
     return score
 
@@ -837,7 +836,7 @@ def _best_from_rows(
     keywords: list[str],
     query_lower: str,
     min_score: int = 4,
-) -> Optional[Path]:
+) -> Path | None:
     """Pick the best image from a set of DB rows, respecting a minimum score."""
     if not rows:
         return None
@@ -864,9 +863,9 @@ def _best_from_rows(
 
 async def _fetch_teacher_image(
     query: str,
-    cache_dir: Optional[Path] = None,
+    cache_dir: Path | None = None,
     subject: str = "",
-) -> Optional[Path]:
+) -> Path | None:
     """Search the teacher's extracted images with progressive broadening.
 
     Checks the asset_images table for images whose context_text, parent
@@ -938,8 +937,8 @@ async def _fetch_teacher_image(
 
 
 async def _fetch_web_scrape(
-    query: str, cache_dir: Optional[Path] = None,
-) -> Optional[Path]:
+    query: str, cache_dir: Path | None = None,
+) -> Path | None:
     """Scrape an image from the web via DuckDuckGo image search.
 
     No API key needed. Uses the DDG image search endpoint which returns
@@ -1139,8 +1138,8 @@ _SOURCE_FETCHERS: dict = {
 async def fetch_slide_image(
     topic: str,
     subject: str = "",
-    cache_dir: Optional[Path] = None,
-) -> Optional[Path]:
+    cache_dir: Path | None = None,
+) -> Path | None:
     """Fetch a relevant image for a slide topic.
 
     Tries sources in priority order:
@@ -1191,8 +1190,8 @@ async def fetch_content_image(
     content_text: str,
     subject: str = "",
     fallback_topic: str = "",
-    cache_dir: Optional[Path] = None,
-) -> Optional[Path]:
+    cache_dir: Path | None = None,
+) -> Path | None:
     """Fetch an image based on the *content* of a slide, not just the title.
 
     Extracts key concepts from ``content_text`` and searches for each one

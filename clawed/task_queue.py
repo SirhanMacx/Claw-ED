@@ -286,7 +286,7 @@ async def run_worker(
         try:
             result = await _execute_task(task)
             queue.mark_done(task.id, result)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             queue.mark_failed(task.id, str(exc))
 
         if once:

@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
-from typing import Optional
 from xml.etree import ElementTree
 
 
-def extract_flipchart(path: Path) -> tuple[str, Optional[int]]:
+def extract_flipchart(path: Path) -> tuple[str, int | None]:
     """Extract text from an ActivInspire (.flipchart) file.
 
     These are ZIP archives with XML content describing flipchart pages.

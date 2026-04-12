@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.panel import Panel
@@ -57,11 +56,11 @@ def _unit_json(*, topic, grade, subject, weeks, standards):
 def unit(
     topic: str = typer.Argument(..., help="Unit topic (e.g., 'Photosynthesis')"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    subject: Optional[str] = typer.Option(
+    subject: str | None = typer.Option(
         None, "--subject", "-s", help="Subject area (reads from profile if not set)"
     ),
     weeks: int = typer.Option(3, "--weeks", "-w", help="Duration in weeks"),
-    standards: Optional[str] = typer.Option(
+    standards: str | None = typer.Option(
         None, "--standards", help="Comma-separated standards"
     ),
     fmt: str = typer.Option(
@@ -137,7 +136,7 @@ def unit(
 def year_map(
     subject: str = typer.Argument(..., help="Subject area (e.g., 'Math')"),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    standards: Optional[str] = typer.Option(
+    standards: str | None = typer.Option(
         None, "--standards", help="Comma-separated standards"
     ),
     weeks: int = typer.Option(
@@ -228,7 +227,7 @@ def pacing(
     start_date: str = typer.Option(
         ..., "--start-date", "-d", help="First instructional day (YYYY-MM-DD)"
     ),
-    calendar_file: Optional[str] = typer.Option(
+    calendar_file: str | None = typer.Option(
         None, "--calendar", "-c", help="School calendar JSON file"
     ),
     fmt: str = typer.Option(
@@ -330,14 +329,14 @@ def full(
         "Science", "--subject", "-s", help="Subject area"
     ),
     weeks: int = typer.Option(3, "--weeks", "-w", help="Duration in weeks"),
-    standards: Optional[str] = typer.Option(
+    standards: str | None = typer.Option(
         None, "--standards", help="Comma-separated standards"
     ),
     homework: bool = typer.Option(
         True, "--homework/--no-homework", help="Include homework"
     ),
     fmt: str = typer.Option("markdown", "--format", "-f", help="Export format"),
-    max_lessons: Optional[int] = typer.Option(
+    max_lessons: int | None = typer.Option(
         None, "--max-lessons", help="Limit lessons generated"
     ),
 ):

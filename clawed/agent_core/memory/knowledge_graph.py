@@ -451,7 +451,7 @@ class CurriculumKG:
         sims = m_norms @ q_norm
 
         ranked = sorted(
-            zip(sims, ids, names, types),
+            zip(sims, ids, names, types, strict=False),
             key=lambda x: x[0],
             reverse=True,
         )

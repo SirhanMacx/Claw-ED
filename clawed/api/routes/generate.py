@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -51,8 +50,8 @@ class FullRequest(BaseModel):
     duration_weeks: int = Field(3, ge=1, le=52)
     standards: list[str] = Field(default_factory=list)
     include_homework: bool = True
-    max_lessons: Optional[int] = Field(None, ge=1, le=100)
-    template_slug: Optional[str] = None
+    max_lessons: int | None = Field(None, ge=1, le=100)
+    template_slug: str | None = None
 
 
 class CourseRequest(BaseModel):
@@ -62,7 +61,7 @@ class CourseRequest(BaseModel):
     weeks_per_topic: int = Field(2, ge=1, le=52)
 
 
-def _get_persona(db) -> tuple[Optional[TeacherPersona], Optional[str]]:
+def _get_persona(db) -> tuple[TeacherPersona | None, str | None]:
     """Load persona from the default teacher in the DB."""
     teacher = db.get_default_teacher()
     if not teacher or not teacher.get("persona_json"):

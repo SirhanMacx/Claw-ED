@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
-from clawed.failure_codes import FailureCode  # noqa: F401 — used in error messages
+from clawed.failure_codes import FailureCode
 
 logger = logging.getLogger(__name__)
 

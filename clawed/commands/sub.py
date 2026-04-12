@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.panel import Panel
 
@@ -58,16 +56,16 @@ def sub(
     grade: str = typer.Option(..., "--grade", "-g", help="Grade level"),
     subject: str = typer.Option(..., "--subject", "-s", help="Subject"),
     date: str = typer.Option(..., "--date", "-d", help="Date (e.g. 'March 25, 2026')"),
-    topic: Optional[str] = typer.Option(
+    topic: str | None = typer.Option(
         None, "--topic", "-t", help="Lesson topic"
     ),
-    context: Optional[str] = typer.Option(
+    context: str | None = typer.Option(
         None, "--context", help="What unit are we in?"
     ),
-    teacher: Optional[str] = typer.Option(
+    teacher: str | None = typer.Option(
         None, "--teacher", help="Teacher name (auto-detected from profile if omitted)"
     ),
-    school: Optional[str] = typer.Option(
+    school: str | None = typer.Option(
         None, "--school", help="School name (auto-detected from profile if omitted)"
     ),
     period: str = typer.Option(
@@ -204,7 +202,7 @@ def parent_comm(
     tone: str = typer.Option(
         "professional and warm", "--tone", help="Tone of the communication"
     ),
-    notes: Optional[str] = typer.Option(
+    notes: str | None = typer.Option(
         None, "--notes", "-n", help="Additional notes"
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),

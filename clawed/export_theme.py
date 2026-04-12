@@ -147,7 +147,7 @@ def _hex_to_rgb(hex_str: str):
     return RGBColor(int(hex_str[:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
 
 
-def _resolve_output(output_dir: Path | None, lesson: "DailyLesson", ext: str) -> Path:
+def _resolve_output(output_dir: Path | None, lesson: DailyLesson, ext: str) -> Path:
     """Build the output file path using the lesson title."""
     if output_dir is None:
         output_dir = Path("clawed_output").resolve()

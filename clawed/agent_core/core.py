@@ -8,13 +8,14 @@ go through the agent tool-use loop.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from clawed._legacy_gateway import ActivityEvent, GatewayStats
 from clawed.agent_core.approvals import ApprovalManager
@@ -74,7 +75,7 @@ class _LLMClientAdapter:
 class Gateway:
     """Agent-first Gateway — sits behind the feature-flag shim."""
 
-    def __init__(self, config: Optional[AppConfig] = None, llm: Optional[LLMInterface] = None):
+    def __init__(self, config: AppConfig | None = None, llm: LLMInterface | None = None):
         self.config = config or AppConfig.load()
         self._event_bus: asyncio.Queue[ActivityEvent] | None = None
         self.active_sessions: dict[str, dict] = {}
@@ -319,10 +320,8 @@ class Gateway:
             data=data or {},
         )
         if self.event_bus.full():
-            try:
+            with contextlib.suppress(asyncio.QueueEmpty):
                 self.event_bus.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
         await self.event_bus.put(event)
 
     # Backward compatibility methods
@@ -744,10 +743,7 @@ class Gateway:
                     from clawed.ingestor import ingest_path
                     result = ingest_path(p)
                     # ingest_path may return a list or coroutine
-                    if asyncio.iscoroutine(result):
-                        docs = asyncio.run(result)
-                    else:
-                        docs = result
+                    docs = asyncio.run(result) if asyncio.iscoroutine(result) else result
                     if docs:
                         from clawed.agent_core.memory.curriculum_kb import (
                             CurriculumKB,

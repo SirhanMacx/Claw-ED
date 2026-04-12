@@ -13,4 +13,4 @@ Submodules:
 
 from clawed.export_pptx import cleanup_temp_images, export_lesson_pptx
 
-__all__ = ["export_lesson_pptx", "cleanup_temp_images"]
+__all__ = ["cleanup_temp_images", "export_lesson_pptx"]

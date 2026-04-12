@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 import typer
 
@@ -85,7 +84,7 @@ def get_cmd(
 @brain_app.command("search")
 def search_cmd(
     query: str = typer.Argument(..., help="Search query"),
-    page_type: Optional[str] = typer.Option(
+    page_type: str | None = typer.Option(
         None, "--type", "-t", help="Filter by page type",
     ),
     limit: int = typer.Option(10, "--limit", "-n", help="Max results"),

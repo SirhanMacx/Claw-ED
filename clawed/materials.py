@@ -31,7 +31,7 @@ class _WorksheetResult(PydanticBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _wrap_list(cls, data):  # noqa: ANN001
+    def _wrap_list(cls, data):
         if isinstance(data, list):
             return {"items": data}
         return data
@@ -47,7 +47,7 @@ class _SlidesResult(PydanticBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _wrap_list(cls, data):  # noqa: ANN001
+    def _wrap_list(cls, data):
         if isinstance(data, list):
             return {"slides": data}
         return data
@@ -58,7 +58,7 @@ class _IEPNotesResult(PydanticBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _wrap_list(cls, data):  # noqa: ANN001
+    def _wrap_list(cls, data):
         if isinstance(data, list):
             return {"notes": data}
         return data

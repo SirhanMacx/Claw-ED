@@ -16,11 +16,13 @@ CLI:
 
 from __future__ import annotations
 
-from typing import Optional
+import logging
 
 from pydantic import BaseModel, Field
 
 from clawed.models import AppConfig, DailyLesson, TeacherPersona
+
+logger = logging.getLogger(__name__)
 
 
 class LessonScore(BaseModel):
@@ -130,7 +132,7 @@ Respond with ONLY a JSON object:
 async def evaluate_voice_consistency(
     persona: TeacherPersona,
     lessons: list[DailyLesson],
-    config: Optional[AppConfig] = None,
+    config: AppConfig | None = None,
 ) -> VoiceReport:
     """Evaluate how well generated lessons match the teacher's voice.
 
@@ -182,7 +184,9 @@ async def evaluate_voice_consistency(
                 notes=data.get("notes", ""),
             )
         except Exception as e:
-            # If evaluation fails for one lesson, record with neutral scores
+            # Broad catch: per-lesson evaluation is best-effort; any
+            # failure degrades gracefully to neutral scores.
+            logger.debug("Voice evaluation failed for lesson %s: %s", lesson.title, e)
             score = LessonScore(
                 lesson_title=lesson.title,
                 lesson_number=lesson.lesson_number,

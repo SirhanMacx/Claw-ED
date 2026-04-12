@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def compile_narration_script(master: "MasterContent", output_dir: Path) -> Path:
+def compile_narration_script(master: MasterContent, output_dir: Path) -> Path:
     """Generate a TTS-ready narration script from a MasterContent lesson.
 
     The script is structured for natural reading:
@@ -125,7 +125,7 @@ def compile_narration_script(master: "MasterContent", output_dir: Path) -> Path:
 
 
 async def compile_audio_mp3(
-    master: "MasterContent",
+    master: MasterContent,
     output_dir: Path,
     voice: str = "alloy",
 ) -> Path | None:

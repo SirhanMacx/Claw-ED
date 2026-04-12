@@ -25,7 +25,6 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Optional
 
 from clawed.brain.store import BrainPage, BrainStore
 
@@ -85,7 +84,7 @@ class DreamReport:
 
 
 async def dream_cycle(
-    store: Optional[BrainStore] = None,
+    store: BrainStore | None = None,
     consolidate: bool = True,
     dry_run: bool = False,
 ) -> DreamReport:

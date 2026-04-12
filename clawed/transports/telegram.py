@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import signal
@@ -466,10 +467,8 @@ class EduAgentTelegramBot:
         signal.signal(signal.SIGTERM, _signal_handler)
 
         # Clear stale webhooks but keep pending updates
-        try:
+        with contextlib.suppress(Exception):
             self.api._call("deleteWebhook")
-        except Exception:
-            pass
 
         self.api.set_my_commands(self.COMMANDS)
         me = self.api.get_me()
@@ -604,14 +603,12 @@ class EduAgentTelegramBot:
 
                 # Progress callback — lets tools send mid-operation updates.
                 def _progress_cb(msg: str, _cid: int = chat_id, _tok: str = self.token) -> None:
-                    try:
+                    with contextlib.suppress(Exception):
                         _requests.post(
                             f"https://api.telegram.org/bot{_tok}/sendMessage",
                             json={"chat_id": _cid, "text": msg},
                             timeout=10,
                         )
-                    except Exception:
-                        pass
 
                 try:
                     response = self._loop.run_until_complete(
@@ -633,23 +630,19 @@ class EduAgentTelegramBot:
                     _log_error(send_err)
                     # Last resort: send text even if file delivery fails
                     if hasattr(response, "text") and response.text:
-                        try:
+                        with contextlib.suppress(Exception):
                             self.api.send_message(chat_id, response.text)
-                        except Exception:
-                            pass
 
         except Exception as e:
             logger.error("Error processing update: %s", e)
             _log_error(e)
             # Send error message so teacher isn't left hanging
-            try:
+            with contextlib.suppress(Exception):
                 self.api.send_message(
                     chat_id,
                     "Something went wrong processing that. "
                     "Try again or rephrase your request.",
                 )
-            except Exception:
-                pass
 
     def _download_files(self, msg: dict) -> list[Path]:
         """Download any attached documents from a Telegram message."""
@@ -725,10 +718,7 @@ class EduAgentTelegramBot:
 
 def run_bot(token: str | None = None, force: bool = False, data_dir=None) -> None:
     """Entry point — create and run the bot."""
-    if token:
-        bot = EduAgentTelegramBot(token, data_dir=data_dir)
-    else:
-        bot = EduAgentTelegramBot.from_env(data_dir=data_dir)
+    bot = EduAgentTelegramBot(token, data_dir=data_dir) if token else EduAgentTelegramBot.from_env(data_dir=data_dir)
     bot.run(force=force)
 
 

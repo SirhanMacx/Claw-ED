@@ -142,10 +142,10 @@ EDUCATION_WHITELIST: set[str] = {
     "significant", "derivative", "transformation",
     # Social studies / humanities
     "paradigm", "revolution", "reform", "progressive",
-    "catalyst",  # e.g., "catalyst for change" in history
+    # e.g., "catalyst for change" in history
     "cornerstone",  # e.g., "cornerstone of democracy"
     # General academic vocabulary
-    "analyze", "evaluate", "synthesize", "compare",
+    "analyze", "evaluate", "compare",
     "contrast", "distinguish", "identify", "examine",
 }
 

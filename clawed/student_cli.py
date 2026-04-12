@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from typing import Optional
 
 from rich.live import Live
 from rich.panel import Panel
@@ -37,7 +36,7 @@ def _run_async(coro):
 def main(
     class_code: str,
     student_id: str = "student-001",
-    student_name: Optional[str] = None,
+    student_name: str | None = None,
 ) -> None:
     """Run the student chat terminal.
 

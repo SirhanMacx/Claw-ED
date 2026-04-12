@@ -288,7 +288,7 @@ class GenerateLessonBundleTool:
             report.warnings.append(err)
             logger.warning("Validation: %s", err)
 
-        align_score, align_issues = validate_alignment(master)
+        _align_score, align_issues = validate_alignment(master)
         for issue in align_issues:
             report.warnings.append(issue)
 

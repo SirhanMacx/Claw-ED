@@ -10,7 +10,6 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
 
@@ -18,10 +17,10 @@ _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagen
 class BotStateStore:
     """Read/write ChatState rows to the data directory's bot_state.db."""
 
-    def __init__(self, db_path: Optional[Path] = None) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         self._db_path = db_path or (_BASE_DIR / "bot_state.db")
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
         self._ensure_table()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -43,7 +42,7 @@ class BotStateStore:
         )
         conn.commit()
 
-    def get(self, chat_id: int) -> Optional[dict]:
+    def get(self, chat_id: int) -> dict | None:
         """Load a chat state row, or None if not found."""
         row = self._get_conn().execute(
             "SELECT state, pending_topic, last_lesson_id, updated_at "
@@ -90,13 +89,13 @@ class BotStateStore:
 class StudentProgressStore:
     """Read/write student progress rows to ~/.eduagent/bot_state.db."""
 
-    def __init__(self, db_path: Optional[Path] = None) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         if db_path is None:
             from clawed.paths import data_dir
             db_path = data_dir() / "bot_state.db"
         self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
         self._ensure_table()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -124,7 +123,7 @@ class StudentProgressStore:
         )
         conn.commit()
 
-    def get(self, student_id: str, class_code: str) -> Optional[dict]:
+    def get(self, student_id: str, class_code: str) -> dict | None:
         """Load a student progress row."""
         import json
         row_id = f"{student_id}:{class_code}"
@@ -149,10 +148,10 @@ class StudentProgressStore:
         class_code: str,
         *,
         student_name: str = "",
-        topics_asked: Optional[dict] = None,
+        topics_asked: dict | None = None,
         total_questions: int = 0,
         last_active: str = "",
-        struggle_topics: Optional[list] = None,
+        struggle_topics: list | None = None,
     ) -> None:
         """Upsert a student progress row."""
         import json
@@ -204,13 +203,13 @@ class StudentProgressStore:
 class StudentBotStateStore:
     """Read/write student session rows to ~/.eduagent/bot_state.db."""
 
-    def __init__(self, db_path: Optional[Path] = None) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         if db_path is None:
             from clawed.paths import data_dir
             db_path = data_dir() / "bot_state.db"
         self._db_path = db_path
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn: Optional[sqlite3.Connection] = None
+        self._conn: sqlite3.Connection | None = None
         self._ensure_table()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -231,7 +230,7 @@ class StudentBotStateStore:
         )
         conn.commit()
 
-    def get(self, chat_id: int) -> Optional[dict[str, str]]:
+    def get(self, chat_id: int) -> dict[str, str] | None:
         """Load a student session row, or None if not found."""
         row = self._get_conn().execute(
             "SELECT class_code, student_id, updated_at "

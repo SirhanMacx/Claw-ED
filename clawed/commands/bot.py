@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.panel import Panel
@@ -280,7 +279,7 @@ def serve(
     host: str = typer.Option(
         "127.0.0.1", "--host", "-h", help="Host to bind to"
     ),
-    token: Optional[str] = typer.Option(
+    token: str | None = typer.Option(
         None,
         "--token",
         "-t",
@@ -385,10 +384,10 @@ def serve(
 
 
 def _serve_with_tui(
-    token: Optional[str],
+    token: str | None,
     host: str,
     port: int,
-    config: Optional[AppConfig] = None,
+    config: AppConfig | None = None,
 ) -> None:
     """Launch the full TUI dashboard with gateway."""
     try:
@@ -437,7 +436,7 @@ def _serve_gateway_headless(
     token: str,
     host: str,
     port: int,
-    config: Optional[AppConfig] = None,
+    config: AppConfig | None = None,
 ) -> None:
     """Run gateway + web server without TUI (VPS mode)."""
     # Check for existing standalone bot instance
@@ -527,7 +526,7 @@ def _serve_gateway_headless(
 
 @bot_app.command(name="student-bot")
 def student_bot_cmd(
-    token: Optional[str] = typer.Option(
+    token: str | None = typer.Option(
         None,
         "--token",
         "-t",
@@ -565,14 +564,14 @@ def student_bot_cmd(
 
 @bot_app.command()
 def bot(
-    token: Optional[str] = typer.Option(
+    token: str | None = typer.Option(
         None,
         "--token",
         "-t",
         envvar="TELEGRAM_BOT_TOKEN",
         help="Telegram bot token from @BotFather (or set TELEGRAM_BOT_TOKEN env var)",
     ),
-    data_dir: Optional[str] = typer.Option(
+    data_dir: str | None = typer.Option(
         None,
         "--data-dir",
         help="Data directory (default: ~/.eduagent)",

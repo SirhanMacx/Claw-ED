@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 
@@ -131,9 +132,7 @@ def _validate_ollama_url(raw: str) -> tuple[str | None, str | None]:
     extra_allowed = {h.strip().lower() for h in allow_env.split(",") if h.strip()}
 
     # Loopback names are always allowed.
-    if host in {"localhost", "127.0.0.1", "::1"}:
-        pass
-    elif host in extra_allowed:
+    if host in {"localhost", "127.0.0.1", "::1"} or host in extra_allowed:
         pass
     else:
         # Try parsing as an IP and require it to be loopback.
@@ -250,10 +249,8 @@ async def get_onboarding_state():
     onboarding = db.get_onboarding(teacher["id"])
     persona_data = None
     if teacher.get("persona_json"):
-        try:
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
             persona_data = json.loads(teacher["persona_json"])
-        except (json.JSONDecodeError, TypeError):
-            pass
 
     return {
         "has_persona": persona_data is not None,

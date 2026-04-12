@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 async def compile_journey(
-    master: "MasterContent",
-    persona: "TeacherPersona | None" = None,
+    master: MasterContent,
+    persona: TeacherPersona | None = None,
     output_dir: Path | None = None,
 ) -> Path | None:
     """Generate an interactive learning journey HTML from lesson content."""
@@ -57,7 +57,7 @@ async def compile_journey(
         })
 
     # Step 3-N: Direct instruction sections
-    for i, section in enumerate(master.direct_instruction):
+    for _i, section in enumerate(master.direct_instruction):
         step = {
             "title": section.heading,
             "type": "content",

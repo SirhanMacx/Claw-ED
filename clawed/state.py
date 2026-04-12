@@ -18,10 +18,9 @@ import logging
 import re
 import sqlite3
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from clawed.models import DailyLesson, TeacherPersona, UnitPlan
 
@@ -199,13 +198,13 @@ class TeacherSession:
     def __init__(
         self,
         teacher_id: str,
-        name: Optional[str] = None,
-        persona: Optional[TeacherPersona] = None,
-        config: Optional[dict] = None,
-        current_unit: Optional[UnitPlan] = None,
-        current_lesson: Optional[DailyLesson] = None,
-        context: Optional[list] = None,
-        school_id: Optional[str] = None,
+        name: str | None = None,
+        persona: TeacherPersona | None = None,
+        config: dict | None = None,
+        current_unit: UnitPlan | None = None,
+        current_lesson: DailyLesson | None = None,
+        context: list | None = None,
+        school_id: str | None = None,
     ):
         self.teacher_id = teacher_id
         self.name = name
@@ -218,7 +217,7 @@ class TeacherSession:
         self.school_id = school_id
 
     @classmethod
-    def load(cls, teacher_id: str) -> "TeacherSession":
+    def load(cls, teacher_id: str) -> TeacherSession:
         """Load a session from DB, or create a new one."""
         init_db()
         with _get_conn() as conn:
@@ -266,10 +265,8 @@ class TeacherSession:
                 logger.warning("Failed to parse context_json for %s: %s", teacher_id, exc)
 
         school_id = None
-        try:
+        with suppress(IndexError, KeyError):
             school_id = row["school_id"]
-        except (IndexError, KeyError):
-            pass
 
         return cls(
             teacher_id=teacher_id,
@@ -334,7 +331,7 @@ class TeacherSession:
         self.save()
         return unit_id
 
-    def save_lesson(self, lesson: DailyLesson, unit_id: Optional[str] = None) -> str:
+    def save_lesson(self, lesson: DailyLesson, unit_id: str | None = None) -> str:
         """Save a generated lesson, return its ID."""
         lesson_id = str(uuid.uuid4())
         # v4.11.2026 security fix: use the full uuid4 hex (128 bits of

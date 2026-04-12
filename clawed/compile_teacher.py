@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 async def compile_teacher_view(
-    master: "MasterContent",
+    master: MasterContent,
     images: dict[str, Path],
     output_dir: Path,
 ) -> Path:
@@ -209,7 +209,7 @@ async def compile_teacher_view(
         table = doc.add_table(rows=1, cols=3)
         table.style = "Table Grid"
         hdr_cells = table.rows[0].cells
-        for cell, label in zip(hdr_cells, ["Term", "Definition", "Context Sentence"]):
+        for cell, label in zip(hdr_cells, ["Term", "Definition", "Context Sentence"], strict=False):
             _shaded_cell(cell, primary_hex)
             cell.text = label
             cell.paragraphs[0].runs[0].bold = True

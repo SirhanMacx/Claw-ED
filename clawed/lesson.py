@@ -422,7 +422,7 @@ async def generate_master_content(
 
     effective_state = state
     if not effective_state and config:
-        effective_state = getattr(config, "teacher_profile", None) and config.teacher_profile.state or ""
+        effective_state = (getattr(config, "teacher_profile", None) and config.teacher_profile.state) or ""
     standards_list = get_standards_for_lesson(
         subject=unit.subject,
         grade=unit.grade_level,
@@ -729,7 +729,7 @@ def _record_generation(
     # Synthesize a stable unit_id from the unit title so repeated
     # generations of the same unit share the same parent row.
     unit_id = hashlib.md5(
-        f"{teacher_id}:{unit.title}".encode("utf-8")
+        f"{teacher_id}:{unit.title}".encode()
     ).hexdigest()[:16]
 
     lesson_id = str(uuid.uuid4())

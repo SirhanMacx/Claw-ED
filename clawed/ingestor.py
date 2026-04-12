@@ -16,8 +16,9 @@ import subprocess
 import tempfile
 import zipfile
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from clawed.asset_registry import ExtractedImage, ExtractedURL, ExtractionResult, extract_urls, extract_youtube_ids
 from clawed.models import DocType, Document
@@ -87,7 +88,7 @@ def _extract_urls_from_text(text: str) -> list[ExtractedURL]:
 # ── Individual extractors ────────────────────────────────────────────────
 
 
-def _extract_pdf(path: Path) -> tuple[str, Optional[int]]:
+def _extract_pdf(path: Path) -> tuple[str, int | None]:
     """Extract text from a PDF using pypdf (MIT).
 
     v4.11.2026 license fix: previously used PyMuPDF (``fitz``) which is
@@ -216,7 +217,7 @@ def _extract_docx_rich(path: Path) -> ExtractionResult:
         rels = doc.part.rels
         for rel in rels.values():
             if "hyperlink" in rel.reltype:
-                url = rel._target  # noqa: SLF001
+                url = rel._target
                 if url and isinstance(url, str) and url.startswith("http"):
                     yt_ids = extract_youtube_ids(url)
                     if yt_ids:
@@ -304,7 +305,7 @@ def _extract_pptx_rich(path: Path) -> ExtractionResult:
                     text = paragraph.text.strip()
                     if text:
                         parts.append(text)
-                        slide_context = text[:100] if not slide_context else slide_context
+                        slide_context = slide_context if slide_context else text[:100]
 
                     # Extract hyperlinks from runs
                     for run in paragraph.runs:
@@ -375,21 +376,21 @@ def _extract_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def _extract_notebook(path: Path) -> tuple[str, Optional[int]]:
+def _extract_notebook(path: Path) -> tuple[str, int | None]:
     """Extract text from a SMART Notebook file via formats plugin."""
     from clawed.formats.notebook import extract_notebook
 
     return extract_notebook(path)
 
 
-def _extract_xbk(path: Path) -> tuple[str, Optional[int]]:
+def _extract_xbk(path: Path) -> tuple[str, int | None]:
     """Extract text from a SMART Board file via formats plugin."""
     from clawed.formats.xbk import extract_xbk
 
     return extract_xbk(path)
 
 
-def _extract_flipchart(path: Path) -> tuple[str, Optional[int]]:
+def _extract_flipchart(path: Path) -> tuple[str, int | None]:
     """Extract text from an ActivInspire file via formats plugin."""
     from clawed.formats.flipchart import extract_flipchart
 
@@ -563,8 +564,9 @@ def _extract_xls(path: Path) -> str:
         if text.strip():
             logger.debug("Parsed .xls as xlsx format: %s", path.name)
             return text
-    except Exception:
-        pass
+    except Exception as exc:
+        # Broad catch: .xls-as-xlsx fallback is best-effort; failure falls through
+        logger.debug("openpyxl .xls fallback failed for %s: %s", path.name, exc)
 
     logger.debug(
         "Could not extract .xls file %s — install xlrd for full .xls support",
@@ -894,7 +896,7 @@ def _extract_topic_tags(path: Path, content: str) -> list[str]:
 # ── Corpus contribution helper ─────────────────────────────────────────
 
 
-def _contribute_to_corpus(doc: "Document") -> None:
+def _contribute_to_corpus(doc: Document) -> None:
     """Contribute an extracted document to the corpus if it looks like teaching material.
 
     Called during ingestion so that high-quality curriculum materials are
@@ -974,7 +976,7 @@ RICH_EXTRACTORS = {
 }
 
 
-def _extract_single(path: Path) -> Optional[Document]:
+def _extract_single(path: Path) -> Document | None:
     """Extract a single file into a Document, or None if unsupported/empty."""
     doc_type = _detect_type(path)
     if doc_type == DocType.UNKNOWN:
@@ -1023,7 +1025,7 @@ def _extract_single(path: Path) -> Optional[Document]:
     return doc
 
 
-def extract_rich(path: Path) -> Optional[ExtractionResult]:
+def extract_rich(path: Path) -> ExtractionResult | None:
     """Extract rich metadata (images, URLs, slide counts) from a file.
 
     Returns None if the file type doesn't support rich extraction or if
@@ -1268,8 +1270,9 @@ def full_ingest(
         if progress_callback:
             try:
                 progress_callback(msg)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Broad catch: progress reporting is best-effort; never blocks ingestion
+                logger.debug("Progress callback failed: %s", exc)
 
     # ── Step 1: Parse all documents ──────────────────────────────────
     _progress("Parsing files...")
@@ -1308,8 +1311,9 @@ def full_ingest(
                     result["assets_registered"] += 1
                     if extraction and extraction.images:
                         result["images_extracted"] += len(extraction.images)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Broad catch: per-asset registration is best-effort; skip and continue
+                logger.debug("Asset registration failed for %s: %s", doc.title, exc)
             if (i + 1) % 200 == 0:
                 _progress(
                     f"  assets {i + 1}/{len(docs)} "
@@ -1339,8 +1343,9 @@ def full_ingest(
                     doc.source_path or "", text,
                 )
                 result["chunks_indexed"] += chunks
-            except Exception:
-                pass
+            except Exception as exc:
+                # Broad catch: per-doc KB indexing is best-effort; skip and continue
+                logger.debug("KB indexing failed for %s: %s", doc.title, exc)
             if (i + 1) % 200 == 0:
                 _progress(
                     f"  chunks {i + 1}/{len(docs)} "

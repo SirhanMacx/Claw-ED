@@ -16,7 +16,7 @@ import sqlite3
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 def _default_db_path() -> Path:
@@ -229,7 +229,7 @@ class Database:
     def _new_token() -> str:
         return uuid.uuid4().hex
 
-    def _fetchone(self, sql: str, params: tuple = ()) -> Optional[dict[str, Any]]:
+    def _fetchone(self, sql: str, params: tuple = ()) -> dict[str, Any] | None:
         with self._connect() as conn:
             row = conn.execute(sql, params).fetchone()
         return dict(row) if row else None
@@ -241,7 +241,7 @@ class Database:
 
     # -- teachers ---------------------------------------------------------
 
-    def upsert_teacher(self, name: str, persona_json: str, teacher_id: Optional[str] = None) -> str:
+    def upsert_teacher(self, name: str, persona_json: str, teacher_id: str | None = None) -> str:
         tid = teacher_id or self._new_id()
         with self._connect() as conn:
             conn.execute(
@@ -251,10 +251,10 @@ class Database:
             )
         return tid
 
-    def get_teacher(self, teacher_id: str) -> Optional[dict[str, Any]]:
+    def get_teacher(self, teacher_id: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM teachers WHERE id=?", (teacher_id,))
 
-    def get_default_teacher(self) -> Optional[dict[str, Any]]:
+    def get_default_teacher(self) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM teachers ORDER BY created_at DESC LIMIT 1")
 
     # -- units ------------------------------------------------------------
@@ -271,10 +271,10 @@ class Database:
             )
         return uid
 
-    def get_unit(self, unit_id: str) -> Optional[dict[str, Any]]:
+    def get_unit(self, unit_id: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM units WHERE id=?", (unit_id,))
 
-    def list_units(self, teacher_id: Optional[str] = None) -> list[dict[str, Any]]:
+    def list_units(self, teacher_id: str | None = None) -> list[dict[str, Any]]:
         if teacher_id:
             return self._fetchall("SELECT * FROM units WHERE teacher_id=? ORDER BY created_at DESC", (teacher_id,))
         return self._fetchall("SELECT * FROM units ORDER BY created_at DESC")
@@ -287,7 +287,7 @@ class Database:
 
     def insert_lesson(
         self, unit_id: str, lesson_number: int, title: str, lesson_json: str,
-        materials_json: Optional[str] = None,
+        materials_json: str | None = None,
     ) -> str:
         lid = self._new_id()
         token = self._new_token()
@@ -299,10 +299,10 @@ class Database:
             )
         return lid
 
-    def get_lesson(self, lesson_id: str) -> Optional[dict[str, Any]]:
+    def get_lesson(self, lesson_id: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM lessons WHERE id=?", (lesson_id,))
 
-    def get_lesson_by_token(self, token: str) -> Optional[dict[str, Any]]:
+    def get_lesson_by_token(self, token: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM lessons WHERE share_token=?", (token,))
 
     def list_lessons(self, unit_id: str) -> list[dict[str, Any]]:
@@ -372,7 +372,7 @@ class Database:
             )
         return pid
 
-    def get_active_prompt(self, prompt_type: str) -> Optional[dict[str, Any]]:
+    def get_active_prompt(self, prompt_type: str) -> dict[str, Any] | None:
         return self._fetchone(
             "SELECT * FROM prompt_versions WHERE prompt_type=? AND is_active=1 ORDER BY version DESC LIMIT 1",
             (prompt_type,),
@@ -420,7 +420,7 @@ class Database:
 
     # -- onboarding -------------------------------------------------------
 
-    def get_onboarding(self, teacher_id: str) -> Optional[dict[str, Any]]:
+    def get_onboarding(self, teacher_id: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM onboarding_state WHERE teacher_id=?", (teacher_id,))
 
     def upsert_onboarding(self, teacher_id: str, step_completed: int) -> None:
@@ -481,8 +481,8 @@ class Database:
 
     # -- schools ----------------------------------------------------------
 
-    def create_school(  # noqa: E501
-        self, name: str, district: str = "", state: str = "", grade_levels: Optional[list[str]] = None,
+    def create_school(
+        self, name: str, district: str = "", state: str = "", grade_levels: list[str] | None = None,
     ) -> str:
         import json as _json
         sid = self._new_id()
@@ -493,7 +493,7 @@ class Database:
             )
         return sid
 
-    def get_school(self, school_id: str) -> Optional[dict[str, Any]]:
+    def get_school(self, school_id: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM schools WHERE id=?", (school_id,))
 
     def list_schools(self) -> list[dict[str, Any]]:
@@ -523,7 +523,7 @@ class Database:
             (school_id,),
         )
 
-    def get_teacher_school(self, teacher_id: str) -> Optional[dict[str, Any]]:
+    def get_teacher_school(self, teacher_id: str) -> dict[str, Any] | None:
         return self._fetchone(
             """SELECT s.*, st.role, st.department FROM schools s
                JOIN school_teachers st ON s.id = st.school_id
@@ -573,7 +573,7 @@ class Database:
     def upsert_iep_profile(
         self, teacher_id: str, student_name: str, disability_type: str = "",
         accommodations_json: str = "[]", modifications_json: str = "[]",
-        goals_json: str = "[]", profile_id: Optional[str] = None,
+        goals_json: str = "[]", profile_id: str | None = None,
     ) -> str:
         pid = profile_id or self._new_id()
         with self._connect() as conn:
@@ -592,7 +592,7 @@ class Database:
             )
         return pid
 
-    def get_iep_profile(self, profile_id: str) -> Optional[dict[str, Any]]:
+    def get_iep_profile(self, profile_id: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM iep_profiles WHERE id=?", (profile_id,))
 
     def list_iep_profiles(self, teacher_id: str, active_only: bool = True) -> list[dict[str, Any]]:
@@ -621,7 +621,7 @@ class Database:
 
     def create_class_code(
         self, code: str, teacher_id: str, name: str = "", topic: str = "",
-        allowed_lesson_ids: str = "[]", expires_at: Optional[str] = None,
+        allowed_lesson_ids: str = "[]", expires_at: str | None = None,
     ) -> str:
         cid = self._new_id()
         with self._connect() as conn:
@@ -632,7 +632,7 @@ class Database:
             )
         return cid
 
-    def get_class_code(self, code: str) -> Optional[dict[str, Any]]:
+    def get_class_code(self, code: str) -> dict[str, Any] | None:
         return self._fetchone("SELECT * FROM class_codes WHERE code=?", (code,))
 
     def list_class_codes(self, teacher_id: str) -> list[dict[str, Any]]:

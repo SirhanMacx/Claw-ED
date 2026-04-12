@@ -335,7 +335,7 @@ class MasterContent(BaseModel):
 
     # ── backwards-compat bridge ────────────────────────────────────────────
 
-    def to_daily_lesson(self) -> "DailyLesson":  # noqa: F821 — resolved at runtime
+    def to_daily_lesson(self) -> DailyLesson:  # noqa: F821 — resolved at runtime
         """Return a legacy ``DailyLesson`` compiled from this MasterContent.
 
         Allows existing code that expects ``DailyLesson`` objects to continue

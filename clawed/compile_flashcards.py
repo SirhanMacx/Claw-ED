@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def compile_anki_tsv(master: "MasterContent", output_dir: Path) -> Path:
+def compile_anki_tsv(master: MasterContent, output_dir: Path) -> Path:
     """Export vocabulary + guided notes as Anki-importable TSV.
 
     Format: front<TAB>back<TAB>tags
@@ -74,7 +74,7 @@ def compile_anki_tsv(master: "MasterContent", output_dir: Path) -> Path:
     return out_path
 
 
-def compile_kahoot_csv(master: "MasterContent", output_dir: Path) -> Path:
+def compile_kahoot_csv(master: MasterContent, output_dir: Path) -> Path:
     """Export exit ticket + vocabulary as Kahoot-importable CSV.
 
     Kahoot CSV format:
@@ -154,7 +154,7 @@ def compile_kahoot_csv(master: "MasterContent", output_dir: Path) -> Path:
     return out_path
 
 
-def compile_study_guide(master: "MasterContent", output_dir: Path) -> Path:
+def compile_study_guide(master: MasterContent, output_dir: Path) -> Path:
     """Export a plain-text study guide for student review.
 
     Combines vocabulary, key points, and guided note answers into a

@@ -6,7 +6,6 @@ import re
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Optional
 
 import httpx
 
@@ -14,7 +13,7 @@ from clawed.ingestor import ingest_directory, ingest_path
 from clawed.models import Document
 
 
-def extract_folder_id(url: str) -> Optional[str]:
+def extract_folder_id(url: str) -> str | None:
     """Extract folder ID from various Google Drive URL formats.
 
     Supports:

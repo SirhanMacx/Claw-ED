@@ -8,6 +8,6 @@ Usage:
     from clawed.transports.web import create_app
     app = create_app()
 """
-from clawed.api.server import create_app  # noqa: F401
+from clawed.api.server import create_app
 
 __all__ = ["create_app"]

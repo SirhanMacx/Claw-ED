@@ -11,7 +11,6 @@ import json
 import os
 import stat
 from pathlib import Path
-from typing import Optional
 
 from clawed.models import AppConfig
 
@@ -42,7 +41,7 @@ def _save_secrets(secrets: dict[str, str]) -> None:
         pass
 
 
-def _try_keyring_get(key: str) -> Optional[str]:
+def _try_keyring_get(key: str) -> str | None:
     try:
         import keyring
         return keyring.get_password(_SERVICE_NAME, key)
@@ -68,7 +67,7 @@ def _try_keyring_delete(key: str) -> bool:
         return False
 
 
-def _resolve_claude_code_token() -> Optional[str]:
+def _resolve_claude_code_token() -> str | None:
     """Get a valid OAuth token, refreshing if near expiry.
 
     Uses the OAuth refresh flow from Claude Code's credential store.
@@ -100,7 +99,7 @@ def _resolve_claude_code_token() -> Optional[str]:
     return None
 
 
-def _resolve_codex_token() -> Optional[str]:
+def _resolve_codex_token() -> str | None:
     """Get OpenAI access token from Codex CLI (~/.codex/auth.json).
 
     Codex stores OAuth tokens at ~/.codex/auth.json with structure:
@@ -123,7 +122,7 @@ def _resolve_codex_token() -> Optional[str]:
     return None
 
 
-def get_api_key(provider: str) -> Optional[str]:
+def get_api_key(provider: str) -> str | None:
     """Retrieve an API key for the given provider.
 
     Priority: environment variable > Claude Code credentials (anthropic only)
@@ -215,7 +214,7 @@ def delete_api_key(provider: str) -> None:
         _save_secrets(secrets)
 
 
-def mask_api_key(key: Optional[str]) -> str:
+def mask_api_key(key: str | None) -> str:
     """Mask an API key for display: sk-...abc123."""
     if not key:
         return ""
@@ -230,9 +229,7 @@ def is_anthropic_oauth_token(api_key: str) -> bool:
         return False
     if api_key.startswith("sk-ant-api"):
         return False
-    if api_key.startswith("sk-ant-"):
-        return True
-    return False
+    return bool(api_key.startswith("sk-ant-"))
 
 
 def is_ollama_cloud(base_url: str) -> bool:
@@ -262,7 +259,7 @@ def has_teacher_profile() -> bool:
         return False
 
 
-async def test_llm_connection(config: Optional[AppConfig] = None) -> dict:
+async def test_llm_connection(config: AppConfig | None = None) -> dict:
     """Test the LLM connection and return status info."""
     cfg = config or AppConfig.load()
     provider = cfg.provider.value

@@ -216,10 +216,7 @@ async def _openai_with_tools(
     from clawed.config import get_api_key
 
     # Route to the right provider's API key
-    if config.provider == LLMProvider.OPENROUTER:
-        api_key = get_api_key("openrouter")
-    else:
-        api_key = get_api_key("openai")
+    api_key = get_api_key("openrouter") if config.provider == LLMProvider.OPENROUTER else get_api_key("openai")
     if not api_key:
         raise ValueError("No OpenAI API key configured")
 

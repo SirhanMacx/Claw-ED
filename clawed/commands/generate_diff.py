@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.panel import Panel
@@ -28,13 +27,13 @@ def differentiate(
     lesson_file: str = typer.Option(
         ..., "--lesson-file", "-l", help="Path to lesson plan JSON"
     ),
-    iep: Optional[str] = typer.Option(
+    iep: str | None = typer.Option(
         None, "--iep", help="Path to IEP student profiles JSON"
     ),
-    accommodations_504: Optional[str] = typer.Option(
+    accommodations_504: str | None = typer.Option(
         None, "--504", help="Comma-separated 504 accommodations"
     ),
-    tiered_topic: Optional[str] = typer.Option(
+    tiered_topic: str | None = typer.Option(
         None, "--tiered-topic", help="Topic for tiered assignments"
     ),
     tiered_grade: str = typer.Option(
@@ -178,9 +177,7 @@ def differentiate(
             low = t * 100 + (1 if t == 0 else 0)
             high = (t + 1) * 100
             count = sum(1 for i in items if low <= i.item_number < high)
-            labels = ["Approaching", "On-Level", "Advanced"] + [
-                f"Tier {t + 1}"
-            ]
+            labels = ["Approaching", "On-Level", "Advanced", f"Tier {t + 1}"]
             table.add_row(labels[min(t, len(labels) - 1)], str(count))
         console.print(table)
         console.print(f"[green]Saved:[/green] {path}")

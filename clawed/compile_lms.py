@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ── Common Cartridge (.imscc) ────────────────────────────────────────
 
 
-def compile_common_cartridge(master: "MasterContent", output_dir: Path) -> Path:
+def compile_common_cartridge(master: MasterContent, output_dir: Path) -> Path:
     """Export lesson as IMS Common Cartridge package (.imscc).
 
     Common Cartridge is a ZIP file with:
@@ -122,7 +122,7 @@ def compile_common_cartridge(master: "MasterContent", output_dir: Path) -> Path:
     return imscc_path
 
 
-def _build_overview_html(master: "MasterContent") -> str:
+def _build_overview_html(master: MasterContent) -> str:
     """Build a lesson overview HTML page for Common Cartridge."""
     sections = [
         f"<h1>{master.title}</h1>",
@@ -164,7 +164,7 @@ def _build_overview_html(master: "MasterContent") -> str:
     )
 
 
-def _build_handout_html(master: "MasterContent") -> str:
+def _build_handout_html(master: MasterContent) -> str:
     """Build a student handout HTML page for Common Cartridge."""
     sections = [
         f"<h1>{master.title}</h1>",
@@ -218,7 +218,7 @@ def _build_handout_html(master: "MasterContent") -> str:
 
 
 async def post_to_google_classroom(
-    master: "MasterContent",
+    master: MasterContent,
     course_id: str,
     file_paths: list[Path] | None = None,
 ) -> dict | None:
@@ -283,7 +283,7 @@ async def post_to_google_classroom(
 # ── UDL 3-Tier Lesson Generation ─────────────────────────────────────
 
 
-def generate_udl_tiers(master: "MasterContent") -> dict[str, dict]:
+def generate_udl_tiers(master: MasterContent) -> dict[str, dict]:
     """Generate 3 differentiated versions of a lesson for UDL compliance.
 
     Returns a dict with three keys:
@@ -360,7 +360,7 @@ def generate_udl_tiers(master: "MasterContent") -> dict[str, dict]:
 async def grade_exit_ticket(
     student_response: str,
     question_index: int,
-    master: "MasterContent",
+    master: MasterContent,
 ) -> dict:
     """Grade a student's exit ticket response against the answer key.
 

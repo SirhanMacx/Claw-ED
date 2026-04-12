@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 # Each entry: (code, description, grade_band)
 STANDARDS: dict[str, list[tuple[str, str, str]]] = {
     "math": [
@@ -458,14 +456,14 @@ SUBJECT_ALIASES: dict[str, str] = {
 }
 
 
-def resolve_subject(subject: str) -> Optional[str]:
+def resolve_subject(subject: str) -> str | None:
     """Resolve a subject name to a canonical key in the STANDARDS dict."""
     return SUBJECT_ALIASES.get(subject.lower().strip())
 
 
 def get_standards(
     subject: str,
-    grade: Optional[str] = None,
+    grade: str | None = None,
 ) -> list[tuple[str, str, str]]:
     """Return standards matching the subject and optional grade filter.
 

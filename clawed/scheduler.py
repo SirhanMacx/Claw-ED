@@ -15,8 +15,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -528,7 +529,7 @@ async def _task_curriculum_watch() -> str:
         from clawed.agent_core.identity import get_teacher_id
         from clawed.models import AppConfig
 
-        _tid = get_teacher_id()  # noqa: F841 — reserved for future per-teacher watch
+        _tid = get_teacher_id()
         config = AppConfig.load()
         materials_paths = getattr(config.teacher_profile, "materials_paths", [])
 

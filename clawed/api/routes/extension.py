@@ -129,7 +129,7 @@ async def extension_generate(req: ExtensionGenerateRequest):
             # Use a synthetic unit_id so we don't require a real unit row
             import hashlib
             unit_id = hashlib.md5(
-                f"extension:{topic}".encode("utf-8")
+                f"extension:{topic}".encode()
             ).hexdigest()[:16]
             lesson_id = session.save_lesson(daily, unit_id=unit_id)
             # save_lesson writes a share_token row too; look it up

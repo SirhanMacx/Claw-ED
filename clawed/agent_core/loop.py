@@ -60,7 +60,7 @@ async def run_agent_loop(
     all_side_effects: list[str] = []
     tool_schemas = registry.schemas() or None
 
-    for iteration in range(max_iterations):
+    for _iteration in range(max_iterations):
         response = await llm.generate(
             messages=messages, tools=tool_schemas, system=system,
         )
@@ -101,14 +101,32 @@ async def run_agent_loop(
                 })
             continue
 
-    # TODO: export guarantee — detect when generation tools were called
-    # without a follow-up export_document call, and nudge the agent to export.
+    # Export guarantee: nudge if generation tools ran without a subsequent
+    # export_document call — the teacher likely expects a downloadable file.
+    generation_tools = frozenset({
+        "generate_lesson", "generate_lesson_bundle", "generate_unit",
+        "generate_assessment", "generate_materials", "generate_game",
+        "generate_animation", "generate_simulation",
+    })
+    called_tools = {
+        m["tool_calls"][idx]["name"]
+        for m in messages if m.get("tool_calls")
+        for idx in range(len(m["tool_calls"]))
+    }
+    generated = bool(called_tools & generation_tools)
+    exported = "export_document" in called_tools
+    nudge = (
+        "\n\nIt looks like I generated content but didn't export it yet. "
+        "Would you like me to export it as a PDF, DOCX, or PPTX?"
+        if generated and not exported else ""
+    )
 
     # Safety limit reached
     return GatewayResponse(
         text=(
             "I've been working on this for a while. "
             "Here's what I have so far — want me to continue?"
+            f"{nudge}"
         ),
         files=all_files,
     )

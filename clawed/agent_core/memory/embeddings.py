@@ -15,7 +15,6 @@ import math
 import os
 import re
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ class ONNXMiniLMEmbedder:
 
     _DIM = 384
 
-    def __init__(self, model_dir: Optional[Path] = None) -> None:
+    def __init__(self, model_dir: Path | None = None) -> None:
         self._model_dir = model_dir or _MODEL_DIR
         self._session = None
         self._tokenizer = None
@@ -225,7 +224,7 @@ class OllamaEmbedder:
         return [self.embed(t) for t in texts]
 
     def cosine_similarity(self, a: list[float], b: list[float]) -> float:
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = math.sqrt(sum(x * x for x in a)) or 1.0
         norm_b = math.sqrt(sum(x * x for x in b)) or 1.0
         return dot / (norm_a * norm_b)
@@ -295,7 +294,7 @@ class TFIDFEmbedder:
         max_len = max(len(a), len(b))
         a = a + [0.0] * (max_len - len(a))
         b = b + [0.0] * (max_len - len(b))
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = math.sqrt(sum(x * x for x in a)) or 1.0
         norm_b = math.sqrt(sum(x * x for x in b)) or 1.0
         return dot / (norm_a * norm_b)

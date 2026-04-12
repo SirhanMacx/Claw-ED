@@ -25,8 +25,8 @@ def _esc(text: str) -> str:
 
 
 def export_lesson_pdf(
-    lesson: "DailyLesson",
-    persona: "TeacherPersona",
+    lesson: DailyLesson,
+    persona: TeacherPersona,
     output_dir: Path | None = None,
 ) -> Path:
     """Generate a PDF from a lesson plan via reportlab.

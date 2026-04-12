@@ -1,6 +1,7 @@
 """Tool: gap_analysis — wraps CurriculumMapper.identify_curriculum_gaps."""
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -55,10 +56,8 @@ class GapAnalysisTool:
 
         persona = TeacherPersona()
         if context.persona:
-            try:
+            with contextlib.suppress(Exception):
                 persona = TeacherPersona(**context.persona)
-            except Exception:
-                pass
 
         try:
             mapper = CurriculumMapper(context.config)

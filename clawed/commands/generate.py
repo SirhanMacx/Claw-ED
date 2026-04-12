@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.panel import Panel
@@ -97,7 +96,7 @@ def _lesson_json(*, topic, grade, subject, fmt, unit_file=None, lesson_number=1)
 @generate_app.command()
 def lesson(
     topic: str = typer.Argument(..., help="Lesson topic (e.g. 'The American Revolution')"),
-    unit_file: Optional[str] = typer.Option(
+    unit_file: str | None = typer.Option(
         None, "--unit-file", "-u", help="Path to unit plan JSON (omit for standalone lesson)"
     ),
     lesson_num: int = typer.Option(
@@ -106,7 +105,7 @@ def lesson(
     grade: str = typer.Option(
         "8", "--grade", "-g", help="Grade level (for standalone lesson)"
     ),
-    subject: Optional[str] = typer.Option(
+    subject: str | None = typer.Option(
         None, "--subject", "-s", help="Subject area (reads from your profile if not set)"
     ),
     homework: bool = typer.Option(
@@ -452,9 +451,9 @@ def lesson(
 # ── Import split modules so their commands register on generate_app ──────
 # NOTE: These imports MUST stay at the bottom to avoid circular imports.
 # Each module imports generate_app from this file and registers commands on it.
-import clawed.commands.generate_assessment  # noqa: E402, F401
-import clawed.commands.generate_comms  # noqa: E402, F401
-import clawed.commands.generate_diff  # noqa: E402, F401
-import clawed.commands.generate_ingest  # noqa: E402, F401
-import clawed.commands.generate_standards  # noqa: E402, F401
+import clawed.commands.generate_assessment  # noqa: E402
+import clawed.commands.generate_comms  # noqa: E402
+import clawed.commands.generate_diff  # noqa: E402
+import clawed.commands.generate_ingest  # noqa: E402
+import clawed.commands.generate_standards  # noqa: E402
 import clawed.commands.generate_unit  # noqa: E402, F401

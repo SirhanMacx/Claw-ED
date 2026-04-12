@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 async def compile_project_packet(
-    project: "ProjectArc",
+    project: ProjectArc,
     output_dir: Path,
 ) -> Path:
     """Compile a student-facing project packet DOCX from a ProjectArc.

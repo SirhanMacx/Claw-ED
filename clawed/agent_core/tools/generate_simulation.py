@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -66,10 +67,8 @@ class GenerateSimulationTool:
 
             persona = None
             if context.persona:
-                try:
+                with contextlib.suppress(Exception):
                     persona = TeacherPersona(**context.persona)
-                except Exception:
-                    pass
 
             # v4.11.2026 fix: ``compile_simulation`` expects a real
             # ``MasterContent`` instance (it calls ``master.title``,

@@ -10,8 +10,6 @@ The actual command implementations live in:
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 
 from clawed import __version__
@@ -65,7 +63,7 @@ def _version_callback(value: bool) -> None:
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None,
         "--version",
         "-V",
@@ -289,7 +287,7 @@ register_status(app)
 
 # ── Backward compatibility ──────────────────────────────────────────────
 # Tests and other modules import these directly from clawed.cli
-__all__ = ["app", "_DEMO_HTML", "_lesson_to_html"]
+__all__ = ["_DEMO_HTML", "_lesson_to_html", "app"]
 
 if __name__ == "__main__":
     app()

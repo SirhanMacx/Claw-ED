@@ -18,14 +18,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
 
 from clawed.gateway import Gateway
 
 logger = logging.getLogger(__name__)
 
 # Singleton gateway for the Hermes transport
-_gateway: Optional[Gateway] = None
+_gateway: Gateway | None = None
 
 
 def _get_gateway() -> Gateway:

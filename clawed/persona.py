@@ -140,9 +140,8 @@ def merge_persona(existing: TeacherPersona, new: TeacherPersona) -> TeacherPerso
     for field in _STRING_FIELDS:
         existing_val = getattr(existing, field, "")
         new_val = getattr(new, field, "")
-        if not existing_val or existing_val == TeacherPersona.model_fields[field].default:
-            if new_val:
-                data[field] = new_val
+        if (not existing_val or existing_val == TeacherPersona.model_fields[field].default) and new_val:
+            data[field] = new_val
 
     # Identity fields: always keep existing (never overwrite)
     for field in _IDENTITY_FIELDS:

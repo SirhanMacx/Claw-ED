@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 
 from clawed.commands._helpers import console, run_async
@@ -18,7 +16,7 @@ def submit(
     topic: str = typer.Option("", "--topic", "-t", help="Topic for generation"),
     grade: str = typer.Option("", "--grade", "-g", help="Grade level"),
     subject: str = typer.Option("", "--subject", "-s", help="Subject area"),
-    unit_path: Optional[str] = typer.Option(None, "--unit-path", help="Path to unit plan JSON (for lesson tasks)"),
+    unit_path: str | None = typer.Option(None, "--unit-path", help="Path to unit plan JSON (for lesson tasks)"),
     lesson_number: int = typer.Option(1, "--lesson-number", "-n", help="Lesson number (for lesson tasks)"),
 ) -> None:
     """Submit a generation task to the background queue."""

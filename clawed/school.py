@@ -7,7 +7,7 @@ can manage the roster and moderate the shared library.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from clawed.database import Database
 
@@ -25,7 +25,7 @@ def setup_school(
     return db.create_school(name=name, district=district, state=state, grade_levels=grade_levels)
 
 
-def get_school(db: Database, school_id: str) -> Optional[dict[str, Any]]:
+def get_school(db: Database, school_id: str) -> dict[str, Any] | None:
     """Look up a school by ID."""
     return db.get_school(school_id)
 
@@ -63,7 +63,7 @@ def share_unit(
     teacher_id: str,
     unit_id: str,
     department: str = "",
-) -> Optional[str]:
+) -> str | None:
     """Share a unit with the school (or a specific department).
 
     Returns the shared-content ID, or None if the unit doesn't exist.
@@ -89,7 +89,7 @@ def share_lesson(
     teacher_id: str,
     lesson_id: str,
     department: str = "",
-) -> Optional[str]:
+) -> str | None:
     """Share a lesson with the school (or a specific department).
 
     Returns the shared-content ID, or None if the lesson doesn't exist.

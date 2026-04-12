@@ -72,7 +72,7 @@ DEFAULT_MEMORY_TEMPLATE = """\
 
 
 def extract_lesson_patterns(
-    lesson: "DailyLesson",
+    lesson: DailyLesson,
     rating: int,
     notes: str = "",
     edited_sections: list[str] | None = None,
@@ -317,7 +317,7 @@ def _is_duplicate_entry(content: str, entry: str) -> bool:
 
 
 def process_feedback(
-    lesson: "DailyLesson",
+    lesson: DailyLesson,
     rating: int,
     notes: str = "",
     edited_sections: list[str] | None = None,
@@ -623,7 +623,7 @@ def _save_stats(stats_path: Path, stats: dict[str, Any]) -> None:
     stats_path.write_text(json.dumps(stats, indent=2), encoding="utf-8")
 
 
-def track_lesson_metadata(lesson: "DailyLesson", rating: int) -> None:
+def track_lesson_metadata(lesson: DailyLesson, rating: int) -> None:
     """Track which lesson characteristics correlate with high ratings.
 
     Pure rule-based -- no LLM calls. Builds a statistical profile

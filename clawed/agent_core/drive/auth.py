@@ -1,6 +1,7 @@
 """Google OAuth flow + token persistence for Drive access."""
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -26,10 +27,8 @@ def save_token(token_data: dict[str, Any],
     path = token_path or _default_token_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(token_data, indent=2), encoding="utf-8")
-    try:
+    with contextlib.suppress(OSError):
         path.chmod(0o600)
-    except OSError:
-        pass
 
 
 def load_token(token_path: Path | None = None) -> dict[str, Any] | None:

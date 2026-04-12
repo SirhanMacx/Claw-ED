@@ -67,10 +67,7 @@ def _bullet_textbox(slide, left, top, width, height,
     tf.word_wrap = True
 
     for i, item in enumerate(items):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         run = p.add_run()
         run.text = f"\u2022  {item}"
         run.font.size = Pt(font_size)
@@ -96,7 +93,7 @@ def _embed_image(slide, image_spec: str, images: dict[str, Path],
 
 
 async def compile_slides(
-    master: "MasterContent",
+    master: MasterContent,
     images: dict[str, Path],
     output_dir: Path,
 ) -> Path:
@@ -131,7 +128,7 @@ async def compile_slides(
     prs.slide_height = Inches(7.5)
 
     W = prs.slide_width  # noqa: N806
-    _slide_h = prs.slide_height  # noqa: F841, N806
+    _slide_h = prs.slide_height
 
     # Palette (neutral academic)
     C_TITLE_BG = "1F3864"    # dark navy  # noqa: N806

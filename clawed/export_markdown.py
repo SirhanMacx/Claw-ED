@@ -283,7 +283,7 @@ tr:nth-child(even) { background: #f8f9fa; }
 
 def _lesson_to_html_for_pdf(
     lesson: DailyLesson,
-    materials: "LessonMaterials | None" = None,
+    materials: LessonMaterials | None = None,
     teacher_name: str = "",
     date_str: str = "",
 ) -> str:
@@ -371,7 +371,7 @@ def _lesson_to_html_for_pdf(
 
 async def export_lesson_pdf(
     lesson: DailyLesson,
-    materials: "LessonMaterials | None" = None,
+    materials: LessonMaterials | None = None,
     output_path: Path | None = None,
     teacher_name: str = "",
     date_str: str = "",

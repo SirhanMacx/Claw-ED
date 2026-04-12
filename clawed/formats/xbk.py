@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
-from typing import Optional
 from xml.etree import ElementTree
 
 
-def extract_xbk(path: Path) -> tuple[str, Optional[int]]:
+def extract_xbk(path: Path) -> tuple[str, int | None]:
     """Extract text from a SMART Board (.xbk) file.
 
     Tries ZIP-based extraction first, then falls back to plain XML.
@@ -37,7 +36,7 @@ def extract_xbk(path: Path) -> tuple[str, Optional[int]]:
     return "", None
 
 
-def _extract_from_zip(zf: zipfile.ZipFile) -> tuple[str, Optional[int]]:
+def _extract_from_zip(zf: zipfile.ZipFile) -> tuple[str, int | None]:
     """Extract text from XML files within a ZIP-based XBK."""
     texts: list[str] = []
     page_count = 0

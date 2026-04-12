@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.panel import Panel
 
@@ -76,10 +74,10 @@ def sub_packet(
         "My Class", "--class", "-c", help="Class name"
     ),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    subject: Optional[str] = typer.Option(
+    subject: str | None = typer.Option(
         None, "--subject", "-s", help="Subject (reads from your profile if not set)"
     ),
-    topic: Optional[str] = typer.Option(
+    topic: str | None = typer.Option(
         None, "--topic", "-t", help="Lesson topic"
     ),
     fmt: str = typer.Option(
@@ -232,10 +230,10 @@ def parent_note(
         "-t",
         help="Note context (e.g. 'midterm', 'behavior')",
     ),
-    strengths: Optional[str] = typer.Option(
+    strengths: str | None = typer.Option(
         None, "--strengths", help="Comma-separated strengths"
     ),
-    growth: Optional[str] = typer.Option(
+    growth: str | None = typer.Option(
         None, "--growth", help="Comma-separated growth areas"
     ),
     teacher_id: str = typer.Option(

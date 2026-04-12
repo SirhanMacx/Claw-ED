@@ -1,6 +1,7 @@
 """Tool: generate_unit — wraps clawed.planner.plan_unit."""
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -63,10 +64,8 @@ class GenerateUnitTool:
 
         persona = TeacherPersona()
         if context.persona:
-            try:
+            with contextlib.suppress(Exception):
                 persona = TeacherPersona(**context.persona)
-            except Exception:
-                pass
 
         try:
             unit = await plan_unit(

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clawed"
-version = "4.11.2026.1"
+version = "4.11.2026.2"
 description = "Your AI co-teacher. Generate lessons, games, slides, and assessments from your terminal. Learns your teaching voice, aligns to your state standards, and works with any LLM provider."
 readme = "README.md"
 license = "MIT"
@@ -126,7 +126,20 @@ line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "B904",    # raise-without-from — tracked for future cleanup
+    "RUF001",  # ambiguous unicode in education content strings
+    "RUF002",  # ambiguous unicode in docstrings
+    "RUF012",  # mutable class defaults — existing patterns are intentional
+    "SIM102",  # collapsible-if — readability preference
+    "SIM105",  # suppressible-exception — explicit try/except is clearer
+    "SIM108",  # ternary expression — readability preference
+    "SIM113",  # enumerate-for-loop — context-dependent
+    "B007",    # unused-loop-control-variable — naming convention
+    "B008",    # function-call-in-default-argument — FastAPI Depends pattern
+    "B018",    # useless-expression — docstring test pattern
+]
 
 [tool.ruff.lint.per-file-ignores]
 "clawed/export_docx.py" = ["N806"]
@@ -143,3 +156,4 @@ source = ["clawed"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 65
+branch = true

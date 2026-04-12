@@ -221,5 +221,5 @@ def register_status(app: typer.Typer) -> None:
 # These imports MUST come after the app definitions above to avoid
 # circular import errors (the split modules import the apps from here).
 
-import clawed.commands.config_llm  # noqa: E402, F401
+import clawed.commands.config_llm  # noqa: E402
 import clawed.commands.config_profile  # noqa: E402, F401

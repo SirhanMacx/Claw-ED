@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -72,7 +71,7 @@ def create(
         ..., help="Simulation topic (e.g. 'Pendulum Motion')"
     ),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    subject: Optional[str] = typer.Option(
+    subject: str | None = typer.Option(
         None, "--subject", "-s", help="Subject area (reads from your profile if not set)"
     ),
     sim_type: str = typer.Option(
@@ -81,7 +80,7 @@ def create(
         help="Simulation type (e.g. 'physics', 'chemistry', 'math', "
         "'biology'). Leave empty for AI to decide.",
     ),
-    from_lesson: Optional[str] = typer.Option(
+    from_lesson: str | None = typer.Option(
         None,
         "--from-lesson",
         "-l",

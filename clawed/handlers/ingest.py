@@ -9,8 +9,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 from clawed.gateway_response import GatewayResponse
 
@@ -38,7 +38,7 @@ class IngestHandler:
         teacher_id: str,
         files: list[Path] | None = None,
         path: str | None = None,
-        progress_callback: Optional[Callable[[str], None]] = None,
+        progress_callback: Callable[[str], None] | None = None,
     ) -> GatewayResponse:
         if not files and not path:
             return GatewayResponse(
@@ -97,7 +97,7 @@ class IngestHandler:
         teacher_id: str,
         files: list[Path] | None,
         target: Path | None,
-        progress_callback: Optional[Callable[[str], None]],
+        progress_callback: Callable[[str], None] | None,
     ) -> None:
         """Run ingestion synchronously in a background thread."""
         try:
@@ -130,7 +130,7 @@ class IngestHandler:
         self,
         files: list[Path] | None,
         target: Path | None,
-        progress_callback: Optional[Callable[[str], None]],
+        progress_callback: Callable[[str], None] | None,
     ) -> tuple[list, int]:
         """Extract documents from files or directory.
 
@@ -210,7 +210,7 @@ class IngestHandler:
         self,
         teacher_id: str,
         documents: list,
-        progress_callback: Optional[Callable[[str], None]],
+        progress_callback: Callable[[str], None] | None,
     ) -> str:
         """Index documents into curriculum knowledge base with progress."""
         try:
@@ -276,7 +276,7 @@ class IngestHandler:
         return ""
 
     @staticmethod
-    def _notify(callback: Optional[Callable[[str], None]], msg: str) -> None:
+    def _notify(callback: Callable[[str], None] | None, msg: str) -> None:
         """Send a progress notification if callback is available."""
         if callback:
             try:

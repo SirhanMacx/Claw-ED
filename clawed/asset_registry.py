@@ -712,7 +712,7 @@ class AssetRegistry:
 
             # Rank by similarity, threshold at 0.3
             ranked = sorted(
-                zip(similarities, candidates),
+                zip(similarities, candidates, strict=False),
                 key=lambda x: x[0],
                 reverse=True,
             )

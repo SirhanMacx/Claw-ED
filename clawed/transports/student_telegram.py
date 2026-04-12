@@ -43,10 +43,10 @@ STUDENT_BOT_COMMANDS: list[tuple[str, str]] = [
 _student_sessions: dict[int, dict[str, str]] = {}
 
 # Persistent store — lazy-initialized
-_student_state_store: "StudentBotStateStore | None" = None
+_student_state_store: StudentBotStateStore | None = None
 
 
-def _get_student_store() -> "StudentBotStateStore":
+def _get_student_store() -> StudentBotStateStore:
     global _student_state_store
     if _student_state_store is None:
         from clawed.bot_state import StudentBotStateStore

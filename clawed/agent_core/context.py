@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from clawed.models import AppConfig
 
@@ -23,7 +24,7 @@ class AgentContext:
     improvement_context: str
     agent_name: str = "Claw-ED"
     transport: str = "cli"
-    progress_callback: Optional[Callable[[str], None]] = None
+    progress_callback: Callable[[str], None] | None = None
 
     def notify_progress(self, message: str) -> None:
         """Send a progress update to the user if a callback is registered."""

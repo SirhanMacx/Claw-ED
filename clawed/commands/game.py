@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -72,7 +71,7 @@ def create(
         ..., help="Lesson topic (e.g. 'The Missouri Compromise')"
     ),
     grade: str = typer.Option("8", "--grade", "-g", help="Grade level"),
-    subject: Optional[str] = typer.Option(
+    subject: str | None = typer.Option(
         None, "--subject", "-s", help="Subject area (reads from your profile if not set)"
     ),
     style: str = typer.Option(
@@ -87,7 +86,7 @@ def create(
         help="What your students are into (e.g. 'they love Fortnite', "
         "'competitive, love team challenges')",
     ),
-    from_lesson: Optional[str] = typer.Option(
+    from_lesson: str | None = typer.Option(
         None,
         "--from-lesson",
         "-l",

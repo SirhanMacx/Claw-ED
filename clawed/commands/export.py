@@ -8,7 +8,6 @@ import re
 import subprocess
 import webbrowser
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 import typer
@@ -367,13 +366,13 @@ def export_cmd(
 
 @export_app.command()
 def share(
-    lesson_file: Optional[str] = typer.Option(
+    lesson_file: str | None = typer.Option(
         None,
         "--lesson-file",
         "-l",
         help="Path to a saved lesson JSON file",
     ),
-    lesson_id: Optional[str] = typer.Option(
+    lesson_id: str | None = typer.Option(
         None, "--lesson-id", help="Lesson ID from the database"
     ),
     host: str = typer.Option(

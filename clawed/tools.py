@@ -8,6 +8,7 @@ Reuses implementations from the MCP server and handlers where possible.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -487,10 +488,8 @@ async def _tool_configure_profile(
     session.persona = persona
     session.save()
 
-    try:
+    with contextlib.suppress(Exception):
         init_workspace(persona, config)
-    except Exception:
-        pass
 
     return (
         f"Profile saved! {teacher_name} teaches {subject}"

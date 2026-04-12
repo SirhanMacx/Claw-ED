@@ -26,7 +26,7 @@ def check_self_contained(text: str) -> list[str]:
     return violations
 
 
-def validate_master_content(mc: "MasterContent", topic: str) -> list[str]:
+def validate_master_content(mc: MasterContent, topic: str) -> list[str]:
     """Validate a MasterContent object against NLAH Section 3 gates."""
     errors = []
     # NLAH: guided_notes >= 6
@@ -56,7 +56,7 @@ def validate_master_content(mc: "MasterContent", topic: str) -> list[str]:
     return errors
 
 
-def validate_alignment(mc: "MasterContent") -> tuple[float, list[str]]:
+def validate_alignment(mc: MasterContent) -> tuple[float, list[str]]:
     """Check cross-document alignment within a MasterContent.
 
     Returns a (score, issues) tuple where *score* is the percentage of guided

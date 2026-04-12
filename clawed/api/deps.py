@@ -5,6 +5,7 @@ Route modules import from here to avoid circular imports with server.py.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import secrets
@@ -125,10 +126,8 @@ def _get_or_create_token() -> str:
     token = secrets.token_urlsafe(32)
     _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
     _TOKEN_FILE.write_text(token, encoding="utf-8")
-    try:
+    with contextlib.suppress(OSError):
         _TOKEN_FILE.chmod(0o600)
-    except OSError:
-        pass
     return token
 
 

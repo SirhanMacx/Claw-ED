@@ -12,6 +12,7 @@ Usage:
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
@@ -181,10 +182,8 @@ def _maybe_start_bot_background() -> None:
                 return  # Bot already running
         except (ValueError, OSError, subprocess.TimeoutExpired):
             # Stale lock — continue to start a new bot
-            try:
+            with contextlib.suppress(OSError):
                 lock_file.unlink()
-            except OSError:
-                pass
 
     # Spawn bot as detached background process
     try:
@@ -427,11 +426,11 @@ def _handle_daemon(args: list[str]) -> None:
     if daemon_entry.endswith(".ts"):
         tsx = shutil.which("tsx")
         if tsx:
-            result = subprocess.run([tsx, daemon_entry] + args)
+            result = subprocess.run([tsx, daemon_entry, *args])
         else:
-            result = subprocess.run([node, "--loader", "ts-node/esm", daemon_entry] + args)
+            result = subprocess.run([node, "--loader", "ts-node/esm", daemon_entry, *args])
     else:
-        result = subprocess.run([node, daemon_entry] + args)
+        result = subprocess.run([node, daemon_entry, *args])
 
     sys.exit(result.returncode)
 
@@ -452,7 +451,7 @@ def main() -> None:
     # Allow forcing Python CLI
     if "--python" in args:
         args.remove("--python")
-        sys.argv = [sys.argv[0]] + args
+        sys.argv = [sys.argv[0], *args]
 
     # Python CLI subcommands — these are typer commands that should NEVER
     # go through the Node CLI (which would interpret them as chat prompts)
@@ -471,7 +470,7 @@ def main() -> None:
 
     # Route known subcommands to Python CLI directly
     if args and args[0] in python_commands:
-        sys.argv = [sys.argv[0]] + args
+        sys.argv = [sys.argv[0], *args]
         _run_python_cli()
         return
 
@@ -572,7 +571,7 @@ def main() -> None:
             except Exception:
                 _auto = False
         if _auto and "--dangerously-skip-permissions" not in args:
-            args = ["--dangerously-skip-permissions"] + args
+            args = ["--dangerously-skip-permissions", *args]
             import sys as _sys
             print(
                 "\u26a0\ufe0f  Permission bypass ACTIVE (CLAWED_AUTO_APPROVE=1). "
@@ -586,7 +585,7 @@ def main() -> None:
             try:
                 model = _get_configured_model()
                 if model:
-                    args = ["--model", model] + args
+                    args = ["--model", model, *args]
             except Exception:
                 pass
 
@@ -596,7 +595,7 @@ def main() -> None:
         if not args:
             _ed_greeting()
 
-        result = subprocess.run([node, cli_js] + args)
+        result = subprocess.run([node, cli_js, *args])
         sys.exit(result.returncode)
     else:
         if not args:

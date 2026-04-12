@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -29,8 +28,8 @@ class Document(BaseModel):
     title: str
     content: str
     doc_type: DocType
-    source_path: Optional[str] = None
-    page_count: Optional[int] = None
+    source_path: str | None = None
+    page_count: int | None = None
     tags: list[str] = Field(default_factory=list)
 
 
@@ -420,7 +419,7 @@ class UnitPlan(BaseModel):
     daily_lessons: list[LessonBrief] = Field(default_factory=list)
     assessment_plan: AssessmentPlan = Field(default_factory=AssessmentPlan)
     required_materials: list[str] = Field(default_factory=list)
-    project: Optional[ProjectArc] = None    # Multi-day project arc (for units > 1 week)
+    project: ProjectArc | None = None    # Multi-day project arc (for units > 1 week)
 
 
 class ExitTicketQuestion(BaseModel):
@@ -531,7 +530,7 @@ class DailyLesson(BaseModel):
     guided_practice: str = ""
     independent_work: str = ""
     exit_ticket: list[ExitTicketQuestion] = Field(default_factory=list)
-    homework: Optional[str] = None
+    homework: str | None = None
     differentiation: DifferentiationNotes = Field(default_factory=DifferentiationNotes)
     materials_needed: list[str] = Field(default_factory=list)
     time_estimates: dict[str, int] = Field(
@@ -546,7 +545,7 @@ class DailyLesson(BaseModel):
     # Structured fields (v2.3) — all optional for backward compatibility
     vocabulary: list[VocabularyTerm] = Field(default_factory=list)
     primary_sources: list[PrimarySourceDocument] = Field(default_factory=list)
-    graphic_organizer: Optional[GraphicOrganizerSpec] = None
+    graphic_organizer: GraphicOrganizerSpec | None = None
     teacher_content_knowledge: str = ""
     image_specs: list[ImageSpec] = Field(default_factory=list)
 
@@ -566,7 +565,7 @@ class StudentPacket(BaseModel):
     vocabulary: list[VocabularyTerm] = Field(default_factory=list)
     guided_notes: list[GuidedNotesBlank] = Field(default_factory=list)
     stations: list[PrimarySourceDocument] = Field(default_factory=list)
-    graphic_organizer: Optional[GraphicOrganizerSpec] = None
+    graphic_organizer: GraphicOrganizerSpec | None = None
     exit_ticket_questions: list[str] = Field(default_factory=list)
     sentence_starters: list[str] = Field(default_factory=list)
     image_specs: list[ImageSpec] = Field(default_factory=list)
@@ -687,7 +686,7 @@ class SharedContentEntry(BaseModel):
     subject: str = ""
     grade_level: str = ""
     department: str = ""
-    rating: Optional[int] = None
+    rating: int | None = None
     shared_at: str = ""
 
 
@@ -1028,7 +1027,7 @@ class TeacherProfile(BaseModel):
     state: str = ""  # e.g., "NY", "CA", "TX" — used to select state-specific standards
 
     # Teaching context
-    class_size: Optional[int] = None
+    class_size: int | None = None
     has_iep_students: bool = True
     has_ell_students: bool = True
     school_year: str = "2025-26"
@@ -1038,7 +1037,7 @@ class TeacherProfile(BaseModel):
     drive_urls: list[str] = Field(default_factory=list)       # Google Drive URLs
 
     # API keys (stored here for portability, keyring preferred)
-    tavily_api_key: Optional[str] = None
+    tavily_api_key: str | None = None
 
     def get_standards_prefix(self) -> str:
         """Get the standards code prefix for this teacher's framework."""
@@ -1109,26 +1108,26 @@ class AppConfig(BaseModel):
     agent_name: str = "Claw-ED"
 
     # Ollama API key (for cloud Ollama)
-    ollama_api_key: Optional[str] = None
+    ollama_api_key: str | None = None
 
     # Telegram bot token (persisted so teachers don't re-enter it every time)
-    telegram_bot_token: Optional[str] = None
+    telegram_bot_token: str | None = None
 
     # Per-task model overrides (e.g. {"bellringer": "qwen3.5:cloud"})
-    task_models: Optional[dict[str, str]] = None
+    task_models: dict[str, str] | None = None
 
     # Tier model overrides (e.g. {"fast": "qwen3.5:cloud", "deep": "claude-opus-4-6"})
-    tier_models: Optional[dict[str, str]] = None
+    tier_models: dict[str, str] | None = None
 
     # Tier → provider routing (e.g. {"fast": "ollama", "deep": "anthropic"})
     # Allows different tiers to use different providers simultaneously
-    tier_providers: Optional[dict[str, str]] = None
+    tier_providers: dict[str, str] | None = None
 
     # Max agent loop iterations (increase for complex curriculum planning)
     max_agent_iterations: int = 20
 
     # Web dashboard password (None = no auth, set to enable basic auth)
-    dashboard_password: Optional[str] = None
+    dashboard_password: str | None = None
 
     # Per-image network timeout for the image pipeline (seconds)
     image_fetch_timeout: int = 10
@@ -1163,7 +1162,7 @@ class AppConfig(BaseModel):
     )
 
     @classmethod
-    def load(cls) -> "AppConfig":
+    def load(cls) -> AppConfig:
         """Load config from disk, or return defaults.
 
         After loading the JSON config, hydrate secret fields from the
@@ -1171,10 +1170,7 @@ class AppConfig(BaseModel):
         never read from the plaintext JSON file.
         """
         path = cls.config_path()
-        if path.exists():
-            cfg = cls.model_validate_json(path.read_text(encoding="utf-8"))
-        else:
-            cfg = cls()
+        cfg = cls.model_validate_json(path.read_text(encoding="utf-8")) if path.exists() else cls()
 
         # Honor OLLAMA_URL env var as an alias for ollama_base_url
         import os

@@ -23,7 +23,6 @@ import os
 import sqlite3
 import uuid
 from pathlib import Path
-from typing import Optional
 
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
 CORPUS_DIR = _BASE_DIR / "corpus"
@@ -69,9 +68,9 @@ def contribute_example(
     subject: str,
     grade_level: str,
     content: dict,
-    topic: Optional[str] = None,
+    topic: str | None = None,
     quality_score: float = 4.0,
-    teacher_id: Optional[str] = None,
+    teacher_id: str | None = None,
     state: str = "",
     framework: str = "",
     source: str = "teacher",
@@ -133,7 +132,7 @@ def contribute_example(
 def get_examples(
     content_type: str,
     subject: str,
-    grade_level: Optional[str] = None,
+    grade_level: str | None = None,
     limit: int = 3,
     min_quality: float = 3.5,
 ) -> list[dict]:
@@ -225,7 +224,7 @@ def get_examples(
 def get_few_shot_context(
     content_type: str,
     subject: str,
-    grade_level: Optional[str] = None,
+    grade_level: str | None = None,
 ) -> str:
     """Get a few-shot context string for injection into generation prompts.
 
@@ -281,7 +280,7 @@ def seed_from_curriculum(
     grade_levels: list[str],
     state: str = "",
     framework: str = "",
-    teacher_id: Optional[str] = None,
+    teacher_id: str | None = None,
 ) -> int:
     """Seed the corpus from a directory of curriculum materials.
 

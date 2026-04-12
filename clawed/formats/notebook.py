@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import zipfile
 from pathlib import Path
-from typing import Optional
 from xml.etree import ElementTree
 
 
-def extract_notebook(path: Path) -> tuple[str, Optional[int]]:
+def extract_notebook(path: Path) -> tuple[str, int | None]:
     """Extract text from a SMART Notebook (.notebook) file.
 
     These are ZIP archives containing XML page files. We walk all XML

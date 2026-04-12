@@ -1,6 +1,7 @@
 """Tool: generate_materials — wraps clawed.materials worksheet/assessment generation."""
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -55,10 +56,8 @@ class GenerateMaterialsTool:
 
         persona = TeacherPersona()
         if context.persona:
-            try:
+            with contextlib.suppress(Exception):
                 persona = TeacherPersona(**context.persona)
-            except Exception:
-                pass
 
         # Build a minimal DailyLesson to pass to generate_worksheet
         lesson = DailyLesson(

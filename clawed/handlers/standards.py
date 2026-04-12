@@ -18,7 +18,7 @@ class StandardsHandler:
         if not standards:
             return GatewayResponse(text=f"No standards found for {subject} grade {grade}.")
         lines = [f"Standards for {subject.title()} Grade {grade}:\n"]
-        for code, desc, band in standards[:limit]:
+        for code, desc, _band in standards[:limit]:
             lines.append(f"  {code}: {desc}")
         if len(standards) > limit:
             lines.append(f"\n  ...and {len(standards) - limit} more")

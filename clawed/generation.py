@@ -694,7 +694,7 @@ async def generate_freeform(message: str, session: TeacherSession) -> str:
         f"{persona_context}"
     )
 
-    messages = recent_context + [{"role": "user", "content": message}]
+    messages = [*recent_context, {"role": "user", "content": message}]
 
     try:
         response = await client.generate(

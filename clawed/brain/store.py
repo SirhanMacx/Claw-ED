@@ -42,7 +42,6 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # Valid page types
 PAGE_TYPES = (
@@ -64,7 +63,7 @@ class TimelineEntry:
         return f"- **{self.date}** | {self.body}{src}"
 
     @classmethod
-    def parse(cls, line: str) -> Optional["TimelineEntry"]:
+    def parse(cls, line: str) -> TimelineEntry | None:
         """Parse a timeline line back into an entry."""
         # Format: - **YYYY-MM-DD** | body [Source: ...]
         m = re.match(
@@ -147,7 +146,7 @@ class BrainPage:
         return "\n".join(lines) + "\n"
 
     @classmethod
-    def parse(cls, text: str) -> "BrainPage":
+    def parse(cls, text: str) -> BrainPage:
         """Parse a markdown page back into a BrainPage."""
         metadata: dict = {}
         body = text
@@ -215,7 +214,7 @@ class BrainStore:
           people/{slug}.md
     """
 
-    def __init__(self, root: Optional[Path] = None):
+    def __init__(self, root: Path | None = None):
         if root is None:
             root = Path.home() / ".eduagent" / "brain"
         self.root = Path(root)
@@ -244,7 +243,7 @@ class BrainStore:
         path.write_text(page.render(), encoding="utf-8")
         return path
 
-    def get(self, page_type: str, slug: str) -> Optional[BrainPage]:
+    def get(self, page_type: str, slug: str) -> BrainPage | None:
         """Load a page by type and slug."""
         path = self._page_path(page_type, slug)
         if not path.exists():
@@ -270,7 +269,7 @@ class BrainStore:
     def search(
         self,
         query: str,
-        page_type: Optional[str] = None,
+        page_type: str | None = None,
         limit: int = 10,
     ) -> list[BrainPage]:
         """Simple keyword search across brain pages.
@@ -321,7 +320,7 @@ class BrainStore:
         source: str = "",
         date: str = "",
         create_if_missing: bool = True,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> bool:
         """Append a timeline entry. Creates the page if missing when allowed."""
         page = self.get(page_type, slug)

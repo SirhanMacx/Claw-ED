@@ -20,7 +20,7 @@ async def deep_research(
     topic: str,
     subject: str = "",
     grade: str = "",
-    llm: "LLMClient | None" = None,
+    llm: LLMClient | None = None,
     max_sub_queries: int = 5,
 ) -> str:
     """Research a topic with parallel sub-query decomposition.

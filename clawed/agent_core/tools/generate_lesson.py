@@ -1,6 +1,7 @@
 """Tool: generate_lesson — wraps clawed.lesson.generate_lesson."""
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -58,10 +59,8 @@ class GenerateLessonTool:
         config = context.config
         persona = TeacherPersona()
         if context.persona:
-            try:
+            with contextlib.suppress(Exception):
                 persona = TeacherPersona(**context.persona)
-            except Exception:
-                pass
 
         unit = UnitPlan(
             title=f"{topic} Unit",

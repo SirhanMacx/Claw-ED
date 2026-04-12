@@ -15,12 +15,12 @@ Transports (Telegram, Web, CLI) just render the GatewayResponse.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from clawed.config import has_config
 from clawed.gateway_response import GatewayResponse
@@ -71,7 +71,7 @@ class GatewayStats:
 class Gateway:
     """The brain of Claw-ED. Transport-agnostic."""
 
-    def __init__(self, config: Optional[AppConfig] = None):
+    def __init__(self, config: AppConfig | None = None):
         self.config = config or AppConfig.load()
         self._event_bus: asyncio.Queue[ActivityEvent] | None = None
         self.active_sessions: dict[str, dict] = {}
@@ -388,10 +388,8 @@ class Gateway:
             data=data or {},
         )
         if self.event_bus.full():
-            try:
+            with contextlib.suppress(asyncio.QueueEmpty):
                 self.event_bus.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
         await self.event_bus.put(event)
 
     # Backward compatibility

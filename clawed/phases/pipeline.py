@@ -343,8 +343,8 @@ def _validate_phase1(phase1: Phase1Skeleton) -> list[str]:
 
 
 async def _phase1_skeleton(
-    unit: "UnitPlan",
-    lesson_brief: "LessonBrief",
+    unit: UnitPlan,
+    lesson_brief: LessonBrief,
     standards_text: str,
     teacher_materials: str,
     system: str,
@@ -634,7 +634,7 @@ async def _phase2b_guided_notes(
 
 async def _phase2_instruction(
     phase1: Phase1Skeleton,
-    persona: "TeacherPersona",
+    persona: TeacherPersona,
     system: str,
     client,
     task_type: str,
@@ -855,7 +855,7 @@ def _validate_phase4(phase4: Phase4Assessment) -> list[str]:
 async def _phase4_assessment(
     phase1: Phase1Skeleton,
     phase2: Phase2Instruction,
-    persona: "TeacherPersona",
+    persona: TeacherPersona,
     system: str,
     client,
     task_type: str,

@@ -13,7 +13,6 @@ import json
 import random
 from datetime import date
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.table import Table
@@ -40,10 +39,7 @@ async def _refine_persona(documents: list) -> None:
 
     # Load existing persona if available
     pp = persona_path()
-    if pp.exists():
-        existing = load_persona(pp)
-    else:
-        existing = TeacherPersona()
+    existing = load_persona(pp) if pp.exists() else TeacherPersona()
 
     merged = merge_persona(existing, new_persona)
     save_persona(merged, pp.parent)
@@ -240,7 +236,7 @@ def _train_json(*, benchmark, n):
 @train_app.callback(invoke_without_command=True)
 def train(
     drive: bool = typer.Option(False, "--drive", help="Ingest from Google Drive folders"),
-    path: Optional[str] = typer.Option(None, "--path", help="Ingest local materials"),
+    path: str | None = typer.Option(None, "--path", help="Ingest local materials"),
     benchmark: bool = typer.Option(False, "--benchmark", help="Generate & score lessons"),
     n: int = typer.Option(3, "-n", help="Number of benchmark lessons"),
     full: bool = typer.Option(False, "--full", help="Run drive + benchmark"),

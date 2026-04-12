@@ -41,5 +41,5 @@ def is_demo_mode(config: Any = None) -> bool:
     if os.environ.get("CLAWED_DEMO", "").strip() in ("1", "true", "yes"):
         return True
     from clawed.config import resolve_credentials
-    provider, key = resolve_credentials(config)
+    provider, _key = resolve_credentials(config)
     return provider is None

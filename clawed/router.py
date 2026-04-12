@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class Intent(str, Enum):
@@ -77,13 +76,13 @@ class ParsedIntent:
     """Result of parsing a teacher message."""
 
     intent: Intent
-    topic: Optional[str] = None
-    grade: Optional[str] = None
-    subject: Optional[str] = None
-    weeks: Optional[int] = None
-    url: Optional[str] = None
-    query: Optional[str] = None
-    format: Optional[str] = None
+    topic: str | None = None
+    grade: str | None = None
+    subject: str | None = None
+    weeks: int | None = None
+    url: str | None = None
+    query: str | None = None
+    format: str | None = None
     raw: str = ""
 
 
@@ -312,13 +311,10 @@ SHOW_FEEDBACK_PATTERNS = [
 
 def _any_match(text: str, patterns: list[str]) -> bool:
     """Return True if text matches any pattern (case-insensitive)."""
-    for pattern in patterns:
-        if re.search(pattern, text, re.IGNORECASE):
-            return True
-    return False
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
 
-def _extract_topic(text: str) -> Optional[str]:
+def _extract_topic(text: str) -> str | None:
     """Try to extract the lesson/unit topic from a message."""
     # "lesson on photosynthesis" / "unit on the Civil War" / "plan a lesson about fractions"
     patterns = [
@@ -334,7 +330,7 @@ def _extract_topic(text: str) -> Optional[str]:
     return None
 
 
-def _extract_grade(text: str) -> Optional[str]:
+def _extract_grade(text: str) -> str | None:
     """Try to extract grade level."""
     m = re.search(r"(?:grade|gr\.?)\s*(\d+|k(?:indergarten)?)|(\d+)(?:st|nd|rd|th)\s+grade", text, re.IGNORECASE)
     if m:
@@ -346,7 +342,7 @@ def _extract_grade(text: str) -> Optional[str]:
     return None
 
 
-def _extract_weeks(text: str) -> Optional[int]:
+def _extract_weeks(text: str) -> int | None:
     """Try to extract duration in weeks."""
     m = re.search(r"(\d+)\s*(?:week|wk)s?", text, re.IGNORECASE)
     if m:
@@ -360,7 +356,7 @@ def _extract_weeks(text: str) -> Optional[int]:
     return None
 
 
-def _extract_url(text: str) -> Optional[str]:
+def _extract_url(text: str) -> str | None:
     """Extract a URL from the message."""
     m = re.search(r"https?://\S+", text)
     return m.group(0).rstrip(".,)>]") if m else None
@@ -534,7 +530,7 @@ def parse_intent(message: str) -> ParsedIntent:
     return ParsedIntent(intent=Intent.UNKNOWN, raw=text)
 
 
-def needs_clarification(parsed: ParsedIntent) -> Optional[str]:
+def needs_clarification(parsed: ParsedIntent) -> str | None:
     """
     Return a clarifying question if we're missing critical info,
     or None if we have enough to proceed.
@@ -545,9 +541,8 @@ def needs_clarification(parsed: ParsedIntent) -> Optional[str]:
         if not parsed.weeks:
             return f"How many weeks for the {parsed.topic} unit? (1-4 weeks is typical)"
 
-    if parsed.intent == Intent.GENERATE_YEAR_MAP:
-        if not parsed.subject and not parsed.grade:
-            return "What subject and grade level? (e.g., '8th grade Math')"
+    if parsed.intent == Intent.GENERATE_YEAR_MAP and not parsed.subject and not parsed.grade:
+        return "What subject and grade level? (e.g., '8th grade Math')"
 
     if parsed.intent in (Intent.GENERATE_LESSON, Intent.GENERATE_MATERIALS, Intent.GENERATE_ASSESSMENT):
         if not parsed.topic:

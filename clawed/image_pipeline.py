@@ -49,7 +49,7 @@ async def check_image_quality(
     image_path: Path,
     spec: str,
     subject: str = "",
-    config: "AppConfig | None" = None,
+    config: AppConfig | None = None,
 ) -> bool:
     """Use a vision model to evaluate whether an image is good enough for a lesson.
 
@@ -83,7 +83,7 @@ async def check_image_quality(
         return True  # Always permissive on failure
 
 
-def _collect_image_specs(master: "MasterContent") -> dict[str, str]:
+def _collect_image_specs(master: MasterContent) -> dict[str, str]:
     """Collect image_spec strings with their content context.
 
     Returns {spec: context_text} — the context helps the image search
@@ -151,8 +151,8 @@ async def _fetch_one(
 
 
 async def fetch_all_images(
-    master: "MasterContent",
-    config: "AppConfig | None" = None,
+    master: MasterContent,
+    config: AppConfig | None = None,
     teacher_id: str = "",
 ) -> dict[str, Path]:
     """Fetch all images referenced in a MasterContent in parallel.
@@ -351,7 +351,7 @@ async def _vision_rerank_candidates(
     candidates: list[Path],
     spec: str,
     subject: str = "",
-    config: "AppConfig | None" = None,
+    config: AppConfig | None = None,
 ) -> Path | None:
     """Ask the VLM to score each candidate against the spec, return the best.
 

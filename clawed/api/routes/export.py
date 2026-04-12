@@ -7,7 +7,6 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 import httpx
@@ -26,8 +25,8 @@ public_router = APIRouter(tags=["public"])
 
 
 class ImportRequest(BaseModel):
-    url: Optional[str] = None
-    token: Optional[str] = None
+    url: str | None = None
+    token: str | None = None
     server: str = "http://localhost:8000"
 
 

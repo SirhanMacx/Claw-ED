@@ -6,11 +6,12 @@ Generates professional, subject-themed slide decks with academic images.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import re
 from datetime import date
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from clawed.async_utils import run_async_safe
 from clawed.export_theme import _hex_to_rgb, _resolve_output
@@ -27,17 +28,15 @@ _temp_image_files: list[Path] = []
 def cleanup_temp_images() -> None:
     """Remove temporary image files created during PPTX export."""
     for tmp in _temp_image_files:
-        try:
+        with contextlib.suppress(OSError):
             tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
     _temp_image_files.clear()
 
 
 # ── PPTX helpers ──────────────────────────────────────────────────────
 
 
-def _detect_subject(persona: "TeacherPersona") -> str:
+def _detect_subject(persona: TeacherPersona) -> str:
     """Best-effort subject detection from persona fields."""
     subj = (persona.subject_area or "").strip().lower()
     if subj:
@@ -279,14 +278,14 @@ def _section_divider(prs, slide_num, text, theme, slide_w, slide_h,
 # ── Image fetching ────────────────────────────────────────────────────
 
 
-def _try_fetch_images(topics: list[tuple[str, str]], subject: str) -> dict[str, Optional[Path]]:
+def _try_fetch_images(topics: list[tuple[str, str]], subject: str) -> dict[str, Path | None]:
     """Attempt to fetch images for multiple topics. Non-blocking, short timeout.
 
     Returns a dict mapping key -> Path | None.
     """
     from clawed.slide_images import fetch_slide_image
 
-    results: dict[str, Optional[Path]] = {}
+    results: dict[str, Path | None] = {}
 
     async def _fetch_all():
         for topic, key in topics:
@@ -296,7 +295,9 @@ def _try_fetch_images(topics: list[tuple[str, str]], subject: str) -> dict[str, 
                     timeout=5.0,
                 )
                 results[key] = path
-            except Exception:
+            except Exception as exc:
+                # Broad catch: image fetch is best-effort; missing images degrade gracefully
+                logger.debug("Slide image fetch failed for %s: %s", topic, exc)
                 results[key] = None
 
     try:
@@ -311,7 +312,7 @@ def _try_fetch_content_images(
     items: list[tuple[str, str, str]],
     subject: str,
     max_images: int = 4,
-) -> dict[str, Optional[Path]]:
+) -> dict[str, Path | None]:
     """Fetch images based on slide *content* text, not just the lesson title.
 
     Each item is ``(content_text, fallback_topic, key)``.  Stops after
@@ -321,7 +322,7 @@ def _try_fetch_content_images(
     """
     from clawed.slide_images import fetch_content_image, fetch_slide_image
 
-    results: dict[str, Optional[Path]] = {}
+    results: dict[str, Path | None] = {}
 
     async def _fetch_all():
         found = 0
@@ -348,7 +349,9 @@ def _try_fetch_content_images(
                 results[key] = path
                 if path:
                     found += 1
-            except Exception:
+            except Exception as exc:
+                # Broad catch: content image fetch is best-effort; slides render without images
+                logger.debug("Content image fetch failed for key %s: %s", key, exc)
                 results[key] = None
 
     try:
@@ -362,7 +365,7 @@ def _try_fetch_content_images(
 # ── Narration text builder ────────────────────────────────────────────
 
 
-def _build_narration_texts(lesson: "DailyLesson") -> list[str]:
+def _build_narration_texts(lesson: DailyLesson) -> list[str]:
     """Build narration text for each slide from lesson content.
 
     Returns a list of strings, one per slide. Empty strings are skipped
@@ -410,8 +413,8 @@ def _build_narration_texts(lesson: "DailyLesson") -> list[str]:
 
 
 def export_lesson_pptx(
-    lesson: "DailyLesson",
-    persona: "TeacherPersona",
+    lesson: DailyLesson,
+    persona: TeacherPersona,
     output_dir: Path | None = None,
     agent_name: str = "Claw-ED",
     include_images: bool = True,
@@ -503,8 +506,9 @@ def export_lesson_pptx(
             _cfg = _AppConfig.load()
             if _cfg.teacher_profile and _cfg.teacher_profile.name:
                 teacher_display_name = _cfg.teacher_profile.name
-        except Exception:
-            pass
+        except Exception as exc:
+            # Broad catch: config lookup is best-effort; falls back to "Teacher"
+            logger.debug("Config load for teacher name failed: %s", exc)
     if not teacher_display_name:
         teacher_display_name = "Teacher"
 
@@ -558,8 +562,8 @@ def export_lesson_pptx(
 
         # Phase 2: For remaining entities not resolved from teacher assets,
         # go to Wikipedia / Wikimedia for named entities.
-        async def _fetch_entity_images() -> dict[str, Optional[Path]]:
-            results: dict[str, Optional[Path]] = {}
+        async def _fetch_entity_images() -> dict[str, Path | None]:
+            results: dict[str, Path | None] = {}
             found = 0
             for i, entity in enumerate(entities[:5]):
                 if found >= 5:
@@ -594,14 +598,16 @@ def export_lesson_pptx(
         else:
             # No entities found — use lesson title direct Wikipedia lookup
             try:
-                async def _fetch_title_image() -> dict[str, Optional[Path]]:
+                async def _fetch_title_image() -> dict[str, Path | None]:
                     path = await asyncio.wait_for(
                         _fetch_wikimedia(lesson.title),
                         timeout=8.0,
                     )
                     return {"entity_0": path}
                 images = run_async_safe(_fetch_title_image())
-            except Exception:
+            except Exception as exc:
+                # Broad catch: title image fetch is best-effort; slides render without images
+                logger.debug("Title image fetch failed: %s", exc)
                 images = {}
 
         # Merge: teacher images take priority over web-fetched
@@ -650,15 +656,15 @@ def export_lesson_pptx(
         )
         shape.line.fill.background()
         _add_shape_fill(shape, hex_color)
-        # Subtle shadow
+        # Subtle shadow — not all python-pptx shape types support shadow attrs
         try:
             shape.shadow.inherit = False
             shadow = shape.shadow
             shadow.visible = True
             shadow.blur_radius = Pt(4)
             shadow.distance = Pt(2)
-        except Exception:
-            pass
+        except (AttributeError, TypeError) as exc:
+            logger.debug("Shadow effect unavailable on shape: %s", exc)
         return shape
 
     def _white_bg(slide):
@@ -673,7 +679,7 @@ def export_lesson_pptx(
         fill.solid()
         fill.fore_color.rgb = _hex_to_rgb(hex_color)
 
-    def _safe_image_path(image_path: Path) -> Optional[Path]:
+    def _safe_image_path(image_path: Path) -> Path | None:
         """Validate an image file before embedding in a slide.
 
         python-pptx crashes on palette-mode PNGs, truncated files, or
@@ -761,8 +767,9 @@ def export_lesson_pptx(
                 cap_run.text = caption
                 _set_text_props(cap_run, 9, "888888")
                 cap_run.font.italic = True
-        except Exception:
-            pass
+        except (OSError, ValueError) as exc:
+            # Broad catch: sidebar image placement is best-effort; slide renders without it
+            logger.debug("Sidebar image placement failed: %s", exc)
 
     def _add_accent_image(slide, image_path: Path, caption: str = ""):
         """Add a smaller accent image in the bottom-right area."""
@@ -788,8 +795,9 @@ def export_lesson_pptx(
                 cap_run.text = caption
                 _set_text_props(cap_run, 9, "888888")
                 cap_run.font.italic = True
-        except Exception:
-            pass
+        except (OSError, ValueError) as exc:
+            # Broad catch: accent image placement is best-effort; slide renders without it
+            logger.debug("Accent image placement failed: %s", exc)
 
     # ═══════════════════════════════════════════════════════════════════
     # SLIDE 1: TITLE
@@ -1419,10 +1427,7 @@ def export_lesson_pptx(
         iw_summary = iw_text
         if len(iw_text) > 250:
             cutoff = iw_text[:250].rfind(". ")
-            if cutoff > 80:
-                iw_summary = iw_text[:cutoff + 1]
-            else:
-                iw_summary = iw_text[:250].rsplit(" ", 1)[0] + "..."
+            iw_summary = iw_text[:cutoff + 1] if cutoff > 80 else iw_text[:250].rsplit(" ", 1)[0] + "..."
 
         tb = slide.shapes.add_textbox(
             Inches(1.0), Inches(1.8), slide_w - Inches(2.0), Inches(4.5),

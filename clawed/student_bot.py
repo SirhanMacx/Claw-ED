@@ -8,6 +8,7 @@ homework, and tracks what students are asking so the teacher can see patterns.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import secrets
@@ -15,7 +16,7 @@ import string
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from clawed.models import AppConfig, TeacherPersona
 from clawed.state import _get_conn, init_db
@@ -41,9 +42,9 @@ class ClassInfo:
     name: str = ""
     topic: str = ""
     allowed_lesson_ids: list[str] = field(default_factory=list)
-    expires_at: Optional[str] = None
-    active_lesson_id: Optional[str] = None
-    active_lesson_json: Optional[str] = None
+    expires_at: str | None = None
+    active_lesson_id: str | None = None
+    active_lesson_json: str | None = None
     hint_mode: bool = False
     created_at: str = ""
 
@@ -61,7 +62,7 @@ _CONFUSION_RE = re.compile(
 class StudentBot:
     """Student-facing chatbot that answers questions in the teacher's voice."""
 
-    def __init__(self, config: Optional[AppConfig] = None):
+    def __init__(self, config: AppConfig | None = None):
         self.config = config or AppConfig.load()
         init_db()
 
@@ -103,7 +104,7 @@ class StudentBot:
             )
         return code
 
-    def get_class(self, class_code: str) -> Optional[ClassInfo]:
+    def get_class(self, class_code: str) -> ClassInfo | None:
         """Load class info by code."""
         with _get_conn() as conn:
             row = conn.execute(
@@ -112,10 +113,8 @@ class StudentBot:
         if not row:
             return None
         allowed: list[str] = []
-        try:
+        with contextlib.suppress(json.JSONDecodeError, TypeError, KeyError):
             allowed = json.loads(row["allowed_lesson_ids"] or "[]")
-        except (json.JSONDecodeError, TypeError, KeyError):
-            pass
         name = ""
         topic = ""
         expires_at = None
@@ -208,7 +207,7 @@ class StudentBot:
                 )
 
     def set_hint_mode(
-        self, class_code: str, enabled: bool, student_name: Optional[str] = None
+        self, class_code: str, enabled: bool, student_name: str | None = None
     ) -> None:
         """Toggle hint mode for a class or a specific student.
 
@@ -332,7 +331,7 @@ class StudentBot:
     # ── Confusion detection ──────────────────────────────────────────────
 
     @staticmethod
-    def detect_confusion_topic(message: str) -> Optional[str]:
+    def detect_confusion_topic(message: str) -> str | None:
         """Extract the topic from an 'I'm confused about X' message.
 
         Returns the topic string if detected, otherwise None.
@@ -392,10 +391,8 @@ class StudentBot:
         # Load lesson context
         lesson_json: dict[str, Any] = {}
         if class_info.active_lesson_json:
-            try:
+            with contextlib.suppress(json.JSONDecodeError, TypeError):
                 lesson_json = json.loads(class_info.active_lesson_json)
-            except (json.JSONDecodeError, TypeError):
-                pass
 
         if not lesson_json:
             return (

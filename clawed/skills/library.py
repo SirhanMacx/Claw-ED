@@ -5,8 +5,8 @@ from __future__ import annotations
 import importlib
 import logging
 import pkgutil
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from clawed.skills.base import SubjectSkill
 
@@ -142,7 +142,7 @@ def _parse_yaml_skill(path: Path) -> SubjectSkill | None:
     """
     import yaml
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     if not isinstance(data, dict):

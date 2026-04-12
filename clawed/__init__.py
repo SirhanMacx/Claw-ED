@@ -1,5 +1,6 @@
 """Claw-ED — Personal AI teaching agent. Learns your voice, works while you sleep."""
 
+import contextlib
 import os
 import sys
 
@@ -7,26 +8,22 @@ import sys
 # which crashes on emoji/non-Latin characters from LLM output.
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 if hasattr(sys.stdout, "reconfigure"):
-    try:
+    with contextlib.suppress(Exception):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
 if hasattr(sys.stderr, "reconfigure"):
-    try:
+    with contextlib.suppress(Exception):
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
 
-__version__ = "4.11.2026.1"
+__version__ = "4.11.2026.2"
 __author__ = "Jon Maccarello & Claw-ED contributors"
 __description__ = "Your AI co-teacher. Generate lessons, games, slides, and assessments from your terminal."
 
 # Central I/O — re-exported for convenience
-from clawed.io import output_dir as output_dir  # noqa: F401
-from clawed.io import read_text as read_text  # noqa: F401
-from clawed.io import safe_filename as safe_filename  # noqa: F401
-from clawed.io import save_output as save_output  # noqa: F401
-from clawed.io import write_text as write_text  # noqa: F401
+from clawed.io import output_dir as output_dir
+from clawed.io import read_text as read_text
+from clawed.io import safe_filename as safe_filename
+from clawed.io import save_output as save_output
+from clawed.io import write_text as write_text
 
 
 def _safe_filename(title: str) -> str:

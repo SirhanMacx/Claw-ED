@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from clawed.transports.student_telegram import *  # noqa: F401, F403
+from clawed.transports.student_telegram import *  # noqa: F403
 from clawed.transports.student_telegram import (  # noqa: F401
     STUDENT_BOT_COMMANDS,
     StudentTelegramBot,

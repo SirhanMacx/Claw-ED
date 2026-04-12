@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.panel import Panel
@@ -122,13 +121,13 @@ def assess(
         "--question-types",
         help="Question types: mixed, multiple_choice, short_answer",
     ),
-    lesson_file: Optional[str] = typer.Option(
+    lesson_file: str | None = typer.Option(
         None,
         "--lesson-file",
         "-l",
         help="Lesson JSON for formative assessment",
     ),
-    unit_file: Optional[str] = typer.Option(
+    unit_file: str | None = typer.Option(
         None,
         "--unit-file",
         "-u",

@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from clawed.async_utils import run_async_safe
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def try_fetch_images(
     topics: list[tuple[str, str]],
     subject: str,
-) -> dict[str, Optional[Path]]:
+) -> dict[str, Path | None]:
     """Attempt to fetch images for multiple topics. Non-blocking, short timeout.
 
     Args:
@@ -36,7 +36,7 @@ def try_fetch_images(
     """
     from clawed.slide_images import fetch_slide_image
 
-    results: dict[str, Optional[Path]] = {}
+    results: dict[str, Path | None] = {}
 
     async def _fetch_all():
         for topic, key in topics:
@@ -61,7 +61,7 @@ def try_fetch_content_images(
     items: list[tuple[str, str, str]],
     subject: str,
     max_images: int = 4,
-) -> dict[str, Optional[Path]]:
+) -> dict[str, Path | None]:
     """Fetch images based on slide content text, not just the lesson title.
 
     Args:
@@ -74,7 +74,7 @@ def try_fetch_content_images(
     """
     from clawed.slide_images import fetch_content_image, fetch_slide_image
 
-    results: dict[str, Optional[Path]] = {}
+    results: dict[str, Path | None] = {}
 
     async def _fetch_all():
         found = 0

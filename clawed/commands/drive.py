@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -38,13 +37,13 @@ def _check_google_deps() -> bool:
 
 @drive_app.command()
 def auth(
-    client_id: Optional[str] = typer.Option(
+    client_id: str | None = typer.Option(
         None, "--client-id", help="Google OAuth client ID"
     ),
-    client_secret: Optional[str] = typer.Option(
+    client_secret: str | None = typer.Option(
         None, "--client-secret", help="Google OAuth client secret"
     ),
-    credentials_file: Optional[str] = typer.Option(
+    credentials_file: str | None = typer.Option(
         None, "--credentials", "-c",
         help="Path to Google OAuth credentials.json (from Google Cloud Console)"
     ),
@@ -73,7 +72,7 @@ def auth(
 
 @drive_app.command(name="list")
 def list_files(
-    folder_id: Optional[str] = typer.Argument(
+    folder_id: str | None = typer.Argument(
         None, help="Drive folder ID (default: root)"
     ),
 ) -> None:

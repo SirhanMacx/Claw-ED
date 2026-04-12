@@ -52,7 +52,7 @@ async def plan_unit(
 
         effective_state = ""
         if config:
-            effective_state = getattr(config, "teacher_profile", None) and config.teacher_profile.state or ""
+            effective_state = (getattr(config, "teacher_profile", None) and config.teacher_profile.state) or ""
         standards = get_standards_for_lesson(
             subject=subject,
             grade=grade_level,

@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.11.2026.2 — 2026-04-12
+
+### Hardened
+- Expanded ruff rule set to include UP, B, SIM, RUF categories; 528 auto-fixed violations
+- Added branch coverage tracking and coverage artifact upload to CI pipeline
+- Documented all broad exception handlers in `export_pptx.py` and `ingestor.py`; narrowed where possible
+- Resolved last remaining TODO in `agent_core/loop.py` (export guarantee nudge)
+- Converted diagnostic `print()` calls to structured logging in `bridge.py` and `evaluation.py`
+
 ## v4.9.2026.14 (2026-04-09)
 
 ### Triple Audit Remediation — Integration Completeness

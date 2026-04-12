@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.panel import Panel
 
@@ -18,7 +16,7 @@ def config_set_model(
     provider: str = typer.Argument(
         ..., help="LLM provider: anthropic, openai, ollama, google, or openrouter"
     ),
-    model: Optional[str] = typer.Option(
+    model: str | None = typer.Option(
         None, "--model", "-m", help="Model name override"
     ),
 ):

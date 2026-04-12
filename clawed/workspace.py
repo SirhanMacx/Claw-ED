@@ -19,7 +19,6 @@ import os
 import re
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from clawed.models import AppConfig, TeacherPersona
 
@@ -57,7 +56,7 @@ def _sanitize_filename(name: str) -> str:
 # ── Identity generation ────────────────────────────────────────────────
 
 
-def generate_identity(persona: TeacherPersona, config: Optional[AppConfig] = None) -> str:
+def generate_identity(persona: TeacherPersona, config: AppConfig | None = None) -> str:
     """Create identity.md content from a TeacherPersona and optional AppConfig."""
     cfg = config or AppConfig()
     profile = cfg.teacher_profile
@@ -94,7 +93,7 @@ def generate_identity(persona: TeacherPersona, config: Optional[AppConfig] = Non
 # ── Soul generation ───────────────────────────────────────────────────
 
 
-def generate_soul(persona: TeacherPersona, config: Optional[AppConfig] = None) -> str:
+def generate_soul(persona: TeacherPersona, config: AppConfig | None = None) -> str:
     """Create soul.md with teaching philosophy extracted from persona and config."""
     cfg = config or AppConfig()
     profile = cfg.teacher_profile
@@ -251,7 +250,7 @@ def update_memory(key: str, value: str) -> None:
 # ── Daily notes ────────────────────────────────────────────────────────
 
 
-def _notes_path(day: Optional[str] = None) -> Path:
+def _notes_path(day: str | None = None) -> Path:
     """Path to today's (or specified day's) notes file."""
     return NOTES_DIR / f"{day or _today()}.md"
 
@@ -270,7 +269,7 @@ def append_daily_note(text: str, category: str = "general") -> None:
         f.write(entry)
 
 
-def get_daily_notes(day: Optional[str] = None) -> str:
+def get_daily_notes(day: str | None = None) -> str:
     """Read a day's notes. Returns empty string if no notes exist."""
     path = _notes_path(day)
     if path.exists():
@@ -484,8 +483,8 @@ def _is_corrupted(path: Path) -> bool:
 
 
 def init_workspace(
-    persona: Optional[TeacherPersona] = None,
-    config: Optional[AppConfig] = None,
+    persona: TeacherPersona | None = None,
+    config: AppConfig | None = None,
 ) -> Path:
     """Create the workspace directory structure and generate initial files.
 

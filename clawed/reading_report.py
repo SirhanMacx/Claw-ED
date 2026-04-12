@@ -18,8 +18,8 @@ log = logging.getLogger(__name__)
 
 
 def generate_reading_report(
-    documents: list["Document"],
-    persona: "TeacherPersona | None" = None,
+    documents: list[Document],
+    persona: TeacherPersona | None = None,
 ) -> dict[str, Any]:
     """Analyze ingested documents and produce a structured reading report.
 
@@ -289,9 +289,9 @@ def generate_reading_report(
 
 
 def _select_representative_excerpts(
-    documents: list["Document"],
+    documents: list[Document],
     max_excerpts: int = 8,
-) -> list["Document"]:
+) -> list[Document]:
     """Pick a diverse subset of documents for the LLM to read.
 
     Uses round-robin across doc types so the LLM sees a variety of
@@ -305,7 +305,7 @@ def _select_representative_excerpts(
         return list(documents)
 
     # Group documents by doc type
-    by_type: dict[str, list["Document"]] = {}
+    by_type: dict[str, list[Document]] = {}
     for doc in documents:
         key = doc.doc_type.value if doc.doc_type else "unknown"
         by_type.setdefault(key, []).append(doc)
@@ -315,7 +315,7 @@ def _select_representative_excerpts(
         group.sort(key=lambda d: len(d.content or ""), reverse=True)
 
     # Round-robin across types
-    selected: list["Document"] = []
+    selected: list[Document] = []
     seen_ids: set[int] = set()
     type_keys = sorted(by_type.keys())
     idx = 0
@@ -338,7 +338,7 @@ def _select_representative_excerpts(
 
 def _build_llm_reading_prompt(
     regex_report: dict[str, Any],
-    excerpts: list["Document"],
+    excerpts: list[Document],
 ) -> str:
     """Build the user prompt for the LLM reading-observations call.
 
@@ -410,7 +410,7 @@ _LLM_SYSTEM = (
 
 async def enhance_reading_report_with_llm(
     report: dict[str, Any],
-    config: "AppConfig | None" = None,
+    config: AppConfig | None = None,
 ) -> None:
     """Add qualitative LLM observations to an existing reading report.
 

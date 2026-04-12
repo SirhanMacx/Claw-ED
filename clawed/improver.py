@@ -128,7 +128,7 @@ async def improve_prompts(
 
 
 async def suggest_improvements(
-    lesson: "DailyLesson",
+    lesson: DailyLesson,
     feedback_notes: str = "",
     config: AppConfig | None = None,
 ) -> list[str]:

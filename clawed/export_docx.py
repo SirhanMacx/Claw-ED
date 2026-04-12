@@ -166,8 +166,8 @@ def _add_callout_box(doc, label, text, bg_hex, border_hex):
 
 
 def export_lesson_docx(
-    lesson: "DailyLesson",
-    persona: "TeacherPersona",
+    lesson: DailyLesson,
+    persona: TeacherPersona,
     output_dir: Path | None = None,
     agent_name: str = "Claw-ED",
     admin_plan: Any = None,
@@ -195,7 +195,7 @@ def export_lesson_docx(
     # ── Subject color theme ──────────────────────────────────────────
     theme = get_color_theme(persona.subject_area or "")
 
-    def _theme_rgb(key: str) -> "RGBColor":
+    def _theme_rgb(key: str) -> RGBColor:
         h = theme[key]
         return RGBColor(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
@@ -438,8 +438,8 @@ def export_lesson_docx(
 
 
 def export_student_handout(
-    lesson: "DailyLesson",
-    persona: "TeacherPersona",
+    lesson: DailyLesson,
+    persona: TeacherPersona,
     output_dir: Path | None = None,
     agent_name: str = "Claw-ED",
 ) -> Path:
@@ -540,15 +540,14 @@ def export_student_handout(
     # ── Header image (below title, max 2 images total) ───────────────
     subject = persona.subject_area or ""
     _handout_image_count = 0
-    if _handout_image_count < 2:
-        if _docx_add_content_image(
-            doc,
-            content_text=lesson.title + " " + lesson.objective,
-            fallback_topic=lesson.title,
-            subject=subject,
-            width_inches=3.0,
-        ):
-            _handout_image_count += 1
+    if _handout_image_count < 2 and _docx_add_content_image(
+        doc,
+        content_text=lesson.title + " " + lesson.objective,
+        fallback_topic=lesson.title,
+        subject=subject,
+        width_inches=3.0,
+    ):
+        _handout_image_count += 1
 
     # ── Do Now box ────────────────────────────────────────────────────
     if lesson.do_now:
@@ -592,15 +591,14 @@ def export_student_handout(
             run.font.name = "Calibri"
 
         # Add content image next to direct instruction (max 2 total)
-        if _handout_image_count < 2:
-            if _docx_add_content_image(
-                doc,
-                content_text=lesson.direct_instruction,
-                fallback_topic=lesson.title,
-                subject=subject,
-                width_inches=3.0,
-            ):
-                _handout_image_count += 1
+        if _handout_image_count < 2 and _docx_add_content_image(
+            doc,
+            content_text=lesson.direct_instruction,
+            fallback_topic=lesson.title,
+            subject=subject,
+            width_inches=3.0,
+        ):
+            _handout_image_count += 1
 
     # ── Activity Section (Guided Practice) ────────────────────────────
     if lesson.guided_practice:
@@ -704,7 +702,7 @@ def _add_lined_space(cell: Any, line_count: int = 3) -> None:
     from docx.oxml.ns import qn
     from docx.shared import Pt
 
-    for i in range(line_count):
+    for _i in range(line_count):
         para = cell.add_paragraph("")
         para.paragraph_format.space_before = Pt(0)
         para.paragraph_format.space_after = Pt(12)
@@ -844,8 +842,8 @@ def _remove_table_borders(table: Any) -> None:
 
 
 def _export_admin_lesson_docx(
-    lesson: "DailyLesson",
-    persona: "TeacherPersona",
+    lesson: DailyLesson,
+    persona: TeacherPersona,
     admin_plan: Any,
     output_dir: Path | None = None,
     agent_name: str = "Claw-ED",

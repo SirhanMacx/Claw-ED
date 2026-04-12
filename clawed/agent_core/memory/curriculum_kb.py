@@ -10,6 +10,7 @@ for fast retrieval even with large collections.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -397,10 +398,8 @@ class CurriculumKB:
 
         # Try numpy vectorized similarity (100x faster)
         results = None
-        try:
+        with contextlib.suppress(ImportError):
             results = self._search_numpy(query_embedding, rows, top_k)
-        except ImportError:
-            pass
 
         if results is None:
             # Fallback: Python loop

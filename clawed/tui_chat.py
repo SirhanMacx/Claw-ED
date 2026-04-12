@@ -53,10 +53,7 @@ class ChatMessage(Static):
         self.add_class(role)
 
     def compose(self) -> ComposeResult:
-        if self._role == "user":
-            label = "[bold blue]You[/bold blue]"
-        else:
-            label = "[bold green]Claw-ED[/bold green]"
+        label = "[bold blue]You[/bold blue]" if self._role == "user" else "[bold green]Claw-ED[/bold green]"
         yield Static(f"{label}\n{self._text}")
 
 

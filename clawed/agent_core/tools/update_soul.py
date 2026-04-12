@@ -99,10 +99,7 @@ class UpdateSoulTool:
         soul_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Read or create SOUL.md
-        if soul_path.exists():
-            current = soul_path.read_text(encoding="utf-8")
-        else:
-            current = SOUL_TEMPLATE
+        current = soul_path.read_text(encoding="utf-8") if soul_path.exists() else SOUL_TEMPLATE
 
         # Guard against oversized content
         if len(content) > 500:

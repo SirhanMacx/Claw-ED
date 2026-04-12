@@ -1,6 +1,7 @@
 """Tool: export_document — wraps PDF/DOCX/PPTX export functions."""
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -66,10 +67,8 @@ class ExportDocumentTool:
 
             persona = TeacherPersona()
             if context.persona:
-                try:
+                with contextlib.suppress(Exception):
                     persona = TeacherPersona(**context.persona)
-                except Exception:
-                    pass
 
             unit = UnitPlan(
                 title=f"{topic} Unit",

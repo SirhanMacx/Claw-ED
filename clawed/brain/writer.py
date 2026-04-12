@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from clawed.brain.store import BrainPage, BrainStore
 
@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 
 
 def write_lesson_to_brain(
-    master: "MasterContent",
+    master: MasterContent,
     unit_title: str,
     lesson_number: int,
-    store: Optional[BrainStore] = None,
+    store: BrainStore | None = None,
 ) -> dict:
     """Write a lesson record to the brain after generation.
 
@@ -147,7 +147,7 @@ def write_lesson_to_brain(
 
 
 def _build_lesson_compiled_truth(
-    master: "MasterContent",
+    master: MasterContent,
     unit_title: str,
     lesson_number: int,
 ) -> str:

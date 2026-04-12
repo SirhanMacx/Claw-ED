@@ -12,7 +12,6 @@ full teacher memory before generating.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from clawed.brain.search import hybrid_search
 from clawed.brain.store import BrainStore
@@ -28,7 +27,7 @@ _MAX_PAST_LESSONS = 3
 def build_brain_context(
     topic: str,
     unit_title: str = "",
-    store: Optional[BrainStore] = None,
+    store: BrainStore | None = None,
 ) -> BrainContext:
     """Consult the brain for everything relevant to this lesson.
 

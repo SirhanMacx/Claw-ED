@@ -113,10 +113,7 @@ def load_memory_context(teacher_id: str, current_message: str) -> dict[str, Any]
             text = latest["text"]
             # Extract teacher's message (first line is usually "Teacher: <msg>")
             first_line = text.split("\n")[0].strip()
-            if first_line.startswith("Teacher: "):
-                topic = first_line[len("Teacher: "):]
-            else:
-                topic = first_line
+            topic = first_line[len("Teacher: "):] if first_line.startswith("Teacher: ") else first_line
             # Truncate to a concise summary
             if len(topic) > 150:
                 topic = topic[:147] + "..."

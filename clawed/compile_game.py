@@ -223,7 +223,7 @@ def _repair_html_structure(html: str) -> str:
             f"<style>\n{html}\n</style>\n</head>\n<body></body>\n</html>"
         )
 
-    _preamble = html[:html_tag_end + 1]  # noqa: F841  # everything up to and including <html ...>
+    _preamble = html[:html_tag_end + 1]  # everything up to and including <html ...>
     rest = html[html_tag_end + 1:].strip()
 
     # Extract bare title text (first non-tag, non-CSS line after <html>)
@@ -328,7 +328,7 @@ def _validate_game_html(html: str, master: MasterContent) -> list[str]:
 
 
 async def compile_game(
-    master: "MasterContent | Any",
+    master: MasterContent | Any,
     persona: TeacherPersona | None = None,
     output_dir: Path | None = None,
     config: AppConfig | None = None,

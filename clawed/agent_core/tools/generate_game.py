@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -71,10 +72,8 @@ class GenerateGameTool:
 
             persona = None
             if context.persona:
-                try:
+                with contextlib.suppress(Exception):
                     persona = TeacherPersona(**context.persona)
-                except Exception:
-                    pass
 
             # Build a minimal MasterContent for compile_game
             from clawed.master_content import MasterContent

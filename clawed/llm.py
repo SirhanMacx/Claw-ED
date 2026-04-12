@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Optional, Type
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ValidationError
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Unified async LLM client for all supported backends."""
 
-    def __init__(self, config: Optional[AppConfig] = None):
+    def __init__(self, config: AppConfig | None = None):
         self.config = config or AppConfig.load()
 
     async def generate(
@@ -450,7 +450,7 @@ class LLMClient:
     async def safe_generate_json(
         self,
         prompt: str,
-        model_class: Type[BaseModel],
+        model_class: type[BaseModel],
         max_retries: int = 1,
         demo_hint: str = "",
         **kwargs: Any,
@@ -689,7 +689,7 @@ class LLMClient:
 
         api_key = get_api_key("anthropic")
         if not api_key:
-            raise EnvironmentError(
+            raise OSError(
                 "Anthropic API key not found. Set ANTHROPIC_API_KEY, store via "
                 "keyring, or run: clawed config set-model ollama"
             )
@@ -725,7 +725,7 @@ class LLMClient:
             return msg.content[0].text
 
         except anthropic.AuthenticationError:
-            raise EnvironmentError(
+            raise OSError(
                 "Invalid API key or OAuth token. Check with: clawed debug"
             )
         except anthropic.RateLimitError:
@@ -747,7 +747,7 @@ class LLMClient:
 
         api_key = get_api_key("openai")
         if not api_key:
-            raise EnvironmentError(
+            raise OSError(
                 "OpenAI API key not found. Set OPENAI_API_KEY, store via "
                 "keyring, or run: clawed config set-model ollama"
             )
@@ -784,7 +784,7 @@ class LLMClient:
             )
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                raise EnvironmentError(
+                raise OSError(
                     "Invalid OPENAI_API_KEY. Check your key at https://platform.openai.com"
                 )
             raise
@@ -799,7 +799,7 @@ class LLMClient:
 
         api_key = get_api_key("openrouter")
         if not api_key:
-            raise EnvironmentError(
+            raise OSError(
                 "OpenRouter API key not found. Get one at https://openrouter.ai/keys"
             )
         messages: list[dict[str, str]] = []
@@ -838,7 +838,7 @@ class LLMClient:
             )
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                raise EnvironmentError(
+                raise OSError(
                     "Invalid OpenRouter API key. Check at https://openrouter.ai/keys"
                 )
             raise
@@ -943,7 +943,7 @@ class LLMClient:
 
         api_key = get_google_api_key()
         if not api_key:
-            raise EnvironmentError(
+            raise OSError(
                 "No Google API key found. Get a free key at "
                 "https://aistudio.google.com/apikey and set GOOGLE_API_KEY, "
                 "or run `clawed setup --reset` to configure."
@@ -995,7 +995,7 @@ class LLMClient:
             )
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                raise EnvironmentError(
+                raise OSError(
                     "Google credentials expired or invalid.\n"
                     "Run `clawed setup --reset` to re-authenticate."
                 )

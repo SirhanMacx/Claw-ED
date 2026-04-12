@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.panel import Panel
@@ -113,12 +112,12 @@ def _gap_analyze_json(*, subject, grade, standards, materials_dir):
 def gap_analyze(
     subject: str = typer.Option(..., "--subject", "-s", help="Subject area (e.g. 'Social Studies')"),
     grade: str = typer.Option(..., "--grade", "-g", help="Grade level (e.g. '8')"),
-    standards: Optional[str] = typer.Option(
+    standards: str | None = typer.Option(
         None,
         "--standards",
         help="Comma-separated standards codes/descriptions, or path to a .txt file (one per line)",
     ),
-    materials_dir: Optional[str] = typer.Option(
+    materials_dir: str | None = typer.Option(
         None,
         "--materials-dir",
         "-m",

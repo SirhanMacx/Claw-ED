@@ -6,7 +6,7 @@ import html as html_mod
 import json
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -198,10 +198,8 @@ def create_app() -> FastAPI:
         stats = db.get_stats()
         persona_data = None
         if teacher and teacher.get("persona_json"):
-            try:
+            with suppress(json.JSONDecodeError, TypeError):
                 persona_data = json.loads(teacher["persona_json"])
-            except (json.JSONDecodeError, TypeError):
-                pass
 
         return templates.TemplateResponse(request, "index.html", {
             "stats": stats,
@@ -303,10 +301,8 @@ def create_app() -> FastAPI:
             for lesson in db.list_lessons(u["id"]):
                 lesson_data = {}
                 if lesson.get("lesson_json"):
-                    try:
+                    with suppress(json.JSONDecodeError, TypeError):
                         lesson_data = json.loads(lesson["lesson_json"])
-                    except (json.JSONDecodeError, TypeError):
-                        pass
                 quality_score = None
                 if lesson.get("scores_json"):
                     try:
@@ -450,10 +446,8 @@ select {{ padding: 6px 10px; border-radius: 4px;
         teacher = db.get_default_teacher()
         persona_data = None
         if teacher and teacher.get("persona_json"):
-            try:
+            with suppress(json.JSONDecodeError, TypeError):
                 persona_data = json.loads(teacher["persona_json"])
-            except (json.JSONDecodeError, TypeError):
-                pass
 
         teacher_state = cfg.teacher_profile.state if hasattr(cfg, "teacher_profile") else ""
         teacher_subjects = cfg.teacher_profile.subjects if hasattr(cfg, "teacher_profile") else []
@@ -628,8 +622,8 @@ select {{ padding: 6px 10px; border-radius: 4px;
         if not row:
             return HTMLResponse("<h1>Class not found</h1>", status_code=404)
 
-        class_name = row["name"] if "name" in row.keys() else class_code
-        class_topic = row["topic"] if "topic" in row.keys() else ""
+        class_name = row.get("name", class_code)
+        class_topic = row.get("topic", "")
         teacher_id = row["teacher_id"]
 
         # Get teacher name
@@ -921,10 +915,8 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
         teacher = db.get_default_teacher()
         persona_data = None
         if teacher and teacher.get("persona_json"):
-            try:
+            with suppress(json.JSONDecodeError, TypeError):
                 persona_data = json.loads(teacher["persona_json"])
-            except (json.JSONDecodeError, TypeError):
-                pass
 
         profile = cfg.teacher_profile
 

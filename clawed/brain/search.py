@@ -20,7 +20,6 @@ import math
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from clawed.brain.store import BrainPage, BrainStore
 
@@ -41,14 +40,14 @@ class SearchResult:
     snippet: str
     score: float = 0.0
     rank: int = 0
-    page: Optional[BrainPage] = None
+    page: BrainPage | None = None
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
     """Cosine similarity between two float vectors."""
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
     if na == 0 or nb == 0:
@@ -76,13 +75,13 @@ def _embed_brain_pages(
     except Exception as exc:
         logger.debug("Embedding failed: %s", exc)
         return []
-    return list(zip(pages, vectors))
+    return list(zip(pages, vectors, strict=False))
 
 
 def brain_keyword_search(
     store: BrainStore,
     query: str,
-    page_type: Optional[str] = None,
+    page_type: str | None = None,
     limit: int = 20,
 ) -> list[SearchResult]:
     """Keyword search over brain pages."""
@@ -116,7 +115,7 @@ def brain_keyword_search(
 def brain_vector_search(
     store: BrainStore,
     query: str,
-    page_type: Optional[str] = None,
+    page_type: str | None = None,
     limit: int = 20,
 ) -> list[SearchResult]:
     """Vector similarity search over brain pages."""
@@ -268,8 +267,8 @@ def reciprocal_rank_fusion(
 
 def hybrid_search(
     query: str,
-    store: Optional[BrainStore] = None,
-    page_type: Optional[str] = None,
+    store: BrainStore | None = None,
+    page_type: str | None = None,
     limit: int = 10,
     include_corpus: bool = True,
 ) -> list[SearchResult]:

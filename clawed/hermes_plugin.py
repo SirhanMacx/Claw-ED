@@ -13,7 +13,6 @@ All routing lives in clawed.gateway (the brain).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from clawed.generation import _fmt_lesson_summary, _fmt_persona, _fmt_unit_summary
 from clawed.models import AppConfig
@@ -24,16 +23,16 @@ __all__ = [
     "_fmt_lesson_summary",
     "_fmt_persona",
     "_fmt_unit_summary",
-    "get_last_lesson_id",
-    "handle_message",
     "_show_status",
     "_transcribe_attachments",
+    "get_last_lesson_id",
+    "handle_message",
 ]
 
 # ── Rating helpers ────────────────────────────────────────────────────────────
 
 
-def get_last_lesson_id(teacher_id: str) -> Optional[str]:
+def get_last_lesson_id(teacher_id: str) -> str | None:
     """Return the ID of the most recently generated lesson, then clear it.
 
     Used by Telegram bot and CLI chat to offer a rating prompt.
@@ -112,9 +111,9 @@ async def handle_message(
     message: str,
     teacher_id: str,
     *,
-    subject: Optional[str] = None,
-    grade: Optional[str] = None,
-    attachments: Optional[list[str]] = None,
+    subject: str | None = None,
+    grade: str | None = None,
+    attachments: list[str] | None = None,
 ) -> str:
     """Handle a teacher message and return a response string.
 
@@ -126,10 +125,7 @@ async def handle_message(
     if attachments:
         transcribed = await _transcribe_attachments(attachments)
         if transcribed:
-            if not message.strip():
-                message = transcribed
-            else:
-                message = message + "\n\n" + transcribed
+            message = transcribed if not message.strip() else message + "\n\n" + transcribed
 
     # Delegate to the gateway (the single brain)
     from clawed.gateway import Gateway

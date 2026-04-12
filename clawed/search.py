@@ -5,14 +5,13 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Optional
 
 import httpx
 
 from clawed.models import TeacherPersona
 
 
-def _get_tavily_key() -> Optional[str]:
+def _get_tavily_key() -> str | None:
     """Read TAVILY_API_KEY from env or ~/.eduagent/config.json."""
     key = os.environ.get("TAVILY_API_KEY")
     if key:
@@ -28,7 +27,7 @@ def _get_tavily_key() -> Optional[str]:
     return None
 
 
-def _add_edu_framing(query: str, persona: Optional[TeacherPersona] = None) -> str:
+def _add_edu_framing(query: str, persona: TeacherPersona | None = None) -> str:
     """Add educational context to a raw search query."""
     # Strip obvious command prefixes
     cleaned = re.sub(r"^(search for|look up|find)\s+", "", query, flags=re.IGNORECASE).strip()
@@ -119,7 +118,7 @@ async def _search_duckduckgo(query: str, max_results: int = 3) -> list[dict]:
     return results
 
 
-async def search_for_teacher(query: str, persona: Optional[TeacherPersona] = None) -> str:
+async def search_for_teacher(query: str, persona: TeacherPersona | None = None) -> str:
     """Search web and return Telegram-formatted results for a teacher query.
 
     Automatically adds educational framing to queries.

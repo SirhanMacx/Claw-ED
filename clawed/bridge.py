@@ -409,8 +409,8 @@ def _run_chat_stdin() -> None:
 
 def _run_chat_args(provider: str, model: str) -> None:
     """Interactive single-shot chat from CLI args (for testing)."""
-    print(f"Bridge ready: provider={provider}, model={model}", file=sys.stderr)
-    print("Enter message (Ctrl+D to send):", file=sys.stderr)
+    logger.info("Bridge ready: provider=%s, model=%s", provider, model)
+    logger.info("Enter message (Ctrl+D to send):")
     prompt = sys.stdin.read().strip()
     if not prompt:
         _write_error("No prompt provided")
