@@ -88,6 +88,14 @@ Other tools give you a first draft you have to edit. Claw-ED has a **12-check qu
 
 Claw-ED is a **local-first tool** designed for a teacher's own machine. It reads your files, calls LLM APIs you configure, and writes to `~/.eduagent/`. The web API (if you run `clawed serve`) requires a bearer token and binds to localhost by default. Self-equipping installs packages in `--user` scope only. The Telegram bot runs as a background process on your machine. Nothing is sent anywhere except the LLM provider you choose.
 
+### Feature Maturity
+
+| Tier | Features |
+|------|----------|
+| **Stable** | Lesson / unit / assessment generation, multi-format export (DOCX, PPTX, PDF, Markdown, IMSCC), provider & model setup, voice & style learning, quality gate pipeline |
+| **Beta** | Telegram bot, Chrome extension, classroom mode, community sharing, scheduler automation |
+| **Experimental** | Features that still rely on in-memory state without persistent backing (e.g., live classroom sessions, saved sources, community lesson store). These work within a single process lifetime but do not yet survive restarts. |
+
 ---
 
 ## Commands
