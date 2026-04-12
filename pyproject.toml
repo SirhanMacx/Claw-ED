@@ -163,6 +163,20 @@ check_untyped_defs = true
 
 [tool.coverage.run]
 source = ["clawed"]
+omit = [
+    # Optional transports requiring external services / heavy deps
+    "clawed/transports/telegram.py",
+    "clawed/transports/student_telegram.py",
+    "clawed/transports/cli.py",
+    "clawed/transports/web.py",
+    # Interactive TUI (requires terminal)
+    "clawed/tui.py",
+    "clawed/tui_chat.py",
+    # Optional features with heavy native deps
+    "clawed/tts.py",
+    "clawed/voice.py",
+    "clawed/student_cli.py",
+]
 
 [tool.coverage.report]
 show_missing = true
