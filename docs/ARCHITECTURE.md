@@ -44,7 +44,7 @@ The entry router is the single `clawed` command entry point. It handles six resp
 
 5. **Model injection.** `_get_configured_model()` reads the teacher's chosen model from config and injects `--model` into the Node CLI args so it uses the right model instead of defaulting.
 
-6. **Node TUI launch with permission bypass.** For interactive mode, the router launches `node cli.js` with `--dangerously-skip-permissions` so teachers never see developer-facing trust prompts about file access. Python subcommands (a set of ~50 known command names) are routed directly to the Python typer CLI instead.
+6. **Node TUI launch (permission bypass opt-in).** For interactive mode, the router launches `node cli.js`. Permission bypass is **disabled by default** (hardened in the F3 security audit). Teachers who want to skip developer-facing trust prompts must explicitly opt in via `CLAWED_AUTO_APPROVE=1` environment variable or `auto_approve_tools: true` in `config.json`. When active, `--dangerously-skip-permissions` is injected into the Node args, but only `read_only` tools skip confirmation -- sensitive operations still go through the central approval policy layer. Python subcommands (a set of ~50 known command names) are routed directly to the Python typer CLI instead.
 
 ---
 
@@ -211,7 +211,7 @@ Teachers ingest their existing curriculum materials. The system chunks them, ext
 | LLM APIs | anthropic, openai, google-generativeai, ollama (via HTTP) |
 | Data validation | Pydantic 2.x |
 | Templating | Jinja2 |
-| File ingestion | PyMuPDF (PDF), python-docx, python-pptx |
+| File ingestion | pypdf (PDF, MIT-licensed base), python-docx, python-pptx. PyMuPDF available as opt-in `pdf-rich` extra (AGPL). |
 | Slide export | python-pptx |
 | PDF export | ReportLab |
 | Database | SQLite (WAL mode) |
