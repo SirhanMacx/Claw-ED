@@ -10,9 +10,9 @@ from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -26,6 +26,46 @@ _PKG_DIR = Path(__file__).parent
 _TEMPLATE_DIR = _PKG_DIR / "templates"
 _STATIC_DIR = _PKG_DIR / "static"
 
+# Shared auth-denied response used by every page route.
+_AUTH_DENIED = HTMLResponse(
+    "<h1>401 — Auth required</h1>"
+    '<form method="POST" action="/api/auth/bootstrap">'
+    '<input name="token" placeholder="Paste your token" autofocus>'
+    '<button type="submit">Authenticate</button>'
+    "</form>",
+    status_code=401,
+)
+
+
+def _check_page_auth(request: Request) -> bool:
+    """Check auth for HTML pages via cookie, Bearer header, or localhost.
+
+    F4 audit fix: ?token= query params are NO LONGER accepted for page
+    auth. Use POST /api/auth/bootstrap or Bearer header instead.
+    Tokens in URLs leak through browser history, bookmarks, referrers.
+
+    v4.11.2026: timing-safe comparisons via secrets.compare_digest.
+    """
+    import secrets as _secrets
+
+    from clawed.api.deps import get_api_token
+
+    token = get_api_token()
+    # Check cookie (primary method — set via POST /api/auth/bootstrap)
+    cookie_val = request.cookies.get("clawed_token", "")
+    if cookie_val and _secrets.compare_digest(cookie_val, token):
+        return True
+    # Check Bearer header (for API-like access)
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer ") and _secrets.compare_digest(auth[7:], token):
+        return True
+    # Check localhost bypass
+    if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
+        client_ip = request.client.host if request.client else ""
+        if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
+            return True
+    return False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,17 +78,14 @@ async def lifespan(app: FastAPI):
     set_db(None)
 
 
-def create_app() -> FastAPI:
-    """Create and configure the FastAPI application."""
-    from clawed import __version__
+# ── Decomposed helpers ──────────────────────────────────────────────
 
-    app = FastAPI(
-        title="Claw-ED",
-        description="Your teaching files, your AI co-teacher.",
-        version=__version__,
-        lifespan=lifespan,
-    )
 
+def _configure_middleware(app: FastAPI) -> Jinja2Templates:
+    """Set up CORS, static file serving, and Jinja2 templates.
+
+    Returns the configured *Jinja2Templates* instance for use by page routes.
+    """
     # CORS — single middleware instance.
     # Supports localhost + Chrome extension origins (regex for extension IDs).
     cors_origins_raw = os.environ.get("EDUAGENT_CORS_ORIGINS", "")
@@ -72,10 +109,11 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
     # Templates
-    templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+    return Jinja2Templates(directory=str(_TEMPLATE_DIR))
 
-    # ── Import and include API routers ───────────────────────────────
 
+def _register_api_routes(app: FastAPI) -> None:
+    """Import and mount all REST API routers under ``/api``."""
     from clawed.api.routes.chat import router as chat_router
     from clawed.api.routes.chat import (
         student_chat_router as chat_student_router,
@@ -108,41 +146,16 @@ def create_app() -> FastAPI:
     app.include_router(extension_router, prefix="/api")
     app.include_router(student_classroom_router, prefix="/api")  # No auth — class code is auth
 
-    # ── Page auth helper ─────────────────────────────────────────────
 
-    def _check_page_auth(request: Request) -> bool:
-        """Check auth for HTML pages via cookie, Bearer header, or localhost.
+def _register_page_routes(app: FastAPI, templates: Jinja2Templates) -> None:
+    """Register the auth bootstrap endpoint and core HTML page routes.
 
-        F4 audit fix: ?token= query params are NO LONGER accepted for page
-        auth. Use POST /api/auth/bootstrap or Bearer header instead.
-        Tokens in URLs leak through browser history, bookmarks, referrers.
-
-        v4.11.2026: timing-safe comparisons via secrets.compare_digest.
-        """
-        import secrets as _secrets
-
-        from clawed.api.deps import get_api_token
-        token = get_api_token()
-        # Check cookie (primary method — set via POST /api/auth/bootstrap)
-        cookie_val = request.cookies.get("clawed_token", "")
-        if cookie_val and _secrets.compare_digest(cookie_val, token):
-            return True
-        # Check Bearer header (for API-like access)
-        auth = request.headers.get("authorization", "")
-        if auth.startswith("Bearer ") and _secrets.compare_digest(auth[7:], token):
-            return True
-        # Check localhost bypass
-        if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
-            client_ip = request.client.host if request.client else ""
-            if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
-                return True
-        return False
+    Covers: auth bootstrap, index/onboarding, dashboard, lessons list,
+    generate, settings, stats, lesson detail, and share pages.
+    """
 
     # ── Auth bootstrap (F4 audit fix) ───────────────────────────────
     # Token accepted via POST body, cookie set, redirect to clean URL.
-
-    from fastapi import Form
-    from fastapi.responses import JSONResponse
 
     @app.post("/api/auth/bootstrap")
     async def _auth_bootstrap(token: str = Form(...)):
@@ -154,6 +167,7 @@ def create_app() -> FastAPI:
         import secrets as _secrets
 
         from clawed.api.deps import get_api_token
+
         expected = get_api_token()
         # ED-2 audit fix: timing-safe comparison prevents timing side-channel.
         if not _secrets.compare_digest(token, expected):
@@ -173,21 +187,12 @@ def create_app() -> FastAPI:
     # Legacy ?token= URL support REMOVED (P1-7 audit fix).
     # Use POST /api/auth/bootstrap or Bearer header only.
 
-    _auth_denied = HTMLResponse(
-        "<h1>401 — Auth required</h1>"
-        '<form method="POST" action="/api/auth/bootstrap">'
-        '<input name="token" placeholder="Paste your token" autofocus>'
-        '<button type="submit">Authenticate</button>'
-        "</form>",
-        status_code=401,
-    )
-
-    # ── Page routes (server-side rendered) ───────────────────────────
+    # ── Core pages ──────────────────────────────────────────────────
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         db = get_db()
         teacher = db.get_default_teacher()
         has_persona = teacher is not None and teacher.get("persona_json") is not None
@@ -197,7 +202,7 @@ def create_app() -> FastAPI:
         if has_persona and onboarding_complete:
             return RedirectResponse(url="/dashboard", status_code=302)
 
-        # New/incomplete user → show the onboarding wizard (not the marketing landing page)
+        # New/incomplete user -> show the onboarding wizard (not the marketing landing page)
         stats = db.get_stats()
         persona_data = None
         if teacher and teacher.get("persona_json"):
@@ -216,7 +221,7 @@ def create_app() -> FastAPI:
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard(request: Request):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         db = get_db()
         stats = db.get_stats()
         units = db.list_units()
@@ -268,6 +273,7 @@ def create_app() -> FastAPI:
         config_school = ""
         try:
             from clawed.models import AppConfig
+
             cfg = AppConfig.load()
             config_school = cfg.teacher_profile.school
         except Exception:
@@ -288,7 +294,7 @@ def create_app() -> FastAPI:
     async def lessons_list_page(request: Request):
         """Lesson list page: all generated lessons, filterable, newest first."""
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         db = get_db()
         subject_filter = request.query_params.get("subject", "")
         grade_filter = request.query_params.get("grade", "")
@@ -421,8 +427,9 @@ select {{ padding: 6px 10px; border-radius: 4px;
     @app.get("/generate", response_class=HTMLResponse)
     async def generate_page(request: Request):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         from clawed.standards import STANDARDS
+
         db = get_db()
         teacher = db.get_default_teacher()
         has_persona = teacher is not None
@@ -436,7 +443,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
     @app.get("/settings", response_class=HTMLResponse)
     async def settings_page(request: Request):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         from clawed.config import get_api_key, mask_api_key
         from clawed.models import AppConfig
         from clawed.state_standards import (
@@ -460,6 +467,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
         state_frameworks = []
         if teacher_state:
             from clawed.state_standards import STATE_STANDARDS_CONFIG
+
             state_cfg = STATE_STANDARDS_CONFIG.get(teacher_state, {})
             for subj_key in ("math", "ela", "science", "social_studies"):
                 code = state_cfg.get(subj_key, "")
@@ -475,6 +483,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
         try:
             from clawed.state import _get_conn as _state_conn2
             from clawed.state import init_db as _state_init2
+
             _state_init2()
             teacher_id_for_codes = teacher["id"] if teacher else "local-teacher"
             with _state_conn2() as sconn2:
@@ -503,12 +512,13 @@ select {{ padding: 6px 10px; border-radius: 4px;
     @app.get("/stats", response_class=HTMLResponse)
     async def stats_page(request: Request):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         db = get_db()
         teacher = db.get_default_teacher()
         teacher_id = teacher["id"] if teacher else "local-teacher"
 
         from clawed.analytics import get_teacher_stats
+
         stats_data = get_teacher_stats(teacher_id)
 
         return templates.TemplateResponse(request, "stats.html", {
@@ -519,7 +529,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
     @app.get("/lesson/{lesson_id}", response_class=HTMLResponse)
     async def lesson_page(request: Request, lesson_id: str):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         db = get_db()
         lesson_row = db.get_lesson(lesson_id)
         if not lesson_row:
@@ -555,6 +565,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
         try:
             from clawed.state import _get_conn as _state_conn
             from clawed.state import init_db as _state_init
+
             _state_init()
             with _state_conn() as sconn:
                 cc_rows = sconn.execute(
@@ -597,6 +608,10 @@ select {{ padding: 6px 10px; border-radius: 4px;
             "is_shared": True,
         })
 
+
+def _register_classroom_endpoints(app: FastAPI) -> None:
+    """Register classroom-facing endpoints: student class pages and QR codes."""
+
     def _generate_qr_img(data: str) -> str:
         """Generate QR code locally. Falls back to plain link."""
         try:
@@ -604,6 +619,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
             import io
 
             import qrcode
+
             qr = qrcode.make(data)
             buf = io.BytesIO()
             qr.save(buf, format="PNG")
@@ -616,6 +632,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
     async def student_class_page(request: Request, class_code: str):
         """Minimal student-facing page for a class code."""
         from clawed.state import _get_conn, init_db
+
         init_db()
         with _get_conn() as conn:
             row = conn.execute(
@@ -700,10 +717,14 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
 
         return HTMLResponse(page_html)
 
+
+def _register_community_endpoints(app: FastAPI, templates: Jinja2Templates) -> None:
+    """Register analytics, library, students, and profile page routes."""
+
     @app.get("/analytics", response_class=HTMLResponse)
     async def analytics_page(request: Request):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         from clawed.analytics import get_teacher_stats
 
         db = get_db()
@@ -715,6 +736,7 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
             """Run a read query against state DB, returning list of Row dicts."""
             try:
                 from clawed.state import _get_conn, init_db
+
                 init_db()
                 with _get_conn() as conn:
                     rows = conn.execute(sql, params).fetchall()
@@ -809,7 +831,7 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
     async def library_page(request: Request):
         """Library view — all units and lessons, aliased from dashboard."""
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         db = get_db()
         stats = db.get_stats()
         units = db.list_units()
@@ -856,6 +878,7 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
         config_school = ""
         try:
             from clawed.models import AppConfig
+
             cfg = AppConfig.load()
             config_school = cfg.teacher_profile.school
         except Exception:
@@ -876,7 +899,7 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
     async def students_page(request: Request):
         """Students page — chat activity and student engagement."""
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         db = get_db()
         stats = db.get_stats()
 
@@ -905,7 +928,7 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
     @app.get("/profile", response_class=HTMLResponse)
     async def profile_page(request: Request):
         if not _check_page_auth(request):
-            return _auth_denied
+            return _AUTH_DENIED
         from clawed.config import get_api_key, mask_api_key
         from clawed.models import AppConfig
         from clawed.state_standards import (
@@ -952,6 +975,31 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
             "openai_key_masked": mask_api_key(get_api_key("openai")),
             "telegram_token_masked": telegram_token_masked,
         })
+
+
+# ── Factory ─────────────────────────────────────────────────────────
+
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application.
+
+    Delegates to focused helpers for middleware, API routes, page routes,
+    classroom endpoints, and community/analytics endpoints.
+    """
+    from clawed import __version__
+
+    app = FastAPI(
+        title="Claw-ED",
+        description="Your teaching files, your AI co-teacher.",
+        version=__version__,
+        lifespan=lifespan,
+    )
+
+    templates = _configure_middleware(app)
+    _register_api_routes(app)
+    _register_page_routes(app, templates)
+    _register_classroom_endpoints(app)
+    _register_community_endpoints(app, templates)
 
     return app
 

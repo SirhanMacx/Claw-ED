@@ -191,7 +191,7 @@ Add examples directly to the corpus module in `clawed/corpus.py`:
 | Rule | Detail |
 |------|--------|
 | **Line length** | 120 characters max |
-| **Python version** | 3.10+ (use `\|` union types, `match` statements are OK) |
+| **Python version** | 3.10+ (use `\|` union types, `match` statements are OK). Claw-ED targets Python 3.10+ for broader teacher machine compatibility. Claw-STU requires 3.11+ for `tomllib`, `ExceptionGroup`, and `TaskGroup`. |
 | **Type hints** | Appreciated but not mandatory. Use them on public APIs. |
 | **Docstrings** | Required on public functions and classes. One-liner for simple functions, Google-style for complex ones. |
 | **Imports** | Sorted by Ruff (`I` rules). stdlib → third-party → local. |
@@ -295,6 +295,16 @@ Examples:
   test: add student bot message routing tests
   refactor: extract LLM retry logic into helper
 ```
+
+---
+
+## Versioning
+
+Claw-ED and Claw-STU use date-aligned versioning: `M.DD.YYYY[.patch]`.
+The major number is the release month, the minor tracks the day/sprint,
+the year anchors the timeline, and the optional patch increments within
+a release. This keeps the two projects' versions aligned and makes the
+release timeline immediately visible.
 
 ---
 
