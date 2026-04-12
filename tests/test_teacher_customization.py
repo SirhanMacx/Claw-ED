@@ -98,59 +98,6 @@ class TestOnboardingStateMachine:
 # ══════════════════════════════════════════════════════════════════════
 
 
-@pytest.mark.skip(
-    reason="Functions _parse_schedule_time, _parse_day_of_week, _match_task_name "
-    "were removed during gateway extraction; scheduling now delegates to "
-    "clawed.scheduler which uses its own parsing."
-)
-class TestScheduleTimeParser:
-    def test_morning(self):
-        pass
-
-    def test_evening(self):
-        pass
-
-    def test_afternoon(self):
-        pass
-
-    def test_explicit_am(self):
-        pass
-
-    def test_explicit_pm(self):
-        pass
-
-    def test_explicit_time_with_minutes(self):
-        pass
-
-    def test_24_hour(self):
-        pass
-
-    def test_default_when_no_time(self):
-        pass
-
-    def test_noon_pm(self):
-        pass
-
-    def test_midnight_am(self):
-        pass
-
-
-@pytest.mark.skip(
-    reason="Function _parse_day_of_week removed during gateway extraction."
-)
-class TestParseDayOfWeek:
-    def test_sunday(self):
-        pass
-
-    def test_friday(self):
-        pass
-
-    def test_no_day(self):
-        pass
-
-    def test_monday(self):
-        pass
-
 
 class TestCronToHuman:
     def test_daily(self):
@@ -176,45 +123,6 @@ class TestCronToHuman:
         assert "12:00 PM" in result
 
 
-@pytest.mark.skip(
-    reason="Function _match_task_name removed during gateway extraction."
-)
-class TestMatchTaskName:
-    def test_morning_prep(self):
-        pass
-
-    def test_weekly_plan(self):
-        pass
-
-    def test_student_digest(self):
-        pass
-
-    def test_feedback(self):
-        pass
-
-    def test_unknown(self):
-        pass
-
-
-@pytest.mark.skip(
-    reason="bot._cmd_schedule() removed during gateway extraction; "
-    "schedule commands now go through ScheduleHandler (tested in test_handlers.py)."
-)
-class TestScheduleCommand:
-    def test_show_schedule_no_args(self, tmp_path, monkeypatch):
-        pass
-
-    def test_enable_task(self, tmp_path, monkeypatch):
-        pass
-
-    def test_disable_task(self, tmp_path, monkeypatch):
-        pass
-
-    def test_cancel_all(self, tmp_path, monkeypatch):
-        pass
-
-    def test_weekly_schedule_with_day(self, tmp_path, monkeypatch):
-        pass
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -388,14 +296,6 @@ class TestGapsIntent:
         assert parsed.intent == Intent.GAP_ANALYSIS
 
 
-@pytest.mark.skip(
-    reason="bot._cmd_gaps() removed during gateway extraction; "
-    "gap analysis now goes through GapsHandler (tested in test_handlers.py)."
-)
-class TestGapsCommand:
-    def test_gaps_sends_typing(self, tmp_path):
-        pass
-
 
 # ══════════════════════════════════════════════════════════════════════
 # 5. Model switching
@@ -419,20 +319,6 @@ class TestModelSwitchIntent:
         parsed = parse_intent("switch to openai")
         assert parsed.intent == Intent.SWITCH_MODEL
 
-
-@pytest.mark.skip(
-    reason="bot._cmd_model_switch() removed during gateway extraction; "
-    "model switching now goes through the Gateway."
-)
-class TestModelSwitchCommand:
-    def test_switch_to_ollama(self, tmp_path):
-        pass
-
-    def test_switch_to_anthropic(self, tmp_path):
-        pass
-
-    def test_switch_unknown_provider(self, tmp_path):
-        pass
 
 
 # ══════════════════════════════════════════════════════════════════════

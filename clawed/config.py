@@ -14,6 +14,7 @@ from pathlib import Path
 
 from clawed.models import AppConfig
 
+# Legacy name: `EDUAGENT_DATA_DIR` is kept for backward compatibility with existing installations.
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
 _SECRETS_DIR = _BASE_DIR
 _SECRETS_FILE = _SECRETS_DIR / "secrets.json"

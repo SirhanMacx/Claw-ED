@@ -156,6 +156,11 @@ ignore = [
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
+[tool.mypy]
+python_version = "3.10"
+warn_unreachable = true
+check_untyped_defs = true
+
 [tool.coverage.run]
 source = ["clawed"]
 

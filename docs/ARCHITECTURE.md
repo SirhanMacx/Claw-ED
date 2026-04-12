@@ -4,7 +4,7 @@
 
 Claw-ED is a persistent AI teaching assistant. Ed lives in your terminal and on your phone, generating lessons, assessments, and materials in your teaching voice.
 
-This document describes the v4.3 architecture -- how messages flow through the system, what each module does, and how components connect.
+This document describes the v4.11.2026.2 architecture -- how messages flow through the system, what each module does, and how components connect.
 
 ---
 
@@ -58,7 +58,7 @@ clawed/agent_core/
 +-- loop.py           # _agent_loop(): tool-use loop (max 20 iterations)
 +-- prompt.py         # System prompt assembly from persona + workspace + tools
 +-- context.py        # Workspace context loading (soul, memory, curriculum)
-+-- tools/            # 30 auto-discovered tool modules (see below)
++-- tools/            # 43 auto-discovered tool modules (see below)
 +-- approvals.py      # Approval manager for sensitive operations
 +-- autonomy.py       # Autonomy level configuration
 +-- planner.py        # Multi-step plan execution
@@ -97,7 +97,7 @@ There are 15 teaching tools exposed through the Node.js Ink TUI, each implemente
 
 **Bridge pattern:** Each TS tool spawns `python3 -m clawed <command> --json` via `_bridge.ts`, passing arguments as CLI flags. The Python side executes the generation and returns structured JSON. This lets the Node TUI handle rendering while Python handles all LLM calls and content logic.
 
-The agent core has its own set of 30 Python-native tools in `clawed/agent_core/tools/` used by the Telegram bot and direct Python paths. These include everything the TS tools do plus Drive integration, scheduling, workspace management, and heartbeat monitoring.
+The agent core has its own set of 43 Python-native tool modules (51 tool classes) in `clawed/agent_core/tools/` used by the Telegram bot and direct Python paths. These include everything the TS tools do plus Drive integration, scheduling, workspace management, and heartbeat monitoring.
 
 ---
 

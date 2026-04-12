@@ -5,6 +5,7 @@
 An open-source CLI agent that generates complete lesson bundles — plans, handouts, slides, differentiated versions, games, and more — in your teaching voice. Feed it your files. It learns how you teach. Then it does the work for you.
 
 <p align="center">
+  <img src="https://img.shields.io/badge/version-v4.11.2026.2-blue" alt="Version">
   <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/v/clawed?color=blue" alt="PyPI"></a>
   <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/pyversions/clawed" alt="Python"></a>
   <a href="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml"><img src="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -46,7 +47,7 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 
 ## Features
 
-- **51+ agent tools** — lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation, project arcs, and more
+- **51 agent tools** — lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation, project arcs, and more
 - **Quality gate with auto-retry** — 12 pedagogical checks (Bloom's progression, stimulus-based assessment, differentiation specificity, diversity audit) validate every lesson before delivery. Failures auto-retry with specific feedback.
 - **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum). Vision model filters for quality.
 - **Writes like you** — AI-ism removal strips "delve", "utilize", "leverage" and 70+ other LLM tells so output reads like a teacher wrote it
