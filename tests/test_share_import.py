@@ -122,14 +122,16 @@ class TestImportAPI:
         lesson = db.get_lesson(lid)
         token = lesson["share_token"]
 
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {
+        payload = {
             "lesson_id": lid,
             "title": "Original",
             "share_token": token,
             "lesson": {"title": "Original", "objective": "Learn"},
         }
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = json.dumps(payload).encode()
+        mock_resp.json.return_value = payload
 
         mock_client = _mock_async_client(mock_resp)
 
@@ -144,12 +146,14 @@ class TestImportAPI:
         assert data["title"] == "[Imported] Original"
 
     def test_import_with_url(self, client, db):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = {
+        payload = {
             "title": "Remote Lesson",
             "lesson": {"title": "Remote Lesson"},
         }
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = json.dumps(payload).encode()
+        mock_resp.json.return_value = payload
 
         mock_client = _mock_async_client(mock_resp)
 
@@ -167,6 +171,7 @@ class TestImportAPI:
     def test_import_404(self, client):
         mock_resp = MagicMock()
         mock_resp.status_code = 404
+        mock_resp.content = b""
 
         mock_client = _mock_async_client(mock_resp)
 

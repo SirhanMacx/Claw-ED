@@ -204,40 +204,29 @@ async def import_lesson(req: ImportRequest):
 
     try:
         timeout = httpx.Timeout(read_timeout, connect=connect_timeout)
-        async with (
-            httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client,
-            client.stream("GET", fetch_url) as resp,
-        ):
-                if resp.status_code == 404:
-                    return JSONResponse(
-                        {"error": "Lesson not found."}, status_code=404
-                    )
-                if resp.status_code != 200:
-                    return JSONResponse(
-                        {"error": f"Upstream returned {resp.status_code}"},
-                        status_code=502,
-                    )
+        async with httpx.AsyncClient(
+            timeout=timeout, follow_redirects=False,
+        ) as client:
+            resp = await client.get(fetch_url)
 
-                # Verify Content-Type before reading body
-                content_type = resp.headers.get("content-type", "")
-                if "application/json" not in content_type:
-                    return JSONResponse(
-                        {"error": f"Unexpected content-type: {content_type}"},
-                        status_code=502,
-                    )
+            if resp.status_code == 404:
+                return JSONResponse(
+                    {"error": "Lesson not found."}, status_code=404
+                )
+            if resp.status_code != 200:
+                return JSONResponse(
+                    {"error": f"Upstream returned {resp.status_code}"},
+                    status_code=502,
+                )
 
-                # Stream with byte budget to prevent OOM
-                chunks: list[bytes] = []
-                total_bytes = 0
-                async for chunk in resp.aiter_bytes():
-                    total_bytes += len(chunk)
-                    if total_bytes > max_import_bytes:
-                        return JSONResponse(
-                            {"error": "Response too large (>10 MB)."},
-                            status_code=502,
-                        )
-                    chunks.append(chunk)
-                body = b"".join(chunks)
+            # ED-7: reject oversized responses
+            if len(resp.content) > max_import_bytes:
+                return JSONResponse(
+                    {"error": "Response too large (>10 MB)."},
+                    status_code=502,
+                )
+
+            body = resp.content
     except httpx.HTTPError as exc:
         # v4.11.2026: don't leak raw exception text to the client.
         logger.warning("Import fetch failed for %s: %s", fetch_url, exc)
