@@ -145,6 +145,12 @@ ignore = [
 "clawed/export_docx.py" = ["N806"]
 "clawed/export_pptx.py" = ["N806"]
 "clawed/export_handout.py" = ["N806"]
+# Tests: unused unpacked vars and nested withs are common patterns.
+"tests/**" = ["RUF059", "SIM117", "SIM300", "SIM110", "RUF005", "B033"]
+# Scripts: one-off utilities with looser hygiene requirements.
+"scripts/**" = ["RUF059", "SIM110", "B033"]
+# Compat shim re-exports everything from clawed.
+"eduagent/__init__.py" = ["RUF100"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
