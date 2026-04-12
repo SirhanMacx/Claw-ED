@@ -480,274 +480,116 @@ def _clear_config() -> None:
     console.print("  [dim]Previous configuration cleared.[/dim]")
 
 
-def quick_model_setup() -> str:
-    """Minimal first-run setup: provider + key + interface choice. 30 seconds.
+def _setup_google() -> AppConfig | None:
+    """Configure Google Gemini provider. Returns config or None to skip."""
+    console.print("\n  Get your free API key at: [cyan]https://aistudio.google.com/apikey[/cyan]\n")
+    key = Prompt.ask("  [bold]Gemini API key[/bold]")
+    if not key.strip():
+        console.print("  [yellow]No key entered. Run 'clawed setup' when ready.[/yellow]\n")
+        return None
+    key = key.strip()
+    config = AppConfig(provider=LLMProvider.GOOGLE)
+    config.google_model = "gemini-2.5-flash"
+    set_api_key("google", key)
+    console.print(f"  [green]\u2713 Key saved ({key[:8]}...)[/green]")
+    return config
 
-    Returns:
-        "telegram" — teacher wants to use Telegram (bot should start)
-        "terminal" — teacher wants terminal chat
-        "skip" — teacher skipped setup
-    """
-    console.print(Panel(
-        "[bold]Hey there, fellow educator![/bold] \U0001f393\n\n"
-        "I'm Claw-ED -- think of me as a colleague who's really good\n"
-        "at turning your ideas into polished lesson plans, handouts,\n"
-        "and slides.\n\n"
-        "First, let's connect me to an AI service so I can start\n"
-        "creating for you. This takes about 30 seconds.",
-        title="[bold green]Claw-ED Setup[/bold green]",
-        border_style="green",
-        padding=(1, 2),
-    ))
 
-    # ── Step 1: Pick provider ──
-    # Check if local Ollama is running
-    local_ollama = False
-    try:
-        import httpx
-        resp = httpx.get("http://localhost:11434/api/tags", timeout=3.0)
-        if resp.status_code == 200:
-            local_ollama = True
-    except Exception:
-        pass
+def _setup_anthropic() -> AppConfig | None:
+    """Configure Anthropic Claude provider. Returns config or None to skip."""
+    console.print(
+        "\n  Get your API key at: [cyan]https://console.anthropic.com[/cyan] \u2192 API Keys\n"
+        "  Cost: ~$0.10 per lesson with Sonnet, ~$0.50 with Opus\n"
+    )
+    key = Prompt.ask("  [bold]Claude API key (starts with sk-ant-)[/bold]")
+    if not key.strip():
+        console.print("  [yellow]No key. Run 'clawed setup' when ready.[/yellow]\n")
+        return None
+    key = key.strip()
+    config = AppConfig(provider=LLMProvider.ANTHROPIC)
+    config.anthropic_model = "claude-sonnet-4-6"
+    set_api_key("anthropic", key)
+    console.print(f"  [green]\u2713 Key saved ({key[:8]}...)[/green]")
+    return config
 
-    console.print("\n[bold]Which AI service?[/bold]\n")
-    console.print(
-        "  [bold cyan][1][/bold cyan] \u2605 Google Gemini \u2014 free tier available, "
-        "good quality [dim](easiest to start)[/dim]"
-    )
-    console.print(
-        "        Sign up: [cyan]https://aistudio.google.com/apikey[/cyan]"
-    )
-    console.print(
-        "  [bold cyan][2][/bold cyan] Claude (Anthropic) \u2014 highest quality, "
-        "~$0.10/lesson"
-    )
-    console.print(
-        "        Sign up: [cyan]https://console.anthropic.com[/cyan] "
-        "\u2192 API Keys"
-    )
-    console.print(
-        "  [bold cyan][3][/bold cyan] Ollama Cloud \u2014 $20/month, unlimited "
-        "lessons"
-    )
-    console.print(
-        "        Sign up: [cyan]https://ollama.com[/cyan] \u2192 Settings "
-        "\u2192 API Keys"
-    )
+
+def _setup_ollama_cloud() -> AppConfig | None:
+    """Configure Ollama Cloud provider. Returns config or None to skip."""
+    console.print("\n  Sign up at: [cyan]https://ollama.com[/cyan] \u2192 Settings \u2192 API Keys\n")
+    key = Prompt.ask("  [bold]Ollama API key[/bold]")
+    if not key.strip():
+        console.print("  [yellow]No key. Run 'clawed setup' when ready.[/yellow]\n")
+        return None
+    key = key.strip()
+    config = AppConfig(provider=LLMProvider.OLLAMA)
+    config.ollama_base_url = "https://ollama.com"
+    config.ollama_model = "gemma4:31b-cloud"
+    set_api_key("ollama", key)
+    config.ollama_api_key = ""
+    console.print(f"  [green]\u2713 Key saved ({key[:8]}...)[/green]")
+    return config
+
+
+def _setup_local_ollama(local_ollama: bool) -> AppConfig:
+    """Configure local Ollama provider. Always returns a config."""
+    import httpx
+
+    config = AppConfig(provider=LLMProvider.OLLAMA)
+    config.ollama_base_url = "http://localhost:11434"
     if local_ollama:
-        console.print(
-            "  [bold cyan][4][/bold cyan] Local Ollama \u2014 detected on "
-            "this machine, completely free"
-        )
-    else:
-        console.print(
-            "  [bold cyan][4][/bold cyan] Local Ollama \u2014 free, runs on "
-            "your computer"
-        )
-        console.print(
-            "        Install: [cyan]https://ollama.com/download[/cyan]"
-        )
-    console.print(
-        "  [bold cyan][5][/bold cyan] GPT (OpenAI) \u2014 high quality, "
-        "~$0.15/lesson"
-    )
-    console.print(
-        "        Sign up: [cyan]https://platform.openai.com/api-keys[/cyan]"
-    )
-    console.print(
-        "  [bold cyan][6][/bold cyan] Try demo mode \u2014 no API key needed, "
-        "see example output first"
-    )
-    console.print(
-        "  [bold cyan][7][/bold cyan] Skip \u2014 I'll set this up later\n"
-    )
-
-    choice = Prompt.ask(
-        "Choice", choices=["1", "2", "3", "4", "5", "6", "7"], default="1"
-    )
-
-    if choice == "7":
-        config = AppConfig()
-        config.save()
-        _write_onboarding_marker()
-        console.print(
-            "\n  [yellow]No AI configured. "
-            "Run 'clawed setup' when you're ready.[/yellow]\n"
-        )
-        return "skip"
-
-    if choice == "6":
-        # Demo mode — no API key needed
-        config = AppConfig()
-        config.save()
-        _write_onboarding_marker()
-        console.print(
-            "\n  [green]\u2713 Demo mode active![/green] "
-            "Try: [bold]clawed demo[/bold] to see sample output.\n"
-            "  When you're ready for real generation, "
-            "run [bold]clawed setup[/bold].\n"
-        )
-        return "terminal"
-
-    # ── Step 2: Configure based on choice ──
-    if choice == "1":
-        # Google Gemini — free tier available
-        console.print(
-            "\n  Get your free API key at: "
-            "[cyan]https://aistudio.google.com/apikey[/cyan]\n"
-        )
-        key = Prompt.ask(
-            "  [bold]Gemini API key[/bold]"
-        )
-        if not key.strip():
-            console.print(
-                "  [yellow]No key entered. "
-                "Run 'clawed setup' when ready.[/yellow]\n"
-            )
-            config = AppConfig()
-            config.save()
-            _write_onboarding_marker()
-            return "skip"
-        key = key.strip()
-        config = AppConfig(provider=LLMProvider.GOOGLE)
-        config.google_model = "gemini-2.5-flash"
-        set_api_key("google", key)
-        console.print(
-            f"  [green]\u2713 Key saved ({key[:8]}...)[/green]"
-        )
-
-    elif choice == "2":
-        # Claude (Anthropic) — highest quality
-        console.print(
-            "\n  Get your API key at: "
-            "[cyan]https://console.anthropic.com[/cyan] "
-            "\u2192 API Keys\n"
-            "  Cost: ~$0.10 per lesson with Sonnet, "
-            "~$0.50 with Opus\n"
-        )
-        key = Prompt.ask(
-            "  [bold]Claude API key (starts with sk-ant-)[/bold]"
-        )
-        if not key.strip():
-            console.print(
-                "  [yellow]No key. "
-                "Run 'clawed setup' when ready.[/yellow]\n"
-            )
-            config = AppConfig()
-            config.save()
-            _write_onboarding_marker()
-            return "skip"
-        key = key.strip()
-        config = AppConfig(provider=LLMProvider.ANTHROPIC)
-        config.anthropic_model = "claude-sonnet-4-6"
-        set_api_key("anthropic", key)
-        console.print(
-            f"  [green]\u2713 Key saved ({key[:8]}...)[/green]"
-        )
-
-    elif choice == "3":
-        # Ollama Cloud
-        console.print(
-            "\n  Sign up at: "
-            "[cyan]https://ollama.com[/cyan] "
-            "\u2192 Settings \u2192 API Keys\n"
-        )
-        key = Prompt.ask("  [bold]Ollama API key[/bold]")
-        if not key.strip():
-            console.print(
-                "  [yellow]No key. "
-                "Run 'clawed setup' when ready.[/yellow]\n"
-            )
-            config = AppConfig()
-            config.save()
-            _write_onboarding_marker()
-            return "skip"
-        key = key.strip()
-        config = AppConfig(provider=LLMProvider.OLLAMA)
-        config.ollama_base_url = "https://ollama.com"
-        config.ollama_model = "gemma4:31b-cloud"
-        set_api_key("ollama", key)
-        config.ollama_api_key = ""  # Don't leak to config.json
-        console.print(
-            f"  [green]\u2713 Key saved ({key[:8]}...)[/green]"
-        )
-
-    elif choice == "4":
-        # Local Ollama — no API key, detect models
-        config = AppConfig(provider=LLMProvider.OLLAMA)
-        config.ollama_base_url = "http://localhost:11434"
-        if local_ollama:
-            try:
-                resp = httpx.get("http://localhost:11434/api/tags", timeout=5.0)
-                models = [m["name"] for m in resp.json().get("models", [])]
-                if models:
-                    console.print(f"  [green]\u2713 Found models: {', '.join(models[:5])}[/green]")
-                    # Pick most capable model — cloud models first, then by preference
-                    cloud_models = [m for m in models if ":cloud" in m]
-                    preferred = ["gemma4", "minimax-m2.7", "deepseek", "qwen3.5", "llama4"]
-                    picked = None
-                    # Try cloud models first (most capable)
-                    for pref in preferred:
-                        for m in cloud_models:
-                            if pref in m:
-                                picked = m
-                                break
-                        if picked:
-                            break
-                    # Fall back to any preferred model
-                    if not picked:
-                        for pref in preferred:
-                            for m in models:
-                                if pref in m:
-                                    picked = m
-                                    break
-                            if picked:
-                                break
-                    # Last resort — first available
-                    if not picked:
-                        picked = models[0]
-                    config.ollama_model = picked
-                    console.print(f"  [green]\u2713 Using model: {picked}[/green]")
-                else:
-                    console.print("  [yellow]No models found. Pull one: ollama pull qwen3.5[/yellow]")
-                    config.ollama_model = "qwen3.5"
-            except Exception:
+        try:
+            resp = httpx.get("http://localhost:11434/api/tags", timeout=5.0)
+            models = [m["name"] for m in resp.json().get("models", [])]
+            if models:
+                console.print(f"  [green]\u2713 Found models: {', '.join(models[:5])}[/green]")
+                picked = _pick_best_ollama_model(models)
+                config.ollama_model = picked
+                console.print(f"  [green]\u2713 Using model: {picked}[/green]")
+            else:
+                console.print("  [yellow]No models found. Pull one: ollama pull qwen3.5[/yellow]")
                 config.ollama_model = "qwen3.5"
-        else:
-            console.print("  [yellow]Ollama not detected. Install it and pull a model first.[/yellow]")
+        except Exception:
             config.ollama_model = "qwen3.5"
-        key = ""
+    else:
+        console.print("  [yellow]Ollama not detected. Install it and pull a model first.[/yellow]")
+        config.ollama_model = "qwen3.5"
+    return config
 
-    elif choice == "5":
-        # OpenAI GPT
-        console.print(
-            "\n  Get your API key at: "
-            "[cyan]https://platform.openai.com/api-keys[/cyan]\n"
-            "  Cost: ~$0.15 per lesson with GPT-4o\n"
-        )
-        key = Prompt.ask(
-            "  [bold]OpenAI API key (starts with sk-)[/bold]"
-        )
-        if not key.strip():
-            console.print(
-                "  [yellow]No key. "
-                "Run 'clawed setup' when ready.[/yellow]\n"
-            )
-            config = AppConfig()
-            config.save()
-            _write_onboarding_marker()
-            return "skip"
-        key = key.strip()
-        config = AppConfig(provider=LLMProvider.OPENAI)
-        set_api_key("openai", key)
-        console.print(
-            f"  [green]\u2713 Key saved ({key[:8]}...)[/green]"
-        )
 
-    config.save()
+def _pick_best_ollama_model(models: list[str]) -> str:
+    """Pick the most capable model from a list of available Ollama models."""
+    cloud_models = [m for m in models if ":cloud" in m]
+    preferred = ["gemma4", "minimax-m2.7", "deepseek", "qwen3.5", "llama4"]
+    for pref in preferred:
+        for m in cloud_models:
+            if pref in m:
+                return m
+    for pref in preferred:
+        for m in models:
+            if pref in m:
+                return m
+    return models[0]
 
-    # ── Step 3: Choose interface ──
+
+def _setup_openai() -> AppConfig | None:
+    """Configure OpenAI GPT provider. Returns config or None to skip."""
+    console.print(
+        "\n  Get your API key at: [cyan]https://platform.openai.com/api-keys[/cyan]\n"
+        "  Cost: ~$0.15 per lesson with GPT-4o\n"
+    )
+    key = Prompt.ask("  [bold]OpenAI API key (starts with sk-)[/bold]")
+    if not key.strip():
+        console.print("  [yellow]No key. Run 'clawed setup' when ready.[/yellow]\n")
+        return None
+    key = key.strip()
+    config = AppConfig(provider=LLMProvider.OPENAI)
+    set_api_key("openai", key)
+    console.print(f"  [green]\u2713 Key saved ({key[:8]}...)[/green]")
+    return config
+
+
+def _choose_interface(config: AppConfig) -> str:
+    """Step 3 of quick setup: choose Telegram bot or terminal chat."""
     console.print(
         "\n[bold]Great -- you're all set up![/bold] One last thing:\n\n"
         "  [bold cyan][1][/bold cyan] Telegram bot \u2014 chat with me from your phone "
@@ -758,7 +600,6 @@ def quick_model_setup() -> str:
     interface = Prompt.ask("Choice", choices=["1", "2"], default="2")
 
     if interface == "1":
-        # Get Telegram bot token
         console.print(
             "\n  Get a bot token from [bold]@BotFather[/bold] on Telegram:\n"
             "  1. Open Telegram, search for @BotFather\n"
@@ -777,22 +618,99 @@ def quick_model_setup() -> str:
                 "  Open Telegram, find your bot, and send it:\n\n"
                 '    [bold cyan]Hello![/bold cyan]\n\n'
                 "  Claw-ED will introduce itself and get to know you.\n"
-                "  [dim]The bot runs in the background — no extra terminal needed.[/dim]\n"
+                "  [dim]The bot runs in the background -- no extra terminal needed.[/dim]\n"
             )
             return "telegram"
-        else:
-            console.print("  [dim]No token entered. Falling back to terminal chat.[/dim]\n")
-            _write_onboarding_marker()
-            return "terminal"
+        console.print("  [dim]No token entered. Falling back to terminal chat.[/dim]\n")
 
-    # Mark onboarding as complete
     _write_onboarding_marker()
-
-    console.print(
-        "\n  [green]\u2713 All set![/green] "
-        "Let's chat -- I'll start by getting to know you.\n"
-    )
+    console.print("\n  [green]\u2713 All set![/green] Let's chat -- I'll start by getting to know you.\n")
     return "terminal"
+
+
+def quick_model_setup() -> str:
+    """Minimal first-run setup: provider + key + interface choice. 30 seconds.
+
+    Returns:
+        "telegram" -- teacher wants to use Telegram (bot should start)
+        "terminal" -- teacher wants terminal chat
+        "skip" -- teacher skipped setup
+    """
+    console.print(Panel(
+        "[bold]Hey there, fellow educator![/bold] \U0001f393\n\n"
+        "I'm Claw-ED -- think of me as a colleague who's really good\n"
+        "at turning your ideas into polished lesson plans, handouts,\n"
+        "and slides.\n\n"
+        "First, let's connect me to an AI service so I can start\n"
+        "creating for you. This takes about 30 seconds.",
+        title="[bold green]Claw-ED Setup[/bold green]",
+        border_style="green",
+        padding=(1, 2),
+    ))
+
+    # Detect local Ollama
+    local_ollama = False
+    try:
+        import httpx
+        resp = httpx.get("http://localhost:11434/api/tags", timeout=3.0)
+        if resp.status_code == 200:
+            local_ollama = True
+    except Exception:
+        pass
+
+    # Show provider menu
+    console.print("\n[bold]Which AI service?[/bold]\n")
+    console.print(
+        "  [bold cyan][1][/bold cyan] \u2605 Google Gemini \u2014 free tier available, "
+        "good quality [dim](easiest to start)[/dim]"
+    )
+    console.print("        Sign up: [cyan]https://aistudio.google.com/apikey[/cyan]")
+    console.print("  [bold cyan][2][/bold cyan] Claude (Anthropic) \u2014 highest quality, ~$0.10/lesson")
+    console.print("        Sign up: [cyan]https://console.anthropic.com[/cyan] \u2192 API Keys")
+    console.print("  [bold cyan][3][/bold cyan] Ollama Cloud \u2014 $20/month, unlimited lessons")
+    console.print("        Sign up: [cyan]https://ollama.com[/cyan] \u2192 Settings \u2192 API Keys")
+    if local_ollama:
+        console.print("  [bold cyan][4][/bold cyan] Local Ollama \u2014 detected on this machine, completely free")
+    else:
+        console.print("  [bold cyan][4][/bold cyan] Local Ollama \u2014 free, runs on your computer")
+        console.print("        Install: [cyan]https://ollama.com/download[/cyan]")
+    console.print("  [bold cyan][5][/bold cyan] GPT (OpenAI) \u2014 high quality, ~$0.15/lesson")
+    console.print("        Sign up: [cyan]https://platform.openai.com/api-keys[/cyan]")
+    console.print("  [bold cyan][6][/bold cyan] Try demo mode \u2014 no API key needed, see example output first")
+    console.print("  [bold cyan][7][/bold cyan] Skip \u2014 I'll set this up later\n")
+
+    choice = Prompt.ask("Choice", choices=["1", "2", "3", "4", "5", "6", "7"], default="1")
+
+    if choice == "7":
+        AppConfig().save()
+        _write_onboarding_marker()
+        console.print("\n  [yellow]No AI configured. Run 'clawed setup' when you're ready.[/yellow]\n")
+        return "skip"
+
+    if choice == "6":
+        AppConfig().save()
+        _write_onboarding_marker()
+        console.print(
+            "\n  [green]\u2713 Demo mode active![/green] Try: [bold]clawed demo[/bold] to see sample output.\n"
+            "  When you're ready for real generation, run [bold]clawed setup[/bold].\n"
+        )
+        return "terminal"
+
+    # Configure per provider
+    setup_fns = {"1": _setup_google, "2": _setup_anthropic, "3": _setup_ollama_cloud, "5": _setup_openai}
+    if choice == "4":
+        config = _setup_local_ollama(local_ollama)
+    elif choice in setup_fns:
+        config = setup_fns[choice]()
+        if config is None:
+            AppConfig().save()
+            _write_onboarding_marker()
+            return "skip"
+    else:
+        config = AppConfig()
+
+    config.save()
+    return _choose_interface(config)
 
 
 def run_setup_wizard(reset: bool = False) -> AppConfig:

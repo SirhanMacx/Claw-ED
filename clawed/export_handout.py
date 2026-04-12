@@ -19,106 +19,93 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-def export_student_packet_docx(
-    packet: Any,
-    subject: str = "",
-    output_dir: Path | None = None,
-    agent_name: str = "Claw-ED",
-) -> Path:
-    """Export a StudentPacket to a professionally formatted DOCX workbook."""
-    from docx import Document
-    from docx.enum.table import WD_TABLE_ALIGNMENT
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.ns import qn
-    from docx.shared import Inches, Pt, RGBColor
+def _packet_get(packet: Any, field: str, default: Any = "") -> Any:
+    """Get a field from either a model object or a dict."""
+    if hasattr(packet, field):
+        return getattr(packet, field, default)
+    if isinstance(packet, dict):
+        return packet.get(field, default)
+    return default
 
-    from clawed.export_theme import get_color_theme
+
+def _packet_section_heading(doc: Any, text: str, primary_rgb: Any, primary_hex: str) -> None:
+    """Add a styled section heading with bottom border."""
+    from docx.oxml.ns import qn
+    from docx.shared import Pt
+
     from clawed.sanitize import sanitize_text
 
-    theme = get_color_theme(subject)
-    primary_hex = theme["primary"]
-    primary_rgb = RGBColor(
-        int(primary_hex[:2], 16), int(primary_hex[2:4], 16), int(primary_hex[4:6], 16),
+    para = doc.add_paragraph()
+    para.paragraph_format.space_before = Pt(14)
+    para.paragraph_format.space_after = Pt(4)
+    r = para.add_run(sanitize_text(text).upper())
+    r.bold = True
+    r.font.size = Pt(13)
+    r.font.color.rgb = primary_rgb
+    pPr = para._p.get_or_add_pPr()
+    pBdr = pPr.makeelement(qn("w:pBdr"), {})
+    bottom = pBdr.makeelement(
+        qn("w:bottom"),
+        {qn("w:val"): "single", qn("w:sz"): "8", qn("w:space"): "1", qn("w:color"): primary_hex},
     )
-    accent_hex = theme.get("accent", primary_hex)
+    pBdr.append(bottom)
+    pPr.append(pBdr)
 
-    doc = Document()
 
-    # ── Page setup ────────────────────────────────────────────────────
-    for section in doc.sections:
-        section.top_margin = Inches(0.6)
-        section.bottom_margin = Inches(0.5)
-        section.left_margin = Inches(0.75)
-        section.right_margin = Inches(0.75)
+def _add_response_lines(doc: Any, count: int = 3) -> None:
+    """Add blank response lines with bottom borders for student writing."""
+    from docx.oxml.ns import qn
+    from docx.shared import Pt
 
-    # Default font
-    style = doc.styles["Normal"]
-    style.font.name = "Calibri"
-    style.font.size = Pt(11)
-
-    # ── Helper functions ──────────────────────────────────────────────
-
-    def _get(field, default=""):
-        if hasattr(packet, field):
-            return getattr(packet, field, default)
-        if isinstance(packet, dict):
-            return packet.get(field, default)
-        return default
-
-    def _section_heading(text: str) -> None:
-        para = doc.add_paragraph()
-        para.paragraph_format.space_before = Pt(14)
-        para.paragraph_format.space_after = Pt(4)
-        r = para.add_run(sanitize_text(text).upper())
-        r.bold = True
-        r.font.size = Pt(13)
-        r.font.color.rgb = primary_rgb
-        # Bottom border
-        pPr = para._p.get_or_add_pPr()
+    for _ in range(count):
+        p = doc.add_paragraph("")
+        p.paragraph_format.space_after = Pt(12)
+        pPr = p._p.get_or_add_pPr()
         pBdr = pPr.makeelement(qn("w:pBdr"), {})
         bottom = pBdr.makeelement(
             qn("w:bottom"),
-            {qn("w:val"): "single", qn("w:sz"): "8", qn("w:space"): "1", qn("w:color"): primary_hex},
+            {qn("w:val"): "single", qn("w:sz"): "4", qn("w:space"): "1", qn("w:color"): "BBBBBB"},
         )
         pBdr.append(bottom)
         pPr.append(pBdr)
 
-    def _add_lines(count: int = 3) -> None:
-        for _ in range(count):
-            p = doc.add_paragraph("")
-            p.paragraph_format.space_after = Pt(12)
-            pPr = p._p.get_or_add_pPr()
-            pBdr = pPr.makeelement(qn("w:pBdr"), {})
-            bottom = pBdr.makeelement(
-                qn("w:bottom"),
-                {qn("w:val"): "single", qn("w:sz"): "4", qn("w:space"): "1", qn("w:color"): "BBBBBB"},
-            )
-            pBdr.append(bottom)
-            pPr.append(pBdr)
 
-    def _add_table_borders(table) -> None:
-        tbl = table._tbl
-        tblPr = tbl.tblPr if tbl.tblPr is not None else tbl.makeelement(qn("w:tblPr"), {})
-        borders = tblPr.makeelement(qn("w:tblBorders"), {})
-        for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
-            el = borders.makeelement(
-                qn(f"w:{edge}"),
-                {qn("w:val"): "single", qn("w:sz"): "6", qn("w:space"): "0", qn("w:color"): "444444"},
-            )
-            borders.append(el)
-        tblPr.append(borders)
+def _add_docx_table_borders(table: Any) -> None:
+    """Add borders to a DOCX table."""
+    from docx.oxml.ns import qn
 
-    def _shade_cell(cell, hex_color: str) -> None:
-        tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
-        shading = tcPr.makeelement(
-            qn("w:shd"), {qn("w:val"): "clear", qn("w:color"): "auto", qn("w:fill"): hex_color},
+    tbl = table._tbl
+    tblPr = tbl.tblPr if tbl.tblPr is not None else tbl.makeelement(qn("w:tblPr"), {})
+    borders = tblPr.makeelement(qn("w:tblBorders"), {})
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = borders.makeelement(
+            qn(f"w:{edge}"),
+            {qn("w:val"): "single", qn("w:sz"): "6", qn("w:space"): "0", qn("w:color"): "444444"},
         )
-        tcPr.append(shading)
+        borders.append(el)
+    tblPr.append(borders)
 
-    # ── Title + Header ────────────────────────────────────────────────
-    title = sanitize_text(_get("title", "Student Packet"))
 
+def _shade_docx_cell(cell: Any, hex_color: str) -> None:
+    """Shade a DOCX table cell."""
+    from docx.oxml.ns import qn
+
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shading = tcPr.makeelement(
+        qn("w:shd"), {qn("w:val"): "clear", qn("w:color"): "auto", qn("w:fill"): hex_color},
+    )
+    tcPr.append(shading)
+
+
+def _build_packet_header(doc: Any, packet: Any, primary_rgb: Any) -> str:
+    """Build title, aim, and name/date/period header. Returns the title."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt
+
+    from clawed.sanitize import sanitize_text
+
+    title = sanitize_text(_packet_get(packet, "title", "Student Packet"))
     title_para = doc.add_paragraph()
     title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = title_para.add_run(title)
@@ -126,8 +113,7 @@ def export_student_packet_docx(
     run.font.size = Pt(16)
     run.font.color.rgb = primary_rgb
 
-    # Aim
-    aim = sanitize_text(_get("aim", ""))
+    aim = sanitize_text(_packet_get(packet, "aim", ""))
     if aim:
         aim_para = doc.add_paragraph()
         aim_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -136,30 +122,182 @@ def export_student_packet_docx(
         r.bold = True
         r.font.size = Pt(12)
 
-    # Name/Date/Period
     meta = doc.add_paragraph()
     meta.paragraph_format.space_after = Pt(8)
     meta_run = meta.add_run("Name: _________________________   Date: ______________   Period: ________")
     meta_run.font.size = Pt(10)
+    return title
 
-    # ── Do Now ────────────────────────────────────────────────────────
-    do_now = sanitize_text(_get("do_now_prompt") or _get("do_now", ""))
+
+def _build_stations_section(doc: Any, packet: Any, primary_rgb: Any, primary_hex: str) -> None:
+    """Build the Document Analysis / Stations section."""
+    from docx.shared import Inches, Pt, RGBColor
+
+    from clawed.sanitize import sanitize_text
+
+    stations = _packet_get(packet, "stations", []) or _packet_get(packet, "source_excerpts", [])
+    if not stations:
+        return
+
+    _packet_section_heading(doc, "Document Analysis", primary_rgb, primary_hex)
+    for station in stations:
+        if isinstance(station, dict):
+            label = sanitize_text(station.get("document_label", station.get("title", "")))
+            ctx = sanitize_text(station.get("context", ""))
+            full_text = sanitize_text(station.get("full_text", station.get("text", "")))
+            author = sanitize_text(station.get("author", station.get("attribution", "")))
+            dt = sanitize_text(station.get("date", ""))
+            questions = station.get("analysis_questions", [])
+        else:
+            label = sanitize_text(getattr(station, "document_label", "") or getattr(station, "title", ""))
+            ctx = sanitize_text(getattr(station, "context", ""))
+            full_text = sanitize_text(getattr(station, "full_text", ""))
+            author = sanitize_text(getattr(station, "author", ""))
+            dt = sanitize_text(getattr(station, "date", ""))
+            questions = getattr(station, "analysis_questions", [])
+
+        if label:
+            p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(12)
+            p.paragraph_format.space_after = Pt(4)
+            r = p.add_run(label)
+            r.bold = True
+            r.font.size = Pt(12)
+            r.font.color.rgb = primary_rgb
+
+        if ctx:
+            p = doc.add_paragraph()
+            p.paragraph_format.space_after = Pt(4)
+            r = p.add_run("Context: ")
+            r.bold = True
+            r.font.size = Pt(10)
+            r2 = p.add_run(ctx)
+            r2.font.size = Pt(10)
+            r2.italic = True
+
+        if full_text:
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Inches(0.4)
+            p.paragraph_format.right_indent = Inches(0.4)
+            p.paragraph_format.space_before = Pt(6)
+            p.paragraph_format.space_after = Pt(6)
+            r = p.add_run(f'\u201c{full_text}\u201d')
+            r.italic = True
+            r.font.size = Pt(11)
+            if author or dt:
+                attrib_parts = [x for x in [author, dt] if x]
+                a = doc.add_paragraph()
+                a.paragraph_format.left_indent = Inches(0.4)
+                a.paragraph_format.space_after = Pt(6)
+                ar = a.add_run(f"\u2014 {', '.join(attrib_parts)}")
+                ar.font.size = Pt(9)
+                ar.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+
+        if questions:
+            for qi, q in enumerate(questions, 1):
+                q_text = sanitize_text(q) if isinstance(q, str) else sanitize_text(str(q))
+                p = doc.add_paragraph()
+                p.paragraph_format.space_before = Pt(4)
+                r = p.add_run(f"{qi}. {q_text}")
+                r.font.size = Pt(11)
+                _add_response_lines(doc, 5)
+
+
+def _build_graphic_organizer(doc: Any, packet: Any, primary_rgb: Any, primary_hex: str, accent_hex: str) -> None:
+    """Build the graphic organizer table section."""
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.shared import Pt, RGBColor
+
+    from clawed.sanitize import sanitize_text
+
+    organizer = _packet_get(packet, "graphic_organizer")
+    if not organizer:
+        return
+    if isinstance(organizer, dict):
+        org_title = sanitize_text(organizer.get("title", "Graphic Organizer"))
+        org_instructions = sanitize_text(organizer.get("instructions", ""))
+        columns = organizer.get("columns", [])
+        num_rows = organizer.get("num_rows", 4)
+    else:
+        org_title = sanitize_text(getattr(organizer, "title", "Graphic Organizer"))
+        org_instructions = sanitize_text(getattr(organizer, "instructions", ""))
+        columns = getattr(organizer, "columns", [])
+        num_rows = getattr(organizer, "num_rows", 4)
+
+    if not columns:
+        return
+
+    _packet_section_heading(doc, org_title, primary_rgb, primary_hex)
+    if org_instructions:
+        p = doc.add_paragraph(org_instructions)
+        p.italic = True
+        p.paragraph_format.space_after = Pt(6)
+
+    table = doc.add_table(rows=num_rows + 1, cols=len(columns))
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for i, col in enumerate(columns):
+        cell = table.rows[0].cells[i]
+        cell.text = sanitize_text(col) if isinstance(col, str) else str(col)
+        _shade_docx_cell(cell, accent_hex)
+        for p in cell.paragraphs:
+            for r in p.runs:
+                r.bold = True
+                r.font.size = Pt(10)
+                r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    for row_idx in range(1, num_rows + 1):
+        for cell in table.rows[row_idx].cells:
+            cell.text = ""
+            p = cell.paragraphs[0]
+            p.paragraph_format.space_after = Pt(30)
+    _add_docx_table_borders(table)
+
+
+def export_student_packet_docx(
+    packet: Any,
+    subject: str = "",
+    output_dir: Path | None = None,
+    agent_name: str = "Claw-ED",
+) -> Path:
+    """Export a StudentPacket to a professionally formatted DOCX workbook."""
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Inches, Pt, RGBColor
+
+    from clawed.export_theme import get_color_theme
+    from clawed.sanitize import sanitize_text
+
+    theme = get_color_theme(subject)
+    primary_hex = theme["primary"]
+    primary_rgb = RGBColor(int(primary_hex[:2], 16), int(primary_hex[2:4], 16), int(primary_hex[4:6], 16))
+    accent_hex = theme.get("accent", primary_hex)
+
+    doc = Document()
+    for section in doc.sections:
+        section.top_margin = Inches(0.6)
+        section.bottom_margin = Inches(0.5)
+        section.left_margin = Inches(0.75)
+        section.right_margin = Inches(0.75)
+    style = doc.styles["Normal"]
+    style.font.name = "Calibri"
+    style.font.size = Pt(11)
+
+    title = _build_packet_header(doc, packet, primary_rgb)
+
+    # Do Now
+    do_now = sanitize_text(_packet_get(packet, "do_now_prompt") or _packet_get(packet, "do_now", ""))
     if do_now:
-        _section_heading("Do Now")
+        _packet_section_heading(doc, "Do Now", primary_rgb, primary_hex)
         p = doc.add_paragraph(do_now)
         p.paragraph_format.space_after = Pt(6)
         for r in p.runs:
             r.font.size = Pt(11)
-        lines = _get("do_now_response_lines", 4)
-        if isinstance(lines, int):
-            _add_lines(lines)
-        else:
-            _add_lines(4)
+        lines = _packet_get(packet, "do_now_response_lines", 4)
+        _add_response_lines(doc, lines if isinstance(lines, int) else 4)
 
-    # ── Key Vocabulary ────────────────────────────────────────────────
-    vocab = _get("vocabulary", [])
+    # Key Vocabulary
+    vocab = _packet_get(packet, "vocabulary", [])
     if vocab:
-        _section_heading("Key Vocabulary")
+        _packet_section_heading(doc, "Key Vocabulary", primary_rgb, primary_hex)
         for item in vocab:
             if isinstance(item, dict):
                 term = sanitize_text(item.get("term", ""))
@@ -175,144 +313,31 @@ def export_student_packet_docx(
                 r.font.size = Pt(11)
                 p.add_run(defn)
 
-    # ── Guided Notes (fill-in-the-blank) ──────────────────────────────
-    guided = _get("guided_notes", [])
+    # Guided Notes
+    guided = _packet_get(packet, "guided_notes", [])
     if guided:
-        _section_heading("Guided Notes")
+        _packet_section_heading(doc, "Guided Notes", primary_rgb, primary_hex)
         p_intro = doc.add_paragraph("Directions: Fill in the blanks as we go through the lesson.")
         p_intro.italic = True
         p_intro.paragraph_format.space_after = Pt(6)
         for i, item in enumerate(guided, 1):
-            if isinstance(item, dict):
-                sentence = sanitize_text(item.get("sentence_with_blank", ""))
-            else:
-                sentence = sanitize_text(getattr(item, "sentence_with_blank", ""))
+            sentence = sanitize_text(
+                item.get("sentence_with_blank", "") if isinstance(item, dict)
+                else getattr(item, "sentence_with_blank", "")
+            )
             if sentence:
                 p = doc.add_paragraph()
                 p.paragraph_format.space_after = Pt(8)
                 r = p.add_run(f"{i}. {sentence}")
                 r.font.size = Pt(11)
 
-    # ── Stations / Primary Source Documents ────────────────────────────
-    stations = _get("stations", []) or _get("source_excerpts", [])
-    if stations:
-        _section_heading("Document Analysis")
-        for station in stations:
-            if isinstance(station, dict):
-                label = sanitize_text(station.get("document_label", station.get("title", "")))
-                ctx = sanitize_text(station.get("context", ""))
-                full_text = sanitize_text(station.get("full_text", station.get("text", "")))
-                author = sanitize_text(station.get("author", station.get("attribution", "")))
-                date = sanitize_text(station.get("date", ""))
-                questions = station.get("analysis_questions", [])
-            else:
-                label = sanitize_text(getattr(station, "document_label", "") or getattr(station, "title", ""))
-                ctx = sanitize_text(getattr(station, "context", ""))
-                full_text = sanitize_text(getattr(station, "full_text", ""))
-                author = sanitize_text(getattr(station, "author", ""))
-                date = sanitize_text(getattr(station, "date", ""))
-                questions = getattr(station, "analysis_questions", [])
+    _build_stations_section(doc, packet, primary_rgb, primary_hex)
+    _build_graphic_organizer(doc, packet, primary_rgb, primary_hex, accent_hex)
 
-            # Station header
-            if label:
-                p = doc.add_paragraph()
-                p.paragraph_format.space_before = Pt(12)
-                p.paragraph_format.space_after = Pt(4)
-                r = p.add_run(label)
-                r.bold = True
-                r.font.size = Pt(12)
-                r.font.color.rgb = primary_rgb
-
-            # Context paragraph
-            if ctx:
-                p = doc.add_paragraph()
-                p.paragraph_format.space_after = Pt(4)
-                r = p.add_run("Context: ")
-                r.bold = True
-                r.font.size = Pt(10)
-                r2 = p.add_run(ctx)
-                r2.font.size = Pt(10)
-                r2.italic = True
-
-            # Full source text — indented, quoted
-            if full_text:
-                p = doc.add_paragraph()
-                p.paragraph_format.left_indent = Inches(0.4)
-                p.paragraph_format.right_indent = Inches(0.4)
-                p.paragraph_format.space_before = Pt(6)
-                p.paragraph_format.space_after = Pt(6)
-                r = p.add_run(f'\u201c{full_text}\u201d')
-                r.italic = True
-                r.font.size = Pt(11)
-                # Attribution
-                if author or date:
-                    attrib_parts = [x for x in [author, date] if x]
-                    a = doc.add_paragraph()
-                    a.paragraph_format.left_indent = Inches(0.4)
-                    a.paragraph_format.space_after = Pt(6)
-                    ar = a.add_run(f"\u2014 {', '.join(attrib_parts)}")
-                    ar.font.size = Pt(9)
-                    ar.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
-
-            # Analysis questions with response lines
-            if questions:
-                for qi, q in enumerate(questions, 1):
-                    q_text = sanitize_text(q) if isinstance(q, str) else sanitize_text(str(q))
-                    p = doc.add_paragraph()
-                    p.paragraph_format.space_before = Pt(4)
-                    r = p.add_run(f"{qi}. {q_text}")
-                    r.font.size = Pt(11)
-                    _add_lines(5)
-
-    # ── Graphic Organizer ─────────────────────────────────────────────
-    organizer = _get("graphic_organizer")
-    if organizer:
-        if isinstance(organizer, dict):
-            org_title = sanitize_text(organizer.get("title", "Graphic Organizer"))
-            org_instructions = sanitize_text(organizer.get("instructions", ""))
-            columns = organizer.get("columns", [])
-            num_rows = organizer.get("num_rows", 4)
-        else:
-            org_title = sanitize_text(getattr(organizer, "title", "Graphic Organizer"))
-            org_instructions = sanitize_text(getattr(organizer, "instructions", ""))
-            columns = getattr(organizer, "columns", [])
-            num_rows = getattr(organizer, "num_rows", 4)
-
-        if columns:
-            _section_heading(org_title)
-            if org_instructions:
-                p = doc.add_paragraph(org_instructions)
-                p.italic = True
-                p.paragraph_format.space_after = Pt(6)
-
-            table = doc.add_table(rows=num_rows + 1, cols=len(columns))
-            table.alignment = WD_TABLE_ALIGNMENT.CENTER
-
-            # Header row with shading
-            for i, col in enumerate(columns):
-                cell = table.rows[0].cells[i]
-                cell.text = sanitize_text(col) if isinstance(col, str) else str(col)
-                _shade_cell(cell, accent_hex)
-                for p in cell.paragraphs:
-                    for r in p.runs:
-                        r.bold = True
-                        r.font.size = Pt(10)
-                        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-
-            # Empty data rows with minimum height for writing
-            for row_idx in range(1, num_rows + 1):
-                for cell in table.rows[row_idx].cells:
-                    cell.text = ""
-                    # Add space for writing
-                    p = cell.paragraphs[0]
-                    p.paragraph_format.space_after = Pt(30)
-
-            _add_table_borders(table)
-
-    # ── Exit Ticket ───────────────────────────────────────────────────
-    questions = _get("exit_ticket_questions", [])
+    # Exit Ticket
+    questions = _packet_get(packet, "exit_ticket_questions", [])
     if questions:
-        _section_heading("Exit Ticket")
+        _packet_section_heading(doc, "Exit Ticket", primary_rgb, primary_hex)
         for i, q in enumerate(questions, 1):
             q_text = sanitize_text(q) if isinstance(q, str) else sanitize_text(str(q))
             p = doc.add_paragraph()
@@ -320,10 +345,9 @@ def export_student_packet_docx(
             r = p.add_run(f"{i}. {q_text}")
             r.bold = True
             r.font.size = Pt(11)
-            _add_lines(5)
+            _add_response_lines(doc, 5)
 
-    # Sentence starters
-    starters = _get("sentence_starters", [])
+    starters = _packet_get(packet, "sentence_starters", [])
     if starters:
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(8)
@@ -338,7 +362,7 @@ def export_student_packet_docx(
             br.italic = True
             br.font.size = Pt(10)
 
-    # ── Footer ────────────────────────────────────────────────────────
+    # Footer
     doc.add_paragraph("")
     footer = doc.add_paragraph()
     footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -346,7 +370,7 @@ def export_student_packet_docx(
     fr.font.size = Pt(8)
     fr.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
 
-    # ── Save ──────────────────────────────────────────────────────────
+    # Save
     if output_dir is None:
         output_dir = Path("clawed_output").resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
