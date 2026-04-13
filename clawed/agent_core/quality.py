@@ -109,13 +109,44 @@ def record_rating(
     rating: int,
     feedback: str = "",
 ) -> None:
-    """Record a teacher's rating and feedback for a generation."""
+    """Record a teacher's rating and feedback for a generation.
+
+    When the rating is 4-5 stars, also saves the lesson as a proven
+    template for future reference (template compounding).
+    """
     _ensure_db()
     with _get_conn() as conn:
         conn.execute(
             "UPDATE generations SET teacher_rating = ?, teacher_feedback = ? WHERE id = ?",
             (rating, feedback, generation_id),
         )
+
+        # Template compounding: save highly-rated lessons as proven templates
+        if rating >= 4:
+            row = conn.execute(
+                "SELECT teacher_id, generation_type, topic, subject, grade, score_json "
+                "FROM generations WHERE id = ?",
+                (generation_id,),
+            ).fetchone()
+            if row:
+                try:
+                    from clawed.agent_core.memory.proven_templates import save_proven_template
+
+                    scores = json.loads(row["score_json"]) if row["score_json"] else {}
+                    save_proven_template(
+                        teacher_id=row["teacher_id"],
+                        topic=row["topic"] or "",
+                        grade_level=row["grade"] or "",
+                        subject=row["subject"] or "",
+                        rating=rating,
+                        generation_prompt=feedback,
+                        lesson_structure={
+                            "generation_type": row["generation_type"],
+                            "scores": scores,
+                        },
+                    )
+                except Exception as exc:
+                    logger.debug("Template save skipped: %s", exc)
 
 
 def record_edit(

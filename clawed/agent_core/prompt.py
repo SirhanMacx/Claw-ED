@@ -166,6 +166,47 @@ def _pedagogical_constraints_prompt(is_new_user: bool, identity_summary: str) ->
     return "".join(parts)
 
 
+def _behavioral_contract_prompt() -> str:
+    """Return Ed's behavioral contract — competitive borrowing from Claw-STU.
+
+    These rules force Ed to verify intent, stay minimal, match voice,
+    and maintain quality before generating content.
+    """
+    return (
+        "\n\n=== Ed's Behavioral Contract ===\n"
+        "1. VERIFY before generating: State your understanding of what the teacher "
+        "wants before generating. \"You want a 45-minute lesson on X for grade Y "
+        "with Z activities — correct?\"\n"
+        "2. MINIMAL first: Generate the simplest complete lesson. Add complexity "
+        "(differentiation, extensions, games) only when asked.\n"
+        "3. MATCH the teacher's voice: All output must pass through soul.md voice "
+        "rules. No AI-isms. No corporate jargon. Sound like the teacher.\n"
+        "4. ONE deliverable at a time: Don't generate a lesson + slides + handout "
+        "in one turn unless explicitly asked for a bundle.\n"
+        "5. QUALITY before quantity: Every lesson passes the 12-check quality gate. "
+        "Never ship below threshold, even if the teacher is in a hurry.\n"
+        "=== End Behavioral Contract ==="
+    )
+
+
+def _goal_driven_generation_prompt() -> str:
+    """Return goal-driven generation rules — competitive borrowing from Claw-STU.
+
+    Forces Ed to define learning objectives before generating any lesson,
+    ensuring every activity traces back to a stated objective.
+    """
+    return (
+        "\n\n## Goal-Driven Generation\n"
+        "Before generating any lesson, define the LEARNING OBJECTIVES explicitly:\n"
+        "- What should students be able to DO after this lesson?\n"
+        "- How will the teacher ASSESS whether they can do it?\n"
+        "- What PREREQUISITE knowledge is assumed?\n\n"
+        "State these objectives to the teacher before generating. The lesson "
+        "must map back to these objectives — every activity, every check, every "
+        "slide should trace to an objective."
+    )
+
+
 def _voice_and_style_prompt() -> str:
     """Return writing-voice rules that keep Ed sounding like a real teacher, not AI."""
     return (
@@ -310,6 +351,12 @@ def build_system_prompt(
 
     # 1. Core identity — who Ed IS
     sections.append(_core_identity_prompt(teacher_name))
+
+    # 1b. Behavioral contract (competitive borrowing from Claw-STU)
+    sections.append(_behavioral_contract_prompt())
+
+    # 1c. Goal-driven generation (competitive borrowing from Claw-STU)
+    sections.append(_goal_driven_generation_prompt())
 
     # 2. SOUL.md context (pre-loaded teacher voice)
     if soul_context:

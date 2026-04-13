@@ -464,12 +464,12 @@ class TestVersion:
     def test_version_string(self):
         from clawed import __version__
 
-        assert __version__ == "4.13.2026.0"
+        assert __version__ == "4.13.2026.1"
 
     def test_version_in_health_endpoint(self, client):
         resp = client.get("/api/health")
         data = resp.json()
-        assert data["version"] == "4.13.2026.0"
+        assert data["version"] == "4.13.2026.1"
 
 
 # ═══════════════════════════════════════════════════════════════════════════

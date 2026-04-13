@@ -325,17 +325,83 @@ class CurriculumKB:
         results.sort(key=lambda x: x["similarity"], reverse=True)
         return results
 
+    @staticmethod
+    def _diversify_query(query: str) -> list[str]:
+        """Generate query variants for broader recall — competitive borrowing from Claw-STU.
+
+        Returns the original query plus 2 diversified variants:
+        1. Keyword-expanded: extracts content words and joins them
+        2. Rephrased: reorders words and adds educational context
+
+        This improves recall when the teacher's exact phrasing doesn't
+        match how concepts are worded in their uploaded materials.
+        """
+        import re
+
+        variants = [query]
+
+        # Variant 1: keyword extraction — strip stop words, keep content words
+        stop_words = {
+            "a", "an", "the", "is", "are", "was", "were", "be", "been",
+            "being", "have", "has", "had", "do", "does", "did", "will",
+            "would", "could", "should", "may", "might", "can", "shall",
+            "to", "of", "in", "for", "on", "with", "at", "by", "from",
+            "about", "into", "through", "during", "before", "after",
+            "and", "but", "or", "nor", "not", "so", "yet", "both",
+            "either", "neither", "each", "every", "all", "any", "few",
+            "more", "most", "other", "some", "such", "no", "only",
+            "own", "same", "than", "too", "very", "just", "because",
+            "as", "until", "while", "that", "this", "these", "those",
+            "i", "me", "my", "we", "our", "you", "your", "he", "she",
+            "it", "they", "them", "what", "which", "who", "whom",
+            "how", "when", "where", "why", "make", "create", "give",
+            "lesson", "plan",
+        }
+        words = re.findall(r"[a-zA-Z]{3,}", query.lower())
+        content_words = [w for w in words if w not in stop_words]
+        if content_words:
+            variants.append(" ".join(content_words))
+
+        # Variant 2: educational context expansion — reverse words + add context
+        if len(content_words) >= 2:
+            reversed_plus = " ".join(reversed(content_words)) + " teaching activities assessment"
+            variants.append(reversed_plus)
+        elif content_words:
+            variants.append(content_words[0] + " curriculum standards activities")
+
+        return variants
+
     def search(
         self,
         teacher_id: str,
         query: str,
         top_k: int = 10,
     ) -> list[dict[str, Any]]:
-        """Search the teacher's curriculum files by semantic similarity."""
-        return self._search_impl(
-            query, top_k,
-            where="teacher_id = ?", params=(teacher_id,),
-        )
+        """Search the teacher's curriculum files with query diversification.
+
+        Generates 2 additional query variants (keyword-expanded, rephrased),
+        searches all 3, and merges results with deduplication. This improves
+        recall when teacher phrasing doesn't match uploaded material wording.
+        """
+        variants = self._diversify_query(query)
+        all_results: list[dict[str, Any]] = []
+        seen_texts: set[str] = set()
+
+        for variant in variants:
+            hits = self._search_impl(
+                variant, top_k,
+                where="teacher_id = ?", params=(teacher_id,),
+            )
+            for hit in hits:
+                # Deduplicate by chunk text content
+                text_key = hit.get("chunk_text", "")[:200]
+                if text_key not in seen_texts:
+                    seen_texts.add(text_key)
+                    all_results.append(hit)
+
+        # Re-sort by similarity and return top_k
+        all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
+        return all_results[:top_k]
 
     def search_all_teachers(
         self,
