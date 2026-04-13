@@ -308,7 +308,7 @@ class TestOnboardingDetection:
 
         with (
             patch.dict("os.environ", {}, clear=True),
-            patch("httpx.get", side_effect=Exception("no ollama")),
+            patch("httpx.get", side_effect=ConnectionError("no ollama")),
         ):
             provider, msg = _detect_available_models()
             assert provider is None

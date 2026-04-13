@@ -114,7 +114,10 @@ class IngestMaterialsTool:
             except ImportError:
                 pass
             return persona
-        except ImportError:
+        except (ImportError, OSError, RuntimeError):
+            return None
+        except Exception:
+            logger.debug("Persona extraction failed", exc_info=True)
             return None
 
     def _generate_reading_summary(self, docs, persona, raw_path):
@@ -131,10 +134,13 @@ class IngestMaterialsTool:
                 report_path = _data_dir_fn() / "workspace" / "reading_report.md"
                 report_path.parent.mkdir(parents=True, exist_ok=True)
                 report_path.write_text(report_text, encoding="utf-8")
-        except (FileNotFoundError, OSError):
+        except (FileNotFoundError, OSError, ImportError, TypeError):
             if persona:
-                style = persona.teaching_style.value.replace("_", " ").title()
-                summary += f" Teaching style: {style}, Tone: {persona.tone}."
+                try:
+                    style = persona.teaching_style.value.replace("_", " ").title()
+                    summary += f" Teaching style: {style}, Tone: {persona.tone}."
+                except (AttributeError, TypeError):
+                    summary += " (Could not extract style patterns.)"
             else:
                 summary += " (Could not extract style patterns.)"
         return summary, report

@@ -380,8 +380,8 @@ class CurriculumKB:
                         "LIMIT 500",
                         (*params, fts_query),
                     ).fetchall()
-            except (ConnectionError, OSError):
-                pass  # FTS table may not exist
+            except (ConnectionError, OSError, sqlite3.OperationalError):
+                pass  # FTS table may not exist or query syntax error
 
             # Stage 2: Fall back to brute-force if FTS found nothing
             if not rows:

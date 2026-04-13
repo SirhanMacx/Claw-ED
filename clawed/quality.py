@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from clawed.llm import LLMClient
 from clawed.models import AppConfig, DailyLesson, LessonMaterials
+
+logger = logging.getLogger(__name__)
 
 
 class LessonQualityScore:
@@ -181,5 +184,8 @@ async def score_voice_match(
         result = _json.loads(cleaned)
         score = float(result.get("score", 3.0))
         return max(1.0, min(5.0, score))  # Clamp to valid range
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, KeyError, ValueError):
         return 3.0  # Fail neutral — NLAH: do not block delivery
+    except Exception:
+        logger.debug("Voice match scoring failed", exc_info=True)
+        return 3.0  # LLM/network errors also fail neutral

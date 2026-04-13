@@ -57,8 +57,12 @@ def _docx_add_image(
                 from docx.shared import RGBColor
                 cap_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
             return True
-    except (FileNotFoundError, OSError):
+    except (FileNotFoundError, OSError, ValueError):
         pass  # Images are a bonus, not a requirement
+    except Exception:
+        # Catches library-specific errors (e.g. UnrecognizedImageError)
+        # that aren't part of stdlib exception hierarchy
+        logger.debug("Image embed failed", exc_info=True)
     return False
 
 
@@ -104,8 +108,11 @@ def _docx_add_content_image(
                 from docx.shared import RGBColor
                 cap_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
             return True
-    except (FileNotFoundError, OSError):
+    except (FileNotFoundError, OSError, ValueError):
         pass
+    except Exception:
+        # Catches library-specific errors (e.g. UnrecognizedImageError)
+        logger.debug("Content image embed failed", exc_info=True)
     return False
 
 
