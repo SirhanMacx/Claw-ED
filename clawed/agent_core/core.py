@@ -451,7 +451,35 @@ class Gateway:
             soul_context=soul_context,
         )
 
-        system = self._append_kb_status(system, teacher_id)
+        # 2c. Detect un-ingested materials — kick off background ingest
+        try:
+            from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+            kb = CurriculumKB()
+            kb_stats = kb.stats(teacher_id)
+            materials_paths = getattr(
+                self.config.teacher_profile, "materials_paths", []
+            )
+            if kb_stats["doc_count"] == 0 and materials_paths:
+                self._maybe_background_ingest(materials_paths, teacher_id)
+                paths_str = ", ".join(materials_paths)
+                system += (
+                    "\n\n=== Materials Status ===\n"
+                    f"The teacher's materials at {paths_str} are being "
+                    "ingested in the background. This may take several "
+                    "minutes for large collections.\n"
+                    "=== End Materials Status ===\n"
+                )
+            elif kb_stats["doc_count"] > 0:
+                paths_str = ", ".join(materials_paths) if materials_paths else "unknown"
+                system += (
+                    f"\n\n=== Your Knowledge Base ===\n"
+                    f"You have {kb_stats['doc_count']} documents and "
+                    f"{kb_stats['chunk_count']} searchable sections.\n"
+                    f"Materials folder: {paths_str}\n"
+                    f"=== End KB ===\n"
+                )
+        except Exception:
+            logger.debug("Failed to load curriculum KB stats", exc_info=True)
 
         if recent_conversation:
             system += (
