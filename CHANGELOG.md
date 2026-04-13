@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.13.2026.1 — 2026-04-13
+
+### Added — Competitive Borrowing (DeepTutor, Karpathy Skills, Multica)
+- **Behavioral contract** in system prompt — 5 rules: verify before generating, minimal first, match teacher voice, one deliverable at a time, quality before quantity
+- **Goal-driven generation** — Ed defines learning objectives (what students should DO, how to ASSESS, PREREQUISITES) before generating any lesson
+- **Query diversification** in curriculum KB search — 3 query variants (original, keyword-extracted, education-context-expanded) with deduplication
+- **Template compounding** — highly-rated lessons (4-5 stars) auto-saved as proven templates in `~/.eduagent/templates/`; referenced in future generation prompts
+
 ## v4.13.2026.0 — 2026-04-13
 
 ### Hardened
