@@ -374,22 +374,20 @@ class Gateway:
     # Agent loop — the core reasoning path
     # ------------------------------------------------------------------
 
-    async def _agent_loop(self, message: str, teacher_id: str, progress_callback: Any = None) -> GatewayResponse:
-        """Load context, build prompt, and run the agent tool-use loop."""
-        transport = getattr(self, "_last_transport", "cli")
+    def _load_teacher_context(self, teacher_id: str, message: str):
+        """Load teacher profile, persona, memory, and session history.
 
-        # 1. Load teacher context from canonical sources
+        Returns (teacher_profile, persona_dict, memory_ctx, session_history,
+                 recent_conversation, teacher_name, identity_summary).
+        """
         teacher_profile = self._load_teacher_profile()
         persona_dict = self._load_persona(teacher_profile)
 
-        # Load cross-transport session history from unified store
         from clawed.agent_core.memory.sessions import format_for_prompt, load_recent_for_llm
         session_history = load_recent_for_llm(teacher_id, limit=10)
         recent_conversation = format_for_prompt(teacher_id, limit=10)
 
-        # 1b. Load 3-layer memory context
         from clawed.agent_core.memory.loader import load_memory_context
-
         memory_ctx = load_memory_context(teacher_id, message)
 
         teacher_name = (
@@ -411,7 +409,12 @@ class Gateway:
                     parts.append(style.replace("_", " "))
             identity_summary = ", ".join(parts)
 
-        # 2. Load reading report if available
+        return (teacher_profile, persona_dict, memory_ctx, session_history,
+                recent_conversation, teacher_name, identity_summary)
+
+    def _build_agent_system_prompt(self, teacher_name, identity_summary,
+                                   memory_ctx, recent_conversation, teacher_id):
+        """Build the full system prompt with all context layers."""
         reading_report_context = ""
         try:
             from clawed.paths import workspace_dir
@@ -420,9 +423,7 @@ class Gateway:
                 reading_report_context = report_path.read_text(encoding="utf-8")[:1500]
         except Exception as e:
             logger.debug("Failed to load reading report: %s", e)
-            pass
 
-        # 2a. Load SOUL.md if available
         soul_context = ""
         try:
             from clawed.paths import workspace_dir as _ws_dir
@@ -431,11 +432,9 @@ class Gateway:
                 soul_context = soul_path.read_text(encoding="utf-8")[:2000]
         except Exception as e:
             logger.debug("Failed to load SOUL.md: %s", e)
-            pass
 
-        # 2b. Build system prompt
         agent_name = self.config.agent_name
-        is_new_user = teacher_name == "Teacher" and not persona_dict
+        is_new_user = teacher_name == "Teacher" and not memory_ctx.get("identity_summary")
         system = build_system_prompt(
             agent_name=agent_name,
             teacher_name=teacher_name,
@@ -452,86 +451,106 @@ class Gateway:
             soul_context=soul_context,
         )
 
-        # 2c. Detect un-ingested materials — kick off background ingest
-        try:
-            from clawed.agent_core.memory.curriculum_kb import CurriculumKB
-            kb = CurriculumKB()
-            kb_stats = kb.stats(teacher_id)
-            materials_paths = getattr(
-                self.config.teacher_profile, "materials_paths", []
-            )
-            if kb_stats["doc_count"] == 0 and materials_paths:
-                # Start background ingest (non-blocking)
-                self._maybe_background_ingest(materials_paths, teacher_id)
-                paths_str = ", ".join(materials_paths)
-                system += (
-                    "\n\n=== Materials Status ===\n"
-                    f"The teacher's materials at {paths_str} are being "
-                    "ingested in the background. This may take several "
-                    "minutes for large collections. You can help the "
-                    "teacher now — the KB will populate as files are "
-                    "processed. If they ask about their materials, let "
-                    "them know ingestion is in progress.\n"
-                    "=== End Materials Status ===\n"
-                )
-            elif kb_stats["doc_count"] > 0:
-                paths_str = ", ".join(materials_paths) if materials_paths else "unknown"
-                system += (
-                    f"\n\n=== Your Knowledge Base ===\n"
-                    f"You have {kb_stats['doc_count']} documents and "
-                    f"{kb_stats['chunk_count']} searchable sections "
-                    f"ingested from the teacher's materials.\n"
-                    f"Materials folder: {paths_str}\n"
-                    f"The ingest tool IS recursive — it scans all "
-                    f"subfolders automatically using rglob. It only "
-                    f"indexes text-extractable files (PDF, DOCX, PPTX, "
-                    f"DOC, PPT, TXT, MD, XLSX, etc). Videos, images, "
-                    f"and other binary files are skipped because they "
-                    f"have no searchable text. If the teacher has 18K "
-                    f"files but only 500 are indexed, that is CORRECT "
-                    f"— the rest are non-text files.\n"
-                    f"FACT: Right now you have {kb_stats['doc_count']} "
-                    f"documents and {kb_stats['chunk_count']} chunks. "
-                    f"This is REAL DATA, not an estimate. Do NOT claim "
-                    f"the ingest is broken. Do NOT say 'only 499 files' "
-                    f"— the actual count is {kb_stats['doc_count']}. "
-                    f"Do NOT ask the teacher to open File Explorer, "
-                    f"run PowerShell, or check anything. YOU have the "
-                    f"data. Use search_my_materials to prove it.\n"
-                    f"The CLI and Telegram share the same KB. "
-                    f"Anything ingested via CLI is available here.\n"
-                    f"=== End KB ===\n"
-                )
-        except Exception as e:
-            logger.debug("Failed to load curriculum KB stats: %s", e)
-            pass
+        system = self._append_kb_status(system, teacher_id)
 
-        # 2d. Cross-transport conversation context
         if recent_conversation:
             system += (
                 "\n\n=== Recent Conversation (across all devices) ===\n"
                 f"{recent_conversation}\n"
                 "=== End Recent Conversation ===\n"
-                "You can reference what was said on other devices naturally — "
+                "You can reference what was said on other devices naturally \u2014 "
                 "e.g. 'Earlier you mentioned...' without specifying the device.\n"
             )
         else:
-            # Fallback: cross-session continuity from episodic memory
             last_session = memory_ctx.get("last_session_summary", "")
             if last_session:
                 system += (
                     "\n\n=== Last Session Context ===\n"
                     f"The teacher's last interaction was about: {last_session}\n"
-                    "If this is a new conversation, greet them with continuity — e.g. "
+                    "If this is a new conversation, greet them with continuity \u2014 e.g. "
                     '"Last time we worked on [topic]. Want to continue or start something new?"\n'
                     "=== End Last Session Context ===\n"
                 )
 
-        # 2d. Enhance prompt for multi-step planning requests
         from clawed.agent_core.planner import build_planning_prompt, is_planning_request
-
-        if is_planning_request(message):
+        if is_planning_request(memory_ctx.get("_original_message", "")):
             system += build_planning_prompt()
+
+        return system
+
+    def _append_kb_and_ingest_status(self, system, teacher_id):
+        """Append KB stats or background ingest status to system prompt."""
+        try:
+            from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+            kb = CurriculumKB()
+            kb_stats = kb.stats(teacher_id)
+            materials_paths = getattr(self.config.teacher_profile, "materials_paths", [])
+            if kb_stats["doc_count"] == 0 and materials_paths:
+                self._maybe_background_ingest(materials_paths, teacher_id)
+                system += (
+                    "\n\n=== Materials Status ===\n"
+                    f"Materials at {', '.join(materials_paths)} are being ingested.\n"
+                    "=== End Materials Status ===\n"
+                )
+            elif kb_stats["doc_count"] > 0:
+                system += (
+                    f"\n\n=== Your Knowledge Base ===\n"
+                    f"{kb_stats['doc_count']} documents, {kb_stats['chunk_count']} chunks indexed.\n"
+                    f"Use search_my_materials to find content.\n"
+                    f"=== End KB ===\n"
+                )
+        except Exception as e:
+            logger.debug("Failed to load curriculum KB stats: %s", e)
+        return system
+
+    def _save_post_loop_context(self, teacher_id, message, result, transport):
+        """Save conversation context and episodic memory after the agent loop."""
+        from clawed.agent_core.memory.sessions import save_turn
+        save_turn(teacher_id, "user", message, transport=transport)
+        save_turn(teacher_id, "assistant", result.text, transport=transport)
+        self._save_session_context(teacher_id, message, result.text)
+
+        try:
+            from clawed.agent_core.memory.episodes import EpisodicMemory
+            mem = EpisodicMemory()
+            episode_text = f"Teacher: {message}\nClaw-ED: {result.text[:500]}"
+            mem.store(teacher_id, episode_text, metadata={
+                "type": "interaction",
+                "had_tool_calls": bool(result.files),
+                "message_length": len(message),
+            })
+        except Exception as e:
+            logger.debug("Failed to store episodic memory: %s", e)
+
+        try:
+            from clawed.memory_engine import maybe_compress_episodes
+            maybe_compress_episodes(teacher_id)
+        except Exception as e:
+            logger.debug("Failed to compress episodes: %s", e)
+
+        try:
+            from clawed.agent_core.memory.session_compress import maybe_compress_sessions
+            maybe_compress_sessions(teacher_id)
+        except Exception as e:
+            logger.debug("Failed to compress sessions: %s", e)
+
+    async def _agent_loop(self, message: str, teacher_id: str, progress_callback: Any = None) -> GatewayResponse:
+        """Load context, build prompt, and run the agent tool-use loop."""
+        transport = getattr(self, "_last_transport", "cli")
+
+        (teacher_profile, persona_dict, memory_ctx, session_history,
+         recent_conversation, teacher_name, identity_summary) = self._load_teacher_context(teacher_id, message)
+
+        # Store original message for planning detection
+        memory_ctx["_original_message"] = message
+
+        system = self._build_agent_system_prompt(
+            teacher_name, identity_summary, memory_ctx, recent_conversation, teacher_id,
+        )
+
+        system = self._append_kb_and_ingest_status(system, teacher_id)
+
+        agent_name = self.config.agent_name
 
         # 3. Build AgentContext for tools
         context = AgentContext(
@@ -564,48 +583,8 @@ class Gateway:
             conversation_history=session_history,
         )
 
-        # 6. Save conversation context to cross-transport session store
-        from clawed.agent_core.memory.sessions import save_turn
-        save_turn(teacher_id, "user", message, transport=transport)
-        save_turn(teacher_id, "assistant", result.text, transport=transport)
-        # Also save to legacy TeacherSession for backward compat
-        self._save_session_context(teacher_id, message, result.text)
-
-        # 7. Store exchange as episodic memory (with rich metadata)
-        try:
-            from clawed.agent_core.memory.episodes import EpisodicMemory
-
-            mem = EpisodicMemory()
-            episode_text = f"Teacher: {message}\nClaw-ED: {result.text[:500]}"
-            episode_metadata = {
-                "type": "interaction",
-                "had_tool_calls": bool(result.files),
-                "message_length": len(message),
-            }
-            mem.store(teacher_id, episode_text, metadata=episode_metadata)
-        except Exception as e:
-            logger.debug("Failed to store episodic memory: %s", e)
-            pass
-
-        # 8. Maybe compress old episodes (runs every COMPRESSION_THRESHOLD episodes)
-        try:
-            from clawed.memory_engine import maybe_compress_episodes
-
-            maybe_compress_episodes(teacher_id)
-        except Exception as e:
-            logger.debug("Failed to compress episodes: %s", e)
-            pass
-
-        # 8b. Maybe compress old session turns
-        try:
-            from clawed.agent_core.memory.session_compress import (
-                maybe_compress_sessions,
-            )
-
-            maybe_compress_sessions(teacher_id)
-        except Exception as e:
-            logger.debug("Failed to compress sessions: %s", e)
-            pass
+        # 6. Save conversation context and episodic memory
+        self._save_post_loop_context(teacher_id, message, result, transport)
 
         return result
 

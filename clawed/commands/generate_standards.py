@@ -148,55 +148,13 @@ def gap_analyze(
 
     check_api_key_or_exit()
 
-    from datetime import datetime
-
     from clawed.curriculum_map import CurriculumMapper
     from clawed.models import CurriculumGap, TeacherPersona
 
     persona = load_persona_or_exit()
 
-    # ── Resolve standards ──────────────────────────────────────────────
-    standards_list: list[str] = []
-    if standards:
-        p = Path(standards).expanduser()
-        if p.exists():
-            standards_list = [
-                line.strip()
-                for line in p.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            ]
-        else:
-            standards_list = [s.strip() for s in standards.split(",") if s.strip()]
-
-    if not standards_list:
-        standards_list = [f"Grade {grade} {subject} — Core Standards (auto-inferred from materials)"]
-
-    # ── Collect existing materials ─────────────────────────────────────
-    mat_path: Path | None = None
-    if materials_dir:
-        mat_path = Path(materials_dir).expanduser().resolve()
-        if not mat_path.is_dir():
-            console.print(f"[red]Materials directory not found:[/red] {mat_path}")
-            raise typer.Exit(1)
-    else:
-        cfg = AppConfig.load()
-        from clawed.paths import data_dir
-        corpus_base = data_dir()
-        if getattr(cfg, "active_teacher_id", None):
-            corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
-        else:
-            corpus_base = corpus_base / "corpus"
-        if corpus_base.is_dir():
-            mat_path = corpus_base
-
-    materials_list: list[str] = []
-    if mat_path and mat_path.is_dir():
-        exts = {".txt", ".md", ".pdf", ".docx", ".json"}
-        files = [f for f in mat_path.rglob("*") if f.suffix.lower() in exts and f.is_file()]
-        materials_list = [f.name for f in files[:200]]
-
-    if not materials_list:
-        materials_list = ["(no materials found — analysis is standards-only)"]
+    standards_list = _resolve_standards(standards, subject, grade)
+    materials_list = _collect_materials(materials_dir)
 
     # ── Run gap analysis ───────────────────────────────────────────────
     console.print(
@@ -233,13 +191,57 @@ def gap_analyze(
         console.print("[green]No curriculum gaps identified! Coverage looks complete.[/green]")
         return
 
-    # ── Severity counts ────────────────────────────────────────────────
-    high = [g for g in gaps if g.severity.lower() == "high"]
-    med  = [g for g in gaps if g.severity.lower() == "medium"]
-    low  = [g for g in gaps if g.severity.lower() == "low"]
+    _display_gap_summary(gaps, subject, grade)
 
-    # ── Display summary table ──────────────────────────────────────────
-    table = Table(title=f"Curriculum Gaps — {subject} Grade {grade}")
+    _export_gap_report(gaps, subject, grade, fmt, len(materials_list), len(standards_list))
+
+
+def _resolve_standards(standards_arg, subject, grade):
+    """Resolve standards from arg (file path or comma-separated) or auto-infer."""
+    standards_list: list[str] = []
+    if standards_arg:
+        p = Path(standards_arg).expanduser()
+        if p.exists():
+            standards_list = [ln.strip() for ln in p.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        else:
+            standards_list = [s.strip() for s in standards_arg.split(",") if s.strip()]
+    if not standards_list:
+        standards_list = [f"Grade {grade} {subject} \u2014 Core Standards (auto-inferred from materials)"]
+    return standards_list
+
+
+def _collect_materials(materials_dir_arg):
+    """Collect material file names from directory or default corpus."""
+    mat_path: Path | None = None
+    if materials_dir_arg:
+        mat_path = Path(materials_dir_arg).expanduser().resolve()
+        if not mat_path.is_dir():
+            console.print(f"[red]Materials directory not found:[/red] {mat_path}")
+            raise typer.Exit(1)
+    else:
+        cfg = AppConfig.load()
+        from clawed.paths import data_dir
+        corpus_base = data_dir()
+        if getattr(cfg, "active_teacher_id", None):
+            corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
+        else:
+            corpus_base = corpus_base / "corpus"
+        if corpus_base.is_dir():
+            mat_path = corpus_base
+    materials_list: list[str] = []
+    if mat_path and mat_path.is_dir():
+        exts = {".txt", ".md", ".pdf", ".docx", ".json"}
+        materials_list = [f.name for f in list(mat_path.rglob("*"))[:200] if f.suffix.lower() in exts and f.is_file()]
+    return materials_list or ["(no materials found \u2014 analysis is standards-only)"]
+
+
+def _display_gap_summary(gaps, subject, grade):
+    """Display gap analysis results in a Rich table."""
+    high = [g for g in gaps if g.severity.lower() == "high"]
+    med = [g for g in gaps if g.severity.lower() == "medium"]
+    low = [g for g in gaps if g.severity.lower() == "low"]
+
+    table = Table(title=f"Curriculum Gaps \u2014 {subject} Grade {grade}")
     table.add_column("Severity", style="bold", justify="center")
     table.add_column("Standard", style="dim")
     table.add_column("Description")
@@ -260,7 +262,16 @@ def gap_analyze(
         f"\n[bold]Summary:[/bold] {len(high)} HIGH  |  {len(med)} MEDIUM  |  {len(low)} LOW"
     )
 
-    # ── Export ─────────────────────────────────────────────────────────
+
+def _export_gap_report(gaps, subject, grade, fmt, materials_count=0, standards_count=0):
+    """Export gap report as HTML or Markdown."""
+    from datetime import datetime
+
+    high = [g for g in gaps if g.severity.lower() == "high"]
+    med = [g for g in gaps if g.severity.lower() == "medium"]
+    low = [g for g in gaps if g.severity.lower() == "low"]
+    sev_order = {"high": 0, "medium": 1, "low": 2}
+
     out_dir = _output_dir() / "gap-reports"
     out_dir.mkdir(parents=True, exist_ok=True)
     slug = _safe_filename(f"{subject}_grade{grade}")
@@ -317,7 +328,7 @@ def gap_analyze(
   </tbody>
 </table>
 <p class="meta" style="margin-top:2rem">
-  Generated by Claw-ED · {len(materials_list)} materials analyzed · {len(standards_list)} standards checked
+  Generated by Claw-ED · {materials_count} materials analyzed · {standards_count} standards checked
 </p>
 </body>
 </html>"""

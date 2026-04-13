@@ -140,175 +140,137 @@ def assess(
     """Generate intelligent assessments — DBQ, summative, formative, or quiz."""
     check_api_key_or_exit()
 
-    from clawed.assessment import AssessmentGenerator, save_assessment
+    from clawed.assessment import AssessmentGenerator
 
     persona = load_persona_or_exit()
     gen = AssessmentGenerator(AppConfig.load())
-
     out_dir = _output_dir()
 
     if type == "formative":
-        if not lesson_file:
-            console.print(
-                "[red]--lesson-file required for formative assessment.[/red]"
-            )
-            raise typer.Exit(1)
-        from clawed.lesson import load_lesson
-
-        daily = load_lesson(Path(lesson_file))
-        console.print(
-            Panel(
-                f"[bold]{daily.title}[/bold]"
-                " — exit ticket for today's objective",
-                title="Formative Assessment",
-            )
-        )
-        with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating exit ticket...", total=None
-            )
-            try:
-                result = _run_async(gen.generate_formative(daily, persona))
-            except (RuntimeError, ValueError) as e:
-                console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
-            progress.update(task, description="Exit ticket ready!")
-
-        path = save_assessment(result, out_dir, "formative")
-        console.print(f"\n[green]Saved:[/green] {path}")
-        console.print(
-            Panel(
-                f"[bold]Objective:[/bold] {result.objective}\n"
-                f"[bold]Questions:[/bold] {len(result.questions)}\n"
-                f"[bold]Time:[/bold] {result.time_minutes} minutes",
-                title="Exit Ticket Summary",
-            )
-        )
-
+        _assess_formative(gen, persona, out_dir, lesson_file)
     elif type == "summative":
-        if not unit_file:
-            console.print(
-                "[red]--unit-file required for summative assessment.[/red]"
-            )
-            raise typer.Exit(1)
-        from clawed.planner import load_unit
-
-        unit_plan = load_unit(Path(unit_file))
-        console.print(
-            Panel(
-                f"[bold]{unit_plan.title}[/bold] — unit test",
-                title="Summative Assessment",
-            )
-        )
-        with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating unit test...", total=None
-            )
-            try:
-                result = _run_async(gen.generate_summative(unit_plan, persona))
-            except (RuntimeError, ValueError) as e:
-                console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
-            progress.update(task, description="Unit test ready!")
-
-        path = save_assessment(result, out_dir, "summative")
-        console.print(f"\n[green]Saved:[/green] {path}")
-        console.print(
-            Panel(
-                f"[bold]Questions:[/bold] {len(result.questions)}\n"
-                f"[bold]Total Points:[/bold] {result.total_points}\n"
-                f"[bold]Rubric Criteria:[/bold] {len(result.rubric)}\n"
-                f"[bold]Time:[/bold] {result.time_minutes} minutes",
-                title="Unit Test Summary",
-            )
-        )
-
+        _assess_summative(gen, persona, out_dir, unit_file)
     elif type == "dbq":
-        if not topic:
-            console.print(
-                "[red]--topic required for DBQ assessment.[/red]"
-            )
-            raise typer.Exit(1)
-        console.print(
-            Panel(
-                f"[bold]{topic}[/bold]"
-                f" — NYS Regents-style DBQ | Grade {grade}",
-                title="Document-Based Question",
-            )
-        )
-        with _safe_progress(console=console) as progress:
-            task = progress.add_task(
-                "Generating DBQ with documents...", total=None
-            )
-            try:
-                result = _run_async(
-                    gen.generate_dbq(
-                        topic, persona, grade_level=grade, context=context
-                    )
-                )
-            except (RuntimeError, ValueError) as e:
-                console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
-            progress.update(task, description="DBQ ready!")
-
-        path = save_assessment(result, out_dir, "dbq")
-        console.print(f"\n[green]Saved:[/green] {path}")
-        console.print(
-            Panel(
-                f"[bold]Documents:[/bold] {len(result.documents)}\n"
-                f"[bold]Rubric Criteria:[/bold] {len(result.rubric)}\n"
-                f"[bold]Model Answer:[/bold]"
-                f" {'Yes' if result.model_answer else 'No'}\n"
-                f"[bold]Time:[/bold] {result.time_minutes} minutes",
-                title="DBQ Summary",
-            )
-        )
-
+        _assess_dbq(gen, persona, out_dir, topic, grade, context)
     elif type == "quiz":
-        if not topic:
-            console.print("[red]--topic required for quiz.[/red]")
-            raise typer.Exit(1)
-        console.print(
-            Panel(
-                f"[bold]{topic}[/bold] | Grade {grade}"
-                f" | {questions} questions ({question_types})",
-                title="Quiz",
-            )
-        )
-        with _safe_progress(console=console) as progress:
-            task = progress.add_task("Generating quiz...", total=None)
-            try:
-                result = _run_async(
-                    gen.generate_quiz(
-                        topic=topic,
-                        question_count=questions,
-                        question_types=question_types,
-                        grade=grade,
-                        persona=persona,
-                    )
-                )
-            except (RuntimeError, ValueError) as e:
-                console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
-            progress.update(task, description="Quiz ready!")
-
-        path = save_assessment(result, out_dir, "quiz")
-        console.print(f"\n[green]Saved:[/green] {path}")
-        console.print(
-            Panel(
-                f"[bold]Questions:[/bold] {len(result.questions)}\n"
-                f"[bold]Total Points:[/bold] {result.total_points}\n"
-                f"[bold]Time:[/bold] {result.time_minutes} minutes",
-                title="Quiz Summary",
-            )
-        )
-
+        _assess_quiz(gen, persona, out_dir, topic, grade, questions, question_types)
     else:
-        console.print(
-            f"[red]Unknown assessment type '{type}'."
-            " Use: formative, summative, dbq, quiz[/red]"
-        )
+        console.print(f"[red]Unknown assessment type '{type}'. Use: formative, summative, dbq, quiz[/red]")
         raise typer.Exit(1)
+
+
+def _assess_formative(gen, persona, out_dir, lesson_file):
+    from clawed.assessment import save_assessment
+    if not lesson_file:
+        console.print("[red]--lesson-file required for formative assessment.[/red]")
+        raise typer.Exit(1)
+    from clawed.lesson import load_lesson
+    daily = load_lesson(Path(lesson_file))
+    console.print(Panel(
+        f"[bold]{daily.title}[/bold] \u2014 exit ticket for today's objective",
+        title="Formative Assessment",
+    ))
+    with _safe_progress(console=console) as progress:
+        task = progress.add_task("Generating exit ticket...", total=None)
+        try:
+            result = _run_async(gen.generate_formative(daily, persona))
+        except (RuntimeError, ValueError) as e:
+            console.print(f"[red]{friendly_error(e)}[/red]")
+            raise typer.Exit(1)
+        progress.update(task, description="Exit ticket ready!")
+    path = save_assessment(result, out_dir, "formative")
+    console.print(f"\n[green]Saved:[/green] {path}")
+    console.print(Panel(
+        f"[bold]Objective:[/bold] {result.objective}\n"
+        f"[bold]Questions:[/bold] {len(result.questions)}\n"
+        f"[bold]Time:[/bold] {result.time_minutes} minutes",
+        title="Exit Ticket Summary",
+    ))
+
+
+def _assess_summative(gen, persona, out_dir, unit_file):
+    from clawed.assessment import save_assessment
+    if not unit_file:
+        console.print("[red]--unit-file required for summative assessment.[/red]")
+        raise typer.Exit(1)
+    from clawed.planner import load_unit
+    unit_plan = load_unit(Path(unit_file))
+    console.print(Panel(f"[bold]{unit_plan.title}[/bold] \u2014 unit test", title="Summative Assessment"))
+    with _safe_progress(console=console) as progress:
+        task = progress.add_task("Generating unit test...", total=None)
+        try:
+            result = _run_async(gen.generate_summative(unit_plan, persona))
+        except (RuntimeError, ValueError) as e:
+            console.print(f"[red]{friendly_error(e)}[/red]")
+            raise typer.Exit(1)
+        progress.update(task, description="Unit test ready!")
+    path = save_assessment(result, out_dir, "summative")
+    console.print(f"\n[green]Saved:[/green] {path}")
+    console.print(Panel(
+        f"[bold]Questions:[/bold] {len(result.questions)}\n"
+        f"[bold]Total Points:[/bold] {result.total_points}\n"
+        f"[bold]Rubric Criteria:[/bold] {len(result.rubric)}\n"
+        f"[bold]Time:[/bold] {result.time_minutes} minutes",
+        title="Unit Test Summary",
+    ))
+
+
+def _assess_dbq(gen, persona, out_dir, topic, grade, context):
+    from clawed.assessment import save_assessment
+    if not topic:
+        console.print("[red]--topic required for DBQ assessment.[/red]")
+        raise typer.Exit(1)
+    console.print(Panel(
+        f"[bold]{topic}[/bold] \u2014 NYS Regents-style DBQ | Grade {grade}",
+        title="Document-Based Question",
+    ))
+    with _safe_progress(console=console) as progress:
+        task = progress.add_task("Generating DBQ with documents...", total=None)
+        try:
+            result = _run_async(gen.generate_dbq(topic, persona, grade_level=grade, context=context))
+        except (RuntimeError, ValueError) as e:
+            console.print(f"[red]{friendly_error(e)}[/red]")
+            raise typer.Exit(1)
+        progress.update(task, description="DBQ ready!")
+    path = save_assessment(result, out_dir, "dbq")
+    console.print(f"\n[green]Saved:[/green] {path}")
+    console.print(Panel(
+        f"[bold]Documents:[/bold] {len(result.documents)}\n"
+        f"[bold]Rubric Criteria:[/bold] {len(result.rubric)}\n"
+        f"[bold]Model Answer:[/bold] {'Yes' if result.model_answer else 'No'}\n"
+        f"[bold]Time:[/bold] {result.time_minutes} minutes",
+        title="DBQ Summary",
+    ))
+
+
+def _assess_quiz(gen, persona, out_dir, topic, grade, questions, question_types):
+    from clawed.assessment import save_assessment
+    if not topic:
+        console.print("[red]--topic required for quiz.[/red]")
+        raise typer.Exit(1)
+    console.print(Panel(
+        f"[bold]{topic}[/bold] | Grade {grade} | {questions} questions ({question_types})",
+        title="Quiz",
+    ))
+    with _safe_progress(console=console) as progress:
+        task = progress.add_task("Generating quiz...", total=None)
+        try:
+            result = _run_async(gen.generate_quiz(
+                topic=topic, question_count=questions,
+                question_types=question_types, grade=grade, persona=persona,
+            ))
+        except (RuntimeError, ValueError) as e:
+            console.print(f"[red]{friendly_error(e)}[/red]")
+            raise typer.Exit(1)
+        progress.update(task, description="Quiz ready!")
+    path = save_assessment(result, out_dir, "quiz")
+    console.print(f"\n[green]Saved:[/green] {path}")
+    console.print(Panel(
+        f"[bold]Questions:[/bold] {len(result.questions)}\n"
+        f"[bold]Total Points:[/bold] {result.total_points}\n"
+        f"[bold]Time:[/bold] {result.time_minutes} minutes",
+        title="Quiz Summary",
+    ))
 
 
 @generate_app.command()

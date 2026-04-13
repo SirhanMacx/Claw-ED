@@ -70,194 +70,11 @@ class IngestMaterialsTool:
                     "Supported formats: PDF, DOCX, PPTX, TXT, MD."
                 )
 
-            # Try to extract persona from ingested docs
-            persona = None
-            try:
-                from clawed.persona import extract_persona, save_persona
-
-                persona = await extract_persona(docs, context.config)
-                # Override LLM-inferred name with configured teacher name
-                try:
-                    if context.config and context.config.teacher_profile and context.config.teacher_profile.name:
-                        persona.name = f"{context.config.teacher_profile.name} Teaching Persona"
-                except Exception:
-                    logger.debug("operation_failed", exc_info=True)
-                try:
-                    from clawed.paths import workspace_dir
-                    _id_path = workspace_dir() / "identity.md"
-                    if _id_path.exists():
-                        import re as _re
-                        _id_content = _id_path.read_text(encoding="utf-8")
-                        _name_match = _re.match(r"^#\s+(.+)", _id_content)
-                        if _name_match:
-                            _tname = _name_match.group(1).strip()
-                            if _tname and _tname != "Teacher":
-                                persona.name = f"{_tname} Teaching Persona"
-                except (FileNotFoundError, OSError):
-                    pass
-                from clawed.paths import data_dir
-                save_persona(persona, data_dir())
-                # Track persona changes for evolution
-                try:
-                    from clawed.persona_evolution import record_ingestion_changes
-                    record_ingestion_changes(old_persona=None, new_persona=persona)
-                except ImportError:
-                    pass
-            except ImportError:
-                pass
-
-            # Generate reading report
-            summary = f"Ingested {len(docs)} file(s) from {raw_path}."
-            try:
-                from clawed.reading_report import (
-                    format_reading_report,
-                    generate_reading_report,
-                )
-
-                report = generate_reading_report(docs, persona=persona)
-                report_text = format_reading_report(report)
-                if report_text:
-                    summary = report_text
-                    # Store the report for future system prompts
-
-                    from clawed.paths import data_dir as _data_dir_fn
-                    data_dir = _data_dir_fn()
-                    report_path = data_dir / "workspace" / "reading_report.md"
-                    report_path.parent.mkdir(parents=True, exist_ok=True)
-                    report_path.write_text(report_text, encoding="utf-8")
-            except (FileNotFoundError, OSError):
-                # Fallback to basic summary if report generation fails
-                if persona:
-                    style = persona.teaching_style.value.replace("_", " ").title()
-                    summary += f" Teaching style: {style}, Tone: {persona.tone}."
-                else:
-                    summary += " (Could not extract style patterns.)"
-
-            # Full pipeline: images + assets + chunks + KG + wiki
-            try:
-                from clawed.ingestor import full_ingest
-
-                async def _notify(msg: str) -> None:
-                    if context.progress_callback:
-                        await context.notify_progress(msg)
-
-                ingest_result = full_ingest(
-                    raw_path,
-                    teacher_id=context.teacher_id,
-                    progress_callback=lambda msg: logger.info(msg),
-                )
-                parts = []
-                if ingest_result["chunks_indexed"]:
-                    parts.append(
-                        f"{ingest_result['chunks_indexed']} searchable sections"
-                    )
-                if ingest_result["images_extracted"]:
-                    parts.append(
-                        f"{ingest_result['images_extracted']} images extracted"
-                    )
-                if ingest_result["kg_entities"]:
-                    parts.append(
-                        f"{ingest_result['kg_entities']} concepts mapped"
-                    )
-                if ingest_result["wiki_articles"]:
-                    parts.append(
-                        f"{ingest_result['wiki_articles']} wiki articles"
-                    )
-                if parts:
-                    summary += "\n\n" + " · ".join(parts)
-            except Exception as e:
-                logger.debug("Full ingest pipeline failed: %s", e)
-
-            # Update soul.md with what we learned
-            try:
-                import os as _os
-                _data = _os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-                soul_path = Path(_data) / "workspace" / "soul.md"
-                soul_path.parent.mkdir(parents=True, exist_ok=True)
-
-                # Build soul updates from reading report
-                soul_updates = []
-                if report.get("teacher_details", {}).get("name_used"):
-                    soul_updates.append(
-                        f"Students know me as {report['teacher_details']['name_used']}"
-                    )
-                if report.get("voice_patterns"):
-                    soul_updates.append(
-                        "Voice patterns: " + "; ".join(report["voice_patterns"][:3])
-                    )
-                if report.get("favorite_strategies"):
-                    soul_updates.append(
-                        "Go-to strategies: " + ", ".join(report["favorite_strategies"][:4])
-                    )
-                if report.get("signature_moves"):
-                    soul_updates.append(
-                        "Signature moves: " + ", ".join(report["signature_moves"][:3])
-                    )
-                if report.get("assessment_patterns"):
-                    soul_updates.append(
-                        "Assessment style: " + "; ".join(report["assessment_patterns"][:2])
-                    )
-
-                if soul_updates:
-                    from datetime import date
-
-                    update_text = f"\n\n### Learned from files ({date.today().isoformat()})\n"
-                    update_text += "\n".join(f"- {u}" for u in soul_updates) + "\n"
-
-                    if soul_path.exists():
-                        current = soul_path.read_text(encoding="utf-8")
-                        if "## Agent Observations" in current:
-                            current = current.replace(
-                                "## Agent Observations",
-                                f"## Agent Observations{update_text}",
-                            )
-                        else:
-                            current += f"\n## Agent Observations{update_text}"
-                        soul_path.write_text(current, encoding="utf-8")
-                    else:
-                        template = (
-                            "# Teaching Identity\n\n"
-                            "## Who I Am\n\n## My Teaching Philosophy\n\n"
-                            "## My Voice\n\n## My Classroom Norms\n\n"
-                            "## Assessment Approach\n\n"
-                            "## What Makes My Teaching Mine\n\n"
-                            f"## Agent Observations{update_text}"
-                        )
-                        soul_path.write_text(template, encoding="utf-8")
-            except Exception as e:
-                logger.debug("SOUL.md update failed: %s", e)
-
-            # Auto-populate teacher profile from reading report (pending confirmation)
-            try:
-                from clawed.models import AppConfig
-                config = AppConfig.load()
-                details = report.get("teacher_details", {})
-                pending = {}
-
-                if details.get("name_used") and (
-                    not config.teacher_profile.name
-                    or config.teacher_profile.name == ""
-                ):
-                    pending["name"] = details["name_used"]
-
-                if details.get("school") and not config.teacher_profile.school:
-                    pending["school"] = details["school"]
-
-                if details.get("subject_guess") and not config.teacher_profile.subjects:
-                    pending["subject"] = details["subject_guess"]
-
-                if pending:
-                    # Don't write directly — store as pending for confirmation
-                    items = ", ".join(f"{k}: '{v}'" for k, v in pending.items())
-                    profile_update = (
-                        f"\n\nI extracted these details from your files: {items}. "
-                        "Reply 'yes' to confirm."
-                    )
-                else:
-                    profile_update = ""
-            except Exception as e:
-                logger.debug("Auto-profile failed: %s", e)
-                profile_update = ""
+            persona = await self._extract_and_save_persona(docs, context)
+            summary, report = self._generate_reading_summary(docs, persona, raw_path)
+            summary = self._run_full_ingest_pipeline(summary, raw_path, context)
+            self._update_soul_md(report)
+            profile_update = self._build_profile_update(report)
 
             return ToolResult(
                 text=summary + profile_update,
@@ -266,3 +83,139 @@ class IngestMaterialsTool:
             )
         except Exception as e:
             return ToolResult(text=f"Failed to ingest materials: {e}")
+
+    async def _extract_and_save_persona(self, docs, context):
+        """Extract persona from docs, override name, save, track evolution."""
+        try:
+            from clawed.persona import extract_persona, save_persona
+            persona = await extract_persona(docs, context.config)
+            try:
+                if context.config and context.config.teacher_profile and context.config.teacher_profile.name:
+                    persona.name = f"{context.config.teacher_profile.name} Teaching Persona"
+            except Exception:
+                logger.debug("operation_failed", exc_info=True)
+            try:
+                from clawed.paths import workspace_dir
+                _id_path = workspace_dir() / "identity.md"
+                if _id_path.exists():
+                    import re as _re
+                    _name_match = _re.match(r"^#\s+(.+)", _id_path.read_text(encoding="utf-8"))
+                    if _name_match:
+                        _tname = _name_match.group(1).strip()
+                        if _tname and _tname != "Teacher":
+                            persona.name = f"{_tname} Teaching Persona"
+            except (FileNotFoundError, OSError):
+                pass
+            from clawed.paths import data_dir
+            save_persona(persona, data_dir())
+            try:
+                from clawed.persona_evolution import record_ingestion_changes
+                record_ingestion_changes(old_persona=None, new_persona=persona)
+            except ImportError:
+                pass
+            return persona
+        except ImportError:
+            return None
+
+    def _generate_reading_summary(self, docs, persona, raw_path):
+        """Generate reading report and return (summary, report_dict)."""
+        summary = f"Ingested {len(docs)} file(s) from {raw_path}."
+        report = {}
+        try:
+            from clawed.reading_report import format_reading_report, generate_reading_report
+            report = generate_reading_report(docs, persona=persona)
+            report_text = format_reading_report(report)
+            if report_text:
+                summary = report_text
+                from clawed.paths import data_dir as _data_dir_fn
+                report_path = _data_dir_fn() / "workspace" / "reading_report.md"
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(report_text, encoding="utf-8")
+        except (FileNotFoundError, OSError):
+            if persona:
+                style = persona.teaching_style.value.replace("_", " ").title()
+                summary += f" Teaching style: {style}, Tone: {persona.tone}."
+            else:
+                summary += " (Could not extract style patterns.)"
+        return summary, report
+
+    def _run_full_ingest_pipeline(self, summary, raw_path, context):
+        """Run full pipeline: chunks + images + KG + wiki."""
+        try:
+            from clawed.ingestor import full_ingest
+            result = full_ingest(
+                raw_path, teacher_id=context.teacher_id,
+                progress_callback=lambda msg: logger.info(msg),
+            )
+            parts = []
+            for key, label in [("chunks_indexed", "searchable sections"), ("images_extracted", "images extracted"),
+                               ("kg_entities", "concepts mapped"), ("wiki_articles", "wiki articles")]:
+                if result.get(key):
+                    parts.append(f"{result[key]} {label}")
+            if parts:
+                summary += "\n\n" + " \u00b7 ".join(parts)
+        except Exception as e:
+            logger.debug("Full ingest pipeline failed: %s", e)
+        return summary
+
+    def _update_soul_md(self, report):
+        """Update soul.md with learnings from reading report."""
+        try:
+            import os as _os
+            data_root = _os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
+            soul_path = Path(data_root) / "workspace" / "soul.md"
+            soul_path.parent.mkdir(parents=True, exist_ok=True)
+            soul_updates = []
+            for key, prefix in [("name_used", "Students know me as"), ("voice_patterns", "Voice patterns: "),
+                                ("favorite_strategies", "Go-to strategies: "), ("signature_moves", "Signature moves: "),
+                                ("assessment_patterns", "Assessment style: ")]:
+                if key == "name_used":
+                    val = report.get("teacher_details", {}).get(key)
+                    if val:
+                        soul_updates.append(f"{prefix} {val}")
+                else:
+                    vals = report.get(key, [])
+                    if vals:
+                        sep = "; " if "pattern" in key else ", "
+                        soul_updates.append(prefix + sep.join(vals[:4]))
+            if soul_updates:
+                from datetime import date
+                items = "\n".join(f"- {u}" for u in soul_updates)
+                update_text = f"\n\n### Learned from files ({date.today().isoformat()})\n{items}\n"
+                if soul_path.exists():
+                    current = soul_path.read_text(encoding="utf-8")
+                    if "## Agent Observations" in current:
+                        current = current.replace("## Agent Observations", f"## Agent Observations{update_text}")
+                    else:
+                        current += f"\n## Agent Observations{update_text}"
+                    soul_path.write_text(current, encoding="utf-8")
+                else:
+                    soul_path.write_text(
+                        "# Teaching Identity\n\n## Who I Am\n\n## My Teaching Philosophy\n\n"
+                        "## My Voice\n\n## My Classroom Norms\n\n## Assessment Approach\n\n"
+                        f"## What Makes My Teaching Mine\n\n## Agent Observations{update_text}",
+                        encoding="utf-8",
+                    )
+        except Exception as e:
+            logger.debug("SOUL.md update failed: %s", e)
+
+    def _build_profile_update(self, report):
+        """Check if we can auto-populate teacher profile fields."""
+        try:
+            from clawed.models import AppConfig
+            config = AppConfig.load()
+            details = report.get("teacher_details", {})
+            pending = {}
+            if details.get("name_used") and not config.teacher_profile.name:
+                pending["name"] = details["name_used"]
+            if details.get("school") and not config.teacher_profile.school:
+                pending["school"] = details["school"]
+            if details.get("subject_guess") and not config.teacher_profile.subjects:
+                pending["subject"] = details["subject_guess"]
+            if pending:
+                items = ", ".join(f"{k}: '{v}'" for k, v in pending.items())
+                return f"\n\nI extracted these details from your files: {items}. Reply 'yes' to confirm."
+            return ""
+        except Exception as e:
+            logger.debug("Auto-profile failed: %s", e)
+            return ""

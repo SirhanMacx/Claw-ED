@@ -1,0 +1,51 @@
+name: HEARTBEAT
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Function size check (200-line cap)
+        run: |
+          python3 -c "
+          import ast, os, sys
+          cap = 200  # Tier 1 enforced; Tier 2 (100-200) tracked in HEARTBEAT.md
+          violations = []
+          for root, dirs, files in os.walk('clawed'):
+              for f in files:
+                  if not f.endswith('.py'): continue
+                  path = os.path.join(root, f)
+                  try:
+                      tree = ast.parse(open(path).read())
+                      for node in ast.walk(tree):
+                          if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                              lines = node.end_lineno - node.lineno + 1
+                              if lines > cap:
+                                  violations.append(f'{lines} lines: {path}::{node.name}')
+                  except: pass
+          if violations:
+              print(f'HEARTBEAT VIOLATION: {len(violations)} functions over {cap} lines')
+              for v in sorted(violations, key=lambda x: -int(x.split()[0])): print(f'  {v}')
+              sys.exit(1)
+          print(f'HEARTBEAT OK: all functions <= {cap} lines')
+          "
+
+      - name: Exception swallow check
+        run: |
+          hits=$(grep -rn "except Exception:" clawed/ --include="*.py" -A1 | grep "pass$" | wc -l)
+          if [ "$hits" -gt 0 ]; then
+            echo "HEARTBEAT VIOLATION: $hits bare 'except Exception: pass' blocks"
+            grep -rn "except Exception:" clawed/ --include="*.py" -A1 | grep -B1 "pass$"
+            exit 1
+          fi
+          echo "HEARTBEAT OK: no bare exception swallows"

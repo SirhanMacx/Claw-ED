@@ -98,94 +98,7 @@ class ImproveLessonTool:
             f"your requested change. This usually takes under a minute."
         )
 
-        # ── Search KB for the original lesson content ────────────────
-        original_content = ""
-
-        # 1. Try asset-level search (complete files)
-        try:
-            from clawed.asset_registry import AssetRegistry
-
-            registry = AssetRegistry()
-            assets = registry.search_assets(teacher_id, topic, top_k=3)
-            if not assets:
-                assets = registry.search_assets("", topic, top_k=3)
-            if assets:
-                asset_parts = []
-                for a in assets:
-                    title = a.get("title", "Untitled")
-                    atype = a.get("material_type", "document")
-                    asset_parts.append(
-                        f"[{atype}] {title} ({a.get('filename', 'unknown')})"
-                    )
-                original_content += (
-                    "Existing teacher files on this topic:\n"
-                    + "\n".join(asset_parts)
-                    + "\n\n"
-                )
-        except Exception as e:
-            logger.debug("Asset search for improve_lesson failed: %s", e)
-
-        # 2. Try chunk-level KB search (text excerpts)
-        try:
-            from clawed.agent_core.memory.curriculum_kb import CurriculumKB
-
-            kb = CurriculumKB()
-            results = kb.search(teacher_id, topic, top_k=5)
-            if not results:
-                results = kb.search_all_teachers(topic, top_k=5)
-
-            if results:
-                relevant = [r for r in results if r.get("similarity", 0) > 0.1]
-                if relevant:
-                    original_content += "Original lesson content from knowledge base:\n\n"
-                    for r in relevant:
-                        source = r.get("doc_title", "Unknown source")
-                        chunk = r.get("chunk_text", "")[:800]
-                        original_content += f"--- From \"{source}\" ---\n{chunk}\n\n"
-        except Exception as e:
-            logger.debug("KB search for improve_lesson failed: %s", e)
-
-        # 3. Try database search for generated lessons
-        try:
-            from clawed.database import Database
-
-            db = Database()
-            units = db.list_units()
-            for unit in units:
-                lessons = db.list_lessons(unit["id"])
-                for lesson_row in lessons:
-                    title = (lesson_row.get("title") or "").lower()
-                    if topic.lower() in title or title in topic.lower():
-                        import json
-
-                        lesson_json = lesson_row.get("lesson_json", "")
-                        if lesson_json:
-                            try:
-                                lesson_data = json.loads(lesson_json)
-                                # Extract a summary of the lesson for context
-                                parts = []
-                                if lesson_data.get("title"):
-                                    parts.append(f"Title: {lesson_data['title']}")
-                                if lesson_data.get("objective"):
-                                    parts.append(f"Objective: {lesson_data['objective']}")
-                                if lesson_data.get("standards"):
-                                    parts.append(
-                                        f"Standards: {', '.join(lesson_data['standards'][:5])}"
-                                    )
-                                # Include full lesson JSON (truncated for context window)
-                                lesson_str = json.dumps(lesson_data, indent=2)
-                                if len(lesson_str) > 3000:
-                                    lesson_str = lesson_str[:3000] + "\n... (truncated)"
-                                parts.append(f"\nFull lesson data:\n{lesson_str}")
-                                original_content += (
-                                    "Previously generated lesson:\n"
-                                    + "\n".join(parts)
-                                    + "\n\n"
-                                )
-                            except (json.JSONDecodeError, TypeError):
-                                pass
-        except Exception as e:
-            logger.debug("DB search for improve_lesson failed: %s", e)
+        original_content = self._search_lesson_content(teacher_id, topic)
 
         if not original_content:
             return ToolResult(
@@ -197,92 +110,15 @@ class ImproveLessonTool:
                 )
             )
 
-        # ── Build the improvement prompt ─────────────────────────────
-        section_instruction = ""
-        if section:
-            section_label = section.replace("_", " ").title()
-            section_instruction = (
-                f"\nFocus specifically on the {section_label} section. "
-                f"Return ONLY the revised {section_label} section, not the "
-                f"entire lesson.\n"
-            )
-        else:
-            section_instruction = (
-                "\nDetermine which section(s) of the lesson are most "
-                "relevant to this improvement request and revise only "
-                "those sections. Return ONLY the revised content, not "
-                "the entire lesson.\n"
-            )
-
-        # Load persona for voice matching
-        persona_context = ""
-        if context.persona:
-            try:
-                from clawed.models import TeacherPersona
-
-                persona = TeacherPersona(**context.persona)
-                persona_context = persona.to_prompt_context()
-            except ImportError:
-                pass
-
-        prompt = (
-            "You are an expert curriculum editor helping a teacher improve "
-            "an existing lesson. The teacher has a specific change request.\n\n"
-            f"{persona_context}\n\n"
-            f"EXISTING LESSON CONTENT:\n{original_content}\n\n"
-            f"TEACHER'S IMPROVEMENT REQUEST:\n{improvement}\n"
-            f"{section_instruction}\n"
-            "INSTRUCTIONS:\n"
-            "1. Read the existing lesson content carefully.\n"
-            "2. Apply ONLY the requested change. Do not rewrite sections "
-            "that don't need changes.\n"
-            "3. Maintain the teacher's existing voice, vocabulary level, "
-            "and formatting conventions.\n"
-            "4. Return the improved section with clear formatting "
-            "(headers, bullet points, numbered lists as appropriate).\n"
-            "5. If the improvement involves adding content (e.g. a new "
-            "question, a new activity), make it specific and actionable "
-            "-- not generic filler.\n"
-            "6. Keep the same standards alignment and grade-level "
-            "appropriateness as the original.\n"
+        prompt = self._build_improvement_prompt(
+            original_content, improvement, section, context,
         )
 
-        # ── Call the LLM ─────────────────────────────────────────────
-        try:
-            from clawed.llm import LLMClient
+        improved_text = await self._call_llm_for_improvement(prompt, config)
+        if isinstance(improved_text, ToolResult):
+            return improved_text
 
-            llm = LLMClient(config=config)
-            improved_text = await llm.generate(prompt)
-        except Exception as e:
-            logger.error(
-                "NLAH_FAILURE=%s: improve_lesson LLM call failed: %s",
-                FailureCode.API_FAILURE, e,
-            )
-            return ToolResult(
-                text=(
-                    f"[{FailureCode.API_FAILURE}] Failed to generate improvement: "
-                    f"{type(e).__name__}. Check your LLM provider connection."
-                )
-            )
-
-        if not improved_text or len(improved_text.strip()) < 20:
-            return ToolResult(
-                text="The LLM returned an empty or unusable response. "
-                     "Try rephrasing your improvement request."
-            )
-
-        # ── Humanize the output ──────────────────────────────────────
-        try:
-            from clawed.humanize import humanize
-
-            improved_text = humanize(improved_text)
-        except ImportError:
-            pass
-
-        # ── Build the response ───────────────────────────────────────
-        section_label = (
-            section.replace("_", " ").title() if section else "Lesson"
-        )
+        section_label = section.replace("_", " ").title() if section else "Lesson"
         lines = [
             f"Improved {section_label} for \"{topic}\":",
             "",
@@ -302,3 +138,129 @@ class ImproveLessonTool:
                 "section": section,
             },
         )
+
+    def _search_lesson_content(self, teacher_id: str, topic: str) -> str:
+        """Search assets, KB, and DB for existing lesson content on a topic."""
+        original_content = ""
+
+        try:
+            from clawed.asset_registry import AssetRegistry
+            registry = AssetRegistry()
+            assets = registry.search_assets(teacher_id, topic, top_k=3)
+            if not assets:
+                assets = registry.search_assets("", topic, top_k=3)
+            if assets:
+                parts = [
+                    f"[{a.get('material_type', 'document')}] "
+                    f"{a.get('title', 'Untitled')} ({a.get('filename', 'unknown')})"
+                    for a in assets
+                ]
+                original_content += "Existing teacher files on this topic:\n" + "\n".join(parts) + "\n\n"
+        except Exception as e:
+            logger.debug("Asset search for improve_lesson failed: %s", e)
+
+        try:
+            from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+            kb = CurriculumKB()
+            results = kb.search(teacher_id, topic, top_k=5)
+            if not results:
+                results = kb.search_all_teachers(topic, top_k=5)
+            relevant = [r for r in (results or []) if r.get("similarity", 0) > 0.1]
+            if relevant:
+                original_content += "Original lesson content from knowledge base:\n\n"
+                for r in relevant:
+                    source = r.get("doc_title", "Unknown")
+                    chunk = r.get("chunk_text", "")[:800]
+                    original_content += f'--- From "{source}" ---\n{chunk}\n\n'
+        except Exception as e:
+            logger.debug("KB search for improve_lesson failed: %s", e)
+
+        try:
+            import json
+
+            from clawed.database import Database
+            db = Database()
+            for unit in db.list_units():
+                for row in db.list_lessons(unit["id"]):
+                    title = (row.get("title") or "").lower()
+                    if topic.lower() in title or title in topic.lower():
+                        if row.get("lesson_json"):
+                            try:
+                                data = json.loads(row["lesson_json"])
+                                s = json.dumps(data, indent=2)
+                                if len(s) > 3000:
+                                    s = s[:3000] + "\n... (truncated)"
+                                original_content += f"Previously generated lesson:\n{s}\n\n"
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+        except Exception as e:
+            logger.debug("DB search for improve_lesson failed: %s", e)
+
+        return original_content
+
+    def _build_improvement_prompt(self, original_content, improvement, section, context):
+        """Build the LLM prompt for lesson improvement."""
+        if section:
+            label = section.replace("_", " ").title()
+            section_instruction = (
+                f"\nFocus specifically on the {label} section. "
+                f"Return ONLY the revised {label} section, not the entire lesson.\n"
+            )
+        else:
+            section_instruction = (
+                "\nDetermine which section(s) are most relevant and revise "
+                "only those. Return ONLY the revised content, not the entire lesson.\n"
+            )
+
+        persona_context = ""
+        if context.persona:
+            try:
+                from clawed.models import TeacherPersona
+                persona_context = TeacherPersona(**context.persona).to_prompt_context()
+            except ImportError:
+                pass
+
+        return (
+            "You are an expert curriculum editor helping a teacher improve "
+            "an existing lesson. The teacher has a specific change request.\n\n"
+            f"{persona_context}\n\n"
+            f"EXISTING LESSON CONTENT:\n{original_content}\n\n"
+            f"TEACHER'S IMPROVEMENT REQUEST:\n{improvement}\n"
+            f"{section_instruction}\n"
+            "INSTRUCTIONS:\n"
+            "1. Read the existing lesson content carefully.\n"
+            "2. Apply ONLY the requested change. Do not rewrite sections that don't need changes.\n"
+            "3. Maintain the teacher's existing voice, vocabulary level, and formatting conventions.\n"
+            "4. Return the improved section with clear formatting.\n"
+            "5. If the improvement involves adding content, make it specific and actionable.\n"
+            "6. Keep the same standards alignment and grade-level appropriateness as the original.\n"
+        )
+
+    async def _call_llm_for_improvement(self, prompt, config):
+        """Call LLM and humanize the result. Returns str or ToolResult on error."""
+        try:
+            from clawed.llm import LLMClient
+            improved_text = await LLMClient(config=config).generate(prompt)
+        except Exception as e:
+            logger.error(
+                "NLAH_FAILURE=%s: improve_lesson LLM call failed: %s",
+                FailureCode.API_FAILURE, e,
+            )
+            return ToolResult(
+                text=f"[{FailureCode.API_FAILURE}] Failed to generate improvement: "
+                f"{type(e).__name__}. Check your LLM provider connection."
+            )
+
+        if not improved_text or len(improved_text.strip()) < 20:
+            return ToolResult(
+                text="The LLM returned an empty or unusable response. "
+                "Try rephrasing your improvement request."
+            )
+
+        try:
+            from clawed.humanize import humanize
+            improved_text = humanize(improved_text)
+        except ImportError:
+            pass
+        return improved_text
+

@@ -345,46 +345,13 @@ async def generate_master_content(
     """
     # v4.10.2026.1: Try the 4-phase split pipeline first
     if not os.environ.get("CLAWED_SINGLE_CALL_GEN"):
-        try:
-            from clawed.phases.pipeline import generate_master_content_phased
-            logger.info("Using 4-phase split generation pipeline")
-            master = await generate_master_content_phased(
-                lesson_number=lesson_number,
-                unit=unit,
-                persona=persona,
-                include_homework=include_homework,
-                config=config,
-                task_type=task_type,
-                state=state,
-                teacher_materials=teacher_materials,
-            )
-            # Run post-generation brain writes (same as single-call path)
-            try:
-                from clawed.brain.store import BrainStore
-                from clawed.brain.writer import write_lesson_to_brain
-                written = write_lesson_to_brain(
-                    master=master,
-                    unit_title=unit.title,
-                    lesson_number=lesson_number,
-                    store=BrainStore(),
-                )
-                logger.info(
-                    "Brain updated: %d lesson, %d topic, %d concept pages",
-                    len(written.get("lessons", [])),
-                    len(written.get("topics", [])),
-                    len(written.get("concepts", [])),
-                )
-            except Exception as exc:
-                logger.debug("Brain writer skipped: %s", exc)
-            return master
-        except Exception as phased_error:
-            logger.warning(
-                "4-phase pipeline failed (%s: %s). Falling back to single-call.",
-                type(phased_error).__name__, phased_error,
-            )
+        result = await _try_phased_pipeline(
+            lesson_number, unit, persona, include_homework, config, task_type, state, teacher_materials,
+        )
+        if result is not None:
+            return result
 
     # Legacy single-call path (fallback)
-    # Find the matching lesson brief from the unit plan
     lesson_brief = None
     for brief in unit.daily_lessons:
         if brief.lesson_number == lesson_number:
@@ -397,11 +364,69 @@ async def generate_master_content(
             f"Unit has {len(unit.daily_lessons)} lessons."
         )
 
+    prompt, brain_ctx_obj = _build_generation_prompt(
+        lesson_brief, unit, persona, config, state, teacher_materials, objective, lesson_number,
+    )
+
+    system = _build_system_prompt(persona, config, subject=unit.subject)
+
+    if task_type and config:
+        config = route_model(task_type, config)
+    client = LLMClient(config)
+
+    master = await client.safe_generate_json(
+        prompt=prompt,
+        model_class=MasterContent,
+        system=system,
+        temperature=0.6,
+        max_tokens=12000,
+    )
+
+    if brain_ctx_obj is not None:
+        master.brain_context = brain_ctx_obj
+        master.source_attributions = list(brain_ctx_obj.citations)
+
+    master = await _run_quality_gate(master, client, prompt, system)
+    await _run_teaching_critic(master, client)
+    _write_brain_results(master, unit.title, lesson_number)
+
+    return master
+
+
+async def _try_phased_pipeline(
+    lesson_number, unit, persona, include_homework, config, task_type, state, teacher_materials,
+):
+    """Try the 4-phase split pipeline. Returns MasterContent or None on failure."""
+    try:
+        from clawed.phases.pipeline import generate_master_content_phased
+        logger.info("Using 4-phase split generation pipeline")
+        master = await generate_master_content_phased(
+            lesson_number=lesson_number, unit=unit, persona=persona,
+            include_homework=include_homework, config=config,
+            task_type=task_type, state=state, teacher_materials=teacher_materials,
+        )
+        _write_brain_results(master, unit.title, lesson_number)
+        return master
+    except Exception as phased_error:
+        logger.warning(
+            "4-phase pipeline failed (%s: %s). Falling back to single-call.",
+            type(phased_error).__name__, phased_error,
+        )
+        return None
+
+
+def _build_generation_prompt(
+    lesson_brief, unit, persona, config, state, teacher_materials, objective, lesson_number,
+):
+    """Build the full generation prompt with all context injections.
+
+    Returns (prompt_text, brain_context_obj_or_None).
+    """
     # Auto-populate unit standards from teacher profile if missing
     if not unit.standards:
         try:
-            config = config or AppConfig.load()
-            if config.teacher_profile and config.teacher_profile.state:
+            cfg = config or AppConfig.load()
+            if cfg.teacher_profile and cfg.teacher_profile.state:
                 from clawed.standards import get_standards
                 results = get_standards(unit.subject, unit.grade_level)
                 unit.standards = [
@@ -410,14 +435,12 @@ async def generate_master_content(
         except ImportError:
             pass
 
-    # Pull few-shot examples from the corpus for this subject/grade
     few_shot_context = get_few_shot_context(
         content_type="lesson_plan",
         subject=unit.subject.lower(),
         grade_level=unit.grade_level,
     )
 
-    # Look up applicable standards for this lesson
     from clawed.standards import format_standards_for_prompt, get_standards_for_lesson
 
     effective_state = state
@@ -431,7 +454,6 @@ async def generate_master_content(
     )
     standards_text = format_standards_for_prompt(standards_list)
 
-    # Derive objective from lesson brief if not explicitly provided
     effective_objective = objective or getattr(lesson_brief, "description", "")
 
     prompt_template = MASTER_PROMPT_PATH.read_text(encoding="utf-8")
@@ -461,7 +483,7 @@ async def generate_master_content(
         ))
     )
 
-    # Inject classroom profile context into system prompt
+    # Inject classroom profile context
     try:
         from clawed.classroom_profile import profile_to_prompt_context
         classroom_ctx = profile_to_prompt_context()
@@ -470,30 +492,24 @@ async def generate_master_content(
     except ImportError:
         pass
 
-    # Inject knowledge graph connections into prompt
+    # Inject knowledge graph connections
     try:
         from clawed.agent_core.identity import get_teacher_id
         from clawed.lesson_connections import inject_connections_into_prompt
         _tid = get_teacher_id()
-        kg_ctx = inject_connections_into_prompt(
-            lesson_brief.topic,
-            teacher_id=_tid,
-        )
+        kg_ctx = inject_connections_into_prompt(lesson_brief.topic, teacher_id=_tid)
         if kg_ctx:
             prompt = kg_ctx + "\n\n" + prompt
     except ImportError:
         pass
 
-    # v4.10: Brain-first lookup — inject brain context before generation
+    # Brain-first lookup
     brain_ctx_obj = None
     try:
         from clawed.brain.context import build_brain_context
         from clawed.brain.store import BrainStore
-        brain_store = BrainStore()
         brain_ctx_obj = build_brain_context(
-            topic=lesson_brief.topic,
-            unit_title=unit.title,
-            store=brain_store,
+            topic=lesson_brief.topic, unit_title=unit.title, store=BrainStore(),
         )
         brain_prompt = brain_ctx_obj.render_for_prompt()
         if brain_prompt:
@@ -507,35 +523,18 @@ async def generate_master_content(
     except Exception as exc:
         logger.debug("Brain context lookup skipped: %s", exc)
 
-    system = _build_system_prompt(persona, config, subject=unit.subject)
+    return prompt, brain_ctx_obj
 
-    if task_type and config:
-        config = route_model(task_type, config)
-    client = LLMClient(config)
 
-    master = await client.safe_generate_json(
-        prompt=prompt,
-        model_class=MasterContent,
-        system=system,
-        temperature=0.6,
-        max_tokens=12000,
-    )
-
-    # v4.10: Attach brain context and citations to the generated master
-    if brain_ctx_obj is not None:
-        master.brain_context = brain_ctx_obj
-        master.source_attributions = list(brain_ctx_obj.citations)
-
-    # ── Quality gate with auto-retry ──────────────────────────────────
+async def _run_quality_gate(master, client, prompt, system):
+    """Run quality validation with auto-retry loop. Returns (possibly new) master."""
     for attempt in range(_MAX_QUALITY_RETRIES):
         issues = _validate_quality(master)
         if not issues:
             break
         logger.warning(
             "Quality gate failed (attempt %d/%d) with %d issues:\n%s",
-            attempt + 1,
-            _MAX_QUALITY_RETRIES,
-            len(issues),
+            attempt + 1, _MAX_QUALITY_RETRIES, len(issues),
             "\n".join(f"  - {i}" for i in issues),
         )
         retry_feedback = (
@@ -549,32 +548,29 @@ async def generate_master_content(
             prompt=prompt + retry_feedback,
             model_class=MasterContent,
             system=system,
-            temperature=0.5,  # slightly lower for more compliance
+            temperature=0.5,
             max_tokens=12000,
         )
 
-    # Log any remaining issues after retries (deliver with warnings)
     remaining = _validate_quality(master)
     if remaining:
         logger.warning(
             "Delivering lesson with %d quality warnings after %d retries:\n%s",
-            len(remaining),
-            _MAX_QUALITY_RETRIES,
+            len(remaining), _MAX_QUALITY_RETRIES,
             "\n".join(f"  - {i}" for i in remaining),
         )
+    return master
 
-    # ── Stage 2: LLM-based critic (Teaching Constitution) ─────────
-    # Separate model call reviews the lesson against pedagogical principles.
-    # Non-blocking — if the critic fails, the lesson still ships.
+
+async def _run_teaching_critic(master, client):
+    """Run LLM-based Teaching Constitution critic (non-blocking)."""
     try:
         critic_path = Path(__file__).parent / "prompts" / "teaching_constitution.txt"
         if critic_path.exists():
             critic_prompt = critic_path.read_text(encoding="utf-8")
             lesson_json = master.model_dump_json(indent=2)
-            # Truncate to avoid token limits
             if len(lesson_json) > 6000:
                 lesson_json = lesson_json[:6000] + "\n... (truncated)"
-
             critic_response = await client.generate(
                 prompt=(
                     f"Review this lesson plan:\n\n{lesson_json}\n\n"
@@ -589,15 +585,15 @@ async def generate_master_content(
     except Exception as exc:
         logger.debug("Teaching Constitution critic skipped: %s", exc)
 
-    # v4.10: Post-generation brain writes — capture learnings
+
+def _write_brain_results(master, unit_title, lesson_number):
+    """Post-generation brain writes -- capture learnings."""
     try:
         from clawed.brain.store import BrainStore
         from clawed.brain.writer import write_lesson_to_brain
         written = write_lesson_to_brain(
-            master=master,
-            unit_title=unit.title,
-            lesson_number=lesson_number,
-            store=BrainStore(),
+            master=master, unit_title=unit_title,
+            lesson_number=lesson_number, store=BrainStore(),
         )
         logger.info(
             "Brain updated: %d lesson, %d topic, %d concept pages",
@@ -607,8 +603,6 @@ async def generate_master_content(
         )
     except Exception as exc:
         logger.debug("Brain writer skipped: %s", exc)
-
-    return master
 
 
 async def generate_and_compile(

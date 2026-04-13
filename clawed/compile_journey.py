@@ -31,70 +31,58 @@ async def compile_journey(
         output_dir = Path("~/clawed_output").expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build journey steps from MasterContent
-    steps = []
-
-    # Step 1: Hook (Do Now)
-    if master.do_now:
-        steps.append({
-            "title": "Warm Up",
-            "type": "question",
-            "content": master.do_now.stimulus,
-            "questions": master.do_now.questions[:2],
-        })
-
-    # Step 2-N: Vocabulary (if any)
-    if master.vocabulary:
-        vocab_items = [
-            f"<b>{v.term}</b>: {v.definition}"
-            for v in master.vocabulary[:8]
-        ]
-        steps.append({
-            "title": "Key Vocabulary",
-            "type": "reveal",
-            "content": "Learn these terms before we begin.",
-            "items": vocab_items,
-        })
-
-    # Step 3-N: Direct instruction sections
-    for _i, section in enumerate(master.direct_instruction):
-        step = {
-            "title": section.heading,
-            "type": "content",
-            "content": section.content,
-        }
-        if section.key_points:
-            step["key_points"] = section.key_points[:4]
-        steps.append(step)
-
-    # Step N+1: Guided practice
-    if master.guided_notes:
-        steps.append({
-            "title": "Check Your Understanding",
-            "type": "quiz",
-            "items": [
-                {"q": n.prompt, "a": n.answer}
-                for n in master.guided_notes[:5]
-            ],
-        })
-
-    # Step N+2: Exit ticket
-    if master.exit_ticket:
-        steps.append({
-            "title": "Exit Ticket",
-            "type": "question",
-            "content": master.exit_ticket[0].stimulus if master.exit_ticket else "",
-            "questions": [
-                q.question for q in master.exit_ticket[:3]
-            ],
-        })
-
+    steps = _build_journey_steps(master)
     if not steps:
         return None
 
-    # Build HTML
+    html = _render_journey_html(steps, master.title, master.objective)
+
+    from clawed.io import safe_filename
+    filename = safe_filename(master.title, max_len=50) + "_journey.html"
+    out_path = output_dir / filename
+    out_path.write_text(html, encoding="utf-8")
+    logger.info("Learning journey: %s (%d steps)", out_path.name, len(steps))
+    return out_path
+
+
+def _build_journey_steps(master) -> list[dict]:
+    """Extract interactive steps from MasterContent."""
+    steps = []
+    if master.do_now:
+        steps.append({
+            "title": "Warm Up", "type": "question",
+            "content": master.do_now.stimulus,
+            "questions": master.do_now.questions[:2],
+        })
+    if master.vocabulary:
+        steps.append({
+            "title": "Key Vocabulary", "type": "reveal",
+            "content": "Learn these terms before we begin.",
+            "items": [f"<b>{v.term}</b>: {v.definition}" for v in master.vocabulary[:8]],
+        })
+    for section in master.direct_instruction:
+        step = {"title": section.heading, "type": "content", "content": section.content}
+        if section.key_points:
+            step["key_points"] = section.key_points[:4]
+        steps.append(step)
+    if master.guided_notes:
+        steps.append({
+            "title": "Check Your Understanding", "type": "quiz",
+            "items": [{"q": n.prompt, "a": n.answer} for n in master.guided_notes[:5]],
+        })
+    if master.exit_ticket:
+        steps.append({
+            "title": "Exit Ticket", "type": "question",
+            "content": master.exit_ticket[0].stimulus if master.exit_ticket else "",
+            "questions": [q.question for q in master.exit_ticket[:3]],
+        })
+    return steps
+
+
+def _render_journey_html(steps: list[dict], title: str, objective: str) -> str:
+    """Render a self-contained interactive journey HTML page."""
     steps_json = json.dumps(steps)
-    safe_title = master.title.replace('"', '\\"')
+    safe_title = title.replace('"', '\\"')
 
     html = f'''<!DOCTYPE html>
 <html lang="en">
@@ -146,7 +134,7 @@ h1{{font-size:1.5rem;color:#1a1a2e;margin-bottom:8px}}
 <body>
 <a class="skip-link" href="#steps">Skip to main content</a>
 <h1>{safe_title}</h1>
-<p class="sub">{master.objective}</p>
+<p class="sub">{objective}</p>
 <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0"
   aria-valuemax="100"><div class="progress-bar" id="pb" style="width:0%"></div></div>
 <div id="sr-announce" class="sr-only" aria-live="polite"></div>
@@ -225,9 +213,4 @@ render();
 </body>
 </html>'''
 
-    from clawed.io import safe_filename
-    filename = safe_filename(master.title, max_len=50) + "_journey.html"
-    out_path = output_dir / filename
-    out_path.write_text(html, encoding="utf-8")
-    logger.info("Learning journey: %s (%d steps)", out_path.name, len(steps))
-    return out_path
+    return html

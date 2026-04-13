@@ -185,42 +185,73 @@ def export_lesson_docx(
         return _export_admin_lesson_docx(lesson, persona, admin_plan, output_dir, agent_name)
 
     from docx import Document
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.shared import Pt, RGBColor
+    from docx.shared import RGBColor
 
     from clawed.sanitize import sanitize_text
 
     doc = Document()
 
-    # ── Subject color theme ──────────────────────────────────────────
     theme = get_color_theme(persona.subject_area or "")
 
     def _theme_rgb(key: str) -> RGBColor:
         h = theme[key]
         return RGBColor(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
-    # ── Resolve teacher display name ─────────────────────────────────
-    teacher_display_name = ""
-    if persona and persona.name and persona.name != "My Teaching Persona":
-        teacher_display_name = persona.name
-    else:
-        try:
-            from clawed.models import AppConfig as _AppConfig
-            _cfg = _AppConfig.load()
-            if _cfg.teacher_profile and _cfg.teacher_profile.name:
-                teacher_display_name = _cfg.teacher_profile.name
-        except ImportError:
-            pass
-    if not teacher_display_name:
-        teacher_display_name = "Teacher"
+    teacher_display_name = _resolve_teacher_name(persona)
 
-    # ── Professional header ──────────────────────────────────────────
+    _docx_header_footer(doc, teacher_display_name, persona, agent_name, theme)
+
+    _s = sanitize_text
+    _s_title = _s(lesson.title)
+    _s_objective = _s(lesson.objective)
+    _s_do_now = _s(lesson.do_now) if lesson.do_now else ""
+    _s_direct = _s(lesson.direct_instruction) if lesson.direct_instruction else ""
+    _s_guided = _s(lesson.guided_practice) if lesson.guided_practice else ""
+    _s_independent = _s(lesson.independent_work) if lesson.independent_work else ""
+    _s_homework = _s(lesson.homework) if lesson.homework else ""
+    subject = persona.subject_area or ""
+
+    _docx_title_and_standards(
+        doc, lesson, _s_title, _s_objective, teacher_display_name, subject, persona,
+    )
+    _docx_timing_table(doc, lesson)
+    _docx_lesson_sections(
+        doc, lesson, _s_title, _s_do_now, _s_direct, _s_guided, _s_independent, subject, _s,
+    )
+    _docx_differentiation(doc, lesson, _s)
+    _docx_homework_and_footer(doc, _s_homework, agent_name)
+    _docx_apply_theme(doc, _theme_rgb, theme)
+
+    out = _resolve_output(output_dir, lesson, ".docx")
+    doc.save(str(out))
+    return out
+
+
+def _resolve_teacher_name(persona: TeacherPersona) -> str:
+    """Resolve display name from persona or config, fallback to 'Teacher'."""
+    if persona and persona.name and persona.name != "My Teaching Persona":
+        return persona.name
+    try:
+        from clawed.models import AppConfig as _AppConfig
+        _cfg = _AppConfig.load()
+        if _cfg.teacher_profile and _cfg.teacher_profile.name:
+            return _cfg.teacher_profile.name
+    except ImportError:
+        pass
+    return "Teacher"
+
+
+def _docx_header_footer(doc, teacher_name, persona, agent_name, theme):
+    """Add professional header and footer to the DOCX document."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
+
     header_section = doc.sections[0]
     header = header_section.header
     header_para = header.paragraphs[0]
     header_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     header_run = header_para.add_run(
-        f"{teacher_display_name}  |  "
+        f"{teacher_name}  |  "
         f"{persona.subject_area or 'Education'}  |  "
         f"{date.today().strftime('%B %d, %Y')}"
     )
@@ -228,22 +259,16 @@ def export_lesson_docx(
     header_run.font.size = Pt(9)
     header_run.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
 
-    # Apply accent color as header bar background
     try:
         from docx.oxml.ns import qn as _qn
         _shd = header_para._p.get_or_add_pPr().makeelement(
             _qn("w:shd"),
-            {
-                _qn("w:val"): "clear",
-                _qn("w:color"): "auto",
-                _qn("w:fill"): theme["accent"],
-            },
+            {_qn("w:val"): "clear", _qn("w:color"): "auto", _qn("w:fill"): theme["accent"]},
         )
         header_para._p.get_or_add_pPr().append(_shd)
     except ImportError:
         pass
 
-    # ── Professional footer ──────────────────────────────────────────
     footer = header_section.footer
     footer_para = footer.paragraphs[0]
     footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -252,36 +277,19 @@ def export_lesson_docx(
     footer_run.font.size = Pt(8)
     footer_run.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
 
-    # Sanitize all text content before writing to the document
-    _s_title = sanitize_text(lesson.title)
-    _s_objective = sanitize_text(lesson.objective)
-    _s_do_now = sanitize_text(lesson.do_now) if lesson.do_now else ""
-    _s_direct = sanitize_text(lesson.direct_instruction) if lesson.direct_instruction else ""
-    _s_guided = sanitize_text(lesson.guided_practice) if lesson.guided_practice else ""
-    _s_independent = sanitize_text(lesson.independent_work) if lesson.independent_work else ""
-    _s_homework = sanitize_text(lesson.homework) if lesson.homework else ""
 
-    # Resolve subject for image searches
-    subject = persona.subject_area or ""
-
-    # Title
-    doc.add_heading(_s_title, level=0)
+def _docx_title_and_standards(doc, lesson, title, objective, teacher_name, subject, persona):
+    """Add title, header image, and standards table."""
+    doc.add_heading(title, level=0)
     doc.add_paragraph(
-        f"Teacher: {teacher_display_name}  |  "
-        f"Lesson {lesson.lesson_number}  |  "
+        f"Teacher: {teacher_name}  |  Lesson {lesson.lesson_number}  |  "
         f"{date.today().strftime('%B %d, %Y')}"
     )
-
-    # Try to add a header image relevant to the lesson content
     _docx_add_content_image(
-        doc,
-        content_text=_s_title + " " + _s_objective,
-        fallback_topic=_s_title,
-        subject=subject,
-        width_inches=5.5,
+        doc, content_text=title + " " + objective,
+        fallback_topic=title, subject=subject, width_inches=5.5,
     )
 
-    # Standards table — fallback to generic alignment if empty
     if not lesson.standards:
         try:
             from clawed.models import AppConfig as _AppConfig
@@ -298,23 +306,21 @@ def export_lesson_docx(
         doc.add_heading("Standards Addressed", level=2)
         table = doc.add_table(rows=1, cols=1)
         table.style = "Light Grid Accent 1"
-        hdr = table.rows[0].cells
-        hdr[0].text = "Standard"
+        table.rows[0].cells[0].text = "Standard"
         for std in lesson.standards:
-            row = table.add_row().cells
-            row[0].text = std
+            doc.tables[-1].add_row().cells[0].text = std
 
-    # Objective
     doc.add_heading("Objective (SWBAT)", level=2)
-    doc.add_paragraph(_s_objective)
+    doc.add_paragraph(objective)
 
-    # Materials
     if lesson.materials_needed:
         doc.add_heading("Materials Needed", level=2)
         for m in lesson.materials_needed:
             doc.add_paragraph(m, style="List Bullet")
 
-    # Lesson-at-a-Glance timing table
+
+def _docx_timing_table(doc, lesson):
+    """Add the Lesson-at-a-Glance timing table."""
     doc.add_heading("Lesson at a Glance", level=2)
     timing_table = doc.add_table(rows=1, cols=2)
     timing_table.style = "Light Grid Accent 1"
@@ -336,7 +342,6 @@ def export_lesson_docx(
             row[0].text = section_name
             row[1].text = f"{minutes} min"
             total += minutes
-    # Total row
     total_row = timing_table.add_row().cells
     total_row[0].text = "Total"
     total_row[1].text = f"{total} min"
@@ -345,12 +350,14 @@ def export_lesson_docx(
             for r in p.runs:
                 r.bold = True
 
-    # Lesson Sections — add relevant images to instruction sections
+
+def _docx_lesson_sections(doc, lesson, title, do_now, direct, guided, independent, subject, sanitize_fn):
+    """Add the main lesson sections with optional images."""
     sections = [
-        ("Do Now / Warm-Up", _s_do_now, False),
-        ("Direct Instruction", _s_direct, True),
-        ("Guided Practice", _s_guided, False),
-        ("Independent Work", _s_independent, False),
+        ("Do Now / Warm-Up", do_now, False),
+        ("Direct Instruction", direct, True),
+        ("Guided Practice", guided, False),
+        ("Independent Work", independent, False),
     ]
     for heading, content, add_img in sections:
         if content:
@@ -359,61 +366,59 @@ def export_lesson_docx(
             time_label = f" ({minutes} min)" if minutes else ""
             doc.add_heading(f"{heading}{time_label}", level=2)
             doc.add_paragraph(content)
-            # Add a content-specific image to the direct instruction section
             if add_img:
                 _docx_add_content_image(
-                    doc,
-                    content_text=content,
-                    fallback_topic=_s_title,
-                    subject=subject,
-                    width_inches=4.0,
+                    doc, content_text=content, fallback_topic=title,
+                    subject=subject, width_inches=4.0,
                 )
 
-    # Exit Ticket
     if lesson.exit_ticket:
         doc.add_heading("Exit Ticket", level=2)
         for i, q in enumerate(lesson.exit_ticket, 1):
-            doc.add_paragraph(f"{i}. {sanitize_text(q.question)}")
+            doc.add_paragraph(f"{i}. {sanitize_fn(q.question)}")
 
-    # Differentiation
+
+def _docx_differentiation(doc, lesson, sanitize_fn):
+    """Add differentiation callout boxes."""
     diff = lesson.differentiation
     if diff:
         doc.add_heading("Differentiation", level=2)
         if diff.struggling:
             text = ", ".join(diff.struggling) if isinstance(diff.struggling, list) else str(diff.struggling)
-            _add_callout_box(doc, "Struggling\nLearners", sanitize_text(text), "FFF3CD", "D4A017")
+            _add_callout_box(doc, "Struggling\nLearners", sanitize_fn(text), "FFF3CD", "D4A017")
         if diff.advanced:
             text = ", ".join(diff.advanced) if isinstance(diff.advanced, list) else str(diff.advanced)
-            _add_callout_box(doc, "Advanced\nLearners", sanitize_text(text), "D1ECF1", "2B7A98")
+            _add_callout_box(doc, "Advanced\nLearners", sanitize_fn(text), "D1ECF1", "2B7A98")
         if diff.ell:
             text = ", ".join(diff.ell) if isinstance(diff.ell, list) else str(diff.ell)
-            _add_callout_box(doc, "ELL\nSupport", sanitize_text(text), "D4EDDA", "2D8B4E")
+            _add_callout_box(doc, "ELL\nSupport", sanitize_fn(text), "D4EDDA", "2D8B4E")
 
-    # Homework
-    if _s_homework:
+
+def _docx_homework_and_footer(doc, homework_text, agent_name):
+    """Add homework section and generation footer."""
+    from docx.shared import Pt
+
+    if homework_text:
         doc.add_heading("Homework", level=2)
-        doc.add_paragraph(_s_homework)
+        doc.add_paragraph(homework_text)
 
-    # Footer
     doc.add_paragraph("")
     gen_footer = doc.add_paragraph(f"Generated by {agent_name}")
     gen_footer.runs[0].font.size = Pt(8)
 
-    # ── Apply subject color theme to headings and shaded sections ─────
+
+def _docx_apply_theme(doc, theme_rgb_fn, theme):
+    """Apply subject color theme to headings and table cells."""
     try:
         from docx.oxml.ns import qn as _qn
 
-        primary_rgb = _theme_rgb("primary")
+        primary_rgb = theme_rgb_fn("primary")
         bg_light_hex = theme["bg_light"]
         for para in doc.paragraphs:
             if para.style and para.style.name and para.style.name.startswith("Heading 2"):
-                # Apply primary theme color to Heading 2 runs
                 for run in para.runs:
                     run.font.color.rgb = primary_rgb
-            # Apply bg_light shading to vocabulary/standards table containers
-            # (tables are handled separately below)
 
-        # Apply bg_light to standards table cells (vocabulary boxes)
         for tbl in doc.tables:
             for row in tbl.rows:
                 for cell in row.cells:
@@ -427,11 +432,7 @@ def export_lesson_docx(
                     )
                     cell._tc.get_or_add_tcPr().append(_cell_shd)
     except ImportError:
-        pass  # Theming is cosmetic — don't break export
-
-    out = _resolve_output(output_dir, lesson, ".docx")
-    doc.save(str(out))
-    return out
+        pass
 
 
 # ── Student handout export ────────────────────────────────────────────
@@ -460,9 +461,6 @@ def export_student_handout(
     import re as _re
 
     from docx import Document
-    from docx.enum.table import WD_TABLE_ALIGNMENT
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.shared import Inches, Pt, RGBColor
 
     from clawed.sanitize import sanitize_text
 
@@ -480,7 +478,7 @@ def export_student_handout(
 
     doc = Document()
 
-    # Sanitize AND strip answers — work on a copy so we don't mutate the caller's object
+    # Sanitize AND strip answers on a copy
     import copy as _copy
     lesson = _copy.deepcopy(lesson)
     lesson.title = sanitize_text(lesson.title)
@@ -492,176 +490,166 @@ def export_student_handout(
     for q in lesson.exit_ticket:
         q.question = sanitize_text(q.question)
 
-    # ── Page setup ────────────────────────────────────────────────────
+    _handout_page_setup(doc)
+    _handout_teacher_name = _resolve_teacher_name(persona)
+    subject = persona.subject_area or ""
+
+    _handout_title_block(doc, lesson, _handout_teacher_name)
+    _handout_image_count = 0
+    if _docx_add_content_image(
+        doc, content_text=lesson.title + " " + lesson.objective,
+        fallback_topic=lesson.title, subject=subject, width_inches=3.0,
+    ):
+        _handout_image_count += 1
+
+    _handout_do_now(doc, lesson)
+    _handout_aim_and_content(doc, lesson, subject, _handout_image_count)
+    _handout_practice_sections(doc, lesson)
+    _handout_exit_ticket(doc, lesson)
+    _handout_footer_block(doc, agent_name)
+
+    out = _resolve_output(output_dir, lesson, "_handout.docx")
+    doc.save(str(out))
+    return out
+
+
+def _handout_page_setup(doc):
+    """Configure page margins and default font for handouts."""
+    from docx.shared import Inches, Pt
     for section in doc.sections:
         section.top_margin = Inches(0.6)
         section.bottom_margin = Inches(0.5)
         section.left_margin = Inches(0.75)
         section.right_margin = Inches(0.75)
-
-    # ── Default font ──────────────────────────────────────────────────
     style = doc.styles["Normal"]
-    font = style.font
-    font.name = "Calibri"
-    font.size = Pt(12)
+    style.font.name = "Calibri"
+    style.font.size = Pt(12)
 
-    # ── Header: Title, Teacher, Date, Period ──────────────────────────
+
+def _handout_title_block(doc, lesson, teacher_name):
+    """Add centered title and teacher/date line."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH as WD_ALIGN
+    from docx.shared import Pt, RGBColor
     title_para = doc.add_paragraph()
-    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_para.alignment = WD_ALIGN.CENTER
     run = title_para.add_run(lesson.title)
     run.bold = True
     run.font.size = Pt(14)
     run.font.name = "Calibri"
 
     meta_para = doc.add_paragraph()
-    meta_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    # Resolve teacher display name for handout
-    _handout_teacher_name = ""
-    if persona and persona.name and persona.name != "My Teaching Persona":
-        _handout_teacher_name = persona.name
-    else:
-        try:
-            from clawed.models import AppConfig as _AppConfig
-            _cfg = _AppConfig.load()
-            if _cfg.teacher_profile and _cfg.teacher_profile.name:
-                _handout_teacher_name = _cfg.teacher_profile.name
-        except ImportError:
-            pass
-    if not _handout_teacher_name:
-        _handout_teacher_name = "Teacher"
-
+    meta_para.alignment = WD_ALIGN.CENTER
     meta_run = meta_para.add_run(
-        f"{_handout_teacher_name}  |  {date.today().strftime('%B %d, %Y')}"
+        f"{teacher_name}  |  {date.today().strftime('%B %d, %Y')}"
     )
     meta_run.font.size = Pt(10)
     meta_run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
     meta_run.font.name = "Calibri"
 
-    # ── Header image (below title, max 2 images total) ───────────────
-    subject = persona.subject_area or ""
-    _handout_image_count = 0
-    if _handout_image_count < 2 and _docx_add_content_image(
-        doc,
-        content_text=lesson.title + " " + lesson.objective,
-        fallback_topic=lesson.title,
-        subject=subject,
-        width_inches=3.0,
-    ):
-        _handout_image_count += 1
 
-    # ── Do Now box ────────────────────────────────────────────────────
+def _handout_do_now(doc, lesson):
+    """Add Do Now bordered box with response lines."""
+    from docx.enum.table import WD_TABLE_ALIGNMENT as WD_TABLE_ALIGN
+    from docx.shared import Pt
     if lesson.do_now:
         _handout_section_heading(doc, "Do Now")
         do_now_table = doc.add_table(rows=2, cols=1)
-        do_now_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        do_now_table.alignment = WD_TABLE_ALIGN.CENTER
         _set_table_borders(do_now_table)
-
-        # Prompt cell
         prompt_cell = do_now_table.rows[0].cells[0]
         prompt_cell.text = ""
-        prompt_para = prompt_cell.paragraphs[0]
-        prompt_run = prompt_para.add_run(lesson.do_now)
+        prompt_run = prompt_cell.paragraphs[0].add_run(lesson.do_now)
         prompt_run.font.size = Pt(11)
         prompt_run.font.name = "Calibri"
-
-        # Response area with lines
         response_cell = do_now_table.rows[1].cells[0]
         response_cell.text = ""
         _add_lined_space(response_cell, line_count=4)
 
-    # ── Aim / Objective ───────────────────────────────────────────────
+
+def _handout_aim_and_content(doc, lesson, subject, image_count):
+    """Add aim/objective and key content with optional image."""
+    from docx.shared import Pt
     _handout_section_heading(doc, "Aim")
     aim_para = doc.add_paragraph(lesson.objective)
     aim_para.paragraph_format.space_after = Pt(4)
 
-    # ── Core Content ──────────────────────────────────────────────────
     if lesson.direct_instruction:
         _handout_section_heading(doc, "Key Content")
-        # Include a condensed version -- long DI sections get trimmed
         content_text = lesson.direct_instruction
         if len(content_text) > 1200:
-            # Take first ~1200 chars at a sentence boundary
             cutoff = content_text[:1200].rfind(". ")
             if cutoff > 600:
-                content_text = content_text[: cutoff + 1]
+                content_text = content_text[:cutoff + 1]
         content_para = doc.add_paragraph(content_text)
         content_para.paragraph_format.space_after = Pt(6)
         for run in content_para.runs:
             run.font.size = Pt(11)
             run.font.name = "Calibri"
 
-        # Add content image next to direct instruction (max 2 total)
-        if _handout_image_count < 2 and _docx_add_content_image(
-            doc,
-            content_text=lesson.direct_instruction,
-            fallback_topic=lesson.title,
-            subject=subject,
-            width_inches=3.0,
-        ):
-            _handout_image_count += 1
+        if image_count < 2:
+            _docx_add_content_image(
+                doc, content_text=lesson.direct_instruction,
+                fallback_topic=lesson.title, subject=subject, width_inches=3.0,
+            )
 
-    # ── Activity Section (Guided Practice) ────────────────────────────
+
+def _handout_practice_sections(doc, lesson):
+    """Add guided practice and independent work sections."""
     if lesson.guided_practice:
         _handout_section_heading(doc, "Activity")
         _add_numbered_content_with_lines(doc, lesson.guided_practice)
-
-    # ── Independent Work ──────────────────────────────────────────────
     if lesson.independent_work:
         _handout_section_heading(doc, "Independent Practice")
         _add_numbered_content_with_lines(doc, lesson.independent_work)
 
-    # ── Exit Ticket ───────────────────────────────────────────────────
+
+def _handout_exit_ticket(doc, lesson):
+    """Add exit ticket question boxes with answer lines."""
+    from docx.enum.table import WD_TABLE_ALIGNMENT as WD_TABLE_ALIGN
+    from docx.shared import Pt
     if lesson.exit_ticket:
         _handout_section_heading(doc, "Exit Ticket")
         exit_table = doc.add_table(rows=len(lesson.exit_ticket) * 2, cols=1)
-        exit_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        exit_table.alignment = WD_TABLE_ALIGN.CENTER
         _set_table_borders(exit_table)
-
         for i, q in enumerate(lesson.exit_ticket):
             q_cell = exit_table.rows[i * 2].cells[0]
             q_cell.text = ""
-            q_para = q_cell.paragraphs[0]
-            q_run = q_para.add_run(f"{i + 1}. {q.question}")
+            q_run = q_cell.paragraphs[0].add_run(f"{i + 1}. {q.question}")
             q_run.bold = True
             q_run.font.size = Pt(11)
             q_run.font.name = "Calibri"
-
             ans_cell = exit_table.rows[i * 2 + 1].cells[0]
             ans_cell.text = ""
             _add_lined_space(ans_cell, line_count=3)
 
-    # ── Footer: Name / Date / Period ──────────────────────────────────
-    doc.add_paragraph("")  # spacer
+
+def _handout_footer_block(doc, agent_name):
+    """Add Name/Date/Period footer and watermark."""
+    from docx.enum.table import WD_TABLE_ALIGNMENT as WD_TABLE_ALIGN
+    from docx.enum.text import WD_ALIGN_PARAGRAPH as WD_ALIGN
+    from docx.shared import Inches, Pt, RGBColor
+    doc.add_paragraph("")
     footer_table = doc.add_table(rows=1, cols=3)
-    footer_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    footer_table.alignment = WD_TABLE_ALIGN.CENTER
     footer_table.columns[0].width = Inches(3.0)
     footer_table.columns[1].width = Inches(2.5)
     footer_table.columns[2].width = Inches(1.5)
-
     labels = ["Name: _______________", "Date: _______________", "Period: ______"]
     for idx, label in enumerate(labels):
         cell = footer_table.rows[0].cells[idx]
         cell.text = ""
-        para = cell.paragraphs[0]
-        run = para.add_run(label)
+        run = cell.paragraphs[0].add_run(label)
         run.font.size = Pt(10)
         run.font.name = "Calibri"
         run.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
-
-    # Remove borders from footer table
     _remove_table_borders(footer_table)
 
-    # ── Watermark ─────────────────────────────────────────────────────
     wm_para = doc.add_paragraph()
-    wm_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    wm_para.alignment = WD_ALIGN.CENTER
     wm_run = wm_para.add_run(f"Generated by {agent_name}")
     wm_run.font.size = Pt(8)
     wm_run.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
-
-    # ── Save ──────────────────────────────────────────────────────────
-    out = _resolve_output(output_dir, lesson, "_handout.docx")
-    doc.save(str(out))
-    return out
 
 
 # ── DOCX formatting helpers ──────────────────────────────────────────
