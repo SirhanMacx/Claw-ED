@@ -1,5 +1,17 @@
 # Changelog
 
+## v4.13.2026.0 — 2026-04-13
+
+### Hardened
+- Full HEARTBEAT compliance: Tier 1 decomposition (14 functions >200 lines), exception audit sweep (130 narrowed, 55 logged)
+- HEARTBEAT CI workflow (function size + exception swallow checks)
+- Per-module coverage enforcement planned
+
+### Quality
+- 2081 tests passing, ruff clean with expanded rules (UP/B/SIM/RUF)
+- Zero bare `except Exception: pass` in codebase
+- All audit findings from 3 external reviews resolved
+
 ## v4.12.2026.2 — 2026-04-12
 
 ### Hardened
