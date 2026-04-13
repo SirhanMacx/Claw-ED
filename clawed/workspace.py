@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from clawed.models import AppConfig, TeacherPersona
@@ -43,7 +43,7 @@ def _today() -> str:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
 
 def _sanitize_filename(name: str) -> str:
@@ -263,7 +263,7 @@ def append_daily_note(text: str, category: str = "general") -> None:
     if not path.exists():
         path.write_text(f"# Teaching Notes — {_today()}\n\n", encoding="utf-8")
 
-    timestamp = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    timestamp = datetime.now(UTC).strftime("%H:%M UTC")
     entry = f"- **[{timestamp}]** [{category}] {text}\n"
     with open(path, "a") as f:
         f.write(entry)
@@ -317,7 +317,7 @@ def update_student_profile(name: str, interaction: str) -> None:
     if placeholder in content:
         content = content.replace(placeholder, "")
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     entry = f"- **[{timestamp}]** {interaction}\n"
     content = content.rstrip() + "\n" + entry
 

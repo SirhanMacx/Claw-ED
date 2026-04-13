@@ -10,7 +10,7 @@ import json
 import logging
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -98,7 +98,7 @@ def record_generation(
                 subject,
                 grade,
                 json.dumps(scores or {}),
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(UTC).isoformat(),
             ),
         )
         return cursor.lastrowid or 0
@@ -219,7 +219,7 @@ def record_pattern(
 ) -> None:
     """Record or increment a detected pattern."""
     _ensure_db()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     with _get_conn() as conn:
         existing = conn.execute(
             "SELECT id, occurrences FROM patterns"

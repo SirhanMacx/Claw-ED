@@ -14,7 +14,7 @@ import logging
 import os
 import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -213,8 +213,8 @@ def compress_old_sessions(teacher_id: str, keep_recent: int = KEEP_RECENT) -> in
 
     # Determine session date from the turns
     first_ts = turns[0].get("timestamp", "")
-    session_date = first_ts[:10] if first_ts else datetime.now(timezone.utc).isoformat()[:10]
-    now = datetime.now(timezone.utc).isoformat()
+    session_date = first_ts[:10] if first_ts else datetime.now(UTC).isoformat()[:10]
+    now = datetime.now(UTC).isoformat()
 
     # Write summary and delete originals in a single transaction
     with sqlite3.connect(str(db)) as conn:

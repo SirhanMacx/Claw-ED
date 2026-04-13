@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from enum import Enum
 from pathlib import Path
 
@@ -1249,10 +1250,10 @@ class StudentProgress(BaseModel):
 
     def record_question(self, topic: str) -> None:
         """Record a question about a topic, updating counts and struggle detection."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         self.total_questions += 1
-        self.last_active = datetime.now(timezone.utc).isoformat()
+        self.last_active = datetime.now(UTC).isoformat()
         topic_key = topic.strip().lower() if topic else "general"
         self.topics_asked[topic_key] = self.topics_asked.get(topic_key, 0) + 1
         # Mark as struggle topic if asked 3+ times

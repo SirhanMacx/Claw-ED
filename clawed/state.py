@@ -19,7 +19,7 @@ import re
 import sqlite3
 import uuid
 from contextlib import contextmanager, suppress
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from clawed.models import DailyLesson, TeacherPersona, UnitPlan
@@ -214,7 +214,7 @@ class TeacherSession:
         self.current_unit = current_unit
         self.current_lesson = current_lesson
         self.context: list[dict] = context or []  # Recent conversation turns
-        self.last_activity = datetime.now(timezone.utc)
+        self.last_activity = datetime.now(UTC)
         self.school_id = school_id
 
     @classmethod
@@ -301,7 +301,7 @@ class TeacherSession:
                     self.current_lesson.model_dump_json() if self.current_lesson else None,
                     json.dumps(self.context[-20:]),  # Keep last 20 turns
                     self.school_id,
-                    datetime.now(timezone.utc).isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
 
@@ -310,7 +310,7 @@ class TeacherSession:
         self.context.append({
             "role": role,
             "content": content[:2000],  # Cap per-turn length
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         })
 
     def save_unit(self, unit: UnitPlan) -> str:

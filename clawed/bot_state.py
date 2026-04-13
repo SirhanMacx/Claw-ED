@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
@@ -60,7 +60,7 @@ class BotStateStore:
 
     def save(self, chat_id: int, *, state: str, pending_topic: str = "", last_lesson_id: str = "") -> None:
         """Upsert a chat state row."""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         self._get_conn().execute(
             """INSERT INTO chat_states (chat_id, state, pending_topic, last_lesson_id, updated_at)
             VALUES (?, ?, ?, ?, ?)
@@ -247,7 +247,7 @@ class StudentBotStateStore:
 
     def save(self, chat_id: int, *, class_code: str = "", student_id: str = "") -> None:
         """Upsert a student session row."""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         self._get_conn().execute(
             """INSERT INTO student_bot_sessions (chat_id, class_code, student_id, updated_at)
             VALUES (?, ?, ?, ?)

@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -90,7 +90,7 @@ def extract_lesson_patterns(
     """
     patterns: list[dict[str, str]] = []
     edited = edited_sections or []
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d")
 
     # Tag patterns with subject for cross-subject filtering
     subject_tag = f" [{subject}]" if subject else ""
@@ -414,7 +414,7 @@ def process_feedback(
                     from clawed.workspace import SOUL_PATH
                     if SOUL_PATH.exists():
                         soul_content = SOUL_PATH.read_text(encoding="utf-8")
-                        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                        stamp = datetime.now(UTC).strftime("%Y-%m-%d")
                         for desc in descriptions:
                             entry = f"\n\n*({stamp})* Fingerprint updated: {desc}\n"
                             marker = "## Agent Observations"
@@ -959,7 +959,7 @@ def detect_preference_drift(rating: int) -> str | None:
     prior_avg = sum(prior_window) / len(prior_window)
     diff = current_avg - prior_avg
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d")
     message: str | None = None
 
     if diff < -DRIFT_THRESHOLD:

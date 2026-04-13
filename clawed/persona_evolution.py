@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -109,7 +109,7 @@ def _build_candidate_changes(
 ) -> list[dict[str, Any]]:
     """Wrap comparison results into timestamped candidate entries."""
     raw_changes = _compare_personas(old, new)
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     candidates: list[dict[str, Any]] = []
     for change in raw_changes:
         candidates.append({
@@ -194,7 +194,7 @@ def record_ingestion_changes(
         return []
 
     existing = _load_candidates()
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     for nc in new_candidates:
         # Look for an existing candidate with the same field and new_value

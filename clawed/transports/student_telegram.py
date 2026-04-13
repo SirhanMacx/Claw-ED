@@ -88,7 +88,7 @@ def _log_error(error: Exception) -> None:
         with open(_ERROR_LOG, "a") as f:
             import datetime
 
-            f.write(f"[{datetime.datetime.now(datetime.timezone.utc).isoformat()}] {type(error).__name__}: {error}\n")
+            f.write(f"[{datetime.datetime.now(datetime.UTC).isoformat()}] {type(error).__name__}: {error}\n")
     except (FileNotFoundError, OSError):
         pass
 

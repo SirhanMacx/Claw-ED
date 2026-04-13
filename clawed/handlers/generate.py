@@ -46,7 +46,7 @@ class GenerateHandler:
                 generate_lesson(parsed, session),
                 timeout=120.0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Lesson generation timed out after 120s")
             return GatewayResponse(
                 text="Generation timed out. Please try again with a simpler topic."
@@ -77,7 +77,7 @@ class GenerateHandler:
                 generate_unit(parsed, session),
                 timeout=120.0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Unit generation timed out after 120s")
             return GatewayResponse(
                 text="Generation timed out. Please try again with a simpler topic."

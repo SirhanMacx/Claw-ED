@@ -285,7 +285,7 @@ async def _run_phase(
                             phase_name, model_name,
                         )
                     return result
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     last_error = (
                         f"Phase {phase_name} timed out on {model_name} "
                         f"after {_PHASE_TIMEOUT_SEC}s"

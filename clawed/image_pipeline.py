@@ -142,7 +142,7 @@ async def _fetch_one(
         if path and path.exists() and path.stat().st_size > 5000:
             logger.info("Fetched image for: %s", spec[:80])
             return spec, path
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("Image fetch timed out for: %s", spec[:80])
     except Exception as e:
         logger.debug("Image fetch failed for %s: %s", spec[:80], e)

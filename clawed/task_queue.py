@@ -13,7 +13,7 @@ import json
 import os
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -47,7 +47,7 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.QUEUED
     result: dict[str, Any] | None = None
     error: str | None = None
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     completed_at: str | None = None
 
 
@@ -157,7 +157,7 @@ class TaskQueue:
 
     def mark_done(self, task_id: str, result: dict[str, Any]) -> None:
         """Mark a task as successfully completed with its result."""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         conn = self._get_conn()
         conn.execute(
             "UPDATE tasks SET status = 'done', result_json = ?, completed_at = ? WHERE id = ?",
@@ -167,7 +167,7 @@ class TaskQueue:
 
     def mark_failed(self, task_id: str, error: str) -> None:
         """Mark a task as failed with an error message."""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         conn = self._get_conn()
         conn.execute(
             "UPDATE tasks SET status = 'failed', error = ?, completed_at = ? WHERE id = ?",

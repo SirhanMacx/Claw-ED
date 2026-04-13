@@ -33,7 +33,7 @@ def _log_error(error: Exception) -> None:
             import datetime
 
             f.write(
-                f"[{datetime.datetime.now(datetime.timezone.utc).isoformat()}] "
+                f"[{datetime.datetime.now(datetime.UTC).isoformat()}] "
                 f"{type(error).__name__}: {error}\n"
             )
     except (FileNotFoundError, OSError):

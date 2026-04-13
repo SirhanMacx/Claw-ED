@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from clawed.state import _get_conn, init_db
@@ -125,7 +125,7 @@ def usage_streak(teacher_id: str) -> int:
     if not rows:
         return 0
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     days = sorted({datetime.strptime(row["day"], "%Y-%m-%d").date() for row in rows if row["day"]}, reverse=True)
 
     if not days or days[0] < today - timedelta(days=1):

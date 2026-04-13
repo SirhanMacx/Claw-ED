@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -71,13 +71,13 @@ def save_proven_template(
         "rating": rating,
         "generation_prompt": generation_prompt,
         "lesson_structure": lesson_structure,
-        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "saved_at": datetime.now(UTC).isoformat(),
     }
 
     # Filename: teacher_subject_topic_timestamp.json
     safe_topic = "".join(c if c.isalnum() or c in "-_ " else "" for c in topic)
     safe_topic = safe_topic.strip().replace(" ", "_")[:40]
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     filename = f"{teacher_id}_{subject}_{safe_topic}_{timestamp}.json"
 
     filepath = templates_dir / filename
