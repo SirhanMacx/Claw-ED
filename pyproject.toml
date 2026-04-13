@@ -8,7 +8,7 @@ version = "4.13.2026.1"
 description = "Your AI co-teacher. Generate lessons, games, slides, and assessments from your terminal. Learns your teaching voice, aligns to your state standards, and works with any LLM provider."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Jon Maccarello & Claw-ED contributors" },
 ]
