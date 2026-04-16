@@ -13,6 +13,7 @@ import json
 import random
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.table import Table
@@ -28,7 +29,7 @@ _TRAINING_DIR = Path("~/.eduagent/training").expanduser()
 
 # ── Persona refinement helper ───────────────────────────────────────────
 
-async def _refine_persona(documents: list) -> None:
+async def _refine_persona(documents: list[Any]) -> None:
     """Extract persona traits from new documents and merge into existing."""
     from clawed.commands._helpers import persona_path
     from clawed.models import AppConfig, TeacherPersona
@@ -48,7 +49,7 @@ async def _refine_persona(documents: list) -> None:
 
 # ── Drive ingest ────────────────────────────────────────────────────────
 
-async def _drive_ingest() -> list:
+async def _drive_ingest() -> list[Any]:
     """Download and ingest from configured Drive URLs. Returns documents."""
     from clawed.drive import ingest_drive_folder
     from clawed.models import AppConfig
@@ -80,7 +81,7 @@ async def _drive_ingest() -> list:
 
 # ── Path ingest ─────────────────────────────────────────────────────────
 
-def _path_ingest(path: Path) -> list:
+def _path_ingest(path: Path) -> list[Any]:
     """Ingest local files. Returns documents."""
     from clawed.ingestor import ingest_path
 
@@ -95,7 +96,7 @@ def _path_ingest(path: Path) -> list:
 
 # ── Benchmark ───────────────────────────────────────────────────────────
 
-async def _run_benchmark(n: int) -> dict:
+async def _run_benchmark(n: int) -> dict[str, Any]:
     """Generate N lessons on random topics and score them. Returns report."""
     from clawed.commands._helpers import load_persona_or_exit
     from clawed.lesson import generate_master_content
@@ -122,7 +123,7 @@ async def _run_benchmark(n: int) -> dict:
     ]
     sample_topics = random.sample(topics, min(n, len(topics)))
 
-    results = []
+    results: list[dict[str, Any]] = []
     persona_ctx = persona.to_prompt_context()
 
     for i, topic in enumerate(sample_topics, 1):
@@ -209,7 +210,7 @@ async def _run_benchmark(n: int) -> dict:
 
 # ── Main command ────────────────────────────────────────────────────────
 
-def _train_json(*, benchmark, n):
+def _train_json(*, benchmark: bool, n: int) -> dict[str, Any]:
     """Run benchmark training and return structured result for JSON output."""
     import io
     import sys
@@ -255,8 +256,8 @@ def train(
         )
         raise typer.Exit(0)
 
-    async def _execute():
-        docs = []
+    async def _execute() -> None:
+        docs: list[Any] = []
 
         # Drive ingest
         if drive or full:

@@ -7,9 +7,11 @@ import json
 import logging
 import os
 import sqlite3
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,7 +71,7 @@ def _check_page_auth(request: Request) -> bool:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Startup/shutdown lifecycle."""
     set_db(Database())
     yield
@@ -148,7 +150,7 @@ def _register_api_routes(app: FastAPI) -> None:
     app.include_router(student_classroom_router, prefix="/api")  # No auth — class code is auth
 
 
-async def _page_auth_bootstrap(token: str = Form(...)):
+async def _page_auth_bootstrap(token: str = Form(...)) -> Any:
     """Accept auth token via POST and set a session cookie.
 
     Replaces the old ?token= query param flow to prevent token
@@ -174,7 +176,7 @@ async def _page_auth_bootstrap(token: str = Form(...)):
     return response
 
 
-async def _page_index(request: Request, templates: Jinja2Templates):
+async def _page_index(request: Request, templates: Jinja2Templates) -> Any:
     """Index page: redirect to dashboard if onboarded, else show wizard."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -202,7 +204,9 @@ async def _page_index(request: Request, templates: Jinja2Templates):
     })
 
 
-def _build_dashboard_context(db, units, teacher) -> dict:
+def _build_dashboard_context(
+    db: Database, units: list[dict[str, Any]], teacher: dict[str, Any] | None,
+) -> dict[str, Any]:
     """Build template context for the dashboard/library page."""
     persona_name = ""
     persona_data = None
@@ -213,7 +217,7 @@ def _build_dashboard_context(db, units, teacher) -> dict:
         except (json.JSONDecodeError, TypeError):
             pass
 
-    recent_items: list[dict] = []
+    recent_items: list[dict[str, Any]] = []
     for u in units[:10]:
         recent_items.append({
             "type": "unit",
@@ -259,7 +263,7 @@ def _build_dashboard_context(db, units, teacher) -> dict:
     }
 
 
-async def _page_dashboard(request: Request, templates: Jinja2Templates):
+async def _page_dashboard(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Dashboard page with recent activity and stats."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -279,7 +283,7 @@ async def _page_dashboard(request: Request, templates: Jinja2Templates):
 
 
 def _build_lessons_list_html(
-    all_lessons: list[dict],
+    all_lessons: list[dict[str, Any]],
     all_subjects: list[str],
     all_grades: list[str],
     subject_filter: str,
@@ -372,7 +376,7 @@ select {{ padding: 6px 10px; border-radius: 4px;
 </body></html>"""
 
 
-async def _page_lessons_list(request: Request):
+async def _page_lessons_list(request: Request) -> HTMLResponse:
     """Lesson list page: all generated lessons, filterable, newest first."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -380,7 +384,7 @@ async def _page_lessons_list(request: Request):
     subject_filter = request.query_params.get("subject", "")
     grade_filter = request.query_params.get("grade", "")
 
-    all_lessons: list[dict] = []
+    all_lessons: list[dict[str, Any]] = []
     units = db.list_units()
     for u in units:
         if subject_filter and u.get("subject", "").lower() != subject_filter.lower():
@@ -418,7 +422,7 @@ async def _page_lessons_list(request: Request):
     return HTMLResponse(html)
 
 
-async def _page_generate(request: Request, templates: Jinja2Templates):
+async def _page_generate(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Generate page with subject selection."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -435,9 +439,9 @@ async def _page_generate(request: Request, templates: Jinja2Templates):
     })
 
 
-def _build_state_frameworks(teacher_state: str) -> list[dict]:
+def _build_state_frameworks(teacher_state: str) -> list[dict[str, Any]]:
     """Build framework info list for a given state."""
-    state_frameworks = []
+    state_frameworks: list[dict[str, Any]] = []
     if teacher_state:
         from clawed.state_standards import STATE_STANDARDS_CONFIG, get_framework_description
 
@@ -453,7 +457,7 @@ def _build_state_frameworks(teacher_state: str) -> list[dict]:
     return state_frameworks
 
 
-async def _page_settings(request: Request, templates: Jinja2Templates):
+async def _page_settings(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Settings page with API keys, state frameworks, and class codes."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -475,7 +479,7 @@ async def _page_settings(request: Request, templates: Jinja2Templates):
 
     state_frameworks = _build_state_frameworks(teacher_state)
 
-    class_codes_list: list[dict] = []
+    class_codes_list: list[dict[str, Any]] = []
     try:
         from clawed.state import _get_conn as _state_conn2
         from clawed.state import init_db as _state_init2
@@ -506,7 +510,7 @@ async def _page_settings(request: Request, templates: Jinja2Templates):
     })
 
 
-async def _page_stats(request: Request, templates: Jinja2Templates):
+async def _page_stats(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Stats page with teacher analytics."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -524,7 +528,7 @@ async def _page_stats(request: Request, templates: Jinja2Templates):
     })
 
 
-async def _page_lesson_detail(request: Request, lesson_id: str, templates: Jinja2Templates):
+async def _page_lesson_detail(request: Request, lesson_id: str, templates: Jinja2Templates) -> HTMLResponse:
     """Lesson detail page with materials, scores, feedback, and embed snippet."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -581,7 +585,7 @@ async def _page_lesson_detail(request: Request, lesson_id: str, templates: Jinja
     })
 
 
-async def _page_share(request: Request, token: str, templates: Jinja2Templates):
+async def _page_share(request: Request, token: str, templates: Jinja2Templates) -> HTMLResponse:
     """Public shared lesson page (no auth required)."""
     db = get_db()
     lesson_row = db.get_lesson_by_token(token)
@@ -612,36 +616,36 @@ def _register_page_routes(app: FastAPI, templates: Jinja2Templates) -> None:
     app.post("/api/auth/bootstrap")(_page_auth_bootstrap)
 
     @app.get("/", response_class=HTMLResponse)
-    async def index(request: Request):
+    async def index(request: Request) -> Any:
         return await _page_index(request, templates)
 
     @app.get("/dashboard", response_class=HTMLResponse)
-    async def dashboard(request: Request):
+    async def dashboard(request: Request) -> HTMLResponse:
         return await _page_dashboard(request, templates)
 
     @app.get("/lessons", response_class=HTMLResponse)
-    async def lessons_list_page(request: Request):
+    async def lessons_list_page(request: Request) -> HTMLResponse:
         return await _page_lessons_list(request)
 
     @app.get("/generate", response_class=HTMLResponse)
-    async def generate_page(request: Request):
+    async def generate_page(request: Request) -> HTMLResponse:
         return await _page_generate(request, templates)
 
     @app.get("/settings", response_class=HTMLResponse)
-    async def settings_page(request: Request):
+    async def settings_page(request: Request) -> HTMLResponse:
         return await _page_settings(request, templates)
 
     @app.get("/stats", response_class=HTMLResponse)
-    async def stats_page(request: Request):
+    async def stats_page(request: Request) -> HTMLResponse:
         return await _page_stats(request, templates)
 
     @app.get("/lesson/{lesson_id}", response_class=HTMLResponse)
-    async def lesson_page(request: Request, lesson_id: str):
+    async def lesson_page(request: Request, lesson_id: str) -> HTMLResponse:
         return await _page_lesson_detail(request, lesson_id, templates)
 
     @app.get("/share/{token}", response_class=HTMLResponse)
     @app.get("/shared/{token}", response_class=HTMLResponse)
-    async def share_page(request: Request, token: str):
+    async def share_page(request: Request, token: str) -> HTMLResponse:
         return await _page_share(request, token, templates)
 
 
@@ -658,14 +662,15 @@ def _register_classroom_endpoints(app: FastAPI) -> None:
 
             qr = qrcode.make(data)
             buf = io.BytesIO()
-            qr.save(buf, format="PNG")
+            # qrcode returns a PIL image whose .save accepts a format kwarg at runtime
+            qr.save(buf, format="PNG")  # type: ignore[call-arg]
             b64 = base64.b64encode(buf.getvalue()).decode()
             return f'<img src="data:image/png;base64,{b64}" alt="QR Code" width="200">'
         except ImportError:
             return f'<a href="{data}">{data}</a>'
 
     @app.get("/student/{class_code}", response_class=HTMLResponse)
-    async def student_class_page(request: Request, class_code: str):
+    async def student_class_page(request: Request, class_code: str) -> HTMLResponse:
         """Minimal student-facing page for a class code."""
         from clawed.state import _get_conn, init_db
 
@@ -754,7 +759,7 @@ h1 {{ color: #1a73e8; margin-bottom: 8px; }}
         return HTMLResponse(page_html)
 
 
-def _safe_state_query(sql: str, params: tuple = ()) -> list[dict]:
+def _safe_state_query(sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
     """Run a read query against state DB, returning list of Row dicts."""
     try:
         from clawed.state import _get_conn, init_db
@@ -767,13 +772,13 @@ def _safe_state_query(sql: str, params: tuple = ()) -> list[dict]:
         return []
 
 
-def _build_daily_series(teacher_id: str) -> tuple[list[dict], list[dict]]:
+def _build_daily_series(teacher_id: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Build daily lessons and daily questions series for last 7 days."""
     day_names_short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     today = datetime.now().date()
 
-    daily_lessons: list[dict] = []
-    daily_questions: list[dict] = []
+    daily_lessons: list[dict[str, Any]] = []
+    daily_questions: list[dict[str, Any]] = []
     for i in range(6, -1, -1):
         d = today - timedelta(days=i)
         daily_lessons.append({"date": d.isoformat(), "label": day_names_short[d.weekday()], "count": 0})
@@ -801,7 +806,7 @@ def _build_daily_series(teacher_id: str) -> tuple[list[dict], list[dict]]:
     return daily_lessons, daily_questions
 
 
-async def _page_analytics(request: Request, templates: Jinja2Templates):
+async def _page_analytics(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Analytics page with topic frequency, daily trends, quality trend."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -855,7 +860,7 @@ async def _page_analytics(request: Request, templates: Jinja2Templates):
     })
 
 
-async def _page_library(request: Request, templates: Jinja2Templates):
+async def _page_library(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Library view -- reuses _build_dashboard_context for consistency."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -874,14 +879,14 @@ async def _page_library(request: Request, templates: Jinja2Templates):
     })
 
 
-async def _page_students(request: Request, templates: Jinja2Templates):
+async def _page_students(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Students page -- chat activity and student engagement."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
     db = get_db()
     stats = db.get_stats()
 
-    lesson_chats: list[dict] = []
+    lesson_chats: list[dict[str, Any]] = []
     units = db.list_units()
     for u in units[:10]:
         for lesson in db.list_lessons(u["id"]):
@@ -903,7 +908,7 @@ async def _page_students(request: Request, templates: Jinja2Templates):
     })
 
 
-async def _page_profile(request: Request, templates: Jinja2Templates):
+async def _page_profile(request: Request, templates: Jinja2Templates) -> HTMLResponse:
     """Profile page with API keys, state frameworks, telegram config."""
     if not _check_page_auth(request):
         return _AUTH_DENIED
@@ -941,19 +946,19 @@ def _register_community_endpoints(app: FastAPI, templates: Jinja2Templates) -> N
     """Register analytics, library, students, and profile page routes."""
 
     @app.get("/analytics", response_class=HTMLResponse)
-    async def analytics_page(request: Request):
+    async def analytics_page(request: Request) -> HTMLResponse:
         return await _page_analytics(request, templates)
 
     @app.get("/library", response_class=HTMLResponse)
-    async def library_page(request: Request):
+    async def library_page(request: Request) -> HTMLResponse:
         return await _page_library(request, templates)
 
     @app.get("/students", response_class=HTMLResponse)
-    async def students_page(request: Request):
+    async def students_page(request: Request) -> HTMLResponse:
         return await _page_students(request, templates)
 
     @app.get("/profile", response_class=HTMLResponse)
-    async def profile_page(request: Request):
+    async def profile_page(request: Request) -> HTMLResponse:
         return await _page_profile(request, templates)
 
 

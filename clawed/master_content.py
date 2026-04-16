@@ -9,10 +9,14 @@ usage.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, field_validator
 
 from clawed.models import DifferentiationNotes  # reuse — do not duplicate
+
+if TYPE_CHECKING:
+    from clawed.models import DailyLesson
 
 logger = logging.getLogger(__name__)
 
@@ -286,7 +290,7 @@ class MasterContent(BaseModel):
         default="",
         description="One-line theme/character for the lesson (e.g. 'Today we're detectives investigating...')",
     )
-    minute_by_minute: list[dict] = Field(
+    minute_by_minute: list[dict[str, Any]] = Field(
         default_factory=list,
         description="[{'time': '0:00-3:00', 'activity': 'Do Now', 'teacher_moves': '...'}]",
     )
@@ -335,7 +339,7 @@ class MasterContent(BaseModel):
 
     # ── backwards-compat bridge ────────────────────────────────────────────
 
-    def to_daily_lesson(self) -> DailyLesson:  # noqa: F821 — resolved at runtime
+    def to_daily_lesson(self) -> DailyLesson:
         """Return a legacy ``DailyLesson`` compiled from this MasterContent.
 
         Allows existing code that expects ``DailyLesson`` objects to continue

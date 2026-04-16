@@ -183,8 +183,8 @@ async def suggest_improvements(
     )
 
     # Handle both list and dict responses
-    if isinstance(raw, list):
-        return [str(s) for s in raw[:5]]
+    if isinstance(raw, list):  # type: ignore[unreachable]
+        return [str(s) for s in raw[:5]]  # type: ignore[unreachable]
     elif isinstance(raw, dict) and "suggestions" in raw:
         return [str(s) for s in raw["suggestions"][:5]]
     return [str(raw)]

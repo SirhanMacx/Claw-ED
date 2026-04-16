@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.panel import Panel
@@ -40,7 +41,9 @@ generate_app = typer.Typer()
 # ── Lesson generation ────────────────────────────────────────────────────
 
 
-def _build_unit_plan(topic: str, subject: str, grade: str, unit_file: str | None, lesson_num: int):
+def _build_unit_plan(
+    topic: str, subject: str, grade: str, unit_file: str | None, lesson_num: int
+) -> tuple[Any, int]:
     """Build or load a UnitPlan and return (unit_plan, lesson_number)."""
     if unit_file:
         from clawed.planner import load_unit
@@ -107,7 +110,16 @@ def _search_materials_cli(topic: str) -> str:
     return kb_prompt_section
 
 
-def _run_multi_agent(topic, grade, subject, persona, kb_prompt_section, lesson_num, unit_plan, homework):
+def _run_multi_agent(
+    topic: str,
+    grade: str,
+    subject: str,
+    persona: Any,
+    kb_prompt_section: str,
+    lesson_num: int,
+    unit_plan: Any,
+    homework: bool,
+) -> Any:
     """Run multi-agent pipeline, falling back to single-agent on failure. Returns daily lesson."""
     from clawed.compile_teacher import compile_teacher_view
     from clawed.lesson import generate_lesson
@@ -146,7 +158,7 @@ def _run_multi_agent(topic, grade, subject, persona, kb_prompt_section, lesson_n
     return daily
 
 
-def _show_quality_review(export_path) -> None:
+def _show_quality_review(export_path: Path | str | None) -> None:
     """Show quality review results for an exported file."""
     if not export_path:
         return
@@ -177,7 +189,15 @@ def _show_quality_review(export_path) -> None:
         pass
 
 
-def _lesson_json(*, topic, grade, subject, fmt, unit_file=None, lesson_number=1):
+def _lesson_json(
+    *,
+    topic: str,
+    grade: str,
+    subject: str,
+    fmt: str,
+    unit_file: str | None = None,
+    lesson_number: int = 1,
+) -> dict[str, Any]:
     """Run lesson generation and return structured result for JSON output."""
     from clawed.export_markdown import export_lesson
     from clawed.lesson import generate_lesson, save_lesson
@@ -243,7 +263,7 @@ def lesson(
         help="Export: handout, docx, pptx, pdf, markdown",
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Generate a detailed daily lesson plan.
 
     \b
@@ -325,7 +345,7 @@ def lesson(
     export_path = None
     if fmt in ("pptx", "docx", "pdf", "handout"):
         try:
-            from clawed.doc_export import (
+            from clawed.doc_export import (  # type: ignore[attr-defined]  # names re-exported implicitly; doc_export lacks an __all__
                 export_lesson_docx,
                 export_lesson_pdf,
                 export_lesson_pptx,

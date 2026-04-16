@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -45,14 +46,14 @@ class SubPacket(BaseModel):
 
     @field_validator("student_notes", mode="before")
     @classmethod
-    def _coerce_student_notes(cls, v):
+    def _coerce_student_notes(cls, v: Any) -> Any:
         if isinstance(v, list):
             return "\n".join(str(item) for item in v)
         return v
 
     @field_validator("emergency_info", mode="before")
     @classmethod
-    def coerce_emergency_info(cls, v):
+    def coerce_emergency_info(cls, v: Any) -> str:
         if isinstance(v, dict):
             return json.dumps(v)
         return str(v) if v else ""

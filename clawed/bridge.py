@@ -79,7 +79,7 @@ def _inject_api_keys() -> None:
             os.environ[env_var] = secrets[secret_key]
 
 
-def _build_config(provider: str | None, model: str | None):
+def _build_config(provider: str | None, model: str | None) -> Any:
     """Load AppConfig, optionally overriding provider/model."""
     from clawed.models import AppConfig, LLMProvider
 
@@ -110,7 +110,7 @@ def _build_config(provider: str | None, model: str | None):
     return config
 
 
-def _resolve_model(config, model: str | None) -> str:
+def _resolve_model(config: Any, model: str | None) -> str:
     """Determine the actual model name from config and override."""
     if model:
         return model
@@ -294,7 +294,7 @@ async def _handle_chat_with_tools(
     messages: list[dict[str, Any]],
     system: str,
     tools: list[dict[str, Any]],
-    config,
+    config: Any,
     used_model: str,
 ) -> dict[str, Any]:
     """Route a tool-capable request through agent.py's native tool functions.
@@ -318,7 +318,7 @@ async def _handle_chat_with_tools(
 
         # Also patch the reference inside agent.py (it imported at module load)
         import clawed.agent as _agent_mod
-        _agent_mod.TOOL_DEFINITIONS = tools
+        _agent_mod.TOOL_DEFINITIONS = tools  # type: ignore[attr-defined]
 
         # Convert messages from Anthropic content-block format to the
         # internal dict format that agent.py expects.
@@ -334,7 +334,7 @@ async def _handle_chat_with_tools(
         # Restore original definitions
         _tools_mod.TOOL_DEFINITIONS = original_defs
         import clawed.agent as _agent_mod
-        _agent_mod.TOOL_DEFINITIONS = original_defs
+        _agent_mod.TOOL_DEFINITIONS = original_defs  # type: ignore[attr-defined]
 
     # ── Build the response in Anthropic content-block format ───────────
     if response["type"] == "text":

@@ -6,6 +6,8 @@ validation strict.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from clawed.master_content import (
@@ -134,7 +136,7 @@ class Phase3Activities(BaseModel):
     jigsaw: JigsawStructure | None = None
     creative_activity: CreativeActivity | None = None
     independent_work: IndependentWork | None = None
-    minute_by_minute: list[dict] = Field(default_factory=list)
+    minute_by_minute: list[dict[str, Any]] = Field(default_factory=list)
 
 
 # ══════════════════════════════════════════════════════════════════════

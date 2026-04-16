@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -21,7 +22,7 @@ from clawed.commands._helpers import (
 game_app = typer.Typer(help="Create interactive HTML learning games from lesson content.")
 
 
-def _game_create_json(*, topic, grade, subject, style, students):
+def _game_create_json(*, topic: str, grade: str, subject: str, style: str, students: str) -> dict[str, Any]:
     """Run game creation and return structured result for JSON output."""
     from clawed.compile_game import compile_game
     from clawed.lesson import generate_master_content
@@ -93,7 +94,7 @@ def create(
         help="Generate game from existing lesson JSON file",
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Generate an interactive HTML learning game.
 
     \b
@@ -220,7 +221,7 @@ def create(
 
 
 @game_app.command("gallery")
-def gallery():
+def gallery() -> None:
     """Open the local game gallery — all games you've generated."""
     out_dir = _output_dir()
     games = sorted(out_dir.glob("game_*.html"))

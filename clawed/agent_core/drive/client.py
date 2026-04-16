@@ -52,7 +52,7 @@ class DriveClient:
                 "Drive rate limit exceeded. Try again later."
             )
 
-    def _get_service(self):
+    def _get_service(self) -> Any:
         """Build the Google Drive API service.
 
         Requires: pip install 'clawed[google]'
@@ -66,6 +66,8 @@ class DriveClient:
             ) from e
 
         token_data = load_token(self._token_path)
+        if token_data is None:
+            raise RuntimeError("Google Drive token missing; run: clawed drive auth")
         creds = Credentials(
             token=token_data["access_token"],
             refresh_token=token_data.get("refresh_token"),
@@ -92,7 +94,8 @@ class DriveClient:
             )
             .execute()
         )
-        return results.get("files", [])
+        files: list[dict[str, Any]] = results.get("files", [])
+        return files
 
     async def upload_file(
         self,
@@ -109,7 +112,7 @@ class DriveClient:
         name = file_name or file_path.name
         file_metadata = {"name": name, "parents": [folder_id]}
         media = MediaFileUpload(str(file_path))
-        result = (
+        result: dict[str, Any] = (
             service.files()
             .create(
                 body=file_metadata,
@@ -134,7 +137,7 @@ class DriveClient:
             "mimeType": "application/vnd.google-apps.folder",
             "parents": [parent_id],
         }
-        result = (
+        result: dict[str, Any] = (
             service.files()
             .create(
                 body=file_metadata,
@@ -159,7 +162,7 @@ class DriveClient:
             "mimeType": "application/vnd.google-apps.presentation",
             "parents": [folder_id],
         }
-        result = (
+        result: dict[str, Any] = (
             service.files()
             .create(
                 body=file_metadata,
@@ -184,7 +187,7 @@ class DriveClient:
             "mimeType": "application/vnd.google-apps.document",
             "parents": [folder_id],
         }
-        result = (
+        result: dict[str, Any] = (
             service.files()
             .create(
                 body=file_metadata,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 
 from clawed.commands._helpers import console, run_async
@@ -32,7 +34,7 @@ def submit(
         console.print(f"  Valid types: {', '.join(type_map)}")
         raise typer.Exit(1)
 
-    payload: dict = {"topic": topic, "grade": grade, "subject": subject}
+    payload: dict[str, Any] = {"topic": topic, "grade": grade, "subject": subject}
     if unit_path:
         payload["unit_path"] = unit_path
     if resolved == TaskType.GENERATE_LESSON:

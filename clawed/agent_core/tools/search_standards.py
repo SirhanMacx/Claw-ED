@@ -51,7 +51,7 @@ class SearchStandardsTool:
             if not results:
                 return ToolResult(
                     text=f"No standards found for {subject}"
-                    f"{' grade ' + (grade or '') if grade else ''}."
+                    f"{' grade ' + grade if grade else ''}."
                 )
             lines = [f"Standards for {subject.title()}"
                      f"{' Grade ' + grade if grade else ''}:"]

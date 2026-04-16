@@ -10,7 +10,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-def _default_db():
+def _default_db() -> Path:
     from clawed.paths import approvals_db
     return approvals_db()
 
@@ -161,7 +161,8 @@ class ApprovalTracker:
         if action_type not in rates:
             return False
         r = rates[action_type]
-        return r["total"] >= _MIN_SAMPLES and r["approval_rate"] >= _AUTO_THRESHOLD
+        result: bool = r["total"] >= _MIN_SAMPLES and r["approval_rate"] >= _AUTO_THRESHOLD
+        return result
 
     def summarize_for_prompt(self) -> str:
         """Summarize approval patterns for the system prompt."""

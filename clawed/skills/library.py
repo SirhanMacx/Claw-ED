@@ -13,7 +13,7 @@ from clawed.skills.base import SubjectSkill
 logger = logging.getLogger(__name__)
 
 # Default location for user-defined custom YAML skills
-def _custom_skills_dir():
+def _custom_skills_dir() -> Path:
     from clawed.paths import custom_skills_dir
     return custom_skills_dir()
 

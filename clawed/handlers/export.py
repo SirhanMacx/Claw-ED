@@ -74,19 +74,26 @@ class ExportHandler:
             logger.error("Export failed: %s", e)
             return GatewayResponse(text=f"Export failed: {e}")
 
-    async def _do_export(self, lesson, persona, output_dir, fmt, teacher_id: str = "") -> Path:
-        from clawed.doc_export import (
+    async def _do_export(
+        self,
+        lesson: DailyLesson,
+        persona: TeacherPersona | None,
+        output_dir: Path,
+        fmt: str,
+        teacher_id: str = "",
+    ) -> Path:
+        from clawed.doc_export import (  # type: ignore[attr-defined]
             export_lesson_docx,
             export_lesson_pdf,
             export_lesson_pptx,
             export_student_handout,
         )
         if fmt == "slides":
-            return export_lesson_pptx(lesson, persona, output_dir, teacher_id=teacher_id)
+            return export_lesson_pptx(lesson, persona, output_dir, teacher_id=teacher_id)  # type: ignore[arg-type]
         elif fmt == "handout":
-            return export_student_handout(lesson, persona, output_dir)
+            return export_student_handout(lesson, persona, output_dir)  # type: ignore[arg-type]
         elif fmt == "doc":
-            return export_lesson_docx(lesson, persona, output_dir)
+            return export_lesson_docx(lesson, persona, output_dir)  # type: ignore[arg-type]
         elif fmt == "pdf":
-            return export_lesson_pdf(lesson, persona, output_dir)
+            return export_lesson_pdf(lesson, persona, output_dir)  # type: ignore[arg-type]
         raise ValueError(f"Unknown export format: {fmt}")

@@ -7,11 +7,12 @@ prerequisite/builds_on/related_to relationships from document structure.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from clawed.noise_words import ALL_NOISE as _STOP_WORDS
 
 # Standard code patterns
-_STANDARD_PATTERNS = [
+_STANDARD_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\bCCSS\.[A-Z]+\.\w+\.\d+[\.\d]*\b"),   # CCSS.ELA.RL.8.1
     re.compile(r"\bNGSS\s*[-:]?\s*\w+-\w+[-\d]+\b"),     # NGSS HS-PS1-1
     re.compile(r"\bNY\s*\d+[A-Z]?\.\d+\b"),               # NY state standards
@@ -24,15 +25,15 @@ def extract_entities_from_document(
     doc_title: str,
     content: str,
     tags: list[str] | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Extract curriculum entities from a parsed document.
 
     Returns list of {"name": ..., "entity_type": ..., "properties": {...}}
     """
-    entities: list[dict] = []
+    entities: list[dict[str, Any]] = []
     seen_names: set[str] = set()
 
-    def _add(name: str, etype: str, props: dict | None = None) -> None:
+    def _add(name: str, etype: str, props: dict[str, Any] | None = None) -> None:
         clean = name.strip()
         if len(clean) < 3 or clean.lower() in _STOP_WORDS:
             return
@@ -94,8 +95,8 @@ def extract_entities_from_document(
         r"(?:key\s+)?(?:vocabulary|terms|words)\s*[:\-]\s*(.+?)(?:\n\n|\Z)",
         r"(?:define|definitions)\s*[:\-]\s*(.+?)(?:\n\n|\Z)",
     ]
-    for pat in vocab_patterns:
-        for m in re.finditer(pat, content[:5000], re.IGNORECASE | re.DOTALL):
+    for vocab_pat in vocab_patterns:
+        for m in re.finditer(vocab_pat, content[:5000], re.IGNORECASE | re.DOTALL):
             block = m.group(1)
             # Split on commas, semicolons, bullets, or newlines
             terms = re.split(r"[,;\n•\-\*]+", block)
@@ -112,10 +113,10 @@ def extract_entities_from_document(
 
 
 def infer_relationships(
-    entities: list[dict],
+    entities: list[dict[str, Any]],
     doc_title: str,
     doc_sequence_hint: int | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Infer relationships between extracted entities.
 
     Returns list of {"subject": ..., "predicate": ..., "object": ..., "confidence": ...}
@@ -123,7 +124,7 @@ def infer_relationships(
     if not entities:
         return []
 
-    relationships: list[dict] = []
+    relationships: list[dict[str, Any]] = []
     primary_topic = entities[0]["name"] if entities else doc_title
 
     for ent in entities[1:]:
@@ -172,8 +173,8 @@ def extract_standard_codes(text: str) -> list[str]:
 
 
 def infer_lesson_ordering_relationships(
-    docs: list,
-) -> list[dict]:
+    docs: list[Any],
+) -> list[dict[str, Any]]:
     """Infer prerequisite_for / builds_on relationships from lesson ordering.
 
     Looks at document titles for patterns like "Lesson 1", "Day 2", "Unit 3"
@@ -186,7 +187,7 @@ def infer_lesson_ordering_relationships(
     Returns:
         list of {"subject": ..., "predicate": ..., "object": ..., "confidence": ...}
     """
-    relationships: list[dict] = []
+    relationships: list[dict[str, Any]] = []
 
     # Group documents by inferred unit/sequence
     sequence_pat = re.compile(

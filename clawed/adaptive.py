@@ -13,7 +13,7 @@ This is the feedback loop that closes the planning-to-outcomes gap.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 def analyze_performance(
-    grading_results: list[dict],
-) -> dict:
+    grading_results: list[dict[str, Any]],
+) -> dict[str, Any]:
     """Analyze a batch of exit ticket grading results.
 
     Args:
@@ -88,7 +88,7 @@ def analyze_performance(
 
 
 def generate_adjustment_context(
-    performance: dict,
+    performance: dict[str, Any],
     previous_topic: str = "",
 ) -> str:
     """Generate prompt context for the NEXT lesson based on performance data.
@@ -151,7 +151,7 @@ def generate_adjustment_context(
 
 def generate_parent_notification(
     student_name: str,
-    performance: dict,
+    performance: dict[str, Any],
     lesson_topic: str,
 ) -> str:
     """Draft a parent notification based on student performance.

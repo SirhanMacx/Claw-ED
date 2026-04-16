@@ -5,18 +5,19 @@ Extracted from tg.py lines 1501-1582.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from clawed.gateway_response import Button, GatewayResponse
 
 logger = logging.getLogger(__name__)
 
 
-def _lazy_rate_lesson(user_id, lesson_id, rating):
+def _lazy_rate_lesson(user_id: str, lesson_id: str, rating: int) -> Any:
     from clawed.analytics import rate_lesson
     return rate_lesson(user_id, lesson_id, rating)
 
 
-def _lazy_get_teacher_stats(teacher_id):
+def _lazy_get_teacher_stats(teacher_id: str) -> dict[str, Any]:
     from clawed.analytics import get_teacher_stats
     return get_teacher_stats(teacher_id)
 
@@ -25,7 +26,13 @@ rate_lesson = _lazy_rate_lesson
 get_teacher_stats = _lazy_get_teacher_stats
 
 
-def memory_process(lesson, rating, notes=None, edited_sections=None, subject=None):
+def memory_process(
+    lesson: Any,
+    rating: int,
+    notes: Any = None,
+    edited_sections: Any = None,
+    subject: Any = None,
+) -> list[Any]:
     try:
         from clawed.memory_engine import process_feedback
         return process_feedback(lesson, rating, notes, edited_sections, subject)

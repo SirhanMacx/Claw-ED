@@ -192,7 +192,7 @@ def _extract_do_now_pattern(do_now_text: str, patterns: list[dict[str, str]]) ->
 # ── Memory.md read/write ─────────────────────────────────────────────
 
 
-def _get_memory_path():
+def _get_memory_path() -> Path:
     """Get the memory.md path, respecting EDUAGENT_DATA_DIR."""
     from clawed.workspace import MEMORY_PATH
     return MEMORY_PATH
@@ -611,7 +611,8 @@ def _load_stats(stats_path: Path) -> dict[str, Any]:
     """Load lesson stats from disk."""
     if stats_path.exists():
         try:
-            return json.loads(stats_path.read_text(encoding="utf-8"))
+            data = json.loads(stats_path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
         except (json.JSONDecodeError, OSError):
             return {}
     return {}

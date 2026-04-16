@@ -54,7 +54,8 @@ def get_oauth_token() -> str | None:
         # If refresh fails, try the current token anyway
         logger.warning("Token refresh failed, using existing token")
 
-    return oauth["accessToken"]
+    access_token: str | None = oauth["accessToken"]
+    return access_token
 
 
 def _refresh_token(refresh_token: str | None) -> str | None:
@@ -89,7 +90,7 @@ def _refresh_token(refresh_token: str | None) -> str | None:
             return None
 
         data = resp.json()
-        new_token = data["access_token"]
+        new_token: str = data["access_token"]
         new_refresh = data.get("refresh_token", refresh_token)
         expires_in = data.get("expires_in", 3600)
 

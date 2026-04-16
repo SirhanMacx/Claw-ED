@@ -72,7 +72,8 @@ def _load_compile_state() -> dict[str, Any]:
     """Read _compile_state.json, return empty dict if missing."""
     if COMPILE_STATE_PATH.exists():
         try:
-            return json.loads(COMPILE_STATE_PATH.read_text(encoding="utf-8"))
+            loaded: dict[str, Any] = json.loads(COMPILE_STATE_PATH.read_text(encoding="utf-8"))
+            return loaded
         except (json.JSONDecodeError, OSError):
             return {}
     return {}
@@ -233,7 +234,7 @@ async def compile_wiki(
     state = _load_compile_state()
 
     # Filter to only docs that need compilation
-    to_compile: list[tuple[str, list[dict], str]] = []
+    to_compile: list[tuple[str, list[dict[str, Any]], str]] = []
     for doc_title, chunks in doc_groups.items():
         doc_hash = _compute_doc_hash(chunks)
         prev = state.get(doc_title, {})
@@ -254,7 +255,7 @@ async def compile_wiki(
     compiled_count = 0
 
     async def _compile_one(
-        title: str, chunks: list[dict], doc_hash: str,
+        title: str, chunks: list[dict[str, Any]], doc_hash: str,
     ) -> tuple[str, str | None, str]:
         """Compile one article under semaphore."""
         async with sem:
@@ -363,12 +364,12 @@ async def query_wiki(question: str) -> QueryResult:
                     pick_text = line
                     break
         if pick_text.startswith("["):
-            selected = json.loads(pick_text)
+            selected = list(json.loads(pick_text))
         else:
             # Fallback: try json_repair
             try:
                 import json_repair
-                selected = json_repair.loads(pick_text)
+                selected = list(json_repair.loads(pick_text))  # type: ignore[arg-type]
             except ImportError:
                 pass
     except (json.JSONDecodeError, TypeError):

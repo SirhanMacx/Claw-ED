@@ -10,6 +10,8 @@ The actual command implementations live in:
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 
 from clawed import __version__
@@ -235,12 +237,14 @@ def debug() -> None:
     console.print("\n  [dim]Testing LLM call...[/dim]")
     try:
         from clawed.gateway import Gateway
-        gw = Gateway(config=cfg)
-        result = asyncio.run(gw.handle("say hello in one word", "debug-test"))
-        if "went wrong" in result.text.lower() or "provider key" in result.text.lower():
-            console.print(f"  [red]LLM test failed: {result.text}[/red]")
+        # Gateway() is a factory; typed Any because the concrete gateway class
+        # is resolved at runtime via config.
+        gw: Any = Gateway(config=cfg)
+        llm_result: Any = asyncio.run(gw.handle("say hello in one word", "debug-test"))
+        if "went wrong" in llm_result.text.lower() or "provider key" in llm_result.text.lower():
+            console.print(f"  [red]LLM test failed: {llm_result.text}[/red]")
         else:
-            console.print(f"  [green]LLM test passed: {result.text[:80]}[/green]")
+            console.print(f"  [green]LLM test passed: {llm_result.text[:80]}[/green]")
     except Exception as e:
         console.print(f"  [red]LLM test error: {e}[/red]")
 

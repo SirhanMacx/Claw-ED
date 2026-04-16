@@ -133,14 +133,14 @@ OPENROUTER_FREE_MODELS = [
 ]
 
 
-def list_all_models(config: Any = None) -> dict[str, list[dict]]:
+def list_all_models(config: Any = None) -> dict[str, list[dict[str, Any]]]:
     """List models from all configured providers.
 
     Returns: {"ollama": [...], "openrouter": [...], "anthropic": [...], ...}
     """
     from clawed.config import get_api_key
 
-    result: dict[str, list[dict]] = {}
+    result: dict[str, list[dict[str, Any]]] = {}
 
     # Ollama (dynamic discovery)
     if config:

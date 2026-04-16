@@ -26,6 +26,7 @@ import os
 import re
 import time
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -268,7 +269,7 @@ def _get_topic_queries(title: str) -> list[str]:
     return []
 
 
-def extract_image_subjects(lesson) -> list[dict]:
+def extract_image_subjects(lesson: Any) -> list[dict[str, Any]]:
     """Extract specific people, places, and artifacts from lesson content for targeted image search.
 
     Priority:
@@ -279,7 +280,7 @@ def extract_image_subjects(lesson) -> list[dict]:
     Filters out verb phrases, section headers, and other non-entity strings
     that regex would otherwise match.
     """
-    subjects: list[dict] = []
+    subjects: list[dict[str, Any]] = []
     all_text = " ".join(filter(None, [
         getattr(lesson, 'title', ''),
         getattr(lesson, 'objective', ''),
@@ -382,7 +383,7 @@ def extract_image_subjects(lesson) -> list[dict]:
     # most iconic/relevant images for the lesson topic (e.g. Columbus
     # portrait for Age of Exploration). Regex entities follow after.
     if topic_queries:
-        result: list[dict] = [{"query": q, "type": "topic", "label": q} for q in topic_queries]
+        result: list[dict[str, Any]] = [{"query": q, "type": "topic", "label": q} for q in topic_queries]
         # Append any regex-found entities that aren't already covered
         for s in subjects:
             if len(result) >= 5:
@@ -522,7 +523,7 @@ async def _fetch_loc(
         return cached
 
     url = "https://www.loc.gov/search/"
-    params = {
+    params: dict[str, str | int] = {
         "q": query,
         "fa": "online-format:image",
         "fo": "json",
@@ -705,7 +706,7 @@ async def _fetch_unsplash(
         return cached
 
     url = "https://api.unsplash.com/search/photos"
-    params = {
+    params: dict[str, str | int] = {
         "query": query,
         "per_page": 1,
         "orientation": "landscape",
@@ -748,7 +749,7 @@ async def _fetch_unsplash(
 
 
 def _score_teacher_image_row(
-    row: object,
+    row: Any,
     keywords: list[str],
     query_lower: str,
 ) -> int:
@@ -794,7 +795,7 @@ def _score_teacher_image_row(
 def _query_teacher_images_db(
     search_keywords: list[str],
     limit: int = 150,
-) -> list:
+) -> list[Any]:
     """Run a SQL query against the teacher's image database.
 
     Returns matching rows with image_path, context_text, and title.
@@ -833,7 +834,7 @@ def _query_teacher_images_db(
 
 
 def _best_from_rows(
-    rows: list,
+    rows: list[Any],
     keywords: list[str],
     query_lower: str,
     min_score: int = 4,
@@ -1124,7 +1125,7 @@ async def _fetch_web_scrape(
 
 
 # Source name -> fetcher function mapping
-_SOURCE_FETCHERS: dict = {
+_SOURCE_FETCHERS: dict[str, Any] = {
     "teacher_files": _fetch_teacher_image,
     "web": _fetch_web_scrape,
     "loc": _fetch_loc,
@@ -1174,7 +1175,7 @@ async def fetch_slide_image(
         try:
             # Pass subject to teacher image fetcher for subject-aware broadening
             if source_name == "teacher_files":
-                path = await fetcher(query, cache_dir, subject=subject)
+                path: Path | None = await fetcher(query, cache_dir, subject=subject)
             else:
                 path = await fetcher(query, cache_dir)
             if path:
@@ -1224,7 +1225,7 @@ async def fetch_content_image(
                 continue
             try:
                 if source_name == "teacher_files":
-                    path = await fetcher(query, cache_dir, subject=subject)
+                    path: Path | None = await fetcher(query, cache_dir, subject=subject)
                 else:
                     path = await fetcher(query, cache_dir)
                 if path:

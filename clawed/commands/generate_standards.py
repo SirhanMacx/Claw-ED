@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.panel import Panel
@@ -25,7 +26,13 @@ from clawed.models import AppConfig
 # ── Curriculum gap analyzer ──────────────────────────────────────────────
 
 
-def _gap_analyze_json(*, subject, grade, standards, materials_dir):
+def _gap_analyze_json(
+    *,
+    subject: str,
+    grade: str,
+    standards: str | None,
+    materials_dir: str | None,
+) -> dict[str, Any]:
     """Run gap analysis and return structured result for JSON output."""
     from clawed.curriculum_map import CurriculumMapper
     from clawed.models import CurriculumGap, TeacherPersona
@@ -59,7 +66,7 @@ def _gap_analyze_json(*, subject, grade, standards, materials_dir):
         from clawed.paths import data_dir
         corpus_base = data_dir()
         if getattr(cfg, "active_teacher_id", None):
-            corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
+            corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"  # type: ignore[attr-defined]  # active_teacher_id is dynamic field not on AppConfig schema
         else:
             corpus_base = corpus_base / "corpus"
         if corpus_base.is_dir():
@@ -125,7 +132,7 @@ def gap_analyze(
     ),
     fmt: str = typer.Option("html", "--format", "-f", help="Output format: html or markdown"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Analyze existing materials against standards and identify curriculum gaps.
 
     Scans teacher materials, compares them to the provided standards, and
@@ -196,7 +203,9 @@ def gap_analyze(
     _export_gap_report(gaps, subject, grade, fmt, len(materials_list), len(standards_list))
 
 
-def _resolve_standards(standards_arg, subject, grade):
+def _resolve_standards(
+    standards_arg: str | None, subject: str, grade: str
+) -> list[str]:
     """Resolve standards from arg (file path or comma-separated) or auto-infer."""
     standards_list: list[str] = []
     if standards_arg:
@@ -210,7 +219,7 @@ def _resolve_standards(standards_arg, subject, grade):
     return standards_list
 
 
-def _collect_materials(materials_dir_arg):
+def _collect_materials(materials_dir_arg: str | None) -> list[str]:
     """Collect material file names from directory or default corpus."""
     mat_path: Path | None = None
     if materials_dir_arg:
@@ -223,7 +232,7 @@ def _collect_materials(materials_dir_arg):
         from clawed.paths import data_dir
         corpus_base = data_dir()
         if getattr(cfg, "active_teacher_id", None):
-            corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"
+            corpus_base = corpus_base / "teachers" / cfg.active_teacher_id / "corpus"  # type: ignore[attr-defined]  # active_teacher_id is dynamic field not on AppConfig schema
         else:
             corpus_base = corpus_base / "corpus"
         if corpus_base.is_dir():
@@ -235,7 +244,7 @@ def _collect_materials(materials_dir_arg):
     return materials_list or ["(no materials found \u2014 analysis is standards-only)"]
 
 
-def _display_gap_summary(gaps, subject, grade):
+def _display_gap_summary(gaps: list[Any], subject: str, grade: str) -> None:
     """Display gap analysis results in a Rich table."""
     high = [g for g in gaps if g.severity.lower() == "high"]
     med = [g for g in gaps if g.severity.lower() == "medium"]
@@ -263,7 +272,14 @@ def _display_gap_summary(gaps, subject, grade):
     )
 
 
-def _export_gap_report(gaps, subject, grade, fmt, materials_count=0, standards_count=0):
+def _export_gap_report(
+    gaps: list[Any],
+    subject: str,
+    grade: str,
+    fmt: str,
+    materials_count: int = 0,
+    standards_count: int = 0,
+) -> None:
     """Export gap report as HTML or Markdown."""
     from datetime import datetime
 

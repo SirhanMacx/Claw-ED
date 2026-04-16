@@ -232,7 +232,7 @@ TOOL_DEFINITIONS = [
 # -- Shared helpers -------------------------------------------------------
 
 
-def _load_persona_for_tool(teacher_id: str = ""):
+def _load_persona_for_tool(teacher_id: str = "") -> Any:
     """Load persona from session first, then file path fallback."""
     from clawed.models import TeacherPersona
 
@@ -507,7 +507,7 @@ async def _tool_ingest_folder(path: str, teacher_id: str = "") -> str:
     if not resolved.exists():
         return f"Folder not found: {path}. Check the path and try again."
 
-    docs = ingest_path(str(resolved))
+    docs = ingest_path(resolved)
     if not docs:
         return (
             f"No supported files found in {path}. "

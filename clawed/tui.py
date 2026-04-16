@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import Any
 
 try:
     from textual.app import App, ComposeResult
@@ -30,8 +30,8 @@ except ImportError as e:
         "Or: pip install textual"
     ) from e
 
-if TYPE_CHECKING:
-    from clawed.gateway import EduAgentGateway
+# EduAgentGateway is a factory alias (not a real class), so use Any for type hints.
+EduAgentGateway = Any
 
 
 # ── Status icons ──────────────────────────────────────────────────────
@@ -48,10 +48,10 @@ _EVENT_ICONS = {
 # ── Widgets ───────────────────────────────────────────────────────────
 
 
-class TeacherHeader(Static):
+class TeacherHeader(Static):  # type: ignore[misc]  # Static is Any from textual stubs
     """Top banner: teacher identity and model info."""
 
-    def __init__(self, gateway: EduAgentGateway, **kwargs) -> None:
+    def __init__(self, gateway: EduAgentGateway, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._gateway = gateway
 
@@ -77,13 +77,13 @@ class TeacherHeader(Static):
         )
 
 
-class ActivityLog(Static):
+class ActivityLog(Static):  # type: ignore[misc]  # Static is Any from textual stubs
     """Scrolling activity feed — consumes gateway event_bus."""
 
-    def __init__(self, gateway: EduAgentGateway, **kwargs) -> None:
+    def __init__(self, gateway: EduAgentGateway, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._gateway = gateway
-        self._poll_task: asyncio.Task | None = None
+        self._poll_task: asyncio.Task[None] | None = None
 
     def compose(self) -> ComposeResult:
         table = DataTable(id="activity-table")
@@ -116,10 +116,10 @@ class ActivityLog(Static):
         table.clear()
 
 
-class StatsBar(Static):
+class StatsBar(Static):  # type: ignore[misc]  # Static is Any from textual stubs
     """Bottom-left: today's numbers + uptime."""
 
-    def __init__(self, gateway: EduAgentGateway, **kwargs) -> None:
+    def __init__(self, gateway: EduAgentGateway, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._gateway = gateway
 
@@ -141,10 +141,10 @@ class StatsBar(Static):
         )
 
 
-class ActivePanel(Static):
+class ActivePanel(Static):  # type: ignore[misc]  # Static is Any from textual stubs
     """Bottom-right: active sessions."""
 
-    def __init__(self, gateway: EduAgentGateway, **kwargs) -> None:
+    def __init__(self, gateway: EduAgentGateway, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._gateway = gateway
 
@@ -165,7 +165,7 @@ class ActivePanel(Static):
 # ── Main App ──────────────────────────────────────────────────────────
 
 
-class EduAgentDashboard(App):
+class EduAgentDashboard(App):  # type: ignore[misc]  # App is Any from textual stubs
     """Claw-ED TUI — live dashboard for monitoring the gateway."""
 
     TITLE = "Claw-ED Dashboard"
@@ -217,7 +217,7 @@ class EduAgentDashboard(App):
         Binding("c", "clear_log", "Clear log"),
     ]
 
-    def __init__(self, gateway: EduAgentGateway, **kwargs) -> None:
+    def __init__(self, gateway: EduAgentGateway, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._gateway = gateway
 

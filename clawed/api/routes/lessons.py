@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
@@ -11,7 +13,7 @@ router = APIRouter(tags=["lessons"], dependencies=[Depends(require_auth)])
 
 
 @router.post("/lessons/{lesson_id}/share")
-async def create_share_link(lesson_id: str):
+async def create_share_link(lesson_id: str) -> Any:
     """Generate a shareable URL for a lesson."""
     db = get_db()
     lesson = db.get_lesson(lesson_id)

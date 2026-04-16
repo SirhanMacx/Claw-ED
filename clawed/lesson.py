@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from clawed.corpus import get_few_shot_context
 from clawed.llm import LLMClient
@@ -394,8 +395,15 @@ async def generate_master_content(
 
 
 async def _try_phased_pipeline(
-    lesson_number, unit, persona, include_homework, config, task_type, state, teacher_materials,
-):
+    lesson_number: int,
+    unit: UnitPlan,
+    persona: TeacherPersona,
+    include_homework: bool,
+    config: AppConfig | None,
+    task_type: str,
+    state: str,
+    teacher_materials: str,
+) -> MasterContent | None:
     """Try the 4-phase split pipeline. Returns MasterContent or None on failure."""
     try:
         from clawed.phases.pipeline import generate_master_content_phased
@@ -416,8 +424,15 @@ async def _try_phased_pipeline(
 
 
 def _build_generation_prompt(
-    lesson_brief, unit, persona, config, state, teacher_materials, objective, lesson_number,
-):
+    lesson_brief: Any,
+    unit: UnitPlan,
+    persona: TeacherPersona,
+    config: AppConfig | None,
+    state: str,
+    teacher_materials: str,
+    objective: str,
+    lesson_number: int,
+) -> tuple[str, Any]:
     """Build the full generation prompt with all context injections.
 
     Returns (prompt_text, brain_context_obj_or_None).
@@ -526,7 +541,12 @@ def _build_generation_prompt(
     return prompt, brain_ctx_obj
 
 
-async def _run_quality_gate(master, client, prompt, system):
+async def _run_quality_gate(
+    master: MasterContent,
+    client: LLMClient,
+    prompt: str,
+    system: str,
+) -> MasterContent:
     """Run quality validation with auto-retry loop. Returns (possibly new) master."""
     for attempt in range(_MAX_QUALITY_RETRIES):
         issues = _validate_quality(master)
@@ -562,7 +582,7 @@ async def _run_quality_gate(master, client, prompt, system):
     return master
 
 
-async def _run_teaching_critic(master, client):
+async def _run_teaching_critic(master: MasterContent, client: LLMClient) -> None:
     """Run LLM-based Teaching Constitution critic (non-blocking)."""
     try:
         critic_path = Path(__file__).parent / "prompts" / "teaching_constitution.txt"
@@ -586,7 +606,7 @@ async def _run_teaching_critic(master, client):
         logger.debug("Teaching Constitution critic skipped: %s", exc)
 
 
-def _write_brain_results(master, unit_title, lesson_number):
+def _write_brain_results(master: MasterContent, unit_title: str, lesson_number: int) -> None:
     """Post-generation brain writes -- capture learnings."""
     try:
         from clawed.brain.store import BrainStore
@@ -615,7 +635,7 @@ async def generate_and_compile(
     state: str = "",
     teacher_materials: str = "",
     fetch_images: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     """Generate a lesson AND compile all output files in one call.
 
     This is the recommended entry point for batch generation. It:
@@ -782,7 +802,7 @@ async def generate_lesson(
         state=state,
         teacher_materials=teacher_materials,
     )
-    daily = master.to_daily_lesson()
+    daily: DailyLesson = master.to_daily_lesson()
     daily.lesson_number = lesson_number
     return daily
 

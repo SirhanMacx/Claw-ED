@@ -70,7 +70,7 @@ class DriveIngestTool:
             kb = CurriculumKB()
             teacher_id = context.teacher_id
 
-            files = client.list_files(folder_id=folder_id)
+            files = await client.list_files(folder_id=folder_id)
             if not files:
                 return ToolResult(text="No files found in that Drive folder.")
 
@@ -98,7 +98,7 @@ class DriveIngestTool:
 
             for f in ingestable:
                 try:
-                    content_data = client.read_file(f["id"])
+                    content_data = await client.read_file(f["id"])
                     content = content_data.get("content", "")
                     if not content or len(content.strip()) < 50:
                         continue

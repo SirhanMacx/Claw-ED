@@ -172,8 +172,8 @@ class CurriculumVisualizerTool:
 
 
 def _build_canvas_html(
-    nodes: list[dict],
-    edges: list[dict],
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
     teacher_name: str,
 ) -> str:
     """Build a self-contained HTML page with canvas-based graph renderer.

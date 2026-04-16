@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import httpx
 from rich.panel import Panel
@@ -383,10 +384,11 @@ def _show_persona_preview(subjects: list[str], grade_levels: list[str], state_ab
     return confirm.lower() == "y"
 
 
-def _ask_provider_wizard() -> tuple[LLMProvider, str | None, str | None, str | None]:
+def _ask_provider_wizard() -> tuple[LLMProvider | None, str | None, str | None, str | None]:
     """New setup wizard provider selection — strongly recommends Ollama Cloud.
 
-    Returns (provider, api_key, ollama_base_url, ollama_model).
+    Returns (provider, api_key, ollama_base_url, ollama_model). The provider is
+    None when the teacher picks "Skip for now".
     """
     console.print(
         "\n[bold]Claw-ED needs an AI service to generate your lessons.[/bold]\n"
@@ -696,14 +698,16 @@ def quick_model_setup() -> str:
 
     # Configure per provider
     setup_fns = {"1": _setup_google, "2": _setup_anthropic, "3": _setup_ollama_cloud, "5": _setup_openai}
+    config: AppConfig
     if choice == "4":
         config = _setup_local_ollama(local_ollama)
     elif choice in setup_fns:
-        config = setup_fns[choice]()
-        if config is None:
+        maybe_config = setup_fns[choice]()
+        if maybe_config is None:
             AppConfig().save()
             _write_onboarding_marker()
             return "skip"
+        config = maybe_config
     else:
         config = AppConfig()
 
@@ -801,7 +805,7 @@ def run_setup_wizard(reset: bool = False) -> AppConfig:
         state=state_abbr,
     )
 
-    config_kwargs: dict = {"teacher_profile": profile}
+    config_kwargs: dict[str, Any] = {"teacher_profile": profile}
     if provider:
         config_kwargs["provider"] = provider
     if ollama_base_url:
@@ -927,6 +931,8 @@ def _run_onboarding_legacy() -> AppConfig:
         state_abbr = _ask_state()
 
     # ── API key selection ──
+    provider: LLMProvider
+    api_key: str | None
     if detected_provider and detected_provider != LLMProvider.OLLAMA:
         # Auto-detected a cloud provider, use it
         provider = detected_provider

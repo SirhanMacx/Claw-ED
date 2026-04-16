@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pptx.presentation import Presentation
@@ -25,24 +25,24 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def _hex_to_rgb(hex_color: str):
+def _hex_to_rgb(hex_color: str) -> Any:
     """Convert a 6-char hex string to pptx RGBColor."""
     from pptx.dml.color import RGBColor
 
     h = hex_color.lstrip("#")
-    return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+    return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))  # type: ignore[no-untyped-call]  # python-pptx is untyped
 
 
-def _add_slide(prs, layout_idx: int = 6):
+def _add_slide(prs: Any, layout_idx: int = 6) -> Any:
     """Add a blank slide and return it."""
     layout = prs.slide_layouts[layout_idx]
     return prs.slides.add_slide(layout)
 
 
-def _textbox(slide, left, top, width, height, text: str,
+def _textbox(slide: Any, left: Any, top: Any, width: Any, height: Any, text: str,
              font_size: int = 18, bold: bool = False,
              hex_color: str = "222222", align_center: bool = False,
-             italic: bool = False, word_wrap: bool = True):
+             italic: bool = False, word_wrap: bool = True) -> Any:
     """Add a textbox to a slide and return the shape."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Pt
@@ -63,9 +63,9 @@ def _textbox(slide, left, top, width, height, text: str,
     return tb
 
 
-def _bullet_textbox(slide, left, top, width, height,
+def _bullet_textbox(slide: Any, left: Any, top: Any, width: Any, height: Any,
                     items: list[str], font_size: int = 16,
-                    hex_color: str = "333333"):
+                    hex_color: str = "333333") -> Any:
     """Add a textbox with one paragraph per bullet item."""
     from pptx.util import Pt
 
@@ -84,8 +84,8 @@ def _bullet_textbox(slide, left, top, width, height,
     return tb
 
 
-def _embed_image(slide, image_spec: str, images: dict[str, Path],
-                 left, top, width, height) -> bool:
+def _embed_image(slide: Any, image_spec: str, images: dict[str, Path],
+                 left: Any, top: Any, width: Any, height: Any) -> bool:
     """Embed a pre-fetched image on the slide. Returns True if embedded."""
     if not image_spec:
         return False
@@ -99,7 +99,7 @@ def _embed_image(slide, image_spec: str, images: dict[str, Path],
     return False
 
 
-def _header_bar(slide, prs_width, text: str, hex_color: str) -> None:
+def _header_bar(slide: Any, prs_width: Any, text: str, hex_color: str) -> None:
     """Add a colored header bar with text at the top of a slide."""
     from pptx.util import Emu, Inches
 
@@ -211,7 +211,7 @@ def _build_vocabulary_slides(prs: Presentation, master: MasterContent) -> None:
         slide.shapes._spTree.append(bar._element)
 
         # Term entries
-        top_offset = Inches(1.0)
+        top_offset: Any = Inches(1.0)
         row_height = Inches(1.0)
         for entry in chunk:
             _textbox(
@@ -378,7 +378,7 @@ def _build_exit_ticket_slide(prs: Presentation, master: MasterContent,
     slide = _add_slide(prs)
     _header_bar(slide, W, "Exit Ticket", "7030A0")
 
-    top_offset = Inches(1.0)
+    top_offset: Any = Inches(1.0)
     for i, sq in enumerate(master.exit_ticket, 1):
         has_image = bool(sq.stimulus_image_spec and sq.stimulus_image_spec in images)
         q_width = W - Inches(5.0) if has_image else W - Inches(0.6)

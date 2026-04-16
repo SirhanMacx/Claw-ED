@@ -14,7 +14,7 @@ import logging
 import uuid
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 if TYPE_CHECKING:
@@ -221,7 +221,7 @@ async def post_to_google_classroom(
     master: MasterContent,
     course_id: str,
     file_paths: list[Path] | None = None,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """Post a lesson as coursework to Google Classroom.
 
     Requires Google Classroom API credentials (OAuth).
@@ -236,7 +236,10 @@ async def post_to_google_classroom(
         Coursework response dict, or None if not configured.
     """
     try:
-        from clawed.agent_core.drive.auth import get_credentials
+        # dynamic import handled by try/except
+        from clawed.agent_core.drive.auth import (  # type: ignore[attr-defined]
+            get_credentials,
+        )
 
         creds = get_credentials()
         if not creds:
@@ -267,7 +270,7 @@ async def post_to_google_classroom(
                 json=coursework,
             )
             resp.raise_for_status()
-            result = resp.json()
+            result: dict[str, Any] = resp.json()
 
         logger.info(
             "Posted to Google Classroom: %s (id: %s)",
@@ -283,7 +286,7 @@ async def post_to_google_classroom(
 # ── UDL 3-Tier Lesson Generation ─────────────────────────────────────
 
 
-def generate_udl_tiers(master: MasterContent) -> dict[str, dict]:
+def generate_udl_tiers(master: MasterContent) -> dict[str, dict[str, Any]]:
     """Generate 3 differentiated versions of a lesson for UDL compliance.
 
     Returns a dict with three keys:
@@ -361,7 +364,7 @@ async def grade_exit_ticket(
     student_response: str,
     question_index: int,
     master: MasterContent,
-) -> dict:
+) -> dict[str, Any]:
     """Grade a student's exit ticket response against the answer key.
 
     Uses the MasterContent expected answer + rubric to provide

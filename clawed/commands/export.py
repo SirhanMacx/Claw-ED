@@ -8,6 +8,7 @@ import re
 import subprocess
 import webbrowser
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 import typer
@@ -34,7 +35,7 @@ def _esc(text: str) -> str:
     )
 
 
-def _lesson_to_html(data: dict) -> str:
+def _lesson_to_html(data: dict[str, Any]) -> str:
     """Convert a lesson JSON dict to a self-contained HTML page."""
     title = data.get("title", "Lesson Plan")
     objective = data.get("objective", "")
@@ -306,10 +307,10 @@ def export_cmd(
         help="Export format: classroom",
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Export a lesson plan (e.g., to Google Classroom JSON)."""
     if json_output:
-        def _export_json():
+        def _export_json() -> dict[str, Any]:
             p = Path(lesson_file).expanduser().resolve()
             if not p.exists():
                 raise FileNotFoundError(f"File not found: {p}")
@@ -390,7 +391,7 @@ def share(
         "--copy",
         help="Copy the share URL to the clipboard (macOS)",
     ),
-):
+) -> None:
     """Generate a shareable link or HTML file from a lesson.
 
     Use --lesson-id to get a shareable URL (requires the web server),
@@ -495,7 +496,7 @@ def import_lesson(
         "--server",
         help="Server URL to fetch the lesson from",
     ),
-):
+) -> None:
     """Import a shared lesson by URL or token."""
     import httpx
 
@@ -562,7 +563,7 @@ def demo(
         "--web",
         help="Generate an HTML demo page and open it in your browser",
     ),
-):
+) -> None:
     """Show a sample output without needing an API key or any files.
 
     Prints a realistic example unit plan and lesson plan to demonstrate
@@ -707,7 +708,7 @@ def generate_landing(
         "--open/--no-open",
         help="Open in browser after generating",
     ),
-):
+) -> None:
     """Generate the Claw-ED landing page (self-contained HTML)."""
     landing_src = Path(__file__).parent.parent / "landing" / "index.html"
     if not landing_src.exists():
@@ -743,7 +744,7 @@ def landing(
             "this if you understand the risk."
         ),
     ),
-):
+) -> None:
     """View or serve the Claw-ED landing page."""
     import functools
     import http.server

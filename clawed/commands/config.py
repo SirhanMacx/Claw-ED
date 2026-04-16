@@ -39,7 +39,7 @@ def register_stats(app: typer.Typer) -> None:
             "-t",
             help="Teacher ID",
         ),
-    ):
+    ) -> None:
         """Show a beautiful stats dashboard with rating trends and analytics.
 
         Displays lesson ratings, top topics, streaks, and areas for improvement.
@@ -187,7 +187,7 @@ def register_status(app: typer.Typer) -> None:
     """Register the status command on the main app."""
 
     @app.command()
-    def status():
+    def status() -> None:
         """Quick one-line status check (no TUI, for scripts)."""
         cfg = AppConfig.load()
         profile = cfg.teacher_profile

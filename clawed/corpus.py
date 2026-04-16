@@ -23,6 +23,7 @@ import os
 import sqlite3
 import uuid
 from pathlib import Path
+from typing import Any
 
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
 CORPUS_DIR = _BASE_DIR / "corpus"
@@ -67,7 +68,7 @@ def contribute_example(
     content_type: str,
     subject: str,
     grade_level: str,
-    content: dict,
+    content: dict[str, Any],
     topic: str | None = None,
     quality_score: float = 4.0,
     teacher_id: str | None = None,
@@ -135,7 +136,7 @@ def get_examples(
     grade_level: str | None = None,
     limit: int = 3,
     min_quality: float = 3.5,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Retrieve high-quality examples for few-shot injection into prompts.
 
     Args:
@@ -184,7 +185,7 @@ def get_examples(
         AND (subject = ? OR subject = ?)
         AND quality_score >= ?
     """
-    params: list = [content_type, subject.lower(), normalized_subject, min_quality]
+    params: list[Any] = [content_type, subject.lower(), normalized_subject, min_quality]
 
     if grade_level:
         query += " AND (grade_level = ? OR grade_level LIKE ?)"
@@ -253,7 +254,7 @@ def get_few_shot_context(
     return "\n".join(parts)
 
 
-def corpus_stats() -> dict:
+def corpus_stats() -> dict[str, Any]:
     """Return statistics about the corpus."""
     init_corpus_db()
     with _get_conn() as conn:
@@ -331,7 +332,7 @@ def seed_from_curriculum(
     return added
 
 
-def _sanitize_content(content: dict) -> dict:
+def _sanitize_content(content: dict[str, Any]) -> dict[str, Any]:
     """Remove any PII from content before corpus storage."""
     # Remove teacher name if it appears
     content_str = json.dumps(content)
@@ -344,6 +345,7 @@ def _sanitize_content(content: dict) -> dict:
     content_str = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '[phone]', content_str)
 
     try:
-        return json.loads(content_str)
+        result: dict[str, Any] = json.loads(content_str)
+        return result
     except (json.JSONDecodeError, ValueError):
         return content

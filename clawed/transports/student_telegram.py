@@ -149,7 +149,7 @@ class StudentTelegramBot:
         print("\nStudent bot stopped.")
         self.api.close()
 
-    def _process_update(self, update: dict, bot: Any) -> None:
+    def _process_update(self, update: dict[str, Any], bot: Any) -> None:
         """Route an update to the appropriate handler."""
         msg = update.get("message")
         if not msg or not msg.get("text"):

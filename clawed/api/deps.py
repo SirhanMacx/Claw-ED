@@ -11,12 +11,16 @@ import os
 import secrets
 import time
 from collections import defaultdict
+from collections.abc import Awaitable, Callable
 from functools import wraps
 from pathlib import Path
+from typing import Any, TypeVar
 
 from fastapi import HTTPException, Request
 
 from clawed.database import Database
+
+F = TypeVar("F", bound=Callable[..., Awaitable[Any]])
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +49,15 @@ def _cleanup_rate_store(window: int) -> None:
 class _RateLimiter:
     """Simple in-memory rate limiter. No external dependencies."""
 
-    def limit(self, rate_string: str):
+    def limit(self, rate_string: str) -> Callable[[F], F]:
         """Decorator: enforce rate limit like '30/minute' or '5/minute'."""
         count, _, period = rate_string.partition("/")
         max_calls = int(count)
         window = {"second": 1, "minute": 60, "hour": 3600}.get(period, 60)
 
-        def decorator(func):
+        def decorator(func: F) -> F:
             @wraps(func)
-            async def wrapper(*args, **kwargs):
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
                 global _rate_request_count
 
                 # Extract request from args or kwargs
@@ -103,7 +107,8 @@ class _RateLimiter:
                     )
 
                 return await func(*args, **kwargs)
-            return wrapper
+            # wrapper preserves func's signature at runtime via @wraps
+            return wrapper  # type: ignore[return-value]
         return decorator
 
 

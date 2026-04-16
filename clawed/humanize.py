@@ -183,7 +183,7 @@ TIER3_WORDS: set[str] = {
 
 # ── Structure patterns (AI formatting tells) ────────────────────────
 
-_STRUCTURE_PATTERNS: list[tuple[re.Pattern, str]] = [
+_STRUCTURE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # Colon-heavy headers: "Key Takeaway: The revolution..."
     (re.compile(r"^(#{1,3}\s+\w[\w\s]{2,20}):\s+", re.MULTILINE), r"\1 — "),
     # Em-dash lists (AI loves these)

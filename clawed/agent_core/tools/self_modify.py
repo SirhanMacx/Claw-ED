@@ -74,6 +74,7 @@ class SelfModifyConfigTool:
 
             # Auto-convert type
             current = getattr(config, key)
+            new_val: Any
             if isinstance(current, bool):
                 new_val = value.lower() in ("true", "1", "yes")
             elif isinstance(current, int):

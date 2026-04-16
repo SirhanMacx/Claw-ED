@@ -583,7 +583,7 @@ NY_SOCIAL_STUDIES: dict[str, list[tuple[str, str, str]]] = {
 STANDARDS["social_studies"] = NY_SOCIAL_STUDIES["social_studies"]
 
 
-def get_ny_ss_standards(grade: str) -> list[dict]:
+def get_ny_ss_standards(grade: str) -> list[dict[str, str]]:
     """Get NY State Social Studies standards for a specific grade."""
     return [
         {"code": s[0], "description": s[1], "grade_band": s[2]}

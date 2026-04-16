@@ -7,7 +7,7 @@ from clawed.gateway_response import GatewayResponse
 
 logger = logging.getLogger(__name__)
 
-def get_standards(subject, grade):
+def get_standards(subject: str, grade: str | None) -> list[tuple[str, str, str]]:
     from clawed.standards import get_standards as _get_standards
     return _get_standards(subject, grade)
 

@@ -119,7 +119,7 @@ def _docx_add_content_image(
 # ── Callout box helper ────────────────────────────────────────────────
 
 
-def _add_callout_box(doc, label, text, bg_hex, border_hex):
+def _add_callout_box(doc: Any, label: str, text: str, bg_hex: str, border_hex: str) -> None:
     """Add a colored callout box for differentiation notes."""
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.oxml.ns import qn
@@ -248,7 +248,10 @@ def _resolve_teacher_name(persona: TeacherPersona) -> str:
     return "Teacher"
 
 
-def _docx_header_footer(doc, teacher_name, persona, agent_name, theme):
+def _docx_header_footer(
+    doc: Any, teacher_name: str, persona: TeacherPersona,
+    agent_name: str, theme: dict[str, str],
+) -> None:
     """Add professional header and footer to the DOCX document."""
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt, RGBColor
@@ -285,7 +288,10 @@ def _docx_header_footer(doc, teacher_name, persona, agent_name, theme):
     footer_run.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
 
 
-def _docx_title_and_standards(doc, lesson, title, objective, teacher_name, subject, persona):
+def _docx_title_and_standards(
+    doc: Any, lesson: DailyLesson, title: str, objective: str,
+    teacher_name: str, subject: str, persona: TeacherPersona,
+) -> None:
     """Add title, header image, and standards table."""
     doc.add_heading(title, level=0)
     doc.add_paragraph(
@@ -326,7 +332,7 @@ def _docx_title_and_standards(doc, lesson, title, objective, teacher_name, subje
             doc.add_paragraph(m, style="List Bullet")
 
 
-def _docx_timing_table(doc, lesson):
+def _docx_timing_table(doc: Any, lesson: DailyLesson) -> None:
     """Add the Lesson-at-a-Glance timing table."""
     doc.add_heading("Lesson at a Glance", level=2)
     timing_table = doc.add_table(rows=1, cols=2)
@@ -358,7 +364,10 @@ def _docx_timing_table(doc, lesson):
                 r.bold = True
 
 
-def _docx_lesson_sections(doc, lesson, title, do_now, direct, guided, independent, subject, sanitize_fn):
+def _docx_lesson_sections(
+    doc: Any, lesson: DailyLesson, title: str, do_now: str, direct: str,
+    guided: str, independent: str, subject: str, sanitize_fn: Any,
+) -> None:
     """Add the main lesson sections with optional images."""
     sections = [
         ("Do Now / Warm-Up", do_now, False),
@@ -385,7 +394,7 @@ def _docx_lesson_sections(doc, lesson, title, do_now, direct, guided, independen
             doc.add_paragraph(f"{i}. {sanitize_fn(q.question)}")
 
 
-def _docx_differentiation(doc, lesson, sanitize_fn):
+def _docx_differentiation(doc: Any, lesson: DailyLesson, sanitize_fn: Any) -> None:
     """Add differentiation callout boxes."""
     diff = lesson.differentiation
     if diff:
@@ -401,7 +410,7 @@ def _docx_differentiation(doc, lesson, sanitize_fn):
             _add_callout_box(doc, "ELL\nSupport", sanitize_fn(text), "D4EDDA", "2D8B4E")
 
 
-def _docx_homework_and_footer(doc, homework_text, agent_name):
+def _docx_homework_and_footer(doc: Any, homework_text: str, agent_name: str) -> None:
     """Add homework section and generation footer."""
     from docx.shared import Pt
 
@@ -414,7 +423,7 @@ def _docx_homework_and_footer(doc, homework_text, agent_name):
     gen_footer.runs[0].font.size = Pt(8)
 
 
-def _docx_apply_theme(doc, theme_rgb_fn, theme):
+def _docx_apply_theme(doc: Any, theme_rgb_fn: Any, theme: dict[str, str]) -> None:
     """Apply subject color theme to headings and table cells."""
     try:
         from docx.oxml.ns import qn as _qn
@@ -520,7 +529,7 @@ def export_student_handout(
     return out
 
 
-def _handout_page_setup(doc):
+def _handout_page_setup(doc: Any) -> None:
     """Configure page margins and default font for handouts."""
     from docx.shared import Inches, Pt
     for section in doc.sections:
@@ -533,7 +542,7 @@ def _handout_page_setup(doc):
     style.font.size = Pt(12)
 
 
-def _handout_title_block(doc, lesson, teacher_name):
+def _handout_title_block(doc: Any, lesson: DailyLesson, teacher_name: str) -> None:
     """Add centered title and teacher/date line."""
     from docx.enum.text import WD_ALIGN_PARAGRAPH as WD_ALIGN
     from docx.shared import Pt, RGBColor
@@ -554,7 +563,7 @@ def _handout_title_block(doc, lesson, teacher_name):
     meta_run.font.name = "Calibri"
 
 
-def _handout_do_now(doc, lesson):
+def _handout_do_now(doc: Any, lesson: DailyLesson) -> None:
     """Add Do Now bordered box with response lines."""
     from docx.enum.table import WD_TABLE_ALIGNMENT as WD_TABLE_ALIGN
     from docx.shared import Pt
@@ -573,7 +582,7 @@ def _handout_do_now(doc, lesson):
         _add_lined_space(response_cell, line_count=4)
 
 
-def _handout_aim_and_content(doc, lesson, subject, image_count):
+def _handout_aim_and_content(doc: Any, lesson: DailyLesson, subject: str, image_count: int) -> None:
     """Add aim/objective and key content with optional image."""
     from docx.shared import Pt
     _handout_section_heading(doc, "Aim")
@@ -600,7 +609,7 @@ def _handout_aim_and_content(doc, lesson, subject, image_count):
             )
 
 
-def _handout_practice_sections(doc, lesson):
+def _handout_practice_sections(doc: Any, lesson: DailyLesson) -> None:
     """Add guided practice and independent work sections."""
     if lesson.guided_practice:
         _handout_section_heading(doc, "Activity")
@@ -610,7 +619,7 @@ def _handout_practice_sections(doc, lesson):
         _add_numbered_content_with_lines(doc, lesson.independent_work)
 
 
-def _handout_exit_ticket(doc, lesson):
+def _handout_exit_ticket(doc: Any, lesson: DailyLesson) -> None:
     """Add exit ticket question boxes with answer lines."""
     from docx.enum.table import WD_TABLE_ALIGNMENT as WD_TABLE_ALIGN
     from docx.shared import Pt
@@ -631,7 +640,7 @@ def _handout_exit_ticket(doc, lesson):
             _add_lined_space(ans_cell, line_count=3)
 
 
-def _handout_footer_block(doc, agent_name):
+def _handout_footer_block(doc: Any, agent_name: str) -> None:
     """Add Name/Date/Period footer and watermark."""
     from docx.enum.table import WD_TABLE_ALIGNMENT as WD_TABLE_ALIGN
     from docx.enum.text import WD_ALIGN_PARAGRAPH as WD_ALIGN
@@ -874,7 +883,7 @@ def _export_admin_lesson_docx(
     primary_hex = theme["primary"]
     primary_rgb = RGBColor(int(primary_hex[:2], 16), int(primary_hex[2:4], 16), int(primary_hex[4:6], 16))
 
-    def _shade(cell, hex_color):
+    def _shade(cell: Any, hex_color: str) -> None:
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
         shading = tcPr.makeelement(

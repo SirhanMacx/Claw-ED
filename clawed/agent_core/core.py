@@ -58,8 +58,8 @@ class _LLMClientAdapter:
         from clawed.models import LLMProvider
 
         with _tool_lock:
-            original_defs = _agent_mod.TOOL_DEFINITIONS
-            _agent_mod.TOOL_DEFINITIONS = tools or []
+            original_defs = _agent_mod.TOOL_DEFINITIONS  # type: ignore[attr-defined]  # runtime-patched module global
+            _agent_mod.TOOL_DEFINITIONS = tools or []  # type: ignore[attr-defined]  # runtime-patched module global
         try:
             if self._config.provider in (
                 LLMProvider.ANTHROPIC, LLMProvider.OPENAI, LLMProvider.OPENROUTER,
@@ -69,7 +69,7 @@ class _LLMClientAdapter:
                 return await _call_with_ollama_tools(messages, system, self._config)
         finally:
             with _tool_lock:
-                _agent_mod.TOOL_DEFINITIONS = original_defs
+                _agent_mod.TOOL_DEFINITIONS = original_defs  # type: ignore[attr-defined]  # runtime-patched module global
 
 
 class Gateway:
@@ -78,7 +78,7 @@ class Gateway:
     def __init__(self, config: AppConfig | None = None, llm: LLMInterface | None = None):
         self.config = config or AppConfig.load()
         self._event_bus: asyncio.Queue[ActivityEvent] | None = None
-        self.active_sessions: dict[str, dict] = {}
+        self.active_sessions: dict[str, dict[str, Any]] = {}
         self._stats = GatewayStats()
         self._running = False
         self._llm = llm  # Injectable for testing
@@ -299,7 +299,7 @@ class Gateway:
 
         return GatewayResponse(text="Unknown action.")
 
-    async def stats(self) -> dict:
+    async def stats(self) -> dict[str, Any]:
         """Return live stats. Kept async for backward compat."""
         s = self._stats
         return {
@@ -310,7 +310,7 @@ class Gateway:
             "active_sessions": len(self.active_sessions),
         }
 
-    async def emit(self, event_type: str, data: dict | None = None) -> None:
+    async def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
         """Emit an event for TUI consumption. Public for backward compat."""
         event = ActivityEvent(
             timestamp=time.time(),
@@ -347,7 +347,7 @@ class Gateway:
         self,
         event_type: str,
         teacher_id: str = "local-teacher",
-        payload: dict | None = None,
+        payload: dict[str, Any] | None = None,
     ) -> GatewayResponse:
         """Handle a system event (scheduled task, cron trigger, etc.).
 
@@ -374,7 +374,7 @@ class Gateway:
     # Agent loop — the core reasoning path
     # ------------------------------------------------------------------
 
-    def _load_teacher_context(self, teacher_id: str, message: str):
+    def _load_teacher_context(self, teacher_id: str, message: str) -> tuple[Any, Any, Any, Any, Any, str, str]:
         """Load teacher profile, persona, memory, and session history.
 
         Returns (teacher_profile, persona_dict, memory_ctx, session_history,
@@ -412,8 +412,14 @@ class Gateway:
         return (teacher_profile, persona_dict, memory_ctx, session_history,
                 recent_conversation, teacher_name, identity_summary)
 
-    def _build_agent_system_prompt(self, teacher_name, identity_summary,
-                                   memory_ctx, recent_conversation, teacher_id):
+    def _build_agent_system_prompt(
+        self,
+        teacher_name: str,
+        identity_summary: str,
+        memory_ctx: Any,
+        recent_conversation: str,
+        teacher_id: str,
+    ) -> str:
         """Build the full system prompt with all context layers."""
         reading_report_context = ""
         try:
@@ -506,7 +512,7 @@ class Gateway:
 
         return system
 
-    def _append_kb_and_ingest_status(self, system, teacher_id):
+    def _append_kb_and_ingest_status(self, system: str, teacher_id: str) -> str:
         """Append KB stats or background ingest status to system prompt."""
         try:
             from clawed.agent_core.memory.curriculum_kb import CurriculumKB
@@ -531,7 +537,7 @@ class Gateway:
             logger.debug("Failed to load curriculum KB stats: %s", e)
         return system
 
-    def _save_post_loop_context(self, teacher_id, message, result, transport):
+    def _save_post_loop_context(self, teacher_id: str, message: str, result: Any, transport: str) -> None:
         """Save conversation context and episodic memory after the agent loop."""
         from clawed.agent_core.memory.sessions import save_turn
         save_turn(teacher_id, "user", message, transport=transport)
@@ -827,7 +833,8 @@ class Gateway:
         if not teacher_profile or not teacher_profile.get("persona_json"):
             return None
         try:
-            return json.loads(teacher_profile["persona_json"])
+            parsed: dict[str, Any] = json.loads(teacher_profile["persona_json"])
+            return parsed
         except (json.JSONDecodeError, TypeError) as e:
             logger.debug("Could not parse persona_json: %s", e)
             return None

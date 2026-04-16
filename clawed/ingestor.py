@@ -583,7 +583,7 @@ def _extract_rtf(path: Path) -> str:
     try:
         from striprtf.striprtf import rtf_to_text
         raw = path.read_text(encoding="utf-8", errors="replace")
-        return rtf_to_text(raw).strip()
+        return str(rtf_to_text(raw)).strip()
     except ImportError:
         pass
     except (OSError, ValueError) as e:
@@ -619,20 +619,20 @@ def _extract_html_file(path: Path) -> str:
         from html.parser import HTMLParser
 
         class _TagStripper(HTMLParser):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__()
                 self.parts: list[str] = []
                 self._skip = False
 
-            def handle_starttag(self, tag, attrs):
+            def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
                 if tag in ("script", "style"):
                     self._skip = True
 
-            def handle_endtag(self, tag):
+            def handle_endtag(self, tag: str) -> None:
                 if tag in ("script", "style"):
                     self._skip = False
 
-            def handle_data(self, data):
+            def handle_data(self, data: str) -> None:
                 if not self._skip:
                     self.parts.append(data)
 
@@ -647,7 +647,7 @@ def _extract_html_file(path: Path) -> str:
         return ""
 
 
-def _odf_iter_text(element) -> str:
+def _odf_iter_text(element: Any) -> str:
     """Recursively collect all text from an XML element and its children."""
     parts: list[str] = []
     if element.text:
@@ -790,7 +790,7 @@ def _extract_odp(path: Path) -> str:
 
 # Extension-based extractors for new formats that need special handling
 # (keyed by suffix, returns (text, page_count_or_None))
-_EXTENSION_EXTRACTORS: dict[str, object] = {
+_EXTENSION_EXTRACTORS: dict[str, Callable[[Path], Any]] = {
     ".doc": lambda p: (_extract_doc(p), None),
     ".ppt": lambda p: (_extract_ppt(p), None),
     ".csv": lambda p: (_extract_csv(p), None),
@@ -1106,7 +1106,7 @@ def ingest_directory(
     path: Path,
     *,
     max_files: int = 0,
-    progress_callback=None,
+    progress_callback: Callable[[int, int], Any] | None = None,
 ) -> list[Document]:
     """Recursively scan a directory and extract all supported documents.
 
@@ -1138,7 +1138,11 @@ def ingest_directory(
 MAX_UNZIP_SIZE = 500 * 1024 * 1024  # 500 MB
 
 
-def ingest_zip(path: Path, *, progress_callback=None) -> list[Document]:
+def ingest_zip(
+    path: Path,
+    *,
+    progress_callback: Callable[[int, int], Any] | None = None,
+) -> list[Document]:
     """Extract a ZIP file to a temp directory, then ingest its contents."""
     if not path.is_file() or path.suffix.lower() != ".zip":
         raise ValueError(f"Not a ZIP file: {path}")
@@ -1169,7 +1173,7 @@ def ingest_path(
     *,
     dry_run: bool = False,
     max_files: int = 0,
-    progress_callback=None,
+    progress_callback: Callable[[int, int], Any] | None = None,
 ) -> list[Document]:
     """Smart ingestion: accepts a directory, ZIP file, or single file.
 
@@ -1241,7 +1245,7 @@ def _dry_run_results(files: list[Path]) -> list[Document]:
 def full_ingest(
     path: Path | str,
     teacher_id: str = "default",
-    progress_callback: Callable | None = None,
+    progress_callback: Callable[..., Any] | None = None,
 ) -> dict[str, Any]:
     """Complete ingestion pipeline: parse → images → assets → chunks → KG → wiki.
 

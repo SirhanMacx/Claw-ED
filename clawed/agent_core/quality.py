@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import sqlite3
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -239,7 +240,7 @@ def record_pattern(
             )
 
 
-def get_patterns(teacher_id: str, min_occurrences: int = 2) -> list[dict]:
+def get_patterns(teacher_id: str, min_occurrences: int = 2) -> list[dict[str, Any]]:
     """Get detected patterns with at least N occurrences."""
     _ensure_db()
     with _get_conn() as conn:
@@ -284,7 +285,7 @@ def get_stats(teacher_id: str) -> dict[str, Any]:
     }
 
 
-def self_distill(teacher_id: str, llm_generate=None) -> str:
+def self_distill(teacher_id: str, llm_generate: Callable[..., Any] | None = None) -> str:
     """Self-distillation: analyze best outputs to improve future generations.
 
     Implements the core insight from "Embarrassingly Simple Self-Distillation

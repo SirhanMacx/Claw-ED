@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 from rich.live import Live
 from rich.markdown import Markdown
@@ -39,7 +40,9 @@ Your AI connection is ready. I'll introduce myself in a moment.
 
 async def run_chat(teacher_id: str = "local-teacher") -> None:
     """Run an interactive terminal chat session with Claw-ED."""
-    gateway = Gateway()
+    # Gateway() is a factory returning the legacy or agent gateway; typed Any
+    # because the concrete class is resolved at runtime via config.
+    gateway: Any = Gateway()
     session = TeacherSession.load(teacher_id)
 
     if session.is_new:

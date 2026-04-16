@@ -10,6 +10,7 @@ import os
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
 
@@ -42,7 +43,7 @@ class BotStateStore:
         )
         conn.commit()
 
-    def get(self, chat_id: int) -> dict | None:
+    def get(self, chat_id: int) -> dict[str, Any] | None:
         """Load a chat state row, or None if not found."""
         row = self._get_conn().execute(
             "SELECT state, pending_topic, last_lesson_id, updated_at "
@@ -123,7 +124,7 @@ class StudentProgressStore:
         )
         conn.commit()
 
-    def get(self, student_id: str, class_code: str) -> dict | None:
+    def get(self, student_id: str, class_code: str) -> dict[str, Any] | None:
         """Load a student progress row."""
         import json
         row_id = f"{student_id}:{class_code}"
@@ -148,10 +149,10 @@ class StudentProgressStore:
         class_code: str,
         *,
         student_name: str = "",
-        topics_asked: dict | None = None,
+        topics_asked: dict[str, Any] | None = None,
         total_questions: int = 0,
         last_active: str = "",
-        struggle_topics: list | None = None,
+        struggle_topics: list[str] | None = None,
     ) -> None:
         """Upsert a student progress row."""
         import json
@@ -174,7 +175,7 @@ class StudentProgressStore:
         )
         self._get_conn().commit()
 
-    def get_class_progress(self, class_code: str) -> list[dict]:
+    def get_class_progress(self, class_code: str) -> list[dict[str, Any]]:
         """Get all student progress entries for a class."""
         import json
         rows = self._get_conn().execute(

@@ -6,10 +6,12 @@ Extracted from the monolithic export_pptx.py for maintainability.
 
 from __future__ import annotations
 
+from typing import Any
+
 from clawed.export_theme import _hex_to_rgb
 
 
-def add_shape_fill(shape, hex_color: str) -> None:
+def add_shape_fill(shape: Any, hex_color: str) -> None:
     """Fill a shape with a solid color."""
     fill = shape.fill
     fill.solid()
@@ -17,7 +19,7 @@ def add_shape_fill(shape, hex_color: str) -> None:
 
 
 def set_text_props(
-    run,
+    run: Any,
     font_size_pt: int,
     hex_color: str,
     bold: bool = False,

@@ -11,8 +11,12 @@ import logging
 import threading
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from clawed.gateway_response import GatewayResponse
+
+if TYPE_CHECKING:
+    from clawed.models import AppConfig, Document, TeacherPersona
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +26,15 @@ MAX_INGEST_FILES = 500
 _ingest_semaphore = threading.Semaphore(3)
 
 
-def ingest_path(path, **kwargs):
+def ingest_path(path: Path, **kwargs: Any) -> list[Document]:
     from clawed.ingestor import ingest_path as _ingest
     return _ingest(path, **kwargs)
 
 
-async def extract_persona(documents, config=None):
+async def extract_persona(
+    documents: list[Document],
+    config: AppConfig | None = None,
+) -> TeacherPersona:
     from clawed.persona import extract_persona as _extract
     return await _extract(documents, config)
 
@@ -131,7 +138,7 @@ class IngestHandler:
         files: list[Path] | None,
         target: Path | None,
         progress_callback: Callable[[str], None] | None,
-    ) -> tuple[list, int]:
+    ) -> tuple[list[Any], int]:
         """Extract documents from files or directory.
 
         Returns:
@@ -141,14 +148,14 @@ class IngestHandler:
         failures = 0
         if target and target.exists():
             try:
-                documents = ingest_path(str(target))
+                documents = ingest_path(Path(str(target)))
             except Exception as e:
                 logger.warning("Failed to parse %s: %s", target, e)
                 failures += 1
         elif files:
             for i, f in enumerate(files):
                 try:
-                    documents.extend(ingest_path(str(f)))
+                    documents.extend(ingest_path(Path(str(f))))
                 except Exception as e:
                     logger.warning("Failed to parse %s: %s", f, e)
                     failures += 1
@@ -159,7 +166,7 @@ class IngestHandler:
                     )
         return documents, failures
 
-    def _extract_persona_sync(self, documents: list) -> str:
+    def _extract_persona_sync(self, documents: list[Any]) -> str:
         """Extract persona from documents (runs async in sync context)."""
         try:
             from clawed.models import AppConfig
@@ -209,7 +216,7 @@ class IngestHandler:
     def _index_documents(
         self,
         teacher_id: str,
-        documents: list,
+        documents: list[Any],
         progress_callback: Callable[[str], None] | None,
     ) -> str:
         """Index documents into curriculum knowledge base with progress."""
@@ -244,7 +251,7 @@ class IngestHandler:
             logger.debug("KB indexing skipped: %s", e)
             return ""
 
-    def _register_assets(self, teacher_id: str, documents: list) -> str:
+    def _register_assets(self, teacher_id: str, documents: list[Any]) -> str:
         """Register assets (files, images, YouTube links) for search."""
         try:
             from clawed.asset_registry import AssetRegistry

@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from clawed.master_content import MasterContent
@@ -45,7 +45,7 @@ async def compile_journey(
     return out_path
 
 
-def _build_journey_steps(master) -> list[dict]:
+def _build_journey_steps(master: Any) -> list[dict[str, Any]]:
     """Extract interactive steps from MasterContent."""
     steps = []
     if master.do_now:
@@ -79,7 +79,7 @@ def _build_journey_steps(master) -> list[dict]:
     return steps
 
 
-def _render_journey_html(steps: list[dict], title: str, objective: str) -> str:
+def _render_journey_html(steps: list[dict[str, Any]], title: str, objective: str) -> str:
     """Render a self-contained interactive journey HTML page."""
     steps_json = json.dumps(steps)
     safe_title = title.replace('"', '\\"')

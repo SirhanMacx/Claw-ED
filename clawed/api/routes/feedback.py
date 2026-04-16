@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -31,7 +32,7 @@ class ImproveRequest(BaseModel):
 
 
 @router.post("/feedback")
-async def submit_feedback(req: FeedbackRequest):
+async def submit_feedback(req: FeedbackRequest) -> Any:
     """Teacher rates generated content."""
     if not 1 <= req.rating <= 5:
         return JSONResponse({"error": "Rating must be 1-5."}, status_code=400)
@@ -94,7 +95,7 @@ async def submit_feedback(req: FeedbackRequest):
 
 
 @router.get("/feedback/{lesson_id}")
-async def get_feedback(lesson_id: str):
+async def get_feedback(lesson_id: str) -> dict[str, Any]:
     """Get all feedback for a lesson."""
     db = get_db()
     feedback_list = db.get_feedback_for_lesson(lesson_id)
@@ -102,7 +103,7 @@ async def get_feedback(lesson_id: str):
 
 
 @router.get("/feedback-analysis")
-async def feedback_analysis(days: int = 7):
+async def feedback_analysis(days: int = 7) -> dict[str, Any]:
     """Get feedback analysis summary."""
     db = get_db()
     analysis = analyze_feedback(db, days)
@@ -126,14 +127,14 @@ def _server_side_teacher_id() -> str:
 
 
 @router.get("/stats")
-async def teacher_stats():
+async def teacher_stats() -> dict[str, Any]:
     """Get comprehensive teacher analytics for the authenticated caller."""
     from clawed.analytics import get_teacher_stats
     return get_teacher_stats(_server_side_teacher_id())
 
 
 @router.get("/stats/{teacher_id}")
-async def teacher_stats_by_id(teacher_id: str):
+async def teacher_stats_by_id(teacher_id: str) -> dict[str, Any]:
     """Get analytics for the authenticated caller.
 
     The ``teacher_id`` path parameter is retained for URL-shape
@@ -147,7 +148,7 @@ async def teacher_stats_by_id(teacher_id: str):
 
 
 @router.post("/improve")
-async def trigger_improvement(req: ImproveRequest | None = None):
+async def trigger_improvement(req: ImproveRequest | None = None) -> Any:
     """Trigger a prompt improvement cycle."""
     db = get_db()
     days = req.feedback_window_days if req else 7

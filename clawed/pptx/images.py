@@ -38,7 +38,7 @@ def try_fetch_images(
 
     results: dict[str, Path | None] = {}
 
-    async def _fetch_all():
+    async def _fetch_all() -> None:
         for topic, key in topics:
             try:
                 path = await asyncio.wait_for(
@@ -76,7 +76,7 @@ def try_fetch_content_images(
 
     results: dict[str, Path | None] = {}
 
-    async def _fetch_all():
+    async def _fetch_all() -> None:
         found = 0
         for content_text, fallback_topic, key in items:
             if found >= max_images:

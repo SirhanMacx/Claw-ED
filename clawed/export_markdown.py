@@ -354,14 +354,14 @@ def _lesson_to_html_for_pdf(
         sections.append('<div class="worksheet-page">')
         sections.append(f"<h1>Student Worksheet: {esc(materials.lesson_title)}</h1>")
         sections.append("<p><strong>Name:</strong> ________________________ <strong>Date:</strong> ____________</p>")
-        total_pts = sum(item.point_value for item in materials.worksheet_items)
+        total_pts = sum(ws_item.point_value for ws_item in materials.worksheet_items)
         sections.append(f"<p><strong>Total Points:</strong> {total_pts}</p>")
-        for item in materials.worksheet_items:
-            pts = "pts" if item.point_value != 1 else "pt"
-            prompt_html = esc(item.prompt)
+        for ws_item in materials.worksheet_items:
+            pts = "pts" if ws_item.point_value != 1 else "pt"
+            prompt_html = esc(ws_item.prompt)
             sections.append(
-                f"<p><strong>{item.item_number}.</strong>"
-                f" ({item.point_value} {pts}) {prompt_html}</p>"
+                f"<p><strong>{ws_item.item_number}.</strong>"
+                f" ({ws_item.point_value} {pts}) {prompt_html}</p>"
             )
         sections.append("</div>")
 
@@ -395,7 +395,7 @@ async def export_lesson_pdf(
     return output_path
 
 
-def _pdf_css_stylesheet():
+def _pdf_css_stylesheet() -> Any:
     """Create a weasyprint CSS stylesheet from our PDF styles."""
     try:
         import weasyprint

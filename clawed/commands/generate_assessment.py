@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.panel import Panel
@@ -24,7 +25,7 @@ from clawed.models import AppConfig
 # ── Materials generation ─────────────────────────────────────────────────
 
 
-def _materials_json(*, lesson_file):
+def _materials_json(*, lesson_file: str) -> dict[str, Any]:
     """Run materials generation and return structured result for JSON output."""
     from clawed.lesson import load_lesson
     from clawed.materials import generate_all_materials, save_materials
@@ -56,7 +57,7 @@ def materials(
     ),
     fmt: str = typer.Option("markdown", "--format", "-f", help="Export format"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Generate all supporting materials for a lesson."""
     if json_output:
         run_json_command("gen.materials", _materials_json, lesson_file=lesson_file)
@@ -136,7 +137,7 @@ def assess(
     context: str = typer.Option(
         "", "--context", "-c", help="Additional context (DBQ)"
     ),
-):
+) -> None:
     """Generate intelligent assessments — DBQ, summative, formative, or quiz."""
     check_api_key_or_exit()
 
@@ -159,7 +160,12 @@ def assess(
         raise typer.Exit(1)
 
 
-def _assess_formative(gen, persona, out_dir, lesson_file):
+def _assess_formative(
+    gen: Any,
+    persona: Any,
+    out_dir: Path,
+    lesson_file: str | None,
+) -> None:
     from clawed.assessment import save_assessment
     if not lesson_file:
         console.print("[red]--lesson-file required for formative assessment.[/red]")
@@ -188,7 +194,12 @@ def _assess_formative(gen, persona, out_dir, lesson_file):
     ))
 
 
-def _assess_summative(gen, persona, out_dir, unit_file):
+def _assess_summative(
+    gen: Any,
+    persona: Any,
+    out_dir: Path,
+    unit_file: str | None,
+) -> None:
     from clawed.assessment import save_assessment
     if not unit_file:
         console.print("[red]--unit-file required for summative assessment.[/red]")
@@ -215,7 +226,14 @@ def _assess_summative(gen, persona, out_dir, unit_file):
     ))
 
 
-def _assess_dbq(gen, persona, out_dir, topic, grade, context):
+def _assess_dbq(
+    gen: Any,
+    persona: Any,
+    out_dir: Path,
+    topic: str,
+    grade: str,
+    context: str,
+) -> None:
     from clawed.assessment import save_assessment
     if not topic:
         console.print("[red]--topic required for DBQ assessment.[/red]")
@@ -243,7 +261,15 @@ def _assess_dbq(gen, persona, out_dir, topic, grade, context):
     ))
 
 
-def _assess_quiz(gen, persona, out_dir, topic, grade, questions, question_types):
+def _assess_quiz(
+    gen: Any,
+    persona: Any,
+    out_dir: Path,
+    topic: str,
+    grade: str,
+    questions: int,
+    question_types: str,
+) -> None:
     from clawed.assessment import save_assessment
     if not topic:
         console.print("[red]--topic required for quiz.[/red]")
@@ -282,7 +308,7 @@ def rubric(
         4, "--criteria", "-c", help="Number of rubric criteria"
     ),
     grade: str = typer.Option("", "--grade", "-g", help="Grade level"),
-):
+) -> None:
     """Generate a detailed scoring rubric for any written task."""
     check_api_key_or_exit()
 
@@ -338,7 +364,7 @@ def score(
     lesson_file: str = typer.Option(
         ..., "--lesson-file", "-l", help="Path to a saved lesson JSON file"
     ),
-):
+) -> None:
     """Score a lesson plan on quality dimensions (1-5 per dimension)."""
     check_api_key_or_exit()
 
@@ -402,7 +428,7 @@ def improve(
     reset: bool = typer.Option(
         False, "--reset", help="Clear all learned patterns (with confirmation)"
     ),
-):
+) -> None:
     """Show improvement stats, recent patterns, and memory contents.
 
     With --analyze: run a full analysis of recent feedback and update memory.

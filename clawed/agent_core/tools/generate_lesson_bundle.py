@@ -170,10 +170,10 @@ def _validate_and_humanize(master: Any, topic: str, report: Any) -> None:
 
 
 async def _compile_core_views(
-    master: Any, images: dict, output_dir: Any, config: Any,
-) -> tuple[list, list, list]:
+    master: Any, images: dict[str, Any], output_dir: Any, config: Any,
+) -> tuple[list[Any], list[str], list[str]]:
     """Compile teacher DOCX, student DOCX, and PPTX. Returns (files, side_effects, errors)."""
-    generated_files: list = []
+    generated_files: list[Any] = []
     side_effects: list[str] = []
     errors: list[str] = []
 
@@ -210,7 +210,7 @@ async def _compile_core_views(
 async def _run_auto_chain(
     master: Any, persona: Any, config: Any, output_dir: Any,
     subject: str, grade: str, topic: str,
-    generated_files: list, side_effects: list,
+    generated_files: list[Any], side_effects: list[str],
 ) -> None:
     """Run zero-touch auto-chain: differentiation, game, journey, research, standards."""
     safe_title = master.title.replace(" ", "_")[:40]
@@ -310,7 +310,7 @@ async def _run_auto_chain(
 
 async def _run_quality_review(
     master: Any, config: Any, persona: Any,
-    standards_list: list, generated_files: list, report: Any,
+    standards_list: list[Any], generated_files: list[Any], report: Any,
 ) -> float | None:
     """Run quality review and voice scoring. Returns voice_score or None."""
     voice_score = None
@@ -345,9 +345,9 @@ async def _run_quality_review(
 
 
 def _build_bundle_response(
-    master: Any, generated_files: list, errors: list,
-    side_effects: list, kb_prompt_section: str, report: Any,
-    standards_list: list, voice_score: float | None,
+    master: Any, generated_files: list[Any], errors: list[str],
+    side_effects: list[str], kb_prompt_section: str, report: Any,
+    standards_list: list[Any], voice_score: float | None,
 ) -> ToolResult:
     """Format the final ToolResult response for the bundle."""
     lines: list[str] = []

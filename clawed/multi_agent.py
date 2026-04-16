@@ -143,6 +143,11 @@ async def _run_writer(
     )
     user_prompt = "\n".join(parts)
 
+    if client is None:
+        # Defensive: the default is None but callers always pass a client.
+        logger.warning("Writer agent: no LLM client available")
+        return None
+
     try:
         result = await client.safe_generate_json(
             prompt=user_prompt,

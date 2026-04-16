@@ -295,7 +295,7 @@ def serve(
     reload: bool = typer.Option(
         False, "--reload", help="Enable auto-reload for development"
     ),
-):
+) -> None:
     """Start the Claw-ED server.
 
     \b
@@ -586,7 +586,7 @@ def bot(
         "--kill",
         help="Kill any existing bot process and exit",
     ),
-):
+) -> None:
     """Start the Claw-ED Telegram bot.
 
     \b

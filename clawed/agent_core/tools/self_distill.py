@@ -55,7 +55,7 @@ class SelfDistillTool:
                 from clawed.llm import LLMClient
                 client = LLMClient(context.config)
 
-                def _generate(prompt):
+                def _generate(prompt: str) -> str:
                     import asyncio
                     return asyncio.get_event_loop().run_until_complete(
                         client.generate(prompt, system="You are Ed.")

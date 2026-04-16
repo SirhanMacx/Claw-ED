@@ -206,10 +206,10 @@ def _parse_cron_expr(expr: str) -> dict[str, str]:
 
 # ── Job status tracking (F11 audit fix) ──────────────────────────────
 
-_job_status: dict[str, dict] = {}  # name → {status, last_run, result, error}
+_job_status: dict[str, dict[str, Any]] = {}  # name → {status, last_run, result, error}
 
 
-def get_job_status() -> dict[str, dict]:
+def get_job_status() -> dict[str, dict[str, Any]]:
     """Get the status of all scheduler jobs."""
     return dict(_job_status)
 
@@ -656,7 +656,7 @@ async def run_task(name: str) -> str:
 
     append_daily_note(f"Manual run of '{name}' started.", category="scheduler")
     result = await impl()
-    return result
+    return str(result) if result is not None else ""
 
 
 # ── Scheduler class ────────────────────────────────────────────────────
@@ -670,10 +670,10 @@ class EduScheduler:
     """
 
     def __init__(self) -> None:
-        self._scheduler = None
+        self._scheduler: Any = None
         self._config = load_schedule_config()
 
-    def _get_scheduler(self):
+    def _get_scheduler(self) -> Any:
         """Lazy-init the APScheduler instance."""
         if self._scheduler is None:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler

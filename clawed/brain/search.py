@@ -20,6 +20,7 @@ import math
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from clawed.brain.store import BrainPage, BrainStore
 
@@ -57,7 +58,7 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 def _embed_brain_pages(
     pages: list[BrainPage],
-    embedder,
+    embedder: Any,
 ) -> list[tuple[BrainPage, list[float]]]:
     """Generate (or reuse cached) embeddings for brain pages.
 

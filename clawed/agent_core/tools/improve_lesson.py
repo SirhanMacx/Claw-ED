@@ -198,7 +198,13 @@ class ImproveLessonTool:
 
         return original_content
 
-    def _build_improvement_prompt(self, original_content, improvement, section, context):
+    def _build_improvement_prompt(
+        self,
+        original_content: str,
+        improvement: str,
+        section: str,
+        context: AgentContext,
+    ) -> str:
         """Build the LLM prompt for lesson improvement."""
         if section:
             label = section.replace("_", " ").title()
@@ -236,7 +242,7 @@ class ImproveLessonTool:
             "6. Keep the same standards alignment and grade-level appropriateness as the original.\n"
         )
 
-    async def _call_llm_for_improvement(self, prompt, config):
+    async def _call_llm_for_improvement(self, prompt: str, config: Any) -> str | ToolResult:
         """Call LLM and humanize the result. Returns str or ToolResult on error."""
         try:
             from clawed.llm import LLMClient

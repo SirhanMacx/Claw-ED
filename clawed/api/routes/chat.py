@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import logging
 import secrets
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -49,7 +50,7 @@ class StudentChatRequest(ChatRequest):
     share_token: str = Field(..., min_length=1, max_length=200)
 
 
-async def _run_chat(req: ChatRequest) -> JSONResponse | dict:
+async def _run_chat(req: ChatRequest) -> Any:
     """Shared chat backend used by both the teacher and student routes."""
     db = get_db()
 
@@ -93,7 +94,7 @@ async def _run_chat(req: ChatRequest) -> JSONResponse | dict:
 
 @router.post("/chat")
 @limiter.limit("30/minute")
-async def chat_endpoint(request: Request, req: ChatRequest):
+async def chat_endpoint(request: Request, req: ChatRequest) -> Any:
     """Teacher-side chat endpoint (authenticated).
 
     Same backend as the student route; kept separate so teacher-only
@@ -104,7 +105,7 @@ async def chat_endpoint(request: Request, req: ChatRequest):
 
 @student_chat_router.post("/chat/student")
 @limiter.limit("60/minute")
-async def chat_student_endpoint(request: Request, req: StudentChatRequest):
+async def chat_student_endpoint(request: Request, req: StudentChatRequest) -> Any:
     """Unauthenticated chat endpoint for the LMS-embedded student widget.
 
     ED-3 audit fix: requires both lesson_id AND share_token. Only someone

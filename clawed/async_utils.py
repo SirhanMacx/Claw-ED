@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Coroutine
+from typing import Any
 
 
-def run_async_safe(coro):
+def run_async_safe(coro: Coroutine[Any, Any, Any]) -> Any:
     """Run an async coroutine, handling both sync and async calling contexts.
 
     When called from inside a running event loop (e.g., agent_core tools),

@@ -7,6 +7,17 @@ from clawed.failure_codes import FailureCode
 
 if TYPE_CHECKING:
     from clawed.master_content import MasterContent
+    from clawed.models import (
+        DBQAssessment,
+        FormativeAssessment,
+        LessonMaterials,
+        PacingGuide,
+        Quiz,
+        Rubric,
+        SummativeAssessment,
+        UnitPlan,
+        YearMap,
+    )
 
 DELEGATION_PHRASES = [
     "teacher will distribute", "teacher will provide", "your teacher will give",
@@ -89,7 +100,7 @@ def validate_alignment(mc: MasterContent) -> tuple[float, list[str]]:
 # ── Per-type validators ────────────────────────────────────────────────────
 
 
-def validate_quiz(quiz, topic: str, requested_count: int) -> list[str]:
+def validate_quiz(quiz: Quiz, topic: str, requested_count: int) -> list[str]:
     """Validate a Quiz for non-empty questions, correct count, and topic alignment."""
     errors = []
     if not quiz.questions:
@@ -103,7 +114,7 @@ def validate_quiz(quiz, topic: str, requested_count: int) -> list[str]:
     return errors
 
 
-def validate_rubric(rubric, requested_criteria: int) -> list[str]:
+def validate_rubric(rubric: Rubric, requested_criteria: int) -> list[str]:
     """Validate a Rubric for non-empty criteria and correct count."""
     errors = []
     if not rubric.criteria:
@@ -115,7 +126,7 @@ def validate_rubric(rubric, requested_criteria: int) -> list[str]:
     return errors
 
 
-def validate_year_map(ym, subject: str) -> list[str]:
+def validate_year_map(ym: YearMap, subject: str) -> list[str]:
     """Validate a YearMap for non-empty units and subject alignment."""
     errors = []
     if not ym.units:
@@ -125,7 +136,7 @@ def validate_year_map(ym, subject: str) -> list[str]:
     return errors
 
 
-def validate_unit_plan(up, topic: str) -> list[str]:
+def validate_unit_plan(up: UnitPlan, topic: str) -> list[str]:
     """Validate a UnitPlan for non-empty lessons and topic alignment."""
     errors = []
     if not up.daily_lessons:
@@ -135,7 +146,7 @@ def validate_unit_plan(up, topic: str) -> list[str]:
     return errors
 
 
-def validate_formative(fa) -> list[str]:
+def validate_formative(fa: FormativeAssessment) -> list[str]:
     """Validate a FormativeAssessment for non-empty questions and objective."""
     errors = []
     if not fa.questions:
@@ -145,7 +156,7 @@ def validate_formative(fa) -> list[str]:
     return errors
 
 
-def validate_summative(sa) -> list[str]:
+def validate_summative(sa: SummativeAssessment) -> list[str]:
     """Validate a SummativeAssessment for non-empty questions and objectives."""
     errors = []
     if not sa.questions:
@@ -155,7 +166,7 @@ def validate_summative(sa) -> list[str]:
     return errors
 
 
-def validate_dbq(dbq) -> list[str]:
+def validate_dbq(dbq: DBQAssessment) -> list[str]:
     """Validate a DBQAssessment for non-empty documents and essay prompt."""
     errors = []
     if not dbq.documents:
@@ -165,7 +176,7 @@ def validate_dbq(dbq) -> list[str]:
     return errors
 
 
-def validate_lesson_materials(mats) -> list[str]:
+def validate_lesson_materials(mats: LessonMaterials) -> list[str]:
     """Validate LessonMaterials for non-empty worksheet items and assessment questions."""
     errors = []
     if not mats.worksheet_items:
@@ -175,7 +186,7 @@ def validate_lesson_materials(mats) -> list[str]:
     return errors
 
 
-def validate_pacing_guide(pg) -> list[str]:
+def validate_pacing_guide(pg: PacingGuide) -> list[str]:
     """Validate a PacingGuide for non-empty weeks and a start date."""
     errors = []
     if not pg.weeks:

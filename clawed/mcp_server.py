@@ -201,7 +201,10 @@ async def query_wiki(
     """
     from clawed.wiki import query_wiki as _query
 
-    result = _query(teacher_id, question)
+    # query_wiki is async and takes only the question; teacher_id is unused
+    # here (the wiki is already scoped per-teacher via file paths).
+    del teacher_id
+    result = await _query(question)
     return json.dumps({
         "answer": result.answer,
         "sources": result.sources,

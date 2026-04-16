@@ -9,8 +9,9 @@ No LLM calls — pure mechanical compilation.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from clawed.models import ProjectArc
@@ -52,7 +53,7 @@ async def compile_project_packet(
         except (ValueError, IndexError):
             return RGBColor(0x8B, 0x69, 0x14)
 
-    def _shaded_cell(cell, fill_hex: str) -> None:
+    def _shaded_cell(cell: Any, fill_hex: str) -> None:
         tc_pr = cell._tc.get_or_add_tcPr()
         tc_pr.append(tc_pr.makeelement(qn("w:shd"), {
             qn("w:val"): "clear", qn("w:color"): "auto", qn("w:fill"): fill_hex,
@@ -80,7 +81,7 @@ async def compile_project_packet(
     logger.info("Project packet saved to %s", out_path)
     return out_path
 
-def _project_title_page(doc, project, hex_rgb_fn, primary_hex):
+def _project_title_page(doc: Any, project: ProjectArc, hex_rgb_fn: Callable[[str], Any], primary_hex: str) -> None:
     from docx.shared import Pt
     title_heading = doc.add_heading(project.title, level=0)
     for run in title_heading.runs:
@@ -96,7 +97,7 @@ def _project_title_page(doc, project, hex_rgb_fn, primary_hex):
     doc.add_paragraph("")
 
 
-def _project_roadmap(doc, project, _para):
+def _project_roadmap(doc: Any, project: ProjectArc, _para: Callable[..., None]) -> None:
     doc.add_heading("Day-by-Day Roadmap", level=1)
     _para("Track your progress! Check off each phase as you complete it.", italic=True)
     doc.add_paragraph("")
@@ -111,7 +112,7 @@ def _project_roadmap(doc, project, _para):
     doc.add_page_break()
 
 
-def _project_choice_boards(doc, project, _para):
+def _project_choice_boards(doc: Any, project: ProjectArc, _para: Callable[..., None]) -> None:
     if project.movement_options:
         doc.add_heading("Choose Your Topic", level=1)
         _para("Select ONE of the following topics to specialize in:")
@@ -133,7 +134,10 @@ def _project_choice_boards(doc, project, _para):
     doc.add_page_break()
 
 
-def _project_graphic_organizer(doc, project, _shaded_cell, primary_hex):
+def _project_graphic_organizer(
+    doc: Any, project: ProjectArc,
+    _shaded_cell: Callable[[Any, str], None], primary_hex: str,
+) -> None:
     from docx.shared import RGBColor
     if not project.graphic_organizer:
         return
@@ -154,7 +158,7 @@ def _project_graphic_organizer(doc, project, _shaded_cell, primary_hex):
     doc.add_paragraph("")
 
 
-def _project_resource_library(doc, project, _para):
+def _project_resource_library(doc: Any, project: ProjectArc, _para: Callable[..., None]) -> None:
     if not project.resource_library:
         return
     doc.add_heading("Research Resource Library", level=1)
@@ -170,7 +174,7 @@ def _project_resource_library(doc, project, _para):
     doc.add_page_break()
 
 
-def _project_debate_prep(doc, project, _para):
+def _project_debate_prep(doc: Any, project: ProjectArc, _para: Callable[..., None]) -> None:
     if not project.debate_prep_template:
         return
     doc.add_heading("Debate Prep Sheet", level=1)
@@ -182,7 +186,10 @@ def _project_debate_prep(doc, project, _para):
     doc.add_paragraph("")
 
 
-def _project_rubric(doc, project, _shaded_cell, primary_hex):
+def _project_rubric(
+    doc: Any, project: ProjectArc,
+    _shaded_cell: Callable[[Any, str], None], primary_hex: str,
+) -> None:
     from docx.shared import RGBColor
     if not project.rubric_text:
         return
@@ -212,7 +219,7 @@ def _project_rubric(doc, project, _shaded_cell, primary_hex):
     doc.add_paragraph("")
 
 
-def _project_culminating(doc, project, _para):
+def _project_culminating(doc: Any, project: ProjectArc, _para: Callable[..., None]) -> None:
     perf = project.culminating_performance
     if not perf or not perf.title:
         return

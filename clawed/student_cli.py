@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from collections.abc import Coroutine
+from typing import Any
 
 from rich.live import Live
 from rich.panel import Panel
@@ -21,7 +23,7 @@ from rich.spinner import Spinner
 from clawed.commands._helpers import console
 
 
-def _run_async(coro):
+def _run_async(coro: Coroutine[Any, Any, Any]) -> Any:
     """Run an async coroutine from synchronous code."""
     try:
         loop = asyncio.get_event_loop()

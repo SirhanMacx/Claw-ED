@@ -416,7 +416,7 @@ class CurriculumKB:
         query: str,
         top_k: int,
         where: str,
-        params: tuple,
+        params: tuple[Any, ...],
     ) -> list[dict[str, Any]]:
         """Two-stage search: FTS5 keyword filter → embedding re-rank.
 
@@ -492,7 +492,7 @@ class CurriculumKB:
     @staticmethod
     def _search_numpy(
         query_vec: list[float],
-        rows: list,
+        rows: list[Any],
         top_k: int,
     ) -> list[dict[str, Any]]:
         """Vectorized search using numpy — handles thousands of chunks fast."""
@@ -571,5 +571,6 @@ def _parse_embedding(raw: Any) -> list[float]:
     if isinstance(raw, bytes):
         return _blob_to_embed(raw)
     if isinstance(raw, str):
-        return json.loads(raw)
+        parsed: list[float] = json.loads(raw)
+        return parsed
     return list(raw)

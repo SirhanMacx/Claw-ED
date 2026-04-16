@@ -86,7 +86,7 @@ _TOPIC_PATTERNS: dict[str, str] = {
 }
 
 
-def _extract_doc_stats(report: dict, documents: list) -> None:
+def _extract_doc_stats(report: dict[str, Any], documents: list[Any]) -> None:
     type_counts: Counter[str] = Counter()
     for doc in documents:
         ext = doc.doc_type.value.upper() if doc.doc_type else "UNKNOWN"
@@ -94,7 +94,7 @@ def _extract_doc_stats(report: dict, documents: list) -> None:
     report["doc_stats"] = {"total": len(documents), "by_type": dict(type_counts.most_common())}
 
 
-def _extract_teacher_details(report: dict, documents: list, all_text: str) -> None:
+def _extract_teacher_details(report: dict[str, Any], documents: list[Any], all_text: str) -> None:
     _title_name = r"((?:Mr\.|Ms\.|Mrs\.|Dr\.)[ ]+[A-Z][a-z]+(?:[ ]+[A-Z][a-z]+)?)"
     patterns = [
         re.compile(r"(?:Teacher|By|Prepared by|Created by)[:\s]+" + _title_name, re.IGNORECASE),
@@ -130,7 +130,7 @@ def _extract_teacher_details(report: dict, documents: list, all_text: str) -> No
         report["teacher_details"]["school"] = Counter(matches).most_common(1)[0][0]
 
 
-def _extract_voice_patterns(report: dict, all_text: str) -> None:
+def _extract_voice_patterns(report: dict[str, Any], all_text: str) -> None:
     openers = re.compile(r"(?:Do Now|Warm[- ]?Up|Bell ?Ringer)[:\s]*([^\n]{10,80})", re.IGNORECASE).findall(all_text)
     starters = {
         "alright", "friends", "ok", "okay", "good morning", "good afternoon",
@@ -154,7 +154,7 @@ def _extract_voice_patterns(report: dict, all_text: str) -> None:
             report["voice_patterns"].append(f"Calls students '{term}' ({c} times across your files)")
 
 
-def _extract_topic_coverage(report: dict, all_text: str) -> None:
+def _extract_topic_coverage(report: dict[str, Any], all_text: str) -> None:
     counts: dict[str, int] = {}
     for topic, pat in _TOPIC_PATTERNS.items():
         c = len(re.findall(pat, all_text, re.IGNORECASE))
@@ -167,7 +167,7 @@ def _extract_topic_coverage(report: dict, all_text: str) -> None:
     report["gaps"] = sorted(set(_TOPIC_PATTERNS.keys()) - {t for t, c in counts.items() if c >= 2})
 
 
-def _extract_strategies(report: dict, all_text: str) -> None:
+def _extract_strategies(report: dict[str, Any], all_text: str) -> None:
     strats = {
         "Jigsaw": r"\bjigsaw\b", "DBQ": r"\bDBQ\b|Document[- ]Based Question",
         "Socratic Seminar": r"Socratic Seminar", "Think-Pair-Share": r"Think[- ]Pair[- ]Share",
@@ -180,7 +180,7 @@ def _extract_strategies(report: dict, all_text: str) -> None:
     ]
 
 
-def _extract_assessment_patterns(report: dict, all_text: str) -> None:
+def _extract_assessment_patterns(report: dict[str, Any], all_text: str) -> None:
     ec = len(re.findall(r"Exit Ticket|exit ticket", all_text, re.IGNORECASE))
     if ec:
         report["assessment_patterns"].append(f"Uses exit tickets ({ec} found)")
@@ -189,7 +189,7 @@ def _extract_assessment_patterns(report: dict, all_text: str) -> None:
         report["assessment_patterns"].append(f"~{qc} questions across all documents")
 
 
-def _extract_signature_moves(report: dict, all_text: str) -> None:
+def _extract_signature_moves(report: dict[str, Any], all_text: str) -> None:
     structural = {
         "AIM": r"\bAIM\b[:\s]", "Do Now": r"Do Now",
         "SWBAT": r"SWBAT|Students Will Be Able To",
@@ -201,7 +201,7 @@ def _extract_signature_moves(report: dict, all_text: str) -> None:
             report["signature_moves"].append(f"Uses {name} structure ({c}x)")
 
 
-def _extract_interesting_finds(report: dict, persona) -> None:
+def _extract_interesting_finds(report: dict[str, Any], persona: Any) -> None:
     if report["doc_stats"]["total"] > 100:
         report["interesting_finds"].append(
             f"That's a LOT of materials \u2014 {report['doc_stats']['total']} files. "
@@ -362,7 +362,7 @@ async def enhance_reading_report_with_llm(
 
         client = LLMClient(config)
         prompt = _build_llm_reading_prompt(report, excerpts)
-        result = await client.generate_json(
+        result: Any = await client.generate_json(
             prompt=prompt,
             system=_LLM_SYSTEM,
             temperature=0.4,

@@ -19,7 +19,8 @@ def load_demo(name: str) -> dict[str, Any]:
     path = _DEMO_DIR / f"demo_{name}.json"
     if not path.exists():
         raise FileNotFoundError(f"Demo file not found: {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    loaded: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return loaded
 
 
 def load_all_demos() -> dict[str, dict[str, Any]]:

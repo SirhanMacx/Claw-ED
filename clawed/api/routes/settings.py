@@ -5,8 +5,10 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+from typing import Any
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from clawed import __version__
@@ -49,7 +51,7 @@ class OnboardingStepRequest(BaseModel):
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> dict[str, Any]:
     """Lightweight liveness check — no DB or LLM calls."""
     return {
         "status": "ok",
@@ -58,7 +60,7 @@ async def health_check():
 
 
 @router.get("/health/diagnostics", dependencies=[Depends(require_auth)])
-async def health_diagnostics():
+async def health_diagnostics() -> dict[str, Any]:
     """Full diagnostics endpoint with DB stats and LLM connection test."""
     cfg = AppConfig.load()
     db = get_db()
@@ -81,7 +83,7 @@ async def health_diagnostics():
 
 
 @router.get("/settings", dependencies=[Depends(require_auth)])
-async def get_settings():
+async def get_settings() -> dict[str, Any]:
     """Get current settings (API keys masked)."""
     cfg = AppConfig.load()
     anthropic_key = get_api_key("anthropic")
@@ -154,7 +156,7 @@ def _validate_ollama_url(raw: str) -> tuple[str | None, str | None]:
 
 
 @router.post("/settings", dependencies=[Depends(require_auth)])
-async def save_settings(req: SaveSettingsRequest):
+async def save_settings(req: SaveSettingsRequest) -> Any:
     """Save settings and optionally update API key."""
     cfg = AppConfig.load()
     cfg.provider = LLMProvider(req.provider)
@@ -164,9 +166,8 @@ async def save_settings(req: SaveSettingsRequest):
 
     # v4.11.2026 SSRF fix: validate and normalize ollama_base_url.
     normalized_url, err = _validate_ollama_url(req.ollama_base_url)
-    if err:
-        from fastapi.responses import JSONResponse
-        return JSONResponse({"error": err}, status_code=400)
+    if err or normalized_url is None:
+        return JSONResponse({"error": err or "Invalid URL"}, status_code=400)
     cfg.ollama_base_url = normalized_url
 
     cfg.include_homework = req.include_homework
@@ -180,7 +181,7 @@ async def save_settings(req: SaveSettingsRequest):
 
 
 @router.get("/settings/test-connection", dependencies=[Depends(require_auth)])
-async def test_connection():
+async def test_connection() -> dict[str, Any]:
     """Test the current LLM connection."""
     cfg = AppConfig.load()
     result = await test_llm_connection(cfg)
@@ -188,7 +189,7 @@ async def test_connection():
 
 
 @router.post("/settings/clear-content", dependencies=[Depends(require_auth)])
-async def clear_content():
+async def clear_content() -> dict[str, Any]:
     """Clear all generated content (danger zone)."""
     db = get_db()
     db.clear_all_generated()
@@ -196,7 +197,7 @@ async def clear_content():
 
 
 @router.post("/settings/reset", dependencies=[Depends(require_auth)])
-async def reset_all():
+async def reset_all() -> dict[str, Any]:
     """Full reset — clear everything and restart onboarding."""
     db = get_db()
     db.reset_all()
@@ -204,7 +205,7 @@ async def reset_all():
 
 
 @router.post("/onboarding/persona-form", dependencies=[Depends(require_auth)])
-async def create_persona_from_form(req: PersonaFormRequest):
+async def create_persona_from_form(req: PersonaFormRequest) -> dict[str, Any]:
     """Create a persona from the quick form (no file upload needed)."""
     from clawed.models import TeacherPersona, TeachingStyle
 
@@ -231,7 +232,7 @@ async def create_persona_from_form(req: PersonaFormRequest):
 
 
 @router.post("/onboarding/step", dependencies=[Depends(require_auth)])
-async def update_onboarding_step(req: OnboardingStepRequest):
+async def update_onboarding_step(req: OnboardingStepRequest) -> dict[str, Any]:
     """Update onboarding progress for a teacher."""
     db = get_db()
     db.upsert_onboarding(req.teacher_id, req.step)
@@ -239,7 +240,7 @@ async def update_onboarding_step(req: OnboardingStepRequest):
 
 
 @router.get("/onboarding/state", dependencies=[Depends(require_auth)])
-async def get_onboarding_state():
+async def get_onboarding_state() -> dict[str, Any]:
     """Get current onboarding state."""
     db = get_db()
     teacher = db.get_default_teacher()

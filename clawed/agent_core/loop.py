@@ -56,7 +56,7 @@ async def run_agent_loop(
     messages: list[dict[str, Any]] = list(conversation_history or [])
     messages.append({"role": "user", "content": message})
 
-    all_files: list = []
+    all_files: list[Any] = []
     all_side_effects: list[str] = []
     tool_schemas = registry.schemas() or None
 

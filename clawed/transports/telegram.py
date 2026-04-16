@@ -171,8 +171,12 @@ class TelegramAPI:
     def close(self) -> None:
         self._session.close()
 
-    def _call(self, method: str, **params: Any) -> dict:
-        """Call a Telegram Bot API method with retry on network errors."""
+    def _call(self, method: str, **params: Any) -> Any:
+        """Call a Telegram Bot API method with retry on network errors.
+
+        Returns the raw `result` payload from Telegram — typically a dict,
+        but some endpoints (e.g. getUpdates) return a list.
+        """
         url = f"{self._base}/{method}"
         data = {k: v for k, v in params.items() if v is not None}
 
@@ -212,10 +216,11 @@ class TelegramAPI:
             _log_error(last_err)
         return {}
 
-    def get_me(self) -> dict:
-        return self._call("getMe")
+    def get_me(self) -> dict[str, Any]:
+        result = self._call("getMe")
+        return result if isinstance(result, dict) else {}
 
-    def get_updates(self, offset: int = 0, timeout: int = 30) -> list[dict]:
+    def get_updates(self, offset: int = 0, timeout: int = 30) -> list[dict[str, Any]]:
         """Long-poll for updates."""
         result = self._call(
             "getUpdates", offset=offset, timeout=timeout,
@@ -252,8 +257,8 @@ class TelegramAPI:
         chat_id: int,
         text: str,
         parse_mode: str | None = None,
-        reply_markup: dict | None = None,
-    ) -> dict:
+        reply_markup: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         # Try Markdown parse mode if not specified
         if parse_mode is None:
             parse_mode = "Markdown"
@@ -261,9 +266,9 @@ class TelegramAPI:
         # Split long messages at paragraph boundaries (not mid-word)
         if len(text) > _MAX_MESSAGE_LENGTH:
             chunks = self._split_at_boundary(text, _MAX_MESSAGE_LENGTH - 100)
-            result = {}
+            result: dict[str, Any] = {}
             for i, chunk in enumerate(chunks):
-                kwargs = {
+                kwargs: dict[str, Any] = {
                     "chat_id": chat_id,
                     "text": chunk,
                     "parse_mode": parse_mode,
@@ -272,38 +277,42 @@ class TelegramAPI:
                 if i == len(chunks) - 1 and reply_markup:
                     kwargs["reply_markup"] = reply_markup
                 try:
-                    result = self._call("sendMessage", **kwargs)
+                    call_res = self._call("sendMessage", **kwargs)
                 except Exception:
                     logger.debug("operation_failed", exc_info=True)
                     # Markdown failed — retry without parse_mode
                     kwargs["parse_mode"] = None
-                    result = self._call("sendMessage", **kwargs)
+                    call_res = self._call("sendMessage", **kwargs)
+                if isinstance(call_res, dict):
+                    result = call_res
             return result
 
         try:
-            return self._call(
+            first = self._call(
                 "sendMessage",
                 chat_id=chat_id,
                 text=text,
                 parse_mode=parse_mode,
                 reply_markup=reply_markup,
             )
+            return first if isinstance(first, dict) else {}
         except Exception:
             logger.debug("operation_failed", exc_info=True)
             # Markdown parse failed — retry as plain text
-            return self._call(
+            fallback = self._call(
                 "sendMessage",
                 chat_id=chat_id,
                 text=text,
                 reply_markup=reply_markup,
             )
+            return fallback if isinstance(fallback, dict) else {}
 
     def send_document(
         self,
         chat_id: int,
         file_path: Path,
         caption: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Send a document file to a chat. Retries on network errors."""
         url = f"{self._base}/sendDocument"
         last_err: Exception | None = None
@@ -319,7 +328,8 @@ class TelegramAPI:
                     )
                     result = resp.json()
                     if result.get("ok"):
-                        return result.get("result", {})
+                        inner = result.get("result", {})
+                        return inner if isinstance(inner, dict) else {}
                     logger.warning(
                         "Telegram API error: %s",
                         result.get("description", ""),
@@ -345,35 +355,39 @@ class TelegramAPI:
             _log_error(last_err)
         return {}
 
-    def send_chat_action(self, chat_id: int, action: str = "typing") -> dict:
-        return self._call("sendChatAction", chat_id=chat_id, action=action)
+    def send_chat_action(self, chat_id: int, action: str = "typing") -> dict[str, Any]:
+        res = self._call("sendChatAction", chat_id=chat_id, action=action)
+        return res if isinstance(res, dict) else {}
 
     def answer_callback_query(
         self, callback_query_id: str, text: str | None = None,
-    ) -> dict:
-        return self._call(
+    ) -> dict[str, Any]:
+        res = self._call(
             "answerCallbackQuery",
             callback_query_id=callback_query_id,
             text=text,
         )
+        return res if isinstance(res, dict) else {}
 
     def edit_message_text(
         self,
         chat_id: int,
         message_id: int,
         text: str,
-        reply_markup: dict | None = None,
-    ) -> dict:
-        return self._call(
+        reply_markup: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        res = self._call(
             "editMessageText",
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=reply_markup,
         )
+        return res if isinstance(res, dict) else {}
 
-    def get_file(self, file_id: str) -> dict:
-        return self._call("getFile", file_id=file_id)
+    def get_file(self, file_id: str) -> dict[str, Any]:
+        res = self._call("getFile", file_id=file_id)
+        return res if isinstance(res, dict) else {}
 
     def download_file(self, file_path: str, local_path: Path) -> bool:
         """Download a file from Telegram servers. Retries on network errors."""
@@ -397,8 +411,9 @@ class TelegramAPI:
                 return False
         return False
 
-    def set_my_commands(self, commands: list[dict]) -> dict:
-        return self._call("setMyCommands", commands=commands)
+    def set_my_commands(self, commands: list[dict[str, Any]]) -> dict[str, Any]:
+        res = self._call("setMyCommands", commands=commands)
+        return res if isinstance(res, dict) else {}
 
 
 # ── Thin transport ────────────────────────────────────────────────────
@@ -463,7 +478,7 @@ class EduAgentTelegramBot:
         import atexit
         atexit.register(_release_bot_lock)
 
-        def _signal_handler(sig, frame):
+        def _signal_handler(sig: int, frame: Any) -> None:
             self._running = False
         signal.signal(signal.SIGINT, _signal_handler)
         signal.signal(signal.SIGTERM, _signal_handler)
@@ -558,7 +573,7 @@ class EduAgentTelegramBot:
         except Exception as e:
             logger.debug("Morning prep failed: %s", e)
 
-    def _process_update(self, update: dict) -> None:
+    def _process_update(self, update: dict[str, Any]) -> None:
         """Route an update through the Gateway."""
         try:
             # Track chat IDs for proactive messaging (morning prep)
@@ -647,7 +662,7 @@ class EduAgentTelegramBot:
                     "Try again or rephrase your request.",
                 )
 
-    def _download_files(self, msg: dict) -> list[Path]:
+    def _download_files(self, msg: dict[str, Any]) -> list[Path]:
         """Download any attached documents from a Telegram message."""
         files: list[Path] = []
         doc = msg.get("document")
@@ -719,7 +734,7 @@ class EduAgentTelegramBot:
             api.send_document(chat_id, file_path, caption=caption)
 
 
-def run_bot(token: str | None = None, force: bool = False, data_dir=None) -> None:
+def run_bot(token: str | None = None, force: bool = False, data_dir: Path | None = None) -> None:
     """Entry point — create and run the bot."""
     bot = EduAgentTelegramBot(token, data_dir=data_dir) if token else EduAgentTelegramBot.from_env(data_dir=data_dir)
     bot.run(force=force)

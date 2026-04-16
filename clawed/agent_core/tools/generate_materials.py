@@ -64,7 +64,7 @@ class GenerateMaterialsTool:
             lesson_number=1,
             title=topic,
             objective=f"Students will understand {topic}.",
-            grade_level=grade,
+            grade_level=grade,  # type: ignore[call-arg]  # extra field tolerated by Pydantic for downstream grade hint
         )
 
         try:

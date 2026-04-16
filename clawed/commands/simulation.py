@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -21,7 +22,7 @@ from clawed.commands._helpers import (
 simulation_app = typer.Typer(help="Create interactive HTML simulations for science exploration.")
 
 
-def _simulation_create_json(*, topic, grade, subject, sim_type):
+def _simulation_create_json(*, topic: str, grade: str, subject: str, sim_type: str) -> dict[str, Any]:
     """Run simulation creation and return structured result for JSON output."""
     from clawed.compile_simulation import compile_simulation
     from clawed.lesson import generate_master_content
@@ -87,7 +88,7 @@ def create(
         help="Generate simulation from existing lesson JSON file",
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Generate an interactive HTML science simulation.
 
     \b
@@ -210,7 +211,7 @@ def create(
 
 
 @simulation_app.command("gallery")
-def gallery():
+def gallery() -> None:
     """Open the local simulation gallery — all simulations you've generated."""
     out_dir = _output_dir()
     sims = sorted(out_dir.glob("*_simulation.html"))

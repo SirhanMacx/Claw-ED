@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 from rich.panel import Panel
 
@@ -12,7 +14,18 @@ from clawed.commands._helpers import run_async as _run_async
 sub_app = typer.Typer()
 
 
-def _sub_json(*, class_name, grade, subject, date, topic, context, teacher, school, period):
+def _sub_json(
+    *,
+    class_name: str,
+    grade: str,
+    subject: str,
+    date: str,
+    topic: str | None,
+    context: str | None,
+    teacher: str | None,
+    school: str | None,
+    period: str,
+) -> dict[str, Any]:
     """Run sub-packet generation and return structured result for JSON output."""
     from clawed.llm import LLMClient
     from clawed.models import AppConfig
@@ -139,7 +152,14 @@ def sub(
     console.print(Panel(md, title="Sub Packet Preview", border_style="blue"))
 
 
-def _parent_comm_json(*, comm_type, student_desc, context, tone, notes):
+def _parent_comm_json(
+    *,
+    comm_type: str,
+    student_desc: str,
+    context: str,
+    tone: str,
+    notes: str | None,
+) -> dict[str, Any]:
     """Run parent-comm generation and return structured result for JSON output."""
     from clawed.llm import LLMClient
     from clawed.models import AppConfig

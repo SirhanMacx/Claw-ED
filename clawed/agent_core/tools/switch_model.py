@@ -86,7 +86,7 @@ class SwitchModelTool:
             return self._list_providers()
         return ToolResult(text=f"Unknown action: {action}")
 
-    def _current(self, config) -> ToolResult:
+    def _current(self, config: Any) -> ToolResult:
         provider = config.provider.value
         model_map = {
             "ollama": config.ollama_model,
@@ -107,7 +107,7 @@ class SwitchModelTool:
             data={"model": model, "provider": provider},
         )
 
-    def _list_models(self, config) -> ToolResult:
+    def _list_models(self, config: Any) -> ToolResult:
         """List models from all configured providers."""
         from clawed.model_discovery import list_all_models
 
@@ -139,7 +139,7 @@ class SwitchModelTool:
             data={"providers": list(all_models.keys())},
         )
 
-    def _switch_model(self, params, config) -> ToolResult:
+    def _switch_model(self, params: dict[str, Any], config: Any) -> ToolResult:
         model_name = params.get("model_name", "")
         if not model_name:
             return ToolResult(text="Specify a model_name to switch to.")
@@ -161,7 +161,7 @@ class SwitchModelTool:
             side_effects=[f"Model → {model_name}"],
         )
 
-    def _switch_provider(self, params) -> ToolResult:
+    def _switch_provider(self, params: dict[str, Any]) -> ToolResult:
         provider = params.get("provider", "")
         if not provider:
             return ToolResult(text="Specify a provider name.")
@@ -191,7 +191,7 @@ class SwitchModelTool:
                 "Options: ollama, anthropic, openai, google, openrouter",
             )
 
-    def _set_tier(self, params) -> ToolResult:
+    def _set_tier(self, params: dict[str, Any]) -> ToolResult:
         tier = params.get("tier", "")
         provider = params.get("provider", "")
         if not tier or not provider:

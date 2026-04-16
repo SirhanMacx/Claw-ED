@@ -18,16 +18,20 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
+from typing import Any
 
 from clawed.gateway import Gateway
 
 logger = logging.getLogger(__name__)
 
-# Singleton gateway for the Hermes transport
-_gateway: Gateway | None = None
+# Singleton gateway for the Hermes transport.
+# `Gateway` is a factory function that returns either the legacy or agent
+# gateway — typed as Any because the concrete class is chosen at runtime
+# based on config (see clawed/gateway.py).
+_gateway: Any = None
 
 
-def _get_gateway() -> Gateway:
+def _get_gateway() -> Any:
     """Get or create the singleton Gateway instance."""
     global _gateway
     if _gateway is None:
@@ -56,14 +60,14 @@ async def handle_message(
     if response.button_rows or response.buttons:
         logger.debug("Claw-ED suggested actions (not rendered in Hermes)")
 
-    return response.text
+    return str(response.text)
 
 
 async def handle_callback(callback_data: str, teacher_id: str = "hermes-default") -> str:
     """Handle a button callback (rating, export, etc.)."""
     gateway = _get_gateway()
     response = await gateway.handle_callback(callback_data, teacher_id)
-    return response.text
+    return str(response.text)
 
 
 def handle_message_sync(

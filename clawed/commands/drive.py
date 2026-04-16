@@ -86,8 +86,9 @@ def list_files(
         raise typer.Exit(1)
 
     from clawed.agent_core.drive.client import DriveClient
+    from clawed.commands._helpers import run_async
     client = DriveClient()
-    files = client.list_files(folder_id=folder_id or "root")
+    files = run_async(client.list_files(folder_id=folder_id or "root"))
     if not files:
         console.print("[dim]No files found.[/dim]")
         return
@@ -118,6 +119,7 @@ def ingest(
     from clawed.agent_core.drive.client import DriveClient
     from clawed.agent_core.identity import get_teacher_id
     from clawed.agent_core.memory.curriculum_kb import CurriculumKB
+    from clawed.commands._helpers import run_async
 
     client = DriveClient()
     teacher_id = get_teacher_id()
@@ -129,7 +131,7 @@ def ingest(
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     with console.status("[bold]Listing Drive files...[/bold]"):
-        files = client.list_files(folder_id=folder_id)
+        files = run_async(client.list_files(folder_id=folder_id))
 
     if not files:
         console.print("[yellow]No files found in that folder.[/yellow]")
@@ -160,7 +162,7 @@ def ingest(
 
         try:
             # Read file content
-            content_data = client.read_file(f["id"])
+            content_data = run_async(client.read_file(f["id"]))
             content = content_data.get("content", "")
             if not content or len(content.strip()) < 50:
                 console.print("    [dim]Skipped (too short or empty)[/dim]")

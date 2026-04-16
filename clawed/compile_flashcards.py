@@ -104,7 +104,7 @@ def compile_kahoot_csv(master: MasterContent, output_dir: Path) -> Path:
         correct = entry.definition[:75]  # Kahoot answer limit
 
         # Build distractors from other vocab definitions
-        distractors = []
+        distractors: list[str] = []
         for j, other in enumerate(vocab):
             if j != i and len(distractors) < 3:
                 distractors.append(other.definition[:75])

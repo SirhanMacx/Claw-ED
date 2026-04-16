@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -67,7 +68,7 @@ def _current_teacher_id() -> str:
 
 
 @router.post("/school/setup")
-async def setup_school(req: SchoolSetupRequest):
+async def setup_school(req: SchoolSetupRequest) -> dict[str, Any]:
     from clawed.school import setup_school as _setup
 
     db = get_db()
@@ -76,7 +77,7 @@ async def setup_school(req: SchoolSetupRequest):
 
 
 @router.get("/school/{school_id}")
-async def get_school(school_id: str):
+async def get_school(school_id: str) -> Any:
     db = get_db()
     school = db.get_school(school_id)
     if not school:
@@ -85,7 +86,7 @@ async def get_school(school_id: str):
 
 
 @router.post("/school/add-teacher")
-async def add_teacher(req: AddTeacherRequest):
+async def add_teacher(req: AddTeacherRequest) -> Any:
     from clawed.school import add_teacher as _add
 
     db = get_db()
@@ -98,7 +99,7 @@ async def add_teacher(req: AddTeacherRequest):
 
 
 @router.get("/school/{school_id}/teachers")
-async def list_teachers(school_id: str):
+async def list_teachers(school_id: str) -> Any:
     db = get_db()
     school = db.get_school(school_id)
     if not school:
@@ -108,7 +109,7 @@ async def list_teachers(school_id: str):
 
 
 @router.post("/school/share")
-async def share_content(req: ShareContentRequest):
+async def share_content(req: ShareContentRequest) -> Any:
     from clawed.school import share_lesson, share_unit
 
     db = get_db()
@@ -126,7 +127,7 @@ async def share_content(req: ShareContentRequest):
 
 
 @router.get("/school/{school_id}/shared-library")
-async def shared_library(school_id: str, department: str = "", limit: int = 50):
+async def shared_library(school_id: str, department: str = "", limit: int = 50) -> Any:
     """Return top-rated shared content from the school's curriculum library."""
     from clawed.school import get_shared_library
 
@@ -139,7 +140,7 @@ async def shared_library(school_id: str, department: str = "", limit: int = 50):
 
 
 @router.post("/school/rate-shared")
-async def rate_shared(req: RateSharedRequest):
+async def rate_shared(req: RateSharedRequest) -> Any:
     if req.rating < 1 or req.rating > 5:
         return JSONResponse({"error": "Rating must be 1-5"}, status_code=400)
     db = get_db()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 from rich.panel import Panel
 from rich.table import Table
@@ -232,7 +234,7 @@ def workspace_students(
 
     if json_output:
         from clawed._json_output import run_json_command
-        def _students_json():
+        def _students_json() -> dict[str, Any]:
             return {"data": {"profiles": profiles or []}, "files": []}
         run_json_command("workspace.students", _students_json)
         return

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -11,6 +13,7 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from clawed.api.deps import get_db, limiter, require_auth
+from clawed.database import Database
 from clawed.models import DailyLesson, TeacherPersona, UnitPlan
 
 logger = logging.getLogger(__name__)
@@ -21,7 +24,7 @@ router = APIRouter(
 )
 
 
-def _sse(event: str, **kwargs) -> dict:
+def _sse(event: str, **kwargs: Any) -> dict[str, str]:
     """Build an SSE message dict."""
     return {"event": event, "data": json.dumps(kwargs)}
 
@@ -61,7 +64,7 @@ class CourseRequest(BaseModel):
     weeks_per_topic: int = Field(2, ge=1, le=52)
 
 
-def _get_persona(db) -> tuple[TeacherPersona | None, str | None]:
+def _get_persona(db: Database) -> tuple[TeacherPersona | None, str | None]:
     """Load persona from the default teacher in the DB.
 
     Single-operator model (ED-4 audit): this app is designed for one
@@ -78,13 +81,13 @@ def _get_persona(db) -> tuple[TeacherPersona | None, str | None]:
 
 @router.post("/unit")
 @limiter.limit("10/minute")
-async def create_unit(request: Request, req: UnitRequest):
+async def create_unit(request: Request, req: UnitRequest) -> Any:
     """Generate a unit plan."""
     from clawed.planner import plan_unit
 
     db = get_db()
     persona, teacher_id = _get_persona(db)
-    if not persona:
+    if not persona or teacher_id is None:
         return JSONResponse(
             {"error": "No persona found. Upload teaching materials first."},
             status_code=400,
@@ -119,7 +122,7 @@ async def create_unit(request: Request, req: UnitRequest):
 
 @router.post("/lesson")
 @limiter.limit("10/minute")
-async def create_lesson(request: Request, req: LessonRequest):
+async def create_lesson(request: Request, req: LessonRequest) -> Any:
     """Generate a single lesson plan for a unit."""
     from clawed.lesson import generate_lesson
 
@@ -162,7 +165,7 @@ async def create_lesson(request: Request, req: LessonRequest):
 
 @router.post("/materials")
 @limiter.limit("10/minute")
-async def create_materials(request: Request, req: MaterialsRequest):
+async def create_materials(request: Request, req: MaterialsRequest) -> Any:
     """Generate materials for a lesson."""
     from clawed.materials import generate_all_materials
 
@@ -200,7 +203,7 @@ async def create_materials(request: Request, req: MaterialsRequest):
 
 @router.post("/full")
 @limiter.limit("10/minute")
-async def full_pipeline(request: Request, req: FullRequest):
+async def full_pipeline(request: Request, req: FullRequest) -> Any:
     """End-to-end: generate unit + all lessons + materials. Returns SSE progress events."""
     from clawed.lesson import generate_lesson
     from clawed.materials import generate_all_materials
@@ -208,12 +211,12 @@ async def full_pipeline(request: Request, req: FullRequest):
 
     db = get_db()
     persona, teacher_id = _get_persona(db)
-    if not persona:
+    if not persona or teacher_id is None:
         return JSONResponse(
             {"error": "No persona found."}, status_code=400
         )
 
-    async def event_stream():
+    async def event_stream() -> AsyncGenerator[dict[str, str], None]:
         yield _sse(
             "progress", step="unit", status="generating",
             message="Generating unit plan...",
@@ -254,7 +257,7 @@ async def full_pipeline(request: Request, req: FullRequest):
         if req.max_lessons:
             briefs = briefs[: req.max_lessons]
 
-        lesson_ids = []
+        lesson_ids: list[str] = []
         for brief in briefs:
             yield _sse(
                 "progress", step="lesson", status="generating",
@@ -359,18 +362,18 @@ async def stream_unit(
     grade_level: str = "8",
     subject: str = "Science",
     duration_weeks: int = 3,
-):
+) -> Any:
     """Stream unit plan generation via SSE (GET for EventSource)."""
     from clawed.planner import plan_unit
 
     db = get_db()
     persona, teacher_id = _get_persona(db)
-    if not persona:
+    if not persona or teacher_id is None:
         return JSONResponse(
             {"error": "No persona found."}, status_code=400
         )
 
-    async def event_stream():
+    async def event_stream() -> AsyncGenerator[dict[str, str], None]:
         yield _sse(
             "progress", status="planning_unit",
             progress=10, message="Planning unit structure...",
@@ -410,7 +413,7 @@ async def stream_unit(
 
 @router.get("/stream/lesson")
 @limiter.limit("10/minute")
-async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1):
+async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1) -> Any:
     """Stream single lesson generation via SSE (GET for EventSource)."""
     from clawed.lesson import generate_lesson
 
@@ -429,7 +432,7 @@ async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1):
 
     unit = UnitPlan.model_validate_json(unit_row["unit_json"])
 
-    async def event_stream():
+    async def event_stream() -> AsyncGenerator[dict[str, str], None]:
         yield _sse(
             "progress",
             status=f"generating_lesson_{lesson_number}",
@@ -466,20 +469,20 @@ async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1):
 
 @router.post("/course")
 @limiter.limit("10/minute")
-async def create_course(request: Request, req: CourseRequest):
+async def create_course(request: Request, req: CourseRequest) -> Any:
     """Generate a full course structure — year plan from a list of topics."""
     from clawed.planner import plan_unit
 
     db = get_db()
     persona, teacher_id = _get_persona(db)
-    if not persona:
+    if not persona or teacher_id is None:
         return JSONResponse(
             {"error": "No persona found."}, status_code=400
         )
 
-    async def event_stream():
+    async def event_stream() -> AsyncGenerator[dict[str, str], None]:
         total = len(req.topics)
-        course_units = []
+        course_units: list[dict[str, Any]] = []
 
         for i, topic in enumerate(req.topics, 1):
             pct = int((i - 1) / total * 100)
@@ -546,7 +549,7 @@ async def create_course(request: Request, req: CourseRequest):
 
 @router.get("/score/{lesson_id}")
 @limiter.limit("60/minute")
-async def score_lesson(request: Request, lesson_id: str):
+async def score_lesson(request: Request, lesson_id: str) -> Any:
     """Score a lesson on quality dimensions."""
     from clawed.quality import LessonQualityScore
 
@@ -577,7 +580,7 @@ async def score_lesson(request: Request, lesson_id: str):
 
 @router.post("/suggest/{lesson_id}")
 @limiter.limit("10/minute")
-async def suggest_improvements_endpoint(request: Request, lesson_id: str):
+async def suggest_improvements_endpoint(request: Request, lesson_id: str) -> Any:
     """Generate improvement suggestions for a lesson."""
     from clawed.improver import suggest_improvements
 
@@ -604,7 +607,7 @@ async def suggest_improvements_endpoint(request: Request, lesson_id: str):
 
 @router.get("/templates")
 @limiter.limit("60/minute")
-async def list_templates_endpoint(request: Request):
+async def list_templates_endpoint(request: Request) -> dict[str, Any]:
     """List all available lesson structure templates."""
     from clawed.templates_lib import list_templates
 
@@ -624,7 +627,7 @@ async def list_templates_endpoint(request: Request):
 
 @router.get("/units")
 @limiter.limit("60/minute")
-async def list_units(request: Request):
+async def list_units(request: Request) -> dict[str, Any]:
     """List all generated units."""
     db = get_db()
     units = db.list_units()
@@ -635,7 +638,7 @@ async def list_units(request: Request):
 
 @router.get("/lessons/{unit_id}")
 @limiter.limit("60/minute")
-async def list_lessons(request: Request, unit_id: str):
+async def list_lessons(request: Request, unit_id: str) -> dict[str, Any]:
     """List all lessons for a unit."""
     db = get_db()
     lessons = db.list_lessons(unit_id)

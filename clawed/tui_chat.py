@@ -13,6 +13,8 @@ Telegram and web transports.
 
 from __future__ import annotations
 
+from typing import Any
+
 try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
@@ -28,7 +30,7 @@ except ImportError as e:
 import httpx
 
 
-class ChatMessage(Static):
+class ChatMessage(Static):  # type: ignore[misc]  # Static is Any from textual stubs
     """A single chat message bubble."""
 
     DEFAULT_CSS = """
@@ -46,7 +48,7 @@ class ChatMessage(Static):
     }
     """
 
-    def __init__(self, role: str, text: str, **kwargs) -> None:
+    def __init__(self, role: str, text: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._role = role
         self._text = text
@@ -57,7 +59,7 @@ class ChatMessage(Static):
         yield Static(f"{label}\n{self._text}")
 
 
-class ThinkingIndicator(Static):
+class ThinkingIndicator(Static):  # type: ignore[misc]  # Static is Any from textual stubs
     """Animated thinking indicator."""
 
     DEFAULT_CSS = """
@@ -68,7 +70,7 @@ class ThinkingIndicator(Static):
     }
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._frame = 0
         self._frames = ["Thinking.", "Thinking..", "Thinking..."]
@@ -83,7 +85,7 @@ class ThinkingIndicator(Static):
         )
 
 
-class ClawEDChat(App):
+class ClawEDChat(App):  # type: ignore[misc]  # App is Any from textual stubs
     """Claw-ED TUI — transport client that connects to a running gateway."""
 
     TITLE = "Claw-ED Chat"
@@ -127,7 +129,7 @@ class ClawEDChat(App):
         teacher_id: str = "local-teacher",
         host: str = "127.0.0.1",
         port: int = 8000,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._teacher_id = teacher_id
@@ -198,7 +200,7 @@ class ClawEDChat(App):
         # POST to the running gateway
         response_text = ""
         files: list[str] = []
-        buttons: list[dict] = []
+        buttons: list[dict[str, Any]] = []
         try:
             resp = await self._client.post(
                 "/api/gateway/chat",

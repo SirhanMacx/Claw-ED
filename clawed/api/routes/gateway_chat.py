@@ -7,6 +7,7 @@ from identity.py — callers cannot impersonate other teachers.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -18,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["gateway"])
 
-_gateway = None
+_gateway: Any = None
 
 
-def _get_gateway():
+def _get_gateway() -> Any:
     global _gateway
     if _gateway is None:
         from clawed.gateway import Gateway
@@ -35,7 +36,7 @@ class GatewayChatRequest(BaseModel):
 
 @router.post("/gateway/chat", dependencies=[Depends(require_auth)])
 @limiter.limit("30/minute")
-async def gateway_chat(request: Request, req: GatewayChatRequest):
+async def gateway_chat(request: Request, req: GatewayChatRequest) -> Any:
     """Send a message through the Gateway.
 
     teacher_id is resolved server-side from the config — callers

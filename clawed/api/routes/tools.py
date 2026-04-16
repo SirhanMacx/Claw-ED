@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -32,7 +33,7 @@ class SubPacketAPIRequest(BaseModel):
 
 @router.post("/sub-packet")
 @limiter.limit("10/minute")
-async def create_sub_packet(request: Request, req: SubPacketAPIRequest):
+async def create_sub_packet(request: Request, req: SubPacketAPIRequest) -> Any:
     """Generate a complete substitute teacher packet."""
     from clawed.llm import LLMClient
     from clawed.models import AppConfig
@@ -72,7 +73,7 @@ class ParentCommAPIRequest(BaseModel):
 
 @router.post("/parent-comm")
 @limiter.limit("10/minute")
-async def create_parent_comm(request: Request, req: ParentCommAPIRequest):
+async def create_parent_comm(request: Request, req: ParentCommAPIRequest) -> Any:
     """Generate a professional parent communication email."""
     from clawed.llm import LLMClient
     from clawed.models import AppConfig

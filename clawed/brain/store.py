@@ -43,6 +43,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class BrainPage:
     title: str
     compiled_truth: str = ""
     timeline: list[TimelineEntry] = field(default_factory=list)
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def add_timeline(self, body: str, source: str = "", date: str = "") -> None:
         """Append a timeline entry. Sorted reverse-chronological on save."""
@@ -151,7 +152,7 @@ class BrainPage:
     @classmethod
     def parse(cls, text: str) -> BrainPage:
         """Parse a markdown page back into a BrainPage."""
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
         body = text
 
         # Parse front matter
@@ -340,6 +341,6 @@ class BrainStore:
         self.save(page)
         return True
 
-    def stats(self) -> dict:
+    def stats(self) -> dict[str, int]:
         """Return counts per page type."""
         return {ptype: len(self.list_pages(ptype)) for ptype in PAGE_TYPES}

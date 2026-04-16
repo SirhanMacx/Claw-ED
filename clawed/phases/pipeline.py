@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
+
+from pydantic import BaseModel as _PydanticBaseModel
 
 from clawed.master_content import MasterContent
 from clawed.phases.models import (
@@ -22,7 +24,10 @@ from clawed.phases.models import (
 from clawed.standards import format_standards_for_prompt, get_standards_for_lesson
 
 if TYPE_CHECKING:
-    from clawed.models import LessonBrief, TeacherPersona, UnitPlan
+    from clawed.llm import LLMClient
+    from clawed.models import AppConfig, LessonBrief, TeacherPersona, UnitPlan
+
+_PhaseT = TypeVar("_PhaseT", bound=_PydanticBaseModel)
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +54,7 @@ def _load_prompt(name: str) -> str:
     return (_PROMPT_DIR / name).read_text(encoding="utf-8")
 
 
-def _fill_template(template: str, **kwargs) -> str:
+def _fill_template(template: str, **kwargs: Any) -> str:
     """Replace {variable} placeholders in a template.
 
     Unlike str.format(), this does NOT interpret unrelated braces (like
@@ -63,7 +68,7 @@ def _fill_template(template: str, **kwargs) -> str:
     return result
 
 
-def _render_vocabulary_list(vocab: list) -> str:
+def _render_vocabulary_list(vocab: list[Any]) -> str:
     """Render Phase 1 vocabulary as a bullet list for Phase 2 context."""
     if not vocab:
         return "_(no vocabulary in this lesson)_"
@@ -73,7 +78,7 @@ def _render_vocabulary_list(vocab: list) -> str:
     return "\n".join(lines)
 
 
-def _render_primary_sources_block(sources: list, content_chars: int = 150) -> str:
+def _render_primary_sources_block(sources: list[Any], content_chars: int = 150) -> str:
     """Render Phase 1 primary sources for downstream phases.
 
     Aggressively trimmed to keep downstream prompts <3KB. Downstream
@@ -91,14 +96,14 @@ def _render_primary_sources_block(sources: list, content_chars: int = 150) -> st
     return "\n".join(lines)
 
 
-def _render_primary_sources_mini(sources: list) -> str:
+def _render_primary_sources_mini(sources: list[Any]) -> str:
     """Ultra-compact source list for Phase 3 (stations just need id+title)."""
     if not sources:
         return "_(none)_"
     return "\n".join(f"- {ps.id}: {ps.title}" for ps in sources)
 
 
-def _render_direct_instruction_block(sections: list) -> str:
+def _render_direct_instruction_block(sections: list[Any]) -> str:
     """Render Phase 2 direct instruction headings for Phase 3/4 context.
 
     Compact: heading + 100 chars of content. Phases 3/4 mostly need
@@ -113,23 +118,23 @@ def _render_direct_instruction_block(sections: list) -> str:
     return "\n".join(lines)
 
 
-def _render_direct_instruction_headings(sections: list) -> str:
+def _render_direct_instruction_headings(sections: list[Any]) -> str:
     """Render just the section headings for Phase 4."""
     return ", ".join(sec.heading for sec in sections) or "_(none)_"
 
 
-def _render_misconceptions_list(miscs: list) -> str:
+def _render_misconceptions_list(miscs: list[Any]) -> str:
     if not miscs:
         return "_(none identified)_"
     return "\n".join(f"- {m}" for m in miscs)
 
 
-def _render_vocabulary_terms(vocab: list) -> str:
+def _render_vocabulary_terms(vocab: list[Any]) -> str:
     """Render vocabulary as a comma-separated list of terms."""
     return ", ".join(v.term for v in vocab) if vocab else "_(none)_"
 
 
-def _render_persona_voice_hint(persona) -> str:
+def _render_persona_voice_hint(persona: TeacherPersona | None) -> str:
     """Render a short persona voice reminder for phase prompts."""
     if not persona:
         return ""
@@ -142,7 +147,7 @@ def _render_persona_voice_hint(persona) -> str:
     return ""
 
 
-def _build_slim_system_prompt(persona, subject: str, rich: bool = False) -> str:
+def _build_slim_system_prompt(persona: TeacherPersona | None, subject: str, rich: bool = False) -> str:
     """Build a system prompt for phase calls.
 
     Two modes:
@@ -228,10 +233,10 @@ async def _run_phase(
     phase_name: str,
     prompt: str,
     system: str,
-    model_class,
-    client,
+    model_class: type[_PhaseT],
+    client: LLMClient,
     task_type: str,
-):
+) -> _PhaseT:
     """Run a single phase with multi-model fallback.
 
     Tries the configured model first. If it times out or returns empty,
@@ -348,7 +353,7 @@ async def _phase1_skeleton(
     standards_text: str,
     teacher_materials: str,
     system: str,
-    client,
+    client: LLMClient,
     task_type: str,
     brain_prompt: str = "",
 ) -> Phase1Skeleton:
@@ -495,7 +500,7 @@ def _validate_phase2b(phase2b: Phase2bGuidedNotes) -> list[str]:
     return issues
 
 
-def _render_section_headings_block(sections: list) -> str:
+def _render_section_headings_block(sections: list[Any]) -> str:
     """Render section headings as a numbered list for Phase 2b."""
     if not sections:
         return "_(no sections)_"
@@ -504,7 +509,7 @@ def _render_section_headings_block(sections: list) -> str:
     )
 
 
-def _render_section_content_block(sections: list) -> str:
+def _render_section_content_block(sections: list[Any]) -> str:
     """Render section content summaries for Phase 2b."""
     if not sections:
         return "_(no content)_"
@@ -518,7 +523,7 @@ def _render_section_content_block(sections: list) -> str:
 async def _phase2a_direct_instruction(
     phase1: Phase1Skeleton,
     system: str,
-    client,
+    client: LLMClient,
     task_type: str,
 ) -> Phase2aDirectInstruction:
     """Generate Phase 2a — direct_instruction sections only."""
@@ -577,7 +582,7 @@ async def _phase2b_guided_notes(
     phase1: Phase1Skeleton,
     phase2a: Phase2aDirectInstruction,
     system: str,
-    client,
+    client: LLMClient,
     task_type: str,
 ) -> Phase2bGuidedNotes:
     """Generate Phase 2b — guided_notes + formative_checks."""
@@ -636,7 +641,7 @@ async def _phase2_instruction(
     phase1: Phase1Skeleton,
     persona: TeacherPersona,
     system: str,
-    client,
+    client: LLMClient,
     task_type: str,
 ) -> Phase2Instruction:
     """Generate Phase 2 by calling 2a + 2b sequentially.
@@ -706,7 +711,7 @@ async def _phase3_activities(
     phase1: Phase1Skeleton,
     phase2: Phase2Instruction,
     system: str,
-    client,
+    client: LLMClient,
     task_type: str,
 ) -> Phase3Activities:
     """Generate Phase 3 with quality validation and retry.
@@ -857,7 +862,7 @@ async def _phase4_assessment(
     phase2: Phase2Instruction,
     persona: TeacherPersona,
     system: str,
-    client,
+    client: LLMClient,
     task_type: str,
 ) -> Phase4Assessment:
     """Generate Phase 4 with quality validation and retry."""
@@ -932,8 +937,8 @@ def merge_phases(
     phase2: Phase2Instruction,
     phase3: Phase3Activities,
     phase4: Phase4Assessment,
-    brain_context=None,
-    citations=None,
+    brain_context: Any = None,
+    citations: list[Any] | None = None,
 ) -> MasterContent:
     """Merge 4 phase outputs into a complete MasterContent."""
     return MasterContent(
@@ -980,10 +985,10 @@ def merge_phases(
 
 async def generate_master_content_phased(
     lesson_number: int,
-    unit,
-    persona,
+    unit: UnitPlan,
+    persona: TeacherPersona,
     include_homework: bool = True,
-    config=None,
+    config: AppConfig | None = None,
     task_type: str = "master_content",
     state: str = "",
     teacher_materials: str = "",

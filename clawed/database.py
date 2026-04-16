@@ -15,6 +15,7 @@ import logging
 import os
 import sqlite3
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -53,7 +54,7 @@ class Database:
             self._migrate_on(conn)
 
     @contextmanager
-    def _connect(self):
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         """Context manager yielding a new SQLite connection.
 
         Commits on success, rolls back on exception, always closes.
@@ -249,12 +250,12 @@ class Database:
     def _new_token() -> str:
         return uuid.uuid4().hex
 
-    def _fetchone(self, sql: str, params: tuple = ()) -> dict[str, Any] | None:
+    def _fetchone(self, sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
         with self._connect() as conn:
             row = conn.execute(sql, params).fetchone()
         return dict(row) if row else None
 
-    def _fetchall(self, sql: str, params: tuple = ()) -> list[dict[str, Any]]:
+    def _fetchall(self, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
@@ -685,7 +686,7 @@ class Database:
                 "DELETE FROM student_enrollments WHERE class_code=? AND student_id=?",
                 (class_code, student_id),
             )
-            return cur.rowcount > 0
+            return bool(cur.rowcount > 0)
 
     def list_enrollments(self, class_code: str) -> list[dict[str, Any]]:
         return self._fetchall(

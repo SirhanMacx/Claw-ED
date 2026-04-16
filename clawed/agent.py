@@ -81,7 +81,7 @@ async def run_agent(
             response = await _call_with_ollama_tools(messages, system, config)
 
         if response["type"] == "text":
-            return response["content"]
+            return str(response["content"])
 
         if response["type"] == "tool_calls":
             tool_calls = response["tool_calls"]
@@ -135,7 +135,7 @@ async def _anthropic_with_tools(
     # Convert tool definitions to Anthropic format
     tools = []
     for t in TOOL_DEFINITIONS:
-        f = t["function"]
+        f: dict[str, Any] = t["function"]  # type: ignore[assignment]
         tools.append({
             "name": f["name"],
             "description": f["description"],

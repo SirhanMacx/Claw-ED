@@ -361,7 +361,7 @@ class StudentBot:
         ]
         for _name, content in sections:
             if topic_lower in content.lower():
-                return content
+                return str(content)
         return ""
 
     # ── Student message handling ─────────────────────────────────────────
@@ -463,7 +463,7 @@ class StudentBot:
 
     # ── Reporting ────────────────────────────────────────────────────────
 
-    async def get_student_report(self, class_code: str) -> dict:
+    async def get_student_report(self, class_code: str) -> dict[str, Any]:
         """Return what questions students asked (for teacher insight)."""
         with _get_conn() as conn:
             questions = conn.execute(
@@ -660,7 +660,7 @@ class StudentBot:
         except ImportError:
             pass  # Progress tracking is best-effort
 
-    def get_student_progress(self, class_code: str) -> list[dict]:
+    def get_student_progress(self, class_code: str) -> list[dict[str, Any]]:
         """Get progress data for all students in a class.
 
         Returns a list of dicts with student activity, topic counts,

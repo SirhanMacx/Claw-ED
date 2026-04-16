@@ -6,6 +6,7 @@ import json
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
@@ -40,7 +41,7 @@ class ExtensionSourceRequest(BaseModel):
 
 
 @router.post("/extension/generate")
-async def extension_generate(req: ExtensionGenerateRequest):
+async def extension_generate(req: ExtensionGenerateRequest) -> dict[str, Any]:
     """Generate a lesson from highlighted text (Chrome extension endpoint).
 
     The extension sends selected text from any webpage. Claw-ED generates
@@ -183,7 +184,7 @@ _MAX_SOURCES = 1000
 _MAX_COMMUNITY = 500
 
 
-def _cleanup_expired(store: list[dict], max_size: int) -> None:
+def _cleanup_expired(store: list[dict[str, Any]], max_size: int) -> None:
     """Remove entries older than _STORE_TTL_SECONDS and enforce max size."""
     now = time.time()
     cutoff = now - _STORE_TTL_SECONDS
@@ -220,11 +221,11 @@ def _cleanup_expired_sessions() -> None:
 
 
 # Saved sources from extension (bounded to prevent OOM)
-_saved_sources: list[dict] = []
+_saved_sources: list[dict[str, Any]] = []
 
 
 @router.post("/extension/add-source")
-async def extension_add_source(req: ExtensionSourceRequest):
+async def extension_add_source(req: ExtensionSourceRequest) -> dict[str, Any]:
     """Save highlighted text as a primary source for future lessons."""
     # ED-5: cleanup expired sources and enforce size limits
     _cleanup_expired(_saved_sources, _MAX_SOURCES)
@@ -239,7 +240,7 @@ async def extension_add_source(req: ExtensionSourceRequest):
 
 
 @router.get("/extension/sources")
-async def extension_list_sources():
+async def extension_list_sources() -> dict[str, Any]:
     """List all saved sources from the Chrome extension."""
     return {"sources": _saved_sources, "count": len(_saved_sources)}
 
@@ -256,7 +257,7 @@ class ClassroomState(BaseModel):
     timer_running: bool = False
     poll_active: bool = False
     poll_question: str = ""
-    poll_responses: list[dict] = Field(default_factory=list)
+    poll_responses: list[dict[str, Any]] = Field(default_factory=list)
 
 
 # In-memory classroom sessions (bounded to prevent OOM)
@@ -275,7 +276,7 @@ _MAX_STUDENT_ID_LENGTH = 100
 
 
 @router.post("/classroom/start")
-async def classroom_start(lesson_title: str = "", total_slides: int = 10):
+async def classroom_start(lesson_title: str = "", total_slides: int = 10) -> dict[str, Any]:
     """Start a real-time classroom session. Returns class code."""
     import secrets as _secrets
 
@@ -294,7 +295,7 @@ async def classroom_start(lesson_title: str = "", total_slides: int = 10):
 
 
 @router.post("/classroom/{code}/next-slide")
-async def classroom_next_slide(code: str):
+async def classroom_next_slide(code: str) -> dict[str, Any]:
     """Advance to next slide (teacher control)."""
     session = _classroom_sessions.get(code)
     if not session:
@@ -309,7 +310,7 @@ async def classroom_next_slide(code: str):
 
 
 @router.post("/classroom/{code}/prev-slide")
-async def classroom_prev_slide(code: str):
+async def classroom_prev_slide(code: str) -> dict[str, Any]:
     """Go back one slide (teacher control)."""
     session = _classroom_sessions.get(code)
     if not session:
@@ -324,7 +325,7 @@ async def classroom_prev_slide(code: str):
 
 
 @router.post("/classroom/{code}/start-timer")
-async def classroom_start_timer(code: str, seconds: int = 600):
+async def classroom_start_timer(code: str, seconds: int = 600) -> dict[str, Any]:
     """Start a visible countdown timer (teacher control)."""
     session = _classroom_sessions.get(code)
     if not session:
@@ -339,7 +340,7 @@ async def classroom_start_timer(code: str, seconds: int = 600):
 
 
 @router.post("/classroom/{code}/launch-poll")
-async def classroom_launch_poll(code: str, question: str = ""):
+async def classroom_launch_poll(code: str, question: str = "") -> dict[str, Any]:
     """Launch a live poll (teacher control)."""
     session = _classroom_sessions.get(code)
     if not session:
@@ -355,7 +356,7 @@ async def classroom_launch_poll(code: str, question: str = ""):
 
 
 @student_router.post("/classroom/{code}/respond")
-async def classroom_respond(code: str, student_id: str = "", response: str = ""):
+async def classroom_respond(code: str, student_id: str = "", response: str = "") -> dict[str, Any]:
     """Student submits a poll response or exit ticket answer.
 
     On student_router — no teacher auth required. Class code is the auth.
@@ -391,7 +392,7 @@ async def classroom_respond(code: str, student_id: str = "", response: str = "")
     return {"received": True}
 
 
-def _redact_student_state(session_data: dict) -> dict:
+def _redact_student_state(session_data: dict[str, Any]) -> dict[str, Any]:
     """Redact poll_responses from session state for student-facing views.
 
     ED-1 audit fix: both the HTTP /state endpoint and the WebSocket
@@ -405,7 +406,7 @@ def _redact_student_state(session_data: dict) -> dict:
 
 
 @student_router.get("/classroom/{code}/state")
-async def classroom_state(code: str):
+async def classroom_state(code: str) -> dict[str, Any]:
     """Get current classroom state (for student devices).
 
     On student_router — no teacher auth required.
@@ -423,7 +424,7 @@ async def classroom_state(code: str):
 
 
 @router.get("/classroom/{code}/responses")
-async def classroom_responses(code: str):
+async def classroom_responses(code: str) -> dict[str, Any]:
     """Teacher-only view of raw poll responses for the class session.
 
     v4.11.2026 new route: separates PII-bearing student responses from
@@ -441,7 +442,7 @@ async def classroom_responses(code: str):
 
 
 @student_router.websocket("/classroom/{code}/ws")
-async def classroom_websocket(websocket: WebSocket, code: str):
+async def classroom_websocket(websocket: WebSocket, code: str) -> None:
     """WebSocket for real-time classroom updates.
 
     On student_router — class code validates the session.
@@ -479,7 +480,7 @@ async def classroom_websocket(websocket: WebSocket, code: str):
                 conns.remove(websocket)
 
 
-async def _broadcast(code: str, message: dict) -> None:
+async def _broadcast(code: str, message: dict[str, Any]) -> None:
     """Broadcast a message to all connected WebSocket clients."""
     connections = _classroom_connections.get(code, [])
     dead: list[WebSocket] = []
@@ -505,7 +506,7 @@ class ShareRequest(BaseModel):
 
 
 # Community lesson store (bounded, in-memory — upgrade to SQLite for production)
-_community_lessons: list[dict] = []
+_community_lessons: list[dict[str, Any]] = []
 
 
 # v4.11.2026.1 security fix (P2-6): the previous PII strip only popped
@@ -526,7 +527,7 @@ _IDENTITY_FIELDS: frozenset[str] = frozenset({
 })
 
 
-def _scrub_pii(obj, _depth: int = 0):
+def _scrub_pii(obj: Any, _depth: int = 0) -> Any:
     """Recursively remove identity fields from nested dict/list structures."""
     if _depth > 30:  # pathological nesting guard
         return obj
@@ -543,7 +544,7 @@ def _scrub_pii(obj, _depth: int = 0):
 
 
 @router.post("/community/share")
-async def community_share(req: ShareRequest):
+async def community_share(req: ShareRequest) -> dict[str, Any]:
     """Share a lesson with the teacher community (anonymized).
 
     Strips teacher identity before storing. Other teachers can browse
@@ -584,7 +585,7 @@ async def community_browse(
     grade: str = "",
     query: str = "",
     limit: int = 20,
-):
+) -> dict[str, Any]:
     """Browse shared lessons from the teacher community."""
     results = _community_lessons
 
@@ -613,7 +614,7 @@ class CommunityRatingRequest(BaseModel):
 
 
 @router.post("/community/{lesson_id}/rate")
-async def community_rate(lesson_id: int, req: CommunityRatingRequest):
+async def community_rate(lesson_id: int, req: CommunityRatingRequest) -> dict[str, Any]:
     """Rate a community lesson (1-5 stars)."""
     rating = req.rating
     for entry in _community_lessons:
@@ -633,7 +634,7 @@ async def community_rate(lesson_id: int, req: CommunityRatingRequest):
 
 
 @router.get("/pipeline/status")
-async def pipeline_status():
+async def pipeline_status() -> dict[str, Any]:
     """Get the current state of the lesson generation pipeline.
 
     Returns the quality gate checks, critic feedback, and generation
@@ -708,7 +709,7 @@ async def pipeline_status():
 
 
 @router.get("/pipeline/quality-report")
-async def pipeline_quality_report():
+async def pipeline_quality_report() -> dict[str, Any]:
     """Get the quality gate check results for the most recent lesson."""
     try:
         from clawed.agent_core.identity import get_teacher_id
@@ -722,7 +723,7 @@ async def pipeline_quality_report():
 
 
 @router.get("/scheduler/status")
-async def scheduler_job_status():
+async def scheduler_job_status() -> dict[str, Any]:
     """Get the status of all scheduler jobs (F11 audit fix)."""
     try:
         from clawed.scheduler import get_job_status, load_schedule_config

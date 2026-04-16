@@ -11,6 +11,7 @@ This module provides level 1.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from clawed.corpus import get_few_shot_context
 from clawed.llm import LLMClient
@@ -183,7 +184,10 @@ class CurriculumMapper:
 
         config = route_model("curriculum_gaps", self.config)
         client = LLMClient(config)
-        data = await client.generate_json(
+        # generate_json is typed as returning dict[str, Any] but actually
+        # returns whatever JSON the LLM emits — list or dict depending on the
+        # prompt. Treat it as Any so both runtime branches type-check.
+        data: Any = await client.generate_json(
             prompt=prompt,
             system=(
                 "You are an expert curriculum alignment specialist. "

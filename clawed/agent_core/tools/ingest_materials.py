@@ -84,7 +84,7 @@ class IngestMaterialsTool:
         except Exception as e:
             return ToolResult(text=f"Failed to ingest materials: {e}")
 
-    async def _extract_and_save_persona(self, docs, context):
+    async def _extract_and_save_persona(self, docs: list[Any], context: AgentContext) -> Any:
         """Extract persona from docs, override name, save, track evolution."""
         try:
             from clawed.persona import extract_persona, save_persona
@@ -110,7 +110,7 @@ class IngestMaterialsTool:
             save_persona(persona, data_dir())
             try:
                 from clawed.persona_evolution import record_ingestion_changes
-                record_ingestion_changes(old_persona=None, new_persona=persona)
+                record_ingestion_changes(old_persona=None, new_persona=persona)  # type: ignore[arg-type]  # None is accepted at runtime for first ingest
             except ImportError:
                 pass
             return persona
@@ -120,7 +120,7 @@ class IngestMaterialsTool:
             logger.debug("Persona extraction failed", exc_info=True)
             return None
 
-    def _generate_reading_summary(self, docs, persona, raw_path):
+    def _generate_reading_summary(self, docs: list[Any], persona: Any, raw_path: Any) -> tuple[str, dict[str, Any]]:
         """Generate reading report and return (summary, report_dict)."""
         summary = f"Ingested {len(docs)} file(s) from {raw_path}."
         report = {}
@@ -145,7 +145,7 @@ class IngestMaterialsTool:
                 summary += " (Could not extract style patterns.)"
         return summary, report
 
-    def _run_full_ingest_pipeline(self, summary, raw_path, context):
+    def _run_full_ingest_pipeline(self, summary: str, raw_path: Any, context: AgentContext) -> str:
         """Run full pipeline: chunks + images + KG + wiki."""
         try:
             from clawed.ingestor import full_ingest
@@ -164,7 +164,7 @@ class IngestMaterialsTool:
             logger.debug("Full ingest pipeline failed: %s", e)
         return summary
 
-    def _update_soul_md(self, report):
+    def _update_soul_md(self, report: dict[str, Any]) -> None:
         """Update soul.md with learnings from reading report."""
         try:
             import os as _os
@@ -205,7 +205,7 @@ class IngestMaterialsTool:
         except Exception as e:
             logger.debug("SOUL.md update failed: %s", e)
 
-    def _build_profile_update(self, report):
+    def _build_profile_update(self, report: dict[str, Any]) -> str:
         """Check if we can auto-populate teacher profile fields."""
         try:
             from clawed.models import AppConfig

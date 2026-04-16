@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from docx.document import Document as DocxDocument
@@ -61,7 +61,7 @@ class _DocBuilder:
             run.font.color.rgb = self._RGBColor(*color)
 
     def page_break(self) -> None:
-        self.doc.add_page_break()
+        self.doc.add_page_break()  # type: ignore[no-untyped-call]  # python-docx is untyped
 
     def embed_image(self, image_spec: str, width_inches: float = 4.5) -> None:
         from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -77,7 +77,7 @@ class _DocBuilder:
             except Exception as exc:
                 logger.debug("Could not embed image %r: %s", image_spec, exc)
 
-    def shaded_cell(self, cell, fill_hex: str) -> None:
+    def shaded_cell(self, cell: Any, fill_hex: str) -> None:
         from docx.oxml.ns import qn
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()  # noqa: N806

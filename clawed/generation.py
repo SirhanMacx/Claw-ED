@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from clawed.model_router import route as route_model
-from clawed.models import AppConfig, TeacherPersona
+from clawed.models import AppConfig, DailyLesson, TeacherPersona, UnitPlan
 from clawed.router import ParsedIntent
 from clawed.state import TeacherSession
 from clawed.student_bot import StudentBot
@@ -24,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ── Response formatters ──────────────────────────────────────────────────────
 
 
-def _fmt_unit_summary(unit) -> str:
+def _fmt_unit_summary(unit: UnitPlan) -> str:
     """Format a unit plan for Telegram (no markdown tables)."""
     lines = [
         f"\U0001f4da *{unit.title}*",
@@ -45,7 +47,7 @@ def _fmt_unit_summary(unit) -> str:
     return "\n".join(lines)
 
 
-def _fmt_lesson_summary(lesson) -> str:
+def _fmt_lesson_summary(lesson: DailyLesson) -> str:
     """Format a lesson plan for Telegram."""
     lines = [
         f"\U0001f4dd *Lesson {lesson.lesson_number}: {lesson.title}*",
@@ -98,8 +100,8 @@ async def generate_unit(parsed: ParsedIntent, session: TeacherSession) -> str:
     from clawed.planner import plan_unit
 
     topic = parsed.topic or "the current topic"
-    has_grades = session.persona and session.persona.grade_levels
-    grade = parsed.grade or (session.persona.grade_levels[0] if has_grades else "8")
+    has_grades = bool(session.persona and session.persona.grade_levels)
+    grade = parsed.grade or (session.persona.grade_levels[0] if session.persona and has_grades else "8")
     subject = (session.persona.subject_area if session.persona and session.persona.subject_area else "General")
     weeks = parsed.weeks or 2
     persona = session.persona or TeacherPersona()
@@ -204,7 +206,7 @@ async def generate_lesson(parsed: ParsedIntent, session: TeacherSession) -> str:
 
 async def generate_materials(parsed: ParsedIntent, session: TeacherSession) -> str:
     """Generate supplementary materials for the current lesson."""
-    from clawed.materials import generate_materials as _gen_materials
+    from clawed.materials import generate_all_materials as _gen_materials
 
     if not session.current_lesson:
         return "Which lesson should I make materials for? Generate a lesson plan first, or tell me the topic."
@@ -445,8 +447,10 @@ async def generate_differentiation(parsed: ParsedIntent, session: TeacherSession
             if cleaned.startswith("```"):
                 cleaned = "\n".join(cleaned.split("\n")[1:])
                 cleaned = cleaned.rstrip("`").strip()
-            items = _json.loads(cleaned)
-            if not isinstance(items, list):
+            parsed_any: Any = _json.loads(cleaned)
+            if isinstance(parsed_any, list):
+                items = [str(x) for x in parsed_any]
+            else:
                 items = []
         except Exception:
             logger.debug("Failed to parse differentiation JSON; using empty list", exc_info=True)
@@ -530,8 +534,8 @@ async def handle_search_standards(parsed: ParsedIntent, session: TeacherSession)
     """Look up educational standards."""
     from clawed.standards import get_standards
 
-    has_grades = session.persona and session.persona.grade_levels
-    grade = parsed.grade or (session.persona.grade_levels[0] if has_grades else None)
+    has_grades = bool(session.persona and session.persona.grade_levels)
+    grade = parsed.grade or (session.persona.grade_levels[0] if session.persona and has_grades else None)
     subject = session.persona.subject_area if session.persona else None
 
     if not grade or not subject:
@@ -547,7 +551,10 @@ async def handle_search_standards(parsed: ParsedIntent, session: TeacherSession)
 
     lines = [f"\U0001f4cb *Standards: Grade {grade} {subject}*", ""]
     for s in standards[:8]:
-        lines.append(f"\u2022 *{s.get('code', '')}* \u2014 {s.get('description', '')[:100]}")
+        # standards entries are (code, description, ...) tuples
+        code = s[0] if len(s) >= 1 else ""
+        description = s[1] if len(s) >= 2 else ""
+        lines.append(f"\u2022 *{code}* \u2014 {description[:100]}")
     if len(standards) > 8:
         lines.append(f"_... and {len(standards) - 8} more_")
     return "\n".join(lines)
@@ -758,7 +765,7 @@ async def handle_connect_local(
     parsed: ParsedIntent,
     session: TeacherSession,
     *,
-    notify_callback=None,
+    notify_callback: Callable[[str], Any] | None = None,
 ) -> str:
     """Connect a local folder and ingest lesson materials."""
     path = parsed.url
@@ -813,14 +820,15 @@ async def handle_connect_local(
         if cap_msg:
             notify_callback(cap_msg)
 
-        def _bg_ingest():
+        def _bg_ingest() -> None:
             try:
                 from clawed.ingestor import ingest_path
 
                 batch_size = 50
 
-                def _progress(current, total):
+                def _progress(current: int, total: int) -> None:
                     if current % batch_size == 0 or current == total:
+                        assert notify_callback is not None
                         notify_callback(
                             f"Processing files {current - batch_size + 1}-"
                             f"{current} of {total}..."

@@ -18,9 +18,11 @@ import logging
 import re
 import sqlite3
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from clawed.models import DailyLesson, TeacherPersona, UnitPlan
 
@@ -31,7 +33,7 @@ logger = logging.getLogger(__name__)
 _SAFE_SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_ ()'.\[\]]+$")
 
 # Default data directory
-def _default_data_dir():
+def _default_data_dir() -> Path:
     from clawed.paths import data_dir
     return data_dir()
 
@@ -45,7 +47,7 @@ def _db_path() -> Path:
 
 
 @contextmanager
-def _get_conn():
+def _get_conn() -> Iterator[sqlite3.Connection]:
     """Context manager that yields a SQLite connection.
 
     Commits on success, rolls back on exception, and always closes.
@@ -201,10 +203,10 @@ class TeacherSession:
         teacher_id: str,
         name: str | None = None,
         persona: TeacherPersona | None = None,
-        config: dict | None = None,
+        config: dict[str, Any] | None = None,
         current_unit: UnitPlan | None = None,
         current_lesson: DailyLesson | None = None,
-        context: list | None = None,
+        context: list[dict[str, Any]] | None = None,
         school_id: str | None = None,
     ):
         self.teacher_id = teacher_id
@@ -213,7 +215,7 @@ class TeacherSession:
         self.config = config or {}
         self.current_unit = current_unit
         self.current_lesson = current_lesson
-        self.context: list[dict] = context or []  # Recent conversation turns
+        self.context: list[dict[str, Any]] = context or []  # Recent conversation turns
         self.last_activity = datetime.now(UTC)
         self.school_id = school_id
 
@@ -358,7 +360,7 @@ class TeacherSession:
         self.save()
         return lesson_id
 
-    def get_recent_units(self, limit: int = 5) -> list[dict]:
+    def get_recent_units(self, limit: int = 5) -> list[dict[str, Any]]:
         """Get the teacher's most recent generated units."""
         init_db()
         with _get_conn() as conn:
@@ -380,7 +382,7 @@ class TeacherSession:
         """True if we have curriculum materials to learn from."""
         return bool(self.config.get("materials_path") or self.config.get("drive_url"))
 
-    def get_context_for_llm(self, max_turns: int = 5) -> list[dict]:
+    def get_context_for_llm(self, max_turns: int = 5) -> list[dict[str, Any]]:
         """Get recent conversation context formatted for LLM input."""
         return [
             {"role": turn["role"], "content": turn["content"]}

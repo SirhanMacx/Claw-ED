@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, model_validator
@@ -31,7 +32,7 @@ class _WorksheetResult(PydanticBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _wrap_list(cls, data):
+    def _wrap_list(cls, data: Any) -> Any:
         if isinstance(data, list):
             return {"items": data}
         return data
@@ -47,7 +48,7 @@ class _SlidesResult(PydanticBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _wrap_list(cls, data):
+    def _wrap_list(cls, data: Any) -> Any:
         if isinstance(data, list):
             return {"slides": data}
         return data
@@ -58,7 +59,7 @@ class _IEPNotesResult(PydanticBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _wrap_list(cls, data):
+    def _wrap_list(cls, data: Any) -> Any:
         if isinstance(data, list):
             return {"notes": data}
         return data

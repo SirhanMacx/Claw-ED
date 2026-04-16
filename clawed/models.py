@@ -72,7 +72,7 @@ class TeacherPersona(BaseModel):
 
     @field_validator("teaching_style", mode="before")
     @classmethod
-    def _coerce_teaching_style(cls, v):
+    def _coerce_teaching_style(cls, v: object) -> object:
         """Map unrecognized LLM-generated styles to the closest enum value."""
         if isinstance(v, TeachingStyle):
             return v
@@ -108,7 +108,7 @@ class TeacherPersona(BaseModel):
 
     @field_validator("vocabulary_level", mode="before")
     @classmethod
-    def _coerce_vocabulary_level(cls, v):
+    def _coerce_vocabulary_level(cls, v: object) -> object:
         """Map unrecognized vocabulary levels to the closest enum value."""
         if isinstance(v, VocabularyLevel):
             return v
@@ -133,7 +133,7 @@ class TeacherPersona(BaseModel):
 
     @field_validator("assessment_style", mode="before")
     @classmethod
-    def _coerce_assessment_style(cls, v):
+    def _coerce_assessment_style(cls, v: object) -> object:
         """Map unrecognized assessment styles to the closest enum value."""
         if isinstance(v, AssessmentStyle):
             return v
@@ -170,28 +170,28 @@ class TeacherPersona(BaseModel):
 
     @field_validator("tone", mode="before")
     @classmethod
-    def _truncate_tone(cls, v):
+    def _truncate_tone(cls, v: object) -> object:
         if isinstance(v, str) and len(v) > 500:
             return v[:500]
         return v
 
     @field_validator("preferred_lesson_format", mode="before")
     @classmethod
-    def _truncate_preferred_lesson_format(cls, v):
+    def _truncate_preferred_lesson_format(cls, v: object) -> object:
         if isinstance(v, str) and len(v) > 500:
             return v[:500]
         return v
 
     @field_validator("subject_area", mode="before")
     @classmethod
-    def _truncate_subject_area(cls, v):
+    def _truncate_subject_area(cls, v: object) -> object:
         if isinstance(v, str) and len(v) > 200:
             return v[:200]
         return v
 
     @field_validator("voice_sample", mode="before")
     @classmethod
-    def _truncate_voice_sample(cls, v):
+    def _truncate_voice_sample(cls, v: object) -> object:
         if isinstance(v, str) and len(v) > 2000:
             return v[:2000]
         return v
@@ -398,7 +398,7 @@ class ProjectArc(BaseModel):
     phases: list[ProjectPhase] = Field(default_factory=list)
     movement_options: list[str] = Field(default_factory=list)   # Topics students can choose
     format_options: list[str] = Field(default_factory=list)     # Project formats
-    resource_library: list[dict] = Field(default_factory=list)  # curated research databases
+    resource_library: list[dict[str, str]] = Field(default_factory=list)  # curated research databases
     rubric_text: str = ""                   # Full 4-point rubric as formatted text
     culminating_performance: CulminatingPerformance = Field(default_factory=CulminatingPerformance)
     debate_prep_template: str = ""          # Formatted debate/argument prep sheet
@@ -606,7 +606,7 @@ class WorksheetItem(BaseModel):
 
     @field_validator("point_value", mode="before")
     @classmethod
-    def _coerce_point_value(cls, v):
+    def _coerce_point_value(cls, v: object) -> object:
         if isinstance(v, str):
             import re
             match = re.match(r"(\d+)", v.strip())
@@ -626,7 +626,7 @@ class AssessmentQuestion(BaseModel):
 
     @field_validator("point_value", mode="before")
     @classmethod
-    def _coerce_point_value(cls, v):
+    def _coerce_point_value(cls, v: object) -> object:
         if isinstance(v, str):
             import re
             match = re.match(r"(\d+)", v.strip())
@@ -810,7 +810,7 @@ class SummativeQuestion(BaseModel):
 
     @field_validator("point_value", mode="before")
     @classmethod
-    def _coerce_point_value(cls, v):
+    def _coerce_point_value(cls, v: object) -> object:
         if isinstance(v, str):
             import re
             match = re.match(r"(\d+)", v.strip())
@@ -989,7 +989,7 @@ class TeacherProfile(BaseModel):
 
     @field_validator("name", mode="before")
     @classmethod
-    def _validate_name(cls, v):
+    def _validate_name(cls, v: object) -> object:
         if isinstance(v, str):
             v = v.strip()
             if len(v) > 100:
@@ -998,7 +998,7 @@ class TeacherProfile(BaseModel):
 
     @field_validator("subjects", mode="before")
     @classmethod
-    def _validate_subjects(cls, v):
+    def _validate_subjects(cls, v: object) -> object:
         if isinstance(v, list):
             validated = []
             for s in v:
@@ -1017,7 +1017,7 @@ class TeacherProfile(BaseModel):
 
     @field_validator("school", mode="before")
     @classmethod
-    def _validate_school(cls, v):
+    def _validate_school(cls, v: object) -> object:
         if isinstance(v, str) and len(v) > 200:
             v = v[:200]
         return v

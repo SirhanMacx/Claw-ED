@@ -259,7 +259,7 @@ async def _execute_task(task: Task) -> dict[str, Any]:
             ),
         }
 
-    return {"error": f"Unknown task type: {task.task_type}"}
+    return {"error": f"Unknown task type: {task.task_type}"}  # type: ignore[unreachable]
 
 
 async def run_worker(

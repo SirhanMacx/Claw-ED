@@ -164,7 +164,7 @@ async def _fetch_with_httpx(url: str) -> str:
         return text
 
 
-async def _search_web(query: str) -> list[dict]:
+async def _search_web(query: str) -> list[dict[str, Any]]:
     """Search using DuckDuckGo HTML (no API key needed)."""
     import re
     import urllib.parse

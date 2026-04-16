@@ -13,10 +13,7 @@ Examples:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +21,7 @@ logger = logging.getLogger(__name__)
 def suggest_connections(
     topic: str,
     teacher_id: str = "",
-) -> dict:
+) -> dict[str, Any]:
     """Query the knowledge graph for connections to a lesson topic.
 
     Returns:
@@ -35,11 +32,15 @@ def suggest_connections(
             "cross_unit_links": [{"name": ..., "relationship": ...}],
         }
     """
-    result = {
-        "related_topics": [],
-        "prerequisites": [],
-        "previously_on": None,
-        "cross_unit_links": [],
+    related_topics: list[dict[str, Any]] = []
+    prerequisites: list[dict[str, Any]] = []
+    cross_unit_links: list[dict[str, Any]] = []
+    previously_on: str | None = None
+    result: dict[str, Any] = {
+        "related_topics": related_topics,
+        "prerequisites": prerequisites,
+        "previously_on": previously_on,
+        "cross_unit_links": cross_unit_links,
     }
 
     try:
@@ -63,18 +64,18 @@ def suggest_connections(
                 "entity_type": r.get("entity_type", "topic"),
             }
             if r.get("predicate") in ("prerequisite_for", "builds_on"):
-                result["prerequisites"].append({
+                prerequisites.append({
                     "name": r["entity"],
                     "covered": True,  # If it's in the KG, teacher has covered it
                 })
             elif r.get("predicate") in ("contrasts_with", "related_to"):
-                result["cross_unit_links"].append(entry)
+                cross_unit_links.append(entry)
             else:
-                result["related_topics"].append(entry)
+                related_topics.append(entry)
 
         # Generate a "Previously on..." hook if we have prerequisites
-        if result["prerequisites"]:
-            prereq_names = [p["name"] for p in result["prerequisites"][:3]]
+        if prerequisites:
+            prereq_names = [p["name"] for p in prerequisites[:3]]
             result["previously_on"] = (
                 f"Remember when we studied {prereq_names[0]}? "
                 f"Today we're building on that foundation."
@@ -89,9 +90,9 @@ def suggest_connections(
         logger.info(
             "KG connections for '%s': %d related, %d prerequisites, %d cross-unit",
             topic,
-            len(result["related_topics"]),
-            len(result["prerequisites"]),
-            len(result["cross_unit_links"]),
+            len(related_topics),
+            len(prerequisites),
+            len(cross_unit_links),
         )
 
     except Exception as exc:

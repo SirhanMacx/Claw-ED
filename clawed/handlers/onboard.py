@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import re
 from enum import Enum
+from typing import Any
 
 from clawed.gateway_response import GatewayResponse
 from clawed.models import AppConfig, TeacherPersona, TeacherProfile
@@ -60,8 +61,8 @@ def _parse_grade_and_subject(text: str) -> tuple[str, str]:
 class OnboardHandler:
     """Manages conversational onboarding state per teacher."""
 
-    def __init__(self):
-        self._state: dict[str, dict] = {}
+    def __init__(self) -> None:
+        self._state: dict[str, dict[str, Any]] = {}
 
     def is_onboarding(self, teacher_id: str) -> bool:
         return teacher_id in self._state

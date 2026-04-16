@@ -10,7 +10,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-def _default_token_path():
+def _default_token_path() -> Path:
     from clawed.paths import data_dir
     return data_dir() / "drive_token.json"
 
@@ -37,7 +37,8 @@ def load_token(token_path: Path | None = None) -> dict[str, Any] | None:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+        return data
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load Drive token: %s", e)
         return None

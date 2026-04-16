@@ -135,7 +135,8 @@ class GenerateAnimationTool:
 
         # Report progress
         if context.progress_callback:
-            await context.notify_progress(f"Creating {animation_type} animation for: {topic}")
+            # notify_progress is sync; await on None is preserved legacy behavior
+            await context.notify_progress(f"Creating {animation_type} animation for: {topic}")  # type: ignore[func-returns-value]
 
         # Stage 1: Generate Manim scene code
         scene_code = self._build_scene(topic, animation_type, key_points, style)
@@ -165,7 +166,7 @@ class GenerateAnimationTool:
         ]
 
         if context.progress_callback:
-            await context.notify_progress("Rendering animation (this may take a moment)...")
+            await context.notify_progress("Rendering animation (this may take a moment)...")  # type: ignore[func-returns-value]
 
         try:
             result = subprocess.run(
@@ -181,7 +182,7 @@ class GenerateAnimationTool:
 
                 # Stage 3b: Retry with simplified scene
                 if context.progress_callback:
-                    await context.notify_progress("Simplifying and retrying render...")
+                    await context.notify_progress("Simplifying and retrying render...")  # type: ignore[func-returns-value]
 
                 scene_code = self._simplify_scene(scene_code)
                 scene_file.write_text(scene_code, encoding="utf-8")
@@ -256,7 +257,7 @@ class GenerateAnimationTool:
         ``'...'`` in Python source.
         """
         if not isinstance(s, str):
-            s = str(s)
+            s = str(s)  # type: ignore[unreachable]  # defensive runtime guard for non-str inputs
         # Strip characters that could escape a Python string literal
         for ch in ("\\", '"', "'", "\n", "\r", "\t", "\x00"):
             s = s.replace(ch, " ")

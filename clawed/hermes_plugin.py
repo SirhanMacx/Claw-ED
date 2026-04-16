@@ -38,7 +38,7 @@ def get_last_lesson_id(teacher_id: str) -> str | None:
     Used by Telegram bot and CLI chat to offer a rating prompt.
     """
     session = TeacherSession.load(teacher_id)
-    lesson_id = session.config.pop("last_lesson_id", None)
+    lesson_id: str | None = session.config.pop("last_lesson_id", None)
     if lesson_id:
         session.save()
     return lesson_id
@@ -131,4 +131,5 @@ async def handle_message(
     from clawed.gateway import Gateway
     gw = Gateway()
     response = await gw.handle(message, teacher_id)
-    return response.text
+    text: str = response.text
+    return text

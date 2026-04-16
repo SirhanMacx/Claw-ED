@@ -18,9 +18,11 @@ import asyncio
 import contextlib
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from clawed.config import has_config
 from clawed.gateway_response import GatewayResponse
@@ -52,7 +54,7 @@ class ActivityEvent:
     event_type: str
     actor: str
     message: str
-    data: dict = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -74,7 +76,7 @@ class Gateway:
     def __init__(self, config: AppConfig | None = None):
         self.config = config or AppConfig.load()
         self._event_bus: asyncio.Queue[ActivityEvent] | None = None
-        self.active_sessions: dict[str, dict] = {}
+        self.active_sessions: dict[str, dict[str, Any]] = {}
         self._stats = GatewayStats()
         self._running = False
 
@@ -106,7 +108,7 @@ class Gateway:
 
     async def handle(self, message: str, teacher_id: str,
                      files: list[Path] | None = None,
-                     progress_callback=None) -> GatewayResponse:
+                     progress_callback: Callable[[str], None] | None = None) -> GatewayResponse:
         """Process any message from any transport."""
         self._stats.messages_today += 1
         self.active_sessions[teacher_id] = {
@@ -175,7 +177,7 @@ class Gateway:
 
         return GatewayResponse(text="Unknown action.")
 
-    async def stats(self) -> dict:
+    async def stats(self) -> dict[str, Any]:
         """Return live stats. Kept async for backward compat."""
         s = self._stats
         return {
@@ -188,7 +190,7 @@ class Gateway:
 
     async def _dispatch(self, message: str, teacher_id: str,
                         files: list[Path] | None = None,
-                        progress_callback=None) -> GatewayResponse:
+                        progress_callback: Callable[[str], None] | None = None) -> GatewayResponse:
         """Route a message to the appropriate handler based on intent."""
         if files:
             return await self._ingest.handle(teacher_id, files,
@@ -378,7 +380,7 @@ class Gateway:
             and "/" in stripped[1:]
         ) or stripped.startswith("~/")
 
-    async def emit(self, event_type: str, data: dict | None = None) -> None:
+    async def emit(self, event_type: str, data: dict[str, Any] | None = None) -> None:
         """Emit an event for TUI consumption. Public for backward compat."""
         event = ActivityEvent(
             timestamp=time.time(),

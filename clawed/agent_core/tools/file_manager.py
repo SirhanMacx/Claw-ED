@@ -239,8 +239,9 @@ class WorkspaceStatusTool:
 
 def _human_size(size: int) -> str:
     """Convert bytes to human-readable size."""
+    size_f: float = float(size)
     for unit in ["B", "KB", "MB", "GB"]:
-        if size < 1024:
-            return f"{size:.0f}{unit}"
-        size /= 1024
-    return f"{size:.1f}TB"
+        if size_f < 1024:
+            return f"{size_f:.0f}{unit}"
+        size_f /= 1024
+    return f"{size_f:.1f}TB"

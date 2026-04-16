@@ -159,14 +159,14 @@ def get_topic_theme(title: str, subject: str = "") -> dict[str, str]:
     return _DEFAULT_TOPIC_THEME
 
 
-def _add_shape_fill(shape, hex_color: str) -> None:
+def _add_shape_fill(shape: Any, hex_color: str) -> None:
     """Fill a shape with a solid color."""
     fill = shape.fill
     fill.solid()
     fill.fore_color.rgb = _hex_to_rgb(hex_color)
 
 
-def _set_text_props(run, font_size_pt: int, hex_color: str, bold: bool = False):
+def _set_text_props(run: Any, font_size_pt: int, hex_color: str, bold: bool = False) -> None:
     """Set font properties on a text run."""
     from pptx.util import Pt
 
@@ -193,8 +193,8 @@ def _split_text(text: str, max_len: int = 550) -> list[str]:
     return chunks or [text]
 
 
-def _section_divider(prs, slide_num, text, theme, slide_w, slide_h,
-                     sub_text: str = ""):
+def _section_divider(prs: Any, slide_num: list[int], text: str, theme: dict[str, str], slide_w: Any, slide_h: Any,
+                     sub_text: str = "") -> None:
     """Create a section divider slide with label + optional sub-instruction."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Emu, Inches, Pt
@@ -290,7 +290,7 @@ def _try_fetch_images(topics: list[tuple[str, str]], subject: str) -> dict[str, 
 
     results: dict[str, Path | None] = {}
 
-    async def _fetch_all():
+    async def _fetch_all() -> None:
         for topic, key in topics:
             try:
                 path = await asyncio.wait_for(
@@ -327,7 +327,7 @@ def _try_fetch_content_images(
 
     results: dict[str, Path | None] = {}
 
-    async def _fetch_all():
+    async def _fetch_all() -> None:
         found = 0
         for content_text, fallback_topic, key in items:
             if found >= max_images:
@@ -452,13 +452,13 @@ class _SlideCtx:
 
     # ── Layout primitives ────────────────────────────────────────────
 
-    def next_slide(self):
+    def next_slide(self) -> Any:
 
         self.slide_num[0] += 1
         layout = self.prs.slide_layouts[6]
         return self.prs.slides.add_slide(layout)
 
-    def add_footer(self, slide, num: int) -> None:
+    def add_footer(self, slide: Any, num: int) -> None:
         from pptx.enum.text import PP_ALIGN
         from pptx.util import Inches
 
@@ -471,7 +471,7 @@ class _SlideCtx:
         run.text = str(num)
         _set_text_props(run, 10, "999999")
 
-    def bar(self, slide, left, top, width, height, hex_color: str):
+    def bar(self, slide: Any, left: Any, top: Any, width: Any, height: Any, hex_color: str) -> Any:
         from pptx.enum.shapes import MSO_SHAPE
 
         shape = slide.shapes.add_shape(
@@ -481,7 +481,7 @@ class _SlideCtx:
         _add_shape_fill(shape, hex_color)
         return shape
 
-    def rounded_card(self, slide, left, top, width, height, hex_color: str):
+    def rounded_card(self, slide: Any, left: Any, top: Any, width: Any, height: Any, hex_color: str) -> Any:
         from pptx.enum.shapes import MSO_SHAPE
         from pptx.util import Pt
 
@@ -500,13 +500,13 @@ class _SlideCtx:
             logger.debug("Shadow effect unavailable on shape: %s", exc)
         return shape
 
-    def white_bg(self, slide) -> None:
+    def white_bg(self, slide: Any) -> None:
         bg = slide.background
         fill = bg.fill
         fill.solid()
         fill.fore_color.rgb = _hex_to_rgb("FFFFFF")
 
-    def tinted_bg(self, slide, hex_color: str) -> None:
+    def tinted_bg(self, slide: Any, hex_color: str) -> None:
         bg = slide.background
         fill = bg.fill
         fill.solid()
@@ -523,7 +523,7 @@ class _SlideCtx:
             data = image_path.read_bytes()
             if len(data) < 1000:
                 return None
-            img = PILImage.open(io.BytesIO(data))
+            img: Any = PILImage.open(io.BytesIO(data))
             if img.mode in ("P", "RGBA", "LA", "PA"):
                 img = img.convert("RGB")
                 tmp = Path(tempfile.mktemp(suffix=".jpg"))
@@ -535,7 +535,7 @@ class _SlideCtx:
             logger.debug("Image validation failed for %s: %s", image_path, e)
             return None
 
-    def add_bg_image(self, slide, image_path: Path, overlay_alpha: str = "30000") -> None:
+    def add_bg_image(self, slide: Any, image_path: Path, overlay_alpha: str = "30000") -> None:
         """Full-bleed background image with dark gradient overlay."""
         from pptx.enum.shapes import MSO_SHAPE
         from pptx.oxml.ns import qn
@@ -572,7 +572,7 @@ class _SlideCtx:
                 alpha = etree.SubElement(srgb, qn("a:alpha"))
                 alpha.set("val", overlay_alpha)
 
-    def add_sidebar_image(self, slide, image_path: Path, caption: str = "") -> None:
+    def add_sidebar_image(self, slide: Any, image_path: Path, caption: str = "") -> None:
         from pptx.enum.text import PP_ALIGN
         from pptx.util import Inches
 
@@ -601,7 +601,7 @@ class _SlideCtx:
         except (OSError, ValueError) as exc:
             logger.debug("Sidebar image placement failed: %s", exc)
 
-    def add_accent_image(self, slide, image_path: Path, caption: str = "") -> None:
+    def add_accent_image(self, slide: Any, image_path: Path, caption: str = "") -> None:
         """Add a smaller accent image in the bottom-right area."""
         from pptx.enum.text import PP_ALIGN
         from pptx.util import Inches
@@ -909,7 +909,8 @@ def _build_vocabulary_slides(ctx: _SlideCtx, lesson: DailyLesson) -> None:
 
     vocab_pairs: list[tuple[str, str]] = []
     if hasattr(lesson, "vocabulary") and lesson.vocabulary:
-        for vt in lesson.vocabulary:
+        for vt_item in lesson.vocabulary:
+            vt: Any = vt_item
             term = getattr(vt, "term", "") if hasattr(vt, "term") else vt.get("term", "")
             defn = getattr(vt, "definition", "") if hasattr(vt, "definition") else vt.get("definition", "")
             if term and defn:
@@ -1272,7 +1273,7 @@ def _build_exit_ticket_slide(ctx: _SlideCtx, lesson: DailyLesson) -> None:
     available_h = ctx.slide_h - Inches(1.55) - Inches(0.8)
     card_h = available_h // n_q
 
-    q_top = Inches(1.5)
+    q_top: Any = Inches(1.5)
     for i, q in enumerate(et_questions, 1):
         ctx.rounded_card(
             slide, Inches(0.8), q_top,

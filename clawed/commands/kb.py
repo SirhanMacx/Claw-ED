@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.panel import Panel
@@ -27,11 +28,12 @@ def _corpus_exists() -> bool:
     return _CORPUS_DB.exists()
 
 
-def _load_curriculum_state() -> dict:
+def _load_curriculum_state() -> dict[str, Any]:
     """Load curriculum_state.json if it exists."""
     if _CURRICULUM_STATE.exists():
         try:
-            return json.loads(_CURRICULUM_STATE.read_text(encoding="utf-8"))
+            data: dict[str, Any] = json.loads(_CURRICULUM_STATE.read_text(encoding="utf-8"))
+            return data
         except (json.JSONDecodeError, FileNotFoundError, OSError):
             return {}
     return {}
@@ -171,7 +173,7 @@ def kb_search(
 ) -> None:
     """Search your curriculum knowledge base for topics, files, and examples."""
     query_lower = query.lower()
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
 
     # 1. Search corpus.db
     if _corpus_exists():

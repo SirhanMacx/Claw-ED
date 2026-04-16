@@ -6,6 +6,7 @@ import re
 import tempfile
 import zipfile
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -34,7 +35,7 @@ def extract_folder_id(url: str) -> str | None:
     return None
 
 
-async def _list_drive_files(folder_id: str) -> list[dict]:
+async def _list_drive_files(folder_id: str) -> list[dict[str, Any]]:
     """Try to list files in a public Google Drive folder via the API (no auth)."""
     api_url = "https://www.googleapis.com/drive/v3/files"
     params = {
@@ -46,7 +47,8 @@ async def _list_drive_files(folder_id: str) -> list[dict]:
         resp = await client.get(api_url, params=params)
         resp.raise_for_status()
         data = resp.json()
-        return data.get("files", [])
+        files: list[dict[str, Any]] = data.get("files", [])
+        return files
 
 
 async def _download_drive_file(file_id: str, dest: Path) -> None:

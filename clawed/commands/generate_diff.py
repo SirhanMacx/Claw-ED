@@ -42,7 +42,7 @@ def differentiate(
     tiers: int = typer.Option(
         3, "--tiers", help="Number of difficulty tiers"
     ),
-):
+) -> None:
     """Generate IEP modifications, 504 accommodations, and tiered assignments."""
     check_api_key_or_exit()
 

@@ -318,7 +318,7 @@ def export_student_packet_docx(
     if guided:
         _packet_section_heading(doc, "Guided Notes", primary_rgb, primary_hex)
         p_intro = doc.add_paragraph("Directions: Fill in the blanks as we go through the lesson.")
-        p_intro.italic = True
+        p_intro.italic = True  # type: ignore[attr-defined]  # python-docx Paragraph lacks italic at type level but runtime accepts
         p_intro.paragraph_format.space_after = Pt(6)
         for i, item in enumerate(guided, 1):
             sentence = sanitize_text(

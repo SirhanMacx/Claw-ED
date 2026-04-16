@@ -74,7 +74,7 @@ def sanitize_text(text: str) -> str:
     - Excessive whitespace
     """
     if not isinstance(text, str):
-        text = str(text) if text is not None else ""
+        text = str(text) if text is not None else ""  # type: ignore[unreachable]
     if not text:
         return text
 

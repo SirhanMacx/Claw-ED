@@ -408,7 +408,7 @@ class AssetRegistry:
             else:
                 rows = conn.execute("SELECT * FROM assets").fetchall()
 
-        scored: list[tuple[float, dict]] = []
+        scored: list[tuple[float, dict[str, Any]]] = []
         for row in rows:
             title_lower = row["title"].lower()
             fn_lower = row["filename"].lower()
@@ -424,13 +424,13 @@ class AssetRegistry:
         scored.sort(key=lambda x: (-x[0], x[1].get("material_type", "")))
         return [item[1] for item in scored[:top_k]]
 
-    def get_youtube_links(self, teacher_id: str, query: str, top_k: int = 5) -> list[dict]:
+    def get_youtube_links(self, teacher_id: str, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         """Search for YouTube links related to a topic.
 
         If teacher_id is empty, searches across all teachers.
         """
         assets = self.search_assets(teacher_id, query, top_k=50)
-        links: list[dict] = []
+        links: list[dict[str, Any]] = []
         seen: set[str] = set()
         for asset in assets:
             for yt_url in asset.get("youtube_urls", []):
@@ -445,7 +445,11 @@ class AssetRegistry:
                         return links
         return links
 
-    def format_asset_summary(self, assets: list[dict], youtube_links: list[dict] | None = None) -> str:
+    def format_asset_summary(
+        self,
+        assets: list[dict[str, Any]],
+        youtube_links: list[dict[str, Any]] | None = None,
+    ) -> str:
         """Format a human-readable summary of found assets."""
         if not assets and not youtube_links:
             return ""
@@ -600,7 +604,7 @@ class AssetRegistry:
         rows = self._get_teacher_image_rows(teacher_id)
 
         # Phase 1: keyword scoring (fast)
-        scored: list[tuple[float, dict]] = []
+        scored: list[tuple[float, dict[str, Any]]] = []
         for row in rows:
             path = row["image_path"]
             if not path or not Path(path).exists():
@@ -675,7 +679,7 @@ class AssetRegistry:
             return []
 
         # Build candidate list with valid paths and non-empty context
-        candidates: list[tuple[dict, str]] = []
+        candidates: list[tuple[dict[str, Any], str]] = []
         for row in rows:
             path = row["image_path"]
             if not path or not Path(path).exists():

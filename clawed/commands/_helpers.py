@@ -5,12 +5,17 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+from collections.abc import Awaitable
 from pathlib import Path
+from typing import Any, TypeVar
 
 import typer
 from rich.console import Console
+from rich.progress import Progress
 
 from clawed.models import AppConfig, TeacherPersona
+
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +55,7 @@ def _make_console() -> Console:
                 sys.stderr.buffer, encoding="utf-8", errors="replace"
             )
 
-    kwargs: dict = {
+    kwargs: dict[str, Any] = {
         "highlight": False,
         "safe_box": force_ascii,
     }
@@ -70,9 +75,9 @@ def output_dir() -> Path:
     return Path(cfg.output_dir).expanduser().resolve()
 
 
-def run_async(coro):
+def run_async(coro: Awaitable[T]) -> T:
     """Run an async coroutine from synchronous CLI code."""
-    return asyncio.run(coro)
+    return asyncio.run(coro)  # type: ignore[arg-type]
 
 
 def persona_path() -> Path:
@@ -91,7 +96,7 @@ def get_default_subject() -> str:
     return "General"
 
 
-def _safe_progress(**kwargs):
+def _safe_progress(**kwargs: Any) -> Progress:
     """Create a Progress bar that works on all platforms.
 
     On Windows with cp1252, Rich's SpinnerColumn() uses Braille characters
@@ -100,12 +105,13 @@ def _safe_progress(**kwargs):
     from rich.progress import (
         BarColumn,
         Progress,
+        ProgressColumn,
         SpinnerColumn,
         TaskProgressColumn,
         TextColumn,
     )
 
-    columns: list = []
+    columns: list[ProgressColumn] = []
     if sys.platform == "win32":
         columns.append(TextColumn("[progress.description]{task.description}"))
     else:
@@ -191,8 +197,11 @@ def load_persona_or_exit() -> TeacherPersona:
         logger.warning("operation_failed", exc_info=True)
 
     # Default starter
-    persona = get_starter_persona("social_studies")
+    default_persona = get_starter_persona("social_studies")
+    if default_persona is None:
+        console.print("[red]No starter persona available.[/red]")
+        raise typer.Exit(1)
     console.print(
-        f"[cyan]Using default starter persona ({persona.subject_area}).[/cyan]"
+        f"[cyan]Using default starter persona ({default_persona.subject_area}).[/cyan]"
     )
-    return persona
+    return default_persona

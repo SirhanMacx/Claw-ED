@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 from rich.panel import Panel
 
@@ -19,7 +21,7 @@ def config_set_model(
     model: str | None = typer.Option(
         None, "--model", "-m", help="Model name override"
     ),
-):
+) -> None:
     """Configure the LLM backend."""
     try:
         llm_provider = LLMProvider(provider.lower())
@@ -99,11 +101,11 @@ def config_set_model(
     elif llm_provider == LLMProvider.ANTHROPIC:
         from clawed.config import get_api_key
 
-        key = get_api_key("anthropic")
-        if key:
-            if key.startswith("sk-ant-oat"):
+        anthropic_key: str | None = get_api_key("anthropic")
+        if anthropic_key:
+            if anthropic_key.startswith("sk-ant-oat"):
                 console.print("[green]Claude Code OAuth token detected.[/green]")
-            elif key.startswith("sk-"):
+            elif anthropic_key.startswith("sk-"):
                 console.print("[green]API key format looks valid.[/green]")
             else:
                 console.print("[green]Credentials found.[/green]")
@@ -114,10 +116,10 @@ def config_set_model(
             )
     elif llm_provider == LLMProvider.OPENAI:
         from clawed.config import get_api_key as _get_key
-        key = _get_key("openai")
-        if key and key.startswith("sk-"):
+        openai_key: str | None = _get_key("openai")
+        if openai_key and openai_key.startswith("sk-"):
             console.print("[green]API key format looks valid.[/green]")
-        elif key:
+        elif openai_key:
             console.print("[green]Credentials found.[/green]")
         else:
             console.print(
@@ -131,7 +133,7 @@ def config_set_token(
     token: str = typer.Argument(
         ..., help="Telegram bot token from @BotFather"
     ),
-):
+) -> None:
     """Save your Telegram bot token so you don't need to pass it every time.
 
     After saving, just run:
@@ -163,7 +165,7 @@ def config_set_search_key(
     provider: str = typer.Option(
         "brave", help="Search provider: brave, duckduckgo, or tavily"
     ),
-):
+) -> None:
     """Set a web search API key for research-powered lessons.
 
     Free options: Brave Search (1000 queries/month free), DuckDuckGo (no key needed).
@@ -174,7 +176,7 @@ def config_set_search_key(
     console.print(f"[green]\u2713 {provider.title()} search key saved.[/green]")
 
 
-def _config_show_json():
+def _config_show_json() -> dict[str, Any]:
     """Return config data for JSON output."""
     cfg = AppConfig.load()
     return {
@@ -186,7 +188,7 @@ def _config_show_json():
 @config_app.command("show")
 def config_show(
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Show current configuration."""
     if json_output:
         run_json_command("config.show", _config_show_json)

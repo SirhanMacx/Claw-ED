@@ -16,6 +16,7 @@ import math
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,8 @@ class ONNXMiniLMEmbedder:
 
     def __init__(self, model_dir: Path | None = None) -> None:
         self._model_dir = model_dir or _MODEL_DIR
-        self._session = None
-        self._tokenizer = None
+        self._session: Any = None
+        self._tokenizer: Any = None
         self._ready = False
 
     def _ensure_model(self) -> bool:
@@ -148,7 +149,8 @@ class ONNXMiniLMEmbedder:
         if norm > 0:
             vec = vec / norm
 
-        return vec.tolist()
+        result: list[float] = vec.tolist()
+        return result
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         import numpy as np
@@ -181,7 +183,8 @@ class ONNXMiniLMEmbedder:
         norms = np.maximum(norms, 1e-12)
         pooled = pooled / norms
 
-        return pooled.tolist()
+        result: list[list[float]] = pooled.tolist()
+        return result
 
     def cosine_similarity(self, a: list[float], b: list[float]) -> float:
         import numpy as np
@@ -218,8 +221,10 @@ class OllamaEmbedder:
         data = resp.json()
         embeddings = data.get("embeddings", [])
         if embeddings:
-            return embeddings[0]
-        return data.get("embedding", [])
+            first: list[float] = embeddings[0]
+            return first
+        fallback: list[float] = data.get("embedding", [])
+        return fallback
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         return [self.embed(t) for t in texts]

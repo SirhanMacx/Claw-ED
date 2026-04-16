@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import sys
 import traceback
+from collections.abc import Callable
 from typing import Any
 
 
@@ -38,7 +39,7 @@ def emit_json(envelope: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
-def run_json_command(command: str, fn, **kwargs) -> None:
+def run_json_command(command: str, fn: Callable[..., Any], **kwargs: Any) -> None:
     """Run a function and emit its result as JSON.
 
     fn must return a dict with optional keys: data, files, warnings.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import typer
 from rich.panel import Panel
 
@@ -20,7 +22,14 @@ from clawed.models import AppConfig
 # ── Sub-Packet command ──────────────────────────────────────────────────
 
 
-def _sub_packet_json(*, date, class_name, grade, subject, topic):
+def _sub_packet_json(
+    *,
+    date: str,
+    class_name: str,
+    grade: str,
+    subject: str,
+    topic: str | None,
+) -> dict[str, Any]:
     """Run sub-packet generation and return structured result for JSON output."""
     from datetime import datetime, timedelta
 
@@ -182,7 +191,14 @@ def sub_packet(
 # ── Parent Note command ─────────────────────────────────────────────────
 
 
-def _parent_note_json(*, student, topic, strengths, growth, teacher_id):
+def _parent_note_json(
+    *,
+    student: str,
+    topic: str,
+    strengths: str | None,
+    growth: str | None,
+    teacher_id: str,
+) -> dict[str, Any]:
     """Run parent-note generation and return structured result for JSON output."""
     from clawed.parent_comm import (
         generate_progress_update,

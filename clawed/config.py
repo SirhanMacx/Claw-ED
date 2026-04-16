@@ -11,6 +11,7 @@ import json
 import os
 import stat
 from pathlib import Path
+from typing import Any
 
 from clawed.models import AppConfig
 
@@ -27,7 +28,8 @@ _SERVICE_NAME = "eduagent"
 def _load_secrets() -> dict[str, str]:
     if _SECRETS_FILE.exists():
         try:
-            return json.loads(_SECRETS_FILE.read_text(encoding="utf-8"))
+            data: dict[str, str] = json.loads(_SECRETS_FILE.read_text(encoding="utf-8"))
+            return data
         except (json.JSONDecodeError, OSError):
             return {}
     return {}
@@ -45,7 +47,8 @@ def _save_secrets(secrets: dict[str, str]) -> None:
 def _try_keyring_get(key: str) -> str | None:
     try:
         import keyring
-        return keyring.get_password(_SERVICE_NAME, key)
+        pw: str | None = keyring.get_password(_SERVICE_NAME, key)
+        return pw
     except ImportError:
         return None  # keyring is optional; silently fall through to env/file
 
@@ -78,7 +81,7 @@ def _resolve_claude_code_token() -> str | None:
         from clawed.oauth_refresh import get_oauth_token
         token = get_oauth_token()
         if token:
-            return token
+            return str(token)
     except (ImportError, AttributeError, ValueError):
         pass
 
@@ -94,7 +97,7 @@ def _resolve_claude_code_token() -> str | None:
                 oauth = data.get("claudeAiOauth", {})
                 token = oauth.get("accessToken", "")
                 if token:
-                    return token
+                    return str(token)
             except (ValueError, KeyError, OSError):
                 continue
     return None
@@ -117,7 +120,7 @@ def _resolve_codex_token() -> str | None:
         data = _json.loads(auth_path.read_text(encoding="utf-8"))
         token = data.get("tokens", {}).get("access_token", "")
         if token:
-            return token
+            return str(token)
     except (ValueError, KeyError, OSError):
         pass
     return None
@@ -167,7 +170,7 @@ def get_api_key(provider: str) -> str | None:
     return secrets.get(key_name)
 
 
-def resolve_credentials(config=None):
+def resolve_credentials(config: AppConfig | None = None) -> tuple[str | None, str | None]:
     """Resolve the best available provider and key.
 
     Priority: environment variables > keyring/secrets > Ollama (if configured).
@@ -260,13 +263,18 @@ def has_teacher_profile() -> bool:
         return False
 
 
-async def test_llm_connection(config: AppConfig | None = None) -> dict:
+async def test_llm_connection(config: AppConfig | None = None) -> dict[str, Any]:
     """Test the LLM connection and return status info."""
     cfg = config or AppConfig.load()
     provider = cfg.provider.value
 
-    def _result(connected, model, msg_or_err, is_err=False):
-        r = {"connected": connected, "provider": provider, "model": model}
+    def _result(
+        connected: bool,
+        model: str,
+        msg_or_err: str,
+        is_err: bool = False,
+    ) -> dict[str, Any]:
+        r: dict[str, Any] = {"connected": connected, "provider": provider, "model": model}
         r["error" if is_err else "message"] = msg_or_err
         return r
 
@@ -331,13 +339,13 @@ async def test_llm_connection(config: AppConfig | None = None) -> dict:
         try:
             is_oauth = is_anthropic_oauth_token(api_key)
             if is_oauth:
-                client = _anthropic.Anthropic(
+                anthropic_client = _anthropic.Anthropic(
                     auth_token=api_key,
                     default_headers={"anthropic-beta": "oauth-2025-04-20", "x-app": "cli"},
                 )
             else:
-                client = _anthropic.Anthropic(api_key=api_key)
-            client.messages.create(
+                anthropic_client = _anthropic.Anthropic(api_key=api_key)
+            anthropic_client.messages.create(
                 model=model, max_tokens=5,
                 messages=[{"role": "user", "content": "Hi"}],
             )

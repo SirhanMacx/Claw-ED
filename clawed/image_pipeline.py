@@ -248,7 +248,7 @@ async def fetch_all_images(
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in results:
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 logger.debug("Image fetch raised: %s", result)
                 continue
             spec, path = result

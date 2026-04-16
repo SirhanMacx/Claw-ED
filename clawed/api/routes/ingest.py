@@ -8,6 +8,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import JSONResponse
@@ -32,7 +33,7 @@ _MAX_FILES = 200
 async def ingest_files(
     request: Request,  # required by rate limiter
     files: list[UploadFile] = File(...),
-):
+) -> Any:
     """Upload teaching materials and extract a teacher persona.
 
     v4.11.2026: rate-limited at 3 requests per minute per client IP.
@@ -105,7 +106,7 @@ async def ingest_files(
 
 
 @router.get("/persona")
-async def get_persona():
+async def get_persona() -> Any:
     """Get the current teacher persona."""
     db = get_db()
     teacher = db.get_default_teacher()

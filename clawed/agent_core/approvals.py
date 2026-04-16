@@ -11,7 +11,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-def _default_dir():
+def _default_dir() -> Path:
     from clawed.paths import data_dir
     return data_dir() / "approvals"
 
@@ -75,8 +75,8 @@ class ApprovalManager:
         *,
         teacher_id: str,
         action_description: str,
-        action_payload: dict,
-        agent_state: dict,
+        action_payload: dict[str, Any],
+        agent_state: dict[str, Any],
         transport: str,
         timeout_hours: int = 48,
     ) -> PendingApproval:

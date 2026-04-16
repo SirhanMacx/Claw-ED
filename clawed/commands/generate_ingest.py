@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.panel import Panel
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ── Ingest command ───────────────────────────────────────────────────────
 
 
-def _ingest_json(*, path):
+def _ingest_json(*, path: str) -> dict[str, Any]:
     """Run ingest and return structured result for JSON output."""
     from clawed.ingestor import extract_rich
     from clawed.ingestor import ingest_path as _ingest
@@ -77,7 +78,7 @@ def ingest(
         False, "--dry-run", help="Show what would be processed without actually processing"
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Ingest teaching materials and extract a teacher persona."""
     if json_output:
         run_json_command("gen.ingest", _ingest_json, path=path)
@@ -211,11 +212,12 @@ def ingest(
     out = save_persona(persona, _output_dir())
 
     # Track persona changes for evolution
-    try:
-        from clawed.persona_evolution import record_ingestion_changes
-        record_ingestion_changes(old_persona=old_persona, new_persona=persona)
-    except ImportError:
-        pass
+    if old_persona is not None:
+        try:
+            from clawed.persona_evolution import record_ingestion_changes
+            record_ingestion_changes(old_persona=old_persona, new_persona=persona)
+        except ImportError:
+            pass
 
     # Full pipeline: images + assets + chunks + KG + wiki
     kb_msg = ""

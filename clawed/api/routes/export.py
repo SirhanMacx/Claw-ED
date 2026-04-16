@@ -7,6 +7,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -31,7 +32,7 @@ class ImportRequest(BaseModel):
 
 
 @router.get("/export/{lesson_id}")
-async def export_lesson_endpoint(lesson_id: str, fmt: str = "markdown"):
+async def export_lesson_endpoint(lesson_id: str, fmt: str = "markdown") -> Any:
     """Export a lesson as Markdown, PDF, or DOCX."""
     import shutil
 
@@ -83,7 +84,7 @@ async def export_lesson_endpoint(lesson_id: str, fmt: str = "markdown"):
 
 
 @router.post("/export/{lesson_id}/classroom")
-async def export_classroom(lesson_id: str):
+async def export_classroom(lesson_id: str) -> Any:
     """Generate a Google Classroom-compatible CourseWork JSON payload."""
     db = get_db()
     lesson_row = db.get_lesson(lesson_id)
@@ -127,7 +128,7 @@ async def export_classroom(lesson_id: str):
 
 
 @public_router.get("/share/{token}")
-async def share_lesson_api(token: str):
+async def share_lesson_api(token: str) -> Any:
     """Get a lesson by its share token (JSON API)."""
     db = get_db()
     lesson_row = db.get_lesson_by_token(token)
@@ -144,7 +145,7 @@ async def share_lesson_api(token: str):
 
 
 @router.post("/import")
-async def import_lesson(req: ImportRequest):
+async def import_lesson(req: ImportRequest) -> Any:
     """Import a lesson from a share URL or token."""
     token = req.token
     fetch_server = req.server.rstrip("/")

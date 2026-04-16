@@ -13,7 +13,7 @@ from clawed.agent_core.memory.embeddings import get_embedder
 
 logger = logging.getLogger(__name__)
 
-def _default_db():
+def _default_db() -> Path:
     from clawed.paths import episodes_db_path
     return episodes_db_path()
 

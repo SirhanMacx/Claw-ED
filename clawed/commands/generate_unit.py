@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.panel import Panel
@@ -23,7 +24,14 @@ from clawed.commands.generate import generate_app
 # ── Unit planning ────────────────────────────────────────────────────────
 
 
-def _unit_json(*, topic, grade, subject, weeks, standards):
+def _unit_json(
+    *,
+    topic: str,
+    grade: str,
+    subject: str,
+    weeks: int,
+    standards: str | None,
+) -> dict[str, Any]:
     """Run unit planning and return structured result for JSON output."""
     from clawed.planner import plan_unit, save_unit
 
@@ -67,7 +75,7 @@ def unit(
         "markdown", "--format", "-f", help="Export format: markdown, pdf, docx"
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Plan a complete curriculum unit."""
     if subject is None:
         from clawed.commands._helpers import get_default_subject
@@ -148,7 +156,7 @@ def year_map(
     fmt: str = typer.Option(
         "markdown", "--format", "-f", help="Export format: markdown, pdf, docx"
     ),
-):
+) -> None:
     """Generate a full-year curriculum map with unit sequence, big ideas, and assessment calendar."""
     check_api_key_or_exit()
 
@@ -233,7 +241,7 @@ def pacing(
     fmt: str = typer.Option(
         "markdown", "--format", "-f", help="Export format: markdown, pdf, docx"
     ),
-):
+) -> None:
     """Generate a week-by-week pacing guide from a year map."""
     check_api_key_or_exit()
 
@@ -339,7 +347,7 @@ def full(
     max_lessons: int | None = typer.Option(
         None, "--max-lessons", help="Limit lessons generated"
     ),
-):
+) -> None:
     """End-to-end generation: unit plan + all lesson plans + all materials."""
     check_api_key_or_exit()
 
@@ -391,7 +399,7 @@ def full(
     if max_lessons:
         lesson_briefs = lesson_briefs[:max_lessons]
 
-    lessons = []
+    lessons: list[Any] = []
     with _safe_progress(console=console) as progress:
         task = progress.add_task(
             "Step 2/3: Generating lessons...", total=len(lesson_briefs)
@@ -473,7 +481,7 @@ def course(
         2, "--weeks", "-w", help="Weeks per topic"
     ),
     fmt: str = typer.Option("markdown", "--format", "-f", help="Export format"),
-):
+) -> None:
     """Generate a full course — one unit per topic from a pacing guide."""
     check_api_key_or_exit()
 
@@ -505,7 +513,7 @@ def course(
     )
 
     out_dir = _output_dir() / "course"
-    units = []
+    units: list[Any] = []
 
     with _safe_progress(console=console) as progress:
         task = progress.add_task(

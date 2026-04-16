@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.panel import Panel
@@ -25,10 +26,10 @@ from clawed.commands.config import (
 @persona_app.command("show")
 def persona_show(
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """Display the current teacher persona."""
     if json_output:
-        def _persona_show_json():
+        def _persona_show_json() -> dict[str, Any]:
             from clawed.commands._helpers import output_dir
             from clawed.persona import load_persona
             pp = output_dir() / "persona.json"
@@ -63,17 +64,17 @@ def standards_list(
         ..., "--subject", "-s", help="Subject (math, ela, science, history)"
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-):
+) -> None:
     """List education standards for a grade and subject."""
     if json_output:
-        def _standards_json():
+        def _standards_json() -> dict[str, Any]:
             from clawed.standards import get_standards as _get_stds
             results = _get_stds(subject, grade)
             return {
                 "data": {
                     "standards": [
-                        {"code": s.code, "description": s.description, "band": getattr(s, "band", "")}
-                        for s in results
+                        {"code": code, "description": description, "band": band}
+                        for code, description, band in results
                     ] if results else []
                 },
                 "files": [],
@@ -131,7 +132,7 @@ def standards_list(
 
 
 @templates_app.command("list")
-def templates_list():
+def templates_list() -> None:
     """List all available lesson structure templates."""
     from clawed.templates_lib import list_templates
 
@@ -157,7 +158,7 @@ def templates_list():
 
 
 @skills_app.command("list")
-def skills_list():
+def skills_list() -> None:
     """List all available subject pedagogy skills."""
     from clawed.skills import SkillLibrary
 
@@ -189,7 +190,7 @@ def skills_show(
     subject: str = typer.Argument(
         help="Subject name or alias (e.g., 'math', 'biology', 'ela')."
     ),
-):
+) -> None:
     """Show detailed pedagogy skill for a subject."""
     from clawed.skills import SkillLibrary
 
@@ -222,7 +223,7 @@ def skills_create(
     subject: str = typer.Argument(
         help="Subject name for the new skill (e.g., 'ap_psychology')."
     ),
-):
+) -> None:
     """Generate a template YAML skill file in ~/.eduagent/skills/.
 
     Edit the generated file to customize the pedagogy for your subject,
@@ -408,7 +409,7 @@ def school_share(
             db,
             school_id,
             teacher_id,
-            lesson_id,  # type: ignore[arg-type]
+            lesson_id,
             department=department,
         )
         label = "Lesson"
@@ -635,10 +636,11 @@ def class_qr(
     # Generate QR code as a simple text-based representation
     # (full QR image requires qrcode library which is optional)
     try:
-        import qrcode  # type: ignore[import-untyped]
+        import qrcode
 
         qr = qrcode.make(f"https://t.me/clawed_bot?start={code}")
-        qr.save(output)
+        with open(output, "wb") as fp:
+            qr.save(fp)
         console.print(f"[green]QR code saved to {output}[/green]")
     except ImportError:
         # Fallback: save a text file with the link

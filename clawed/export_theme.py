@@ -6,7 +6,7 @@ Used by export_pptx, export_docx, and export_pdf.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from clawed.models import DailyLesson
@@ -140,11 +140,11 @@ def get_color_theme(subject: str) -> dict[str, str]:
     return _COLOR_THEMES.get(subject.strip().lower(), _DEFAULT_THEME)
 
 
-def _hex_to_rgb(hex_str: str):
+def _hex_to_rgb(hex_str: str) -> Any:
     """Convert a hex color string to an RGBColor (pptx)."""
     from pptx.dml.color import RGBColor
 
-    return RGBColor(int(hex_str[:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))
+    return RGBColor(int(hex_str[:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16))  # type: ignore[no-untyped-call]  # python-pptx is untyped
 
 
 def _resolve_output(output_dir: Path | None, lesson: DailyLesson, ext: str) -> Path:

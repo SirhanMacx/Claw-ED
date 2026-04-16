@@ -14,6 +14,7 @@ import os
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def save_turn(
         )
 
 
-def load_recent(teacher_id: str, limit: int = 10) -> list[dict]:
+def load_recent(teacher_id: str, limit: int = 10) -> list[dict[str, Any]]:
     """Load most recent conversation turns, newest last."""
     _ensure_db()
     with _get_conn() as conn:
@@ -94,7 +95,7 @@ def load_recent(teacher_id: str, limit: int = 10) -> list[dict]:
     return [dict(r) for r in reversed(rows)]
 
 
-def load_recent_for_llm(teacher_id: str, limit: int = 10) -> list[dict]:
+def load_recent_for_llm(teacher_id: str, limit: int = 10) -> list[dict[str, Any]]:
     """Load recent turns formatted for LLM message history.
 
     Returns list of {"role": "user"|"assistant", "content": "..."}.

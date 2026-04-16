@@ -5,14 +5,19 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
 from clawed.models import AppConfig, LLMProvider
 
+if TYPE_CHECKING:
+    from clawed.models import AdminLessonPlan, StudentPacket
+
 logger = logging.getLogger(__name__)
+
+_ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
 class LLMClient:
@@ -64,7 +69,7 @@ class LLMClient:
     async def generate_with_image(
         self,
         prompt: str,
-        image_path: str | os.PathLike,
+        image_path: str | os.PathLike[str],
         system: str = "",
         temperature: float = 0.3,
         max_tokens: int = 150,
@@ -112,7 +117,15 @@ class LLMClient:
         # Providers without vision support
         return "GOOD"
 
-    async def _vision_anthropic(self, prompt, b64, media_type, system, temperature, max_tokens):
+    async def _vision_anthropic(
+        self,
+        prompt: str,
+        b64: str,
+        media_type: str,
+        system: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
         """Anthropic vision API call."""
         try:
             import anthropic
@@ -155,12 +168,20 @@ class LLMClient:
                     ],
                 }],
             )
-            return msg.content[0].text
+            return str(msg.content[0].text)
         except Exception as e:
             logger.debug("Vision check failed (Anthropic): %s", e)
             return "GOOD"  # Permissive on failure
 
-    async def _vision_openai(self, prompt, b64, media_type, system, temperature, max_tokens):
+    async def _vision_openai(
+        self,
+        prompt: str,
+        b64: str,
+        media_type: str,
+        system: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
         """OpenAI vision API call."""
         try:
             from clawed.config import get_api_key
@@ -196,12 +217,18 @@ class LLMClient:
                     },
                 )
                 resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
+                return str(resp.json()["choices"][0]["message"]["content"])
         except Exception as e:
             logger.debug("Vision check failed (OpenAI): %s", e)
             return "GOOD"
 
-    async def _vision_ollama(self, prompt, b64, temperature, max_tokens):
+    async def _vision_ollama(
+        self,
+        prompt: str,
+        b64: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
         """Ollama vision API call with auto-detection of vision model."""
         try:
             # Pick a vision-capable model. Allow override via
@@ -273,7 +300,7 @@ class LLMClient:
                     )
                     return "GOOD"
                 data = resp.json()
-                response_text = data.get("response", "").strip()
+                response_text: str = str(data.get("response", "") or "").strip()
                 if not response_text:
                     logger.debug(
                         "Ollama vision empty response. eval_count=%s think=%s",
@@ -434,7 +461,8 @@ class LLMClient:
                 cleaned = "\n".join(lines)
             # Step 1: try strict JSON parsing
             try:
-                return json.loads(cleaned)
+                parsed: Any = json.loads(cleaned)
+                return parsed  # type: ignore[no-any-return]
             except json.JSONDecodeError:
                 pass
 
@@ -444,7 +472,7 @@ class LLMClient:
             try:
                 result = json_repair.loads(cleaned)
                 if isinstance(result, (dict, list)):
-                    return result
+                    return result  # type: ignore[return-value]
             except Exception:
                 logger.debug("operation_failed", exc_info=True)
 
@@ -457,11 +485,11 @@ class LLMClient:
     async def safe_generate_json(
             self,
             prompt: str,
-            model_class: type[BaseModel],
+            model_class: type[_ModelT],
             max_retries: int = 1,
             demo_hint: str = "",
             **kwargs: Any,
-    ) -> BaseModel:
+    ) -> _ModelT:
             """Generate JSON and parse into a Pydantic model with automatic retry.
 
             On validation failure, retries once with the error appended to the prompt.
@@ -485,6 +513,7 @@ class LLMClient:
                             f"Try again or use a different AI model.\n"
                             f"Validation errors: {last_error[:500]}"
                         ) from e
+            raise RuntimeError("unreachable")
 
     async def generate_student_handout(
             self,
@@ -541,7 +570,7 @@ class LLMClient:
             self,
             lesson_json: str,
             persona_context: str = "",
-    ):
+    ) -> StudentPacket:
             """Generate a structured student packet from a completed lesson.
 
             Returns a validated StudentPacket model with fill-in-the-blank guided
@@ -606,7 +635,7 @@ class LLMClient:
             self,
             lesson_json: str,
             persona_context: str = "",
-    ):
+    ) -> AdminLessonPlan:
             """Generate an administrator-ready lesson plan from a completed lesson.
 
             Returns a validated AdminLessonPlan with per-section teacher/student
@@ -677,7 +706,7 @@ class LLMClient:
                     if lines and lines[-1].strip() == "```":
                         lines = lines[:-1]
                     cleaned = "\n".join(lines)
-                result = json.loads(cleaned)
+                result: dict[str, Any] = json.loads(cleaned)
                 if "passed" not in result:
                     return {"passed": False, "issues": ["LLM response missing 'passed' field"]}
                 return result
@@ -729,7 +758,7 @@ class LLMClient:
                     kwargs["system"] = system
 
                 msg = client.messages.create(**kwargs)
-                return msg.content[0].text
+                return str(msg.content[0].text)
 
             except anthropic.AuthenticationError as e:
                 raise OSError(
@@ -783,7 +812,7 @@ class LLMClient:
                     choices = data.get("choices", [])
                     if not choices:
                         raise RuntimeError("OpenAI returned an empty response (content may have been filtered)")
-                    return choices[0].get("message", {}).get("content", "")
+                    return str(choices[0].get("message", {}).get("content", "") or "")
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to the OpenAI API.\n"
@@ -838,7 +867,7 @@ class LLMClient:
                     choices = data.get("choices", [])
                     if not choices:
                         raise RuntimeError("OpenRouter returned an empty response (no choices)")
-                    return choices[0].get("message", {}).get("content", "")
+                    return str(choices[0].get("message", {}).get("content", "") or "")
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to OpenRouter. Check your internet connection."
@@ -901,7 +930,7 @@ class LLMClient:
                         choices = data.get("choices", [])
                         if not choices:
                             raise RuntimeError("Ollama Cloud returned an empty response")
-                        return choices[0].get("message", {}).get("content", "")
+                        return str(choices[0].get("message", {}).get("content", "") or "")
                 else:
                     # Local Ollama (or Ollama Cloud — cloud models need longer timeout)
                     full_prompt = f"{system}\n\n{prompt}" if system else prompt
@@ -933,7 +962,7 @@ class LLMClient:
                             )
                         resp.raise_for_status()
                         data = resp.json()
-                        return data.get("response", "")
+                        return str(data.get("response", "") or "")
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to Ollama.\n"
@@ -994,7 +1023,7 @@ class LLMClient:
                     if not parts:
                         reason = candidates[0].get("finishReason", "unknown")
                         raise RuntimeError(f"Gemini blocked this request (reason: {reason})")
-                    return parts[0].get("text", "")
+                    return str(parts[0].get("text", "") or "")
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to the Google Gemini API.\n"

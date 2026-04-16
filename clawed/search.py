@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from typing import Any
 
 import httpx
 
@@ -21,7 +22,8 @@ def _get_tavily_key() -> str | None:
     if config_path.exists():
         try:
             data = json.loads(config_path.read_text(encoding="utf-8"))
-            return data.get("tavily_api_key") or data.get("TAVILY_API_KEY")
+            result: str | None = data.get("tavily_api_key") or data.get("TAVILY_API_KEY")
+            return result
         except (json.JSONDecodeError, OSError):
             pass
     return None
@@ -39,7 +41,7 @@ def _add_edu_framing(query: str, persona: TeacherPersona | None = None) -> str:
     return " ".join(parts)
 
 
-def _format_results(results: list[dict], max_results: int = 3) -> str:
+def _format_results(results: list[dict[str, Any]], max_results: int = 3) -> str:
     """Format search results as a Telegram-friendly bullet list."""
     if not results:
         return "No results found. Try rephrasing your query."
@@ -57,7 +59,7 @@ def _format_results(results: list[dict], max_results: int = 3) -> str:
     return "\n".join(lines).rstrip()
 
 
-async def _search_tavily(query: str, api_key: str, max_results: int = 3) -> list[dict]:
+async def _search_tavily(query: str, api_key: str, max_results: int = 3) -> list[dict[str, Any]]:
     """Search using the Tavily API."""
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(
@@ -77,7 +79,7 @@ async def _search_tavily(query: str, api_key: str, max_results: int = 3) -> list
         ]
 
 
-async def _search_duckduckgo(query: str, max_results: int = 3) -> list[dict]:
+async def _search_duckduckgo(query: str, max_results: int = 3) -> list[dict[str, Any]]:
     """Scrape DuckDuckGo HTML-only endpoint as a fallback."""
     async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
         resp = await client.post(
@@ -88,7 +90,7 @@ async def _search_duckduckgo(query: str, max_results: int = 3) -> list[dict]:
         resp.raise_for_status()
         html = resp.text
 
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
     # Parse result blocks: <a class="result__a" href="...">title</a>
     # and <a class="result__snippet">snippet</a>
     link_pattern = re.compile(

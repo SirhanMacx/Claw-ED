@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from clawed.gateway_response import GatewayResponse
 from clawed.scheduler import disable_task, load_schedule_config
 
 logger = logging.getLogger(__name__)
 
-def _cron_to_human(cron: dict) -> str:
+def _cron_to_human(cron: dict[str, Any]) -> str:
     hour = int(cron.get("hour", 0))
     minute = int(cron.get("minute", 0))
     day = cron.get("day_of_week", "")

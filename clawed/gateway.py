@@ -5,6 +5,8 @@ imports (EduAgentGateway, ActivityEvent, GatewayStats) keep working.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from clawed._legacy_gateway import (  # noqa: F401
     ActivityEvent,
     GatewayStats,
@@ -12,7 +14,7 @@ from clawed._legacy_gateway import (  # noqa: F401
 from clawed.models import AppConfig
 
 
-def Gateway(*args, **kwargs):  # noqa: N802
+def Gateway(*args: Any, **kwargs: Any) -> Any:  # noqa: N802
     """Factory that returns the appropriate Gateway based on config."""
     config = kwargs.get("config") or (args[0] if args else None)
     if config is None:

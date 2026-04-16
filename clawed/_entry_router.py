@@ -250,7 +250,7 @@ def _check_telegram_token() -> bool:
     return False
 
 
-def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
+def _resolve_key_for_provider(provider: str, config: dict[str, object]) -> str | None:
     """Find the best API key for a provider using a 5-step resolution chain.
 
     Checks in order: environment variable, Claude Code OAuth credentials,
@@ -282,7 +282,7 @@ def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
                     creds = json.loads(cred_path.read_text())
                     token = creds.get("claudeAiOauth", {}).get("accessToken")
                     if token:
-                        return token
+                        return str(token)
                 except (json.JSONDecodeError, OSError):
                     pass
 
@@ -291,7 +291,7 @@ def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
         import keyring
         val = keyring.get_password("eduagent", f"{provider}_api_key")
         if val:
-            return val
+            return str(val)
     except ImportError:
         pass  # keyring is optional; fall through to secrets.json/env
 
@@ -302,7 +302,7 @@ def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
             secrets = json.loads(secrets_path.read_text())
             val = secrets.get(f"{provider}_api_key")
             if val:
-                return val
+                return str(val)
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -310,7 +310,7 @@ def _resolve_key_for_provider(provider: str, config: dict) -> str | None:
     key_field = f"{provider}_api_key"
     val = config.get(key_field)
     if val and val != "ollama-local":  # Skip sentinel value
-        return val
+        return str(val)
 
     return None
 
@@ -391,7 +391,8 @@ def _get_configured_model() -> str | None:
     }
     field = model_fields.get(provider)
     if field:
-        return config.get(field)
+        value = config.get(field)
+        return str(value) if value else None
     return None
 
 
@@ -535,8 +536,8 @@ def main() -> None:
         _time.sleep(1)
         try:
             from clawed.onboarding import quick_model_setup
-            result = quick_model_setup()
-            if result == "telegram":
+            setup_result = quick_model_setup()
+            if setup_result == "telegram":
                 sys.argv = [sys.argv[0], "bot"]
                 _run_python_cli()
                 return
