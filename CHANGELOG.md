@@ -1,5 +1,77 @@
 # Changelog
 
+## v4.16.2026.0 — 2026-04-16
+
+### Hardened — Type Safety & Exception Chaining
+
+- **`mypy --strict` passes on all 270 source files, zero errors.** The previous
+  lax config (`check_untyped_defs = true` only) allowed 229 real type errors
+  and 845 unchecked annotations. Strict mode is now enforced project-wide.
+- **1074 → 0 mypy strict errors across 144 files.** Work divided into 8 parallel
+  subagent batches covering `clawed/api/`, `clawed/agent_core/`, all
+  `clawed/commands/`, `clawed/transports/`, exports, generation hot path, and
+  handlers. Only narrow `# type: ignore[<code>]` annotations with inline
+  justifications retained — no blanket ignores.
+- **Real runtime bugs caught and fixed by the strict pass:**
+  - `clawed/generation.py:207` imported `generate_materials` from
+    `clawed.materials`, but the real name is `generate_all_materials`. Any call
+    to `handle_generate_materials` would have raised `ImportError`.
+  - `clawed/generation.py:550` accessed `.get('code')` / `.get('description')`
+    on tuples returned by `get_standards()`. Runtime `AttributeError` on first
+    use. Replaced with tuple indexing.
+  - `clawed/commands/drive.py` called async `DriveClient.list_files` and
+    `read_file` synchronously in three places. Wrapped with `run_async(...)`.
+  - `clawed/commands/generate_ingest.py` passed `old_persona=None` to
+    `persona_evolution.record_ingestion_changes` on first-run ingest, violating
+    the signature. Guarded with a None check.
+  - `clawed/commands/config_profile.py` `_standards_json` accessed `.code` /
+    `.description` on `get_standards()` tuples; fixed with unpacking. The
+    `qrcode.make(...).save(output)` call now passes a binary file handle.
+  - `clawed/_entry_router.py:602-603` assigned a `CompletedProcess[bytes]` to
+    a `str` variable, then called `.returncode` on the str. Fixed by binding
+    `proc` and deriving the string separately.
+  - Missing None guards in `commands/_helpers.py::load_persona_or_exit` and
+    several persona-load sites added.
+- **Pydantic `field_validator` methods, FastAPI route signatures, Typer command
+  callbacks, and context-manager helpers all carry explicit types** for the
+  first time. Pydantic generic types, `Awaitable[T] → T` async helpers, and
+  `AsyncGenerator` event streams get concrete annotations.
+- **B904 suppression removed.** All 51 `raise X(...)` sites inside `except`
+  blocks now chain the original exception with `from <exc>`, preserving the
+  traceback chain. Bare `except ClassName:` clauses gained `as e:` bindings
+  where required. No `from None` used — every chain is preserved.
+- **Third-party type stubs added:** `types-PyYAML`, `types-requests`,
+  `types-python-dateutil`, `types-reportlab`, `types-qrcode`, `types-pytz`.
+  Narrow `ignore_missing_imports` overrides for genuinely-untyped deps
+  (anthropic, apscheduler, faster_whisper, google.*, manim, textual, etc.).
+
+### Verified — April 2026 Audit Remediation Regression Pass
+
+Each of the 38 defects catalogued in the April 5 and April 9 audits was
+re-verified against current v4.13 code. **Result: 38/38 still fixed. Zero
+regressions** from the v4.12 and v4.13 releases. Evidence collected for each
+defect (file + line references); full report archived in the session log.
+
+### Fixed — Version Surface Drift
+
+Four version surfaces had silently fallen behind since v4.9 and were never
+bumped during v4.10 → v4.13 ships:
+
+- `cli/source/package.json` (was v4.9.2026.16)
+- `daemon/package.json` (was v4.9.2026.16)
+- `docs/index.html` schema.org + footer (was v4.9.2026.16)
+- `ROADMAP.md` header (was v4.9.2026.16)
+
+All eight version surfaces now track together.
+
+### Quality
+
+- 2081 tests passing, 4 skipped (identical to v4.13 baseline).
+- `ruff check clawed/ tests/`: clean.
+- `mypy --strict clawed/`: 0 errors in 270 source files.
+- 144 files touched by the typing pass; no behavioral changes — only
+  annotations, narrow ignores, and the real-bug fixes documented above.
+
 ## v4.13.2026.1 — 2026-04-13
 
 ### Added — Competitive Borrowing (DeepTutor, Karpathy Skills, Multica)

@@ -1,14 +1,21 @@
 # Roadmap
 
-Current version: **v4.9.2026.16**
+Current version: **v4.16.2026.0**
 
-## v4.9 — Architecture + Ecosystem
+## v4.17 — What's next
 
-### Architecture cleanup (from audit)
+### Recently shipped (v4.16)
+- [x] **`mypy --strict` project-wide** — 1074 errors → 0 across 270 files, 144 files touched. Surfaced and fixed 7+ real runtime bugs (wrong imports, sync calls to async methods, tuple-as-dict access, missing None guards)
+- [x] **B904 exception chaining** — 51 raise sites in `except` blocks now use `from <exc>` to preserve tracebacks. Suppression removed from ruff config
+- [x] **April 2026 audit regression pass** — 38/38 previously-fixed defects re-verified in v4.13 code; zero regressions
+- [x] **Version surface drift fixed** — `cli/source/package.json`, `daemon/package.json`, `docs/index.html`, `ROADMAP.md` were stuck at v4.9; all eight surfaces now track together
+
+### Architecture cleanup
 - [ ] **Database consolidation**: reduce 10 SQLite DBs to 3-4
 - [ ] **Path centralization**: complete paths.py migration for all modules
 - [ ] **Test coverage**: add tests for export_pptx, generation, models (30 untested modules)
 - [ ] **conftest simplification**: one env var patch instead of 19 monkeypatches
+- [ ] **mypy CI gate**: enforce `--strict` in GitHub Actions (currently local-only check)
 
 ### Semantic knowledge graph (Graphify)
 - [ ] **LLM-powered entity extraction**: replace heuristic kg_extractor.py
