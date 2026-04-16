@@ -157,9 +157,46 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
+strict = true
 warn_unreachable = true
-check_untyped_defs = true
+# Narrow relaxations for parts of the codebase that interact with
+# dynamically-typed APIs. Keep this list small — prefer annotating
+# the code over widening exemptions.
+
+[[tool.mypy.overrides]]
+module = [
+    # Third-party libraries without type stubs.
+    "anthropic",
+    "anthropic.*",
+    "apscheduler.*",
+    "faster_whisper",
+    "google",
+    "google.*",
+    "google_auth_oauthlib",
+    "google_auth_oauthlib.*",
+    "googleapiclient",
+    "googleapiclient.*",
+    "gtts",
+    "keyring",
+    "lxml",
+    "lxml.*",
+    "manim",
+    "manim.*",
+    "numpy",
+    "numpy.*",
+    "onnxruntime",
+    "openpyxl",
+    "playwright.*",
+    "pypdf",
+    "pypdf.*",
+    "striprtf.*",
+    "textual.*",
+    "tokenizers",
+    "weasyprint",
+    "xlrd",
+]
+ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["clawed"]
