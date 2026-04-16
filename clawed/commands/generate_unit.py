@@ -109,7 +109,7 @@ def unit(
             )
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Unit plan complete!")
 
     out_dir = _output_dir()
@@ -183,7 +183,7 @@ def year_map(
             )
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Year map complete!")
 
     out_dir = _output_dir()
@@ -284,7 +284,7 @@ def pacing(
             )
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Pacing guide complete!")
 
     out_dir = _output_dir()
@@ -376,7 +376,7 @@ def full(
             )
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Unit plan complete!")
 
     save_unit(unit_plan, out_dir)
@@ -412,7 +412,7 @@ def full(
                 )
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
             save_lesson(daily, out_dir)
             export_lesson(daily, out_dir, fmt=fmt)
             lessons.append(daily)
@@ -434,7 +434,7 @@ def full(
                 mats = _run_async(generate_all_materials(daily, persona))
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
             save_materials(mats, out_dir)
             export_materials(mats, out_dir, fmt=fmt)
             progress.advance(task)

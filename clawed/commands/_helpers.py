@@ -121,13 +121,13 @@ def check_api_key_or_exit() -> None:
 
     try:
         cfg = AppConfig.load()
-    except Exception:
+    except Exception as e:
         logger.warning("operation_failed", exc_info=True)
         console.print(
             "[red]Claw-ED is not configured yet.[/red]\n"
             "Run [bold]clawed setup[/bold] to pick your AI provider and add an API key."
         )
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     provider = cfg.provider.value if hasattr(cfg.provider, 'value') else str(cfg.provider)
     if provider == "ollama":

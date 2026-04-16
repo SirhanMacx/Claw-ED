@@ -429,7 +429,7 @@ def kb_query(
         result = run_async(query_wiki(question))
     except FileNotFoundError as e:
         console.print(f"[yellow]{e}[/yellow]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     # Display answer
     console.print(Markdown(result.answer))

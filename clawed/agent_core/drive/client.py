@@ -60,10 +60,10 @@ class DriveClient:
         try:
             from google.oauth2.credentials import Credentials
             from googleapiclient.discovery import build
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "Google Drive support requires: pip install 'clawed[google]'"
-            )
+            ) from e
 
         token_data = load_token(self._token_path)
         creds = Credentials(

@@ -62,10 +62,10 @@ def run_oauth_flow(
     """
     try:
         from google_auth_oauthlib.flow import InstalledAppFlow
-    except ImportError:
+    except ImportError as e:
         raise RuntimeError(
             "google-auth-oauthlib not installed. Run: pip install clawed[google]"
-        )
+        ) from e
 
     if credentials_file:
         # Use downloaded credentials JSON from Google Cloud Console

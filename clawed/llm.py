@@ -731,19 +731,19 @@ class LLMClient:
                 msg = client.messages.create(**kwargs)
                 return msg.content[0].text
 
-            except anthropic.AuthenticationError:
+            except anthropic.AuthenticationError as e:
                 raise OSError(
                     "Invalid API key or OAuth token. Check with: clawed debug"
-                )
-            except anthropic.RateLimitError:
+                ) from e
+            except anthropic.RateLimitError as e:
                 raise RuntimeError(
                     "The AI service is busy right now. Wait a minute and try again."
-                )
-            except anthropic.APIConnectionError:
+                ) from e
+            except anthropic.APIConnectionError as e:
                 raise ConnectionError(
                     "Could not connect to the Anthropic API.\n"
                     "Check your internet connection and try again."
-                )
+                ) from e
 
     # ── OpenAI ───────────────────────────────────────────────────────────
 
@@ -784,16 +784,16 @@ class LLMClient:
                     if not choices:
                         raise RuntimeError("OpenAI returned an empty response (content may have been filtered)")
                     return choices[0].get("message", {}).get("content", "")
-            except httpx.ConnectError:
+            except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to the OpenAI API.\n"
                     "Check your internet connection and try again."
-                )
+                ) from exc
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 401:
                     raise OSError(
                         "Invalid OPENAI_API_KEY. Check your key at https://platform.openai.com"
-                    )
+                    ) from e
                 raise
 
     # ── OpenRouter ───────────────────────────────────────────────────────
@@ -839,15 +839,15 @@ class LLMClient:
                     if not choices:
                         raise RuntimeError("OpenRouter returned an empty response (no choices)")
                     return choices[0].get("message", {}).get("content", "")
-            except httpx.ConnectError:
+            except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to OpenRouter. Check your internet connection."
-                )
+                ) from exc
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 401:
                     raise OSError(
                         "Invalid OpenRouter API key. Check at https://openrouter.ai/keys"
-                    )
+                    ) from e
                 raise
 
     # ── Ollama ───────────────────────────────────────────────────────────
@@ -934,11 +934,11 @@ class LLMClient:
                         resp.raise_for_status()
                         data = resp.json()
                         return data.get("response", "")
-            except httpx.ConnectError:
+            except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to Ollama.\n"
                     "Install from https://ollama.com and make sure it's running."
-                )
+                ) from exc
 
     # ── Google Gemini ────────────────────────────────────────────────────
 
@@ -995,15 +995,15 @@ class LLMClient:
                         reason = candidates[0].get("finishReason", "unknown")
                         raise RuntimeError(f"Gemini blocked this request (reason: {reason})")
                     return parts[0].get("text", "")
-            except httpx.ConnectError:
+            except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to the Google Gemini API.\n"
                     "Check your internet connection and try again."
-                )
+                ) from exc
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 401:
                     raise OSError(
                         "Google credentials expired or invalid.\n"
                         "Run `clawed setup --reset` to re-authenticate."
-                    )
+                    ) from e
                 raise

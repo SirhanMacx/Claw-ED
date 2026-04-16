@@ -98,9 +98,9 @@ def main(
             from clawed.onboarding import quick_model_setup
             try:
                 interface = quick_model_setup()
-            except (KeyboardInterrupt, EOFError):
+            except (KeyboardInterrupt, EOFError) as e:
                 console.print("\n[dim]Setup cancelled. Run clawed again anytime.[/dim]")
-                raise typer.Exit()
+                raise typer.Exit() from e
 
             if interface == "skip":
                 raise typer.Exit()

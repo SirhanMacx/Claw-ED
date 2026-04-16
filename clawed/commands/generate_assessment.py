@@ -77,7 +77,7 @@ def materials(
             mats = _run_async(generate_all_materials(daily, persona))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(
             task, completed=4, description="All materials generated!"
         )
@@ -176,7 +176,7 @@ def _assess_formative(gen, persona, out_dir, lesson_file):
             result = _run_async(gen.generate_formative(daily, persona))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Exit ticket ready!")
     path = save_assessment(result, out_dir, "formative")
     console.print(f"\n[green]Saved:[/green] {path}")
@@ -202,7 +202,7 @@ def _assess_summative(gen, persona, out_dir, unit_file):
             result = _run_async(gen.generate_summative(unit_plan, persona))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Unit test ready!")
     path = save_assessment(result, out_dir, "summative")
     console.print(f"\n[green]Saved:[/green] {path}")
@@ -230,7 +230,7 @@ def _assess_dbq(gen, persona, out_dir, topic, grade, context):
             result = _run_async(gen.generate_dbq(topic, persona, grade_level=grade, context=context))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="DBQ ready!")
     path = save_assessment(result, out_dir, "dbq")
     console.print(f"\n[green]Saved:[/green] {path}")
@@ -261,7 +261,7 @@ def _assess_quiz(gen, persona, out_dir, topic, grade, questions, question_types)
             ))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Quiz ready!")
     path = save_assessment(result, out_dir, "quiz")
     console.print(f"\n[green]Saved:[/green] {path}")
@@ -308,7 +308,7 @@ def rubric(
             )
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(prog_task, description="Rubric ready!")
 
     out_dir = _output_dir()
@@ -362,7 +362,7 @@ def score(
             scores = _run_async(scorer.score(lesson_obj))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Scoring complete!")
 
     table = Table(title="Lesson Quality Score")
@@ -440,7 +440,7 @@ def improve(
                 result = _run_async(improve_prompts(db, feedback_window_days=days))
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
             progress.update(task, description="Done!")
 
         db.close()
@@ -596,7 +596,7 @@ def evaluate(
         report = _run_async(evaluate_voice_consistency(persona, generated, config))
     except (RuntimeError, ValueError) as e:
         console.print(f"[red]{friendly_error(e)}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     # Display results
     eval_table = Table(title="Voice Evaluation Results")

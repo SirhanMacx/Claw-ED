@@ -23,12 +23,12 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal
     from textual.widgets import DataTable, Footer, Static
-except ImportError:
+except ImportError as e:
     raise ImportError(
         "textual is required for the TUI dashboard.\n"
         "Install with: pip install 'clawed[tui]'\n"
         "Or: pip install textual"
-    )
+    ) from e
 
 if TYPE_CHECKING:
     from clawed.gateway import EduAgentGateway

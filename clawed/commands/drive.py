@@ -67,7 +67,7 @@ def auth(
         console.print("Ed can now access your Google Drive files.")
     except Exception as e:
         console.print(f"[red]Authentication failed: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 @drive_app.command(name="list")

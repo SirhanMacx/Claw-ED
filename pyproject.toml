@@ -128,7 +128,6 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
 ignore = [
-    "B904",    # raise-without-from — tracked for future cleanup
     "RUF001",  # ambiguous unicode in education content strings
     "RUF002",  # ambiguous unicode in docstrings
     "RUF012",  # mutable class defaults — existing patterns are intentional

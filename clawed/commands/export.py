@@ -515,7 +515,7 @@ def import_lesson(
         resp = httpx.get(fetch_url, timeout=15)
     except httpx.HTTPError as exc:
         console.print(f"[red]Network error:[/red] {exc}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
 
     if resp.status_code == 404:
         console.print(
@@ -531,9 +531,9 @@ def import_lesson(
 
     try:
         data = resp.json()
-    except (json.JSONDecodeError, ValueError):
+    except (json.JSONDecodeError, ValueError) as e:
         console.print("[red]Invalid JSON response from server.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     lesson_data = data.get("lesson", data)
     original_title = data.get("title", lesson_data.get("title", "Untitled"))

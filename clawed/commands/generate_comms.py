@@ -153,7 +153,7 @@ def sub_packet(
             packet = _run_async(generate_sub_packet(request, llm))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Sub packet complete!")
 
     md_path = save_sub_packet(packet, _output_dir())
@@ -298,7 +298,7 @@ def parent_note(
             )
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Progress update complete!")
 
     out_dir = _output_dir()

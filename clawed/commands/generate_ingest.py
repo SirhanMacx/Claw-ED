@@ -169,7 +169,7 @@ def ingest(
             new_persona = _run_async(extract_persona(documents))
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Persona extracted!")
 
     # Merge with existing persona instead of overwriting

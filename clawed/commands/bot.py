@@ -51,7 +51,7 @@ def tui(
         console.print(f"[red]Missing dependency:[/red] {e}")
         console.print("\nInstall TUI support with:")
         console.print("  pip install 'clawed\\[tui]'", highlight=False)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     run_tui_chat(teacher_id, host=host, port=port)
 
@@ -397,7 +397,7 @@ def _serve_with_tui(
         console.print(f"[red]Missing dependency:[/red] {e}")
         console.print("\nInstall TUI support with:")
         console.print("  pip install 'clawed\\[tui]'", highlight=False)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     gateway = EduAgentGateway(config=config)
 
@@ -556,7 +556,7 @@ def student_bot_cmd(
             "\n  [cyan]pip install"
             " 'python-telegram-bot>=20.0'[/cyan]"
         )
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 # ── Bot command ──────────────────────────────────────────────────────
@@ -658,6 +658,6 @@ def bot(
         )
     except RuntimeError as e:
         console.print(f"[red]{e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
     except KeyboardInterrupt:
         console.print("\n[yellow]Bot stopped.[/yellow]")

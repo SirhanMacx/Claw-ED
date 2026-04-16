@@ -82,7 +82,7 @@ def differentiate(
                 )
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
             progress.update(
                 task,
                 description=(
@@ -128,7 +128,7 @@ def differentiate(
                 )
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
             progress.update(
                 task, description="504 accommodations complete!"
             )
@@ -163,7 +163,7 @@ def differentiate(
                 )
             except (RuntimeError, ValueError) as e:
                 console.print(f"[red]{friendly_error(e)}[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from e
             progress.update(
                 task,
                 description=f"Generated {len(items)} tiered items!",

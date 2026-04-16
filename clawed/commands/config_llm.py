@@ -23,12 +23,12 @@ def config_set_model(
     """Configure the LLM backend."""
     try:
         llm_provider = LLMProvider(provider.lower())
-    except ValueError:
+    except ValueError as e:
         console.print(
             f"[red]Unknown provider: {provider}[/red]."
             " Use: anthropic, openai, ollama, google, openrouter"
         )
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     cfg = AppConfig.load()
     cfg.provider = llm_provider

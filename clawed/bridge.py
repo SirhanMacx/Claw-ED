@@ -91,8 +91,8 @@ def _build_config(provider: str | None, model: str | None):
     if provider:
         try:
             config.provider = LLMProvider(provider)
-        except ValueError:
-            raise ValueError(f"Unknown provider: {provider}")
+        except ValueError as e:
+            raise ValueError(f"Unknown provider: {provider}") from e
 
     if model:
         # Set the right model field based on provider

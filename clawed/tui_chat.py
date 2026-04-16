@@ -18,12 +18,12 @@ try:
     from textual.binding import Binding
     from textual.containers import VerticalScroll
     from textual.widgets import Footer, Input, Static
-except ImportError:
+except ImportError as e:
     raise ImportError(
         "textual is required for the TUI chat.\n"
         "Install with: pip install 'clawed[tui]'\n"
         "Or: pip install textual"
-    )
+    ) from e
 
 import httpx
 

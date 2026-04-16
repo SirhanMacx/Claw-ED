@@ -184,7 +184,7 @@ def gap_analyze(
             )
         except (RuntimeError, ValueError) as e:
             console.print(f"[red]{friendly_error(e)}[/red]")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from e
         progress.update(task, description="Analysis complete!")
 
     if not gaps:
