@@ -4,7 +4,7 @@ set -euo pipefail
 # Build and publish Claw-ED to PyPI
 # Usage: ./scripts/publish.sh
 #
-# Requires: pip install build twine
+# Requires: uv
 
 echo "==> Claw-ED PyPI Publisher"
 echo ""
@@ -13,7 +13,7 @@ echo ""
 
 if [[ ! -d dist/ ]] || [[ -z "$(ls -A dist/ 2>/dev/null)" ]]; then
     echo "No dist/ found. Building package first..."
-    python3 -m build
+    uv build
 fi
 
 # Verify wheel and tarball exist
@@ -22,8 +22,7 @@ TARBALL=$(ls dist/*.tar.gz 2>/dev/null | head -1)
 
 if [[ -z "$WHEEL" || -z "$TARBALL" ]]; then
     echo "✗ Missing wheel or tarball in dist/. Rebuilding..."
-    rm -rf dist/ build/ *.egg-info/
-    python3 -m build
+    uv build --clear
 fi
 
 echo "✓ Found artifacts:"
@@ -31,23 +30,24 @@ ls -1 dist/
 
 # ── PyPI credentials ─────────────────────────────────────────────────────────
 
-# Use API token auth (recommended by PyPI)
-TWINE_ARGS=("--username" "__token__")
+if [[ -z "${UV_PUBLISH_TOKEN:-}" && -n "${TWINE_PASSWORD:-}" ]]; then
+    export UV_PUBLISH_TOKEN="${TWINE_PASSWORD}"
+fi
 
-if [[ -z "${TWINE_PASSWORD:-}" ]]; then
+if [[ -z "${UV_PUBLISH_TOKEN:-}" ]]; then
     echo ""
-    echo "PyPI API token not found in env (TWINE_PASSWORD)."
+    echo "PyPI API token not found in env (UV_PUBLISH_TOKEN)."
     echo "Get one at: https://pypi.org/manage/account/token/"
-    read -rsp "Enter PyPI API token (starts with pypi-): " TWINE_PASSWORD
+    read -rsp "Enter PyPI API token (starts with pypi-): " UV_PUBLISH_TOKEN
     echo ""
-    export TWINE_PASSWORD
+    export UV_PUBLISH_TOKEN
 fi
 
 # ── Upload ────────────────────────────────────────────────────────────────────
 
 echo ""
 echo "Uploading to PyPI..."
-python3 -m twine upload dist/* "${TWINE_ARGS[@]}"
+uv publish dist/*
 
 echo ""
 echo "✓ Upload complete! https://pypi.org/project/clawed/"
@@ -55,8 +55,19 @@ echo "✓ Upload complete! https://pypi.org/project/clawed/"
 # ── Bump version for next dev cycle ──────────────────────────────────────────
 
 CURRENT=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
+IFS='.' read -r -a PARTS <<< "$CURRENT"
+case "${#PARTS[@]}" in
+    3)
+        NEXT="${PARTS[0]}.${PARTS[1]}.$((PARTS[2] + 1))"
+        ;;
+    4)
+        NEXT="${PARTS[0]}.${PARTS[1]}.${PARTS[2]}.$((PARTS[3] + 1))"
+        ;;
+    *)
+        echo "Cannot auto-bump version '${CURRENT}'. Expected 3 or 4 numeric segments."
+        exit 1
+        ;;
+esac
 
 echo ""
 read -rp "Bump version to ${NEXT} for next release? [Y/n] " bump
@@ -67,8 +78,7 @@ if [[ "${bump:-Y}" =~ ^[Yy]$ ]]; then
     echo "✓ Version bumped to ${NEXT}"
 
     echo "Rebuilding with new version..."
-    rm -rf dist/ build/ *.egg-info/
-    python3 -m build
+    uv build --clear
     echo "✓ Rebuilt dist/ with v${NEXT}"
 fi
 

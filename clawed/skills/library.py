@@ -160,14 +160,17 @@ def _parse_yaml_skill(path: Path) -> SubjectSkill | None:
     if isinstance(aliases_raw, str):
         aliases_raw = [aliases_raw]
 
+    def field_text(key: str, default: object = "") -> str:
+        return str(data.get(key) or default)
+
     return SubjectSkill(
         subject=str(subject).lower().strip(),
-        display_name=data.get("display_name", subject),
-        description=data.get("description", ""),
-        system_prompt=data.get("system_prompt", ""),
-        lesson_prompt_additions=data.get("lesson_prompt_additions", ""),
-        assessment_style_notes=data.get("assessment_style_notes", ""),
-        vocabulary_guidelines=data.get("vocabulary_guidelines", ""),
+        display_name=field_text("display_name", subject),
+        description=field_text("description"),
+        system_prompt=field_text("system_prompt"),
+        lesson_prompt_additions=field_text("lesson_prompt_additions"),
+        assessment_style_notes=field_text("assessment_style_notes"),
+        vocabulary_guidelines=field_text("vocabulary_guidelines"),
         example_strategies={str(k): str(v) for k, v in strategies_raw.items()},
         aliases=tuple(str(a) for a in aliases_raw),
     )

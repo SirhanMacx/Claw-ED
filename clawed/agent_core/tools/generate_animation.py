@@ -135,8 +135,7 @@ class GenerateAnimationTool:
 
         # Report progress
         if context.progress_callback:
-            # notify_progress is sync; await on None is preserved legacy behavior
-            await context.notify_progress(f"Creating {animation_type} animation for: {topic}")  # type: ignore[func-returns-value]
+            context.notify_progress(f"Creating {animation_type} animation for: {topic}")
 
         # Stage 1: Generate Manim scene code
         scene_code = self._build_scene(topic, animation_type, key_points, style)
@@ -166,7 +165,7 @@ class GenerateAnimationTool:
         ]
 
         if context.progress_callback:
-            await context.notify_progress("Rendering animation (this may take a moment)...")  # type: ignore[func-returns-value]
+            context.notify_progress("Rendering animation (this may take a moment)...")
 
         try:
             result = subprocess.run(
@@ -182,7 +181,7 @@ class GenerateAnimationTool:
 
                 # Stage 3b: Retry with simplified scene
                 if context.progress_callback:
-                    await context.notify_progress("Simplifying and retrying render...")  # type: ignore[func-returns-value]
+                    context.notify_progress("Simplifying and retrying render...")
 
                 scene_code = self._simplify_scene(scene_code)
                 scene_file.write_text(scene_code, encoding="utf-8")

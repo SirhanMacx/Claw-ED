@@ -1,6 +1,6 @@
 """Thin Telegram transport — delegates all logic to the Gateway.
 
-Uses requests (urllib3) for reliable cross-platform compatibility.
+Uses urllib3 directly for reliable cross-platform compatibility.
 The bot is a ~200-line polling loop that:
   1. Receives updates from Telegram
   2. Delegates to Gateway.handle() / Gateway.handle_callback()
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import os
 import signal
@@ -23,14 +24,16 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-import requests as _requests
+import urllib3
+from urllib3.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
 _API_BASE = "https://api.telegram.org"
 _MAX_MESSAGE_LENGTH = 4096
+_HTTP = urllib3.PoolManager()
 
 # Base data directory — respects EDUAGENT_DATA_DIR env override
 _BASE = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
@@ -40,6 +43,39 @@ _BOT_LOCK = _BASE / "bot.lock"
 
 # Error log path
 _ERROR_LOG = _BASE / "errors.log"
+
+
+def _timeout(read_timeout: float) -> urllib3.Timeout:
+    """Build a conservative timeout for Telegram API calls."""
+    return urllib3.Timeout(connect=min(10.0, read_timeout), read=read_timeout)
+
+
+def _decode_response(data: bytes) -> tuple[dict[str, Any], str]:
+    text = data.decode("utf-8", errors="replace")
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return {}, text
+    if isinstance(parsed, dict):
+        return cast(dict[str, Any], parsed), text
+    return {}, text
+
+
+def _post_json(
+    http: urllib3.PoolManager,
+    url: str,
+    payload: dict[str, Any],
+    timeout: float,
+) -> tuple[int, dict[str, Any], str]:
+    resp = http.request(
+        "POST",
+        url,
+        body=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        timeout=_timeout(timeout),
+    )
+    parsed, text = _decode_response(resp.data)
+    return resp.status, parsed, text
 
 
 def _log_error(error: Exception) -> None:
@@ -155,9 +191,9 @@ def _release_bot_lock() -> None:
 
 
 class TelegramAPI:
-    """Thin sync wrapper around the Telegram Bot API using requests.
+    """Thin sync wrapper around the Telegram Bot API using urllib3.
 
-    Uses requests (urllib3) instead of httpx for Windows TLS
+    Uses urllib3 instead of httpx for Windows TLS
     compatibility. httpx fails with WinError 10054 on every TLS
     handshake to api.telegram.org on certain Windows machines.
     """
@@ -166,10 +202,33 @@ class TelegramAPI:
         self.token = token
         self._base = f"{_API_BASE}/bot{token}"
         self._timeout = timeout
-        self._session = _requests.Session()
+        self._http = urllib3.PoolManager()
 
     def close(self) -> None:
-        self._session.close()
+        self._http.clear()
+
+    def _post_json(
+        self,
+        url: str,
+        payload: dict[str, Any],
+        timeout: float | None = None,
+    ) -> tuple[int, dict[str, Any], str]:
+        return _post_json(self._http, url, payload, timeout or self._timeout)
+
+    def _post_multipart(
+        self,
+        url: str,
+        fields: dict[str, Any],
+        timeout: float,
+    ) -> tuple[int, dict[str, Any], str]:
+        resp = self._http.request(
+            "POST",
+            url,
+            fields=fields,
+            timeout=_timeout(timeout),
+        )
+        parsed, text = _decode_response(resp.data)
+        return resp.status, parsed, text
 
     def _call(self, method: str, **params: Any) -> Any:
         """Call a Telegram Bot API method with retry on network errors.
@@ -183,10 +242,9 @@ class TelegramAPI:
         last_err: Exception | None = None
         for attempt in range(3):
             try:
-                resp = self._session.post(
-                    url, json=data, timeout=self._timeout,
-                )
-                result = resp.json()
+                status, result, text = self._post_json(url, data)
+                if status >= 500:
+                    raise RuntimeError(f"Telegram HTTP {status}: {text[:200]}")
                 if result.get("ok"):
                     return result.get("result", {})
                 raise RuntimeError(
@@ -194,10 +252,8 @@ class TelegramAPI:
                     f"{result.get('description', 'Unknown error')}"
                 )
             except (
-                _requests.ConnectionError,
-                _requests.Timeout,
+                HTTPError,
                 ConnectionResetError,
-                OSError,
             ) as e:
                 last_err = e
                 wait = 2 ** attempt
@@ -319,14 +375,20 @@ class TelegramAPI:
         for attempt in range(3):
             try:
                 with open(file_path, "rb") as f:
-                    files = {"document": (file_path.name, f)}
                     data: dict[str, Any] = {"chat_id": str(chat_id)}
                     if caption:
                         data["caption"] = caption
-                    resp = self._session.post(
-                        url, data=data, files=files, timeout=120,
-                    )
-                    result = resp.json()
+                    fields = {
+                        **data,
+                        "document": (
+                            file_path.name,
+                            f.read(),
+                            "application/octet-stream",
+                        ),
+                    }
+                    status, result, text = self._post_multipart(url, fields, timeout=120)
+                    if status >= 500:
+                        raise RuntimeError(f"Telegram HTTP {status}: {text[:200]}")
                     if result.get("ok"):
                         inner = result.get("result", {})
                         return inner if isinstance(inner, dict) else {}
@@ -336,8 +398,8 @@ class TelegramAPI:
                     )
                     return {}
             except (
-                _requests.ConnectionError,
-                _requests.Timeout,
+                HTTPError,
+                ConnectionResetError,
             ) as e:
                 last_err = e
                 wait = 2 ** attempt
@@ -394,12 +456,13 @@ class TelegramAPI:
         url = f"{_API_BASE}/file/bot{self.token}/{file_path}"
         for attempt in range(3):
             try:
-                resp = self._session.get(url, timeout=30)
-                resp.raise_for_status()
+                resp = self._http.request("GET", url, timeout=_timeout(30))
+                if resp.status >= 400:
+                    raise RuntimeError(f"Telegram HTTP {resp.status}: {resp.data[:200]!r}")
                 local_path.parent.mkdir(parents=True, exist_ok=True)
-                local_path.write_bytes(resp.content)
+                local_path.write_bytes(resp.data)
                 return True
-            except (_requests.ConnectionError, _requests.Timeout) as e:
+            except (HTTPError, ConnectionResetError) as e:
                 wait = 2 ** attempt
                 logger.warning(
                     "Network error downloading file (attempt %d): %s. Retrying in %ds...",
@@ -622,9 +685,10 @@ class EduAgentTelegramBot:
                 # Progress callback — lets tools send mid-operation updates.
                 def _progress_cb(msg: str, _cid: int = chat_id, _tok: str = self.token) -> None:
                     with contextlib.suppress(Exception):
-                        _requests.post(
+                        _post_json(
+                            _HTTP,
                             f"https://api.telegram.org/bot{_tok}/sendMessage",
-                            json={"chat_id": _cid, "text": msg},
+                            {"chat_id": _cid, "text": msg},
                             timeout=10,
                         )
 
@@ -779,12 +843,12 @@ def send_notification(text: str) -> bool:
             "text": text[:_MAX_MESSAGE_LENGTH],
             "parse_mode": "Markdown",
         }
-        resp = _requests.post(url, json=payload, timeout=10)
-        if resp.status_code == 200:
+        status, result, text_body = _post_json(_HTTP, url, payload, timeout=10)
+        if status == 200 and result.get("ok"):
             logger.info("Notification sent to Telegram chat %s", chat_id)
             return True
         else:
-            logger.warning("Telegram notification failed: %s", resp.text[:200])
+            logger.warning("Telegram notification failed: %s", text_body[:200])
             return False
 
     except Exception as exc:

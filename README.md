@@ -7,7 +7,7 @@ An open-source CLI agent that generates complete lesson bundles — plans, hando
 **Sibling project:** [Claw-STU](https://sirhanmacx.github.io/Claw-STU/) — the student-facing personal learning agent. Ed builds the lessons; Stuart helps students understand them.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v4.16.2026.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-v4.25.2026-blue" alt="Version">
   <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/v/clawed?color=blue" alt="PyPI"></a>
   <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/pyversions/clawed" alt="Python"></a>
   <a href="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml"><img src="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml/badge.svg" alt="CI"></a>

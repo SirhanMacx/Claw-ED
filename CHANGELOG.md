@@ -1,5 +1,33 @@
 # Changelog
 
+## v4.25.2026 — 2026-04-25
+
+### Hardened — Release, Security, and Publish Readiness
+
+- Removed vulnerable base `requests` dependency. Telegram now uses `urllib3`
+  directly for the Windows-compatible transport path, and model discovery uses
+  the existing `httpx` dependency.
+- Moved Google text-to-speech behind the optional `tts` extra so the base
+  install stays smaller and easier to audit.
+- Upgraded the locked dependency graph and verified `pip-audit` reports no
+  known vulnerabilities in the synced development environment.
+- Fixed PDF/export dependency pins: `pypdf` now targets the patched 6.x line,
+  and broken `reportlab` 4.4.10 is excluded.
+- Added strict typing to CI and kept `mypy --strict clawed` passing across all
+  270 Python source files.
+- Added wheel CLI smoke testing in CI so stale bundled CLI assets cannot ship a
+  mismatched `clawed --version`.
+- Reworked local release scripts to use `uv build` / `uv publish`, support the
+  project’s numeric release schemes, and bump `clawed/__init__.py` instead of
+  the legacy `eduagent` shim.
+
+### Verified
+
+- 2092 tests passing, 4 skipped.
+- `ruff check .`: clean.
+- `mypy --strict clawed`: 0 errors.
+- Built wheel and sdist; installed wheel reports `4.25.2026 (Claw-ED)`.
+
 ## v4.16.2026.0 — 2026-04-16
 
 ### Hardened — Type Safety & Exception Chaining

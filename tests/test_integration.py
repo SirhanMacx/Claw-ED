@@ -87,6 +87,12 @@ def config():
     )
 
 
+@pytest.fixture(autouse=True)
+def _single_call_generation_for_mocked_llm(monkeypatch):
+    """Keep integration tests hermetic when lesson generation is LLM-mocked."""
+    monkeypatch.setenv("CLAWED_SINGLE_CALL_GEN", "1")
+
+
 def _lesson_briefs():
     """Ten lesson briefs for a 2-week WWI unit."""
     data = [

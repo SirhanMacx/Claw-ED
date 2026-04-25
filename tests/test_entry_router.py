@@ -113,6 +113,17 @@ def test_main_python_flag_routes_to_python_cli():
             mock_py.assert_called_once()
 
 
+def test_main_version_uses_python_package_version(capsys):
+    """--version should not depend on the bundled Node CLI version."""
+    with patch("sys.argv", ["clawed", "--version"]):
+        with patch("subprocess.run") as mock_run:
+            main()
+
+    captured = capsys.readouterr()
+    assert "4.25.2026 (Claw-ED)" in captured.out
+    mock_run.assert_not_called()
+
+
 def test_main_no_node_falls_back_to_python():
     """When Node.js is absent, falls back to Python CLI."""
     with patch("sys.argv", ["clawed", "lesson", "test"]):

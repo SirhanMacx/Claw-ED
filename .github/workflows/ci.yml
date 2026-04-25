@@ -29,6 +29,8 @@ jobs:
           pip install -e ".[dev]"
       - name: Lint with ruff
         run: ruff check .
+      - name: Type check with mypy
+        run: mypy --strict clawed
       - name: Run tests with coverage
         run: |
           ulimit -n 4096
@@ -97,6 +99,10 @@ jobs:
             echo "ERROR: Wheel too large ($WHEEL_SIZE bytes)"
             exit 1
           fi
+      - name: Smoke test wheel CLI version
+        run: |
+          pip install dist/*.whl
+          clawed --version
       - uses: actions/upload-artifact@v4
         with:
           name: wheel
@@ -130,14 +136,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Publish to PyPI
-        # v4.11.2026 fix: dropped the '|| echo "Upload skipped"' tail
-        # which made every twine failure exit 0. --skip-existing still
-        # handles the benign "this version was already uploaded" case
-        # inside twine itself.
-        run: |
-          pip install twine
-          twine upload --skip-existing dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-          TWINE_NON_INTERACTIVE: "1"
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+          skip-existing: true

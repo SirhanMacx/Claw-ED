@@ -20,7 +20,7 @@ def list_ollama_models(
 
     Returns: [{"name": "gemma4:31b-cloud", "size": ..., "family": ...}]
     """
-    import requests
+    import httpx
 
     base = base_url.rstrip("/")
     headers = {}
@@ -28,7 +28,7 @@ def list_ollama_models(
         headers["Authorization"] = f"Bearer {api_key}"
 
     try:
-        resp = requests.get(
+        resp = httpx.get(
             f"{base}/api/tags", headers=headers, timeout=10,
         )
         if resp.status_code == 200:
@@ -60,14 +60,14 @@ def list_openrouter_models(
     The /models endpoint is public (no auth needed for listing).
     Set free_only=True to filter for models with zero cost.
     """
-    import requests
+    import httpx
 
     try:
         headers = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
-        resp = requests.get(
+        resp = httpx.get(
             "https://openrouter.ai/api/v1/models",
             headers=headers, timeout=15,
         )

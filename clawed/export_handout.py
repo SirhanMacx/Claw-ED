@@ -28,6 +28,13 @@ def _packet_get(packet: Any, field: str, default: Any = "") -> Any:
     return default
 
 
+def _packet_text(value: Any) -> str:
+    """Normalize optional packet fields before DOCX export."""
+    from clawed.sanitize import sanitize_text
+
+    return sanitize_text(str(value or ""))
+
+
 def _packet_section_heading(doc: Any, text: str, primary_rgb: Any, primary_hex: str) -> None:
     """Add a styled section heading with bottom border."""
     from docx.oxml.ns import qn
@@ -142,10 +149,10 @@ def _build_stations_section(doc: Any, packet: Any, primary_rgb: Any, primary_hex
     _packet_section_heading(doc, "Document Analysis", primary_rgb, primary_hex)
     for station in stations:
         if isinstance(station, dict):
-            label = sanitize_text(station.get("document_label", station.get("title", "")))
+            label = _packet_text(station.get("document_label", station.get("title", "")))
             ctx = sanitize_text(station.get("context", ""))
-            full_text = sanitize_text(station.get("full_text", station.get("text", "")))
-            author = sanitize_text(station.get("author", station.get("attribution", "")))
+            full_text = _packet_text(station.get("full_text", station.get("text", "")))
+            author = _packet_text(station.get("author", station.get("attribution", "")))
             dt = sanitize_text(station.get("date", ""))
             questions = station.get("analysis_questions", [])
         else:

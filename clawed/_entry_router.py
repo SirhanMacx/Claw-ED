@@ -289,9 +289,9 @@ def _resolve_key_for_provider(provider: str, config: dict[str, object]) -> str |
     # 3. Keyring
     try:
         import keyring
-        val = keyring.get_password("eduagent", f"{provider}_api_key")
-        if val:
-            return str(val)
+        keyring_value = keyring.get_password("eduagent", f"{provider}_api_key")
+        if keyring_value:
+            return str(keyring_value)
     except ImportError:
         pass  # keyring is optional; fall through to secrets.json/env
 
@@ -300,17 +300,18 @@ def _resolve_key_for_provider(provider: str, config: dict[str, object]) -> str |
     if secrets_path.exists():
         try:
             secrets = json.loads(secrets_path.read_text())
-            val = secrets.get(f"{provider}_api_key")
-            if val:
-                return str(val)
+            if isinstance(secrets, dict):
+                secret_value = secrets.get(f"{provider}_api_key")
+                if secret_value:
+                    return str(secret_value)
         except (json.JSONDecodeError, OSError):
             pass
 
     # 5. Inline in config (e.g. ollama_api_key field)
     key_field = f"{provider}_api_key"
-    val = config.get(key_field)
-    if val and val != "ollama-local":  # Skip sentinel value
-        return str(val)
+    config_value = config.get(key_field)
+    if config_value and config_value != "ollama-local":  # Skip sentinel value
+        return str(config_value)
 
     return None
 
@@ -336,7 +337,8 @@ def _inject_config_env() -> None:
     except (json.JSONDecodeError, OSError):
         return
 
-    provider = config.get("provider", "anthropic")
+    provider_value = config.get("provider", "anthropic")
+    provider = provider_value if isinstance(provider_value, str) else "anthropic"
     os.environ.setdefault("CLAWED_PROVIDER", provider)
 
     # Resolve API key for the active provider
@@ -358,7 +360,8 @@ def _inject_config_env() -> None:
 
     # Ollama base URL so the TS bridge knows where to connect
     if provider == "ollama":
-        base = config.get("ollama_base_url", "")
+        base_value = config.get("ollama_base_url", "")
+        base = base_value if isinstance(base_value, str) else ""
         if base:
             os.environ.setdefault("OLLAMA_BASE_URL", base)
 
@@ -380,7 +383,8 @@ def _get_configured_model() -> str | None:
     except (json.JSONDecodeError, OSError):
         return None
 
-    provider = config.get("provider", "anthropic")
+    provider_value = config.get("provider", "anthropic")
+    provider = provider_value if isinstance(provider_value, str) else "anthropic"
     # Each provider has its own model field
     model_fields = {
         "anthropic": "anthropic_model",
@@ -448,6 +452,12 @@ def main() -> None:
     """
     args = sys.argv[1:]
 
+    if args and any(arg in {"--version", "-v"} for arg in args) and "--python" not in args:
+        from clawed import __version__
+
+        print(f"{__version__} (Claw-ED)")
+        return
+
     # Route daemon commands to the Node.js daemon
     if args and args[0] == "daemon":
         _handle_daemon(args[1:])
@@ -457,6 +467,8 @@ def main() -> None:
     if "--python" in args:
         args.remove("--python")
         sys.argv = [sys.argv[0], *args]
+        _run_python_cli()
+        return
 
     # Python CLI subcommands — these are typer commands that should NEVER
     # go through the Node CLI (which would interpret them as chat prompts)

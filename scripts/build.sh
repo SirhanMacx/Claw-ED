@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/build.sh — Build Claw-ED v3: TypeScript CLI + Python wheel
+# scripts/build.sh — Build Claw-ED: TypeScript CLI + Python wheel
 #
 # This script:
 # 1. Builds the TypeScript CLI (Ink TUI) via Bun
@@ -8,7 +8,8 @@
 #
 # Prerequisites:
 #   - Node.js 18+ and Bun installed
-#   - Python 3.10+ with build module
+#   - Python 3.11+
+#   - uv
 #
 # Usage:
 #   bash scripts/build.sh          # Full build
@@ -20,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "╔══════════════════════════════════════╗"
-echo "║    Building Claw-ED v3.0             ║"
+echo "║    Building Claw-ED                  ║"
 echo "║    The Agentic Layer for Education   ║"
 echo "╚══════════════════════════════════════╝"
 echo ""
@@ -29,8 +30,10 @@ echo ""
 echo "→ Checking prerequisites..."
 command -v node >/dev/null 2>&1 || { echo "ERROR: Node.js not found. Install from https://nodejs.org"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: Python 3 not found."; exit 1; }
+command -v uv >/dev/null 2>&1 || { echo "ERROR: uv not found. Install from https://docs.astral.sh/uv/"; exit 1; }
 echo "  Node.js: $(node --version)"
 echo "  Python:  $(python3 --version)"
+echo "  uv:      $(uv --version)"
 echo ""
 
 # Step 1: Build TypeScript CLI
@@ -78,10 +81,7 @@ echo ""
 echo "→ Step 3: Building Python wheel..."
 cd "$REPO_ROOT"
 
-# Clean old builds
-rm -rf dist/ build/ *.egg-info
-
-python3 -m build --wheel 2>&1 | tail -5
+uv build --wheel --clear
 
 if ls dist/*.whl 1>/dev/null 2>&1; then
     WHEEL=$(ls dist/*.whl | head -1)
@@ -95,7 +95,7 @@ if ls dist/*.whl 1>/dev/null 2>&1; then
     echo "╚══════════════════════════════════════╝"
     echo ""
     echo "To install locally:  pip install dist/*.whl"
-    echo "To upload to PyPI:   twine upload dist/*"
+    echo "To upload to PyPI:   uv publish dist/*"
 else
     echo "ERROR: Wheel build failed"
     exit 1

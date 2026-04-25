@@ -137,6 +137,7 @@ class LLMClient:
                 return "GOOD"  # No key = permissive
 
             is_oauth = is_anthropic_oauth_token(api_key)
+            client: Any
             if is_oauth:
                 client = anthropic.Anthropic(
                     auth_token=api_key,

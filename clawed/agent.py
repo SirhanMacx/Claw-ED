@@ -170,6 +170,7 @@ async def _anthropic_with_tools(
 
     import anthropic as _anthropic
 
+    sdk_client: Any
     if _is_oauth_token(api_key):
         sdk_client = _anthropic.Anthropic(
             auth_token=api_key,

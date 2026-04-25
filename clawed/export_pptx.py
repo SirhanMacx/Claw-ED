@@ -1561,9 +1561,14 @@ def export_lesson_pptx(
 
     images = _fetch_entity_images(lesson, subject, teacher_id, include_images)
 
+    if prs.slide_width is None or prs.slide_height is None:
+        raise ValueError("Presentation slide dimensions were not initialized")
     ctx = _SlideCtx(
-        prs=prs, slide_w=prs.slide_width, slide_h=prs.slide_height,
-        theme=theme, images=images,
+        prs=prs,
+        slide_w=int(prs.slide_width),
+        slide_h=int(prs.slide_height),
+        theme=theme,
+        images=images,
     )
 
     # -- Build slides --------------------------------------------------

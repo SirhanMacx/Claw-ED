@@ -1,6 +1,6 @@
 # Roadmap
 
-Current version: **v4.16.2026.0**
+Current version: **v4.25.2026**
 
 ## v4.17 — What's next
 
