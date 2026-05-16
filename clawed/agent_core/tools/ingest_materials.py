@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
+from clawed.paths import path_is_within
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class IngestMaterialsTool:
 
         # Security: only allow ingesting files from the user's home directory
         home = Path.home().resolve()
-        if not str(resolved).startswith(str(home)):
+        if not path_is_within(resolved, home):
             return ToolResult(
                 text="Access denied: can only ingest files from your home directory."
             )

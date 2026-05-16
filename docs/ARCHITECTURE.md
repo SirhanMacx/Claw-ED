@@ -4,7 +4,7 @@
 
 Claw-ED is a persistent AI teaching assistant. Ed lives in your terminal and on your phone, generating lessons, assessments, and materials in your teaching voice.
 
-This document describes the v4.25.2026 architecture -- how messages flow through the system, what each module does, and how components connect.
+This document describes the v5.15.2026 architecture -- how messages flow through the system, what each module does, and how components connect.
 
 ---
 
@@ -160,6 +160,18 @@ All persistent data lives under `$EDUAGENT_DATA_DIR` (defaults to `~/.eduagent/`
     +-- corpus.db            # Few-shot examples for prompt injection (SQLite)
 ```
 
+### Filesystem Boundary Layer
+
+Agent tools that read or write files must resolve user-supplied paths through `clawed.paths.path_is_within()` instead of string prefix checks. This prevents prefix-sibling escapes such as `/tmp/workspace-evil` being treated as inside `/tmp/workspace`.
+
+Current protected surfaces:
+- Workspace reads (`read_workspace`)
+- Self-modification reads and writes (`read_file`, `write_file`)
+- Output file listing and organization (`list_output_files`, `organize_files`)
+- Material ingestion home-directory guard (`ingest_materials`)
+
+API token storage also resolves `EDUAGENT_DATA_DIR` at call time through `clawed.paths.api_token_path()`, so tests, Docker runs, and multi-profile launches do not accidentally reuse an import-time token path.
+
 ---
 
 ## Multi-Provider Auth
@@ -204,7 +216,7 @@ Teachers ingest their existing curriculum materials. The system chunks them, ext
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Python 3.10+ (backend), TypeScript (TUI) |
+| Language | Python 3.11+ (backend), TypeScript (TUI) |
 | TUI | Ink (React for CLI) via Node.js |
 | CLI | Typer + Rich (Python fallback) |
 | Async HTTP | httpx |

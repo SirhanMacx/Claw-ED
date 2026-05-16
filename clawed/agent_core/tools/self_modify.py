@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from clawed.agent_core.context import AgentContext, ToolResult
+from clawed.paths import path_is_within
 
 logger = logging.getLogger(__name__)
 
@@ -189,8 +190,10 @@ class WriteFileTool:
         # Block path traversal
         try:
             full_path = full_path.resolve()
-            if not (str(full_path).startswith(str(data_dir.resolve())) or
-                    str(full_path).startswith(str(output_dir.resolve()))):
+            if not (
+                path_is_within(full_path, data_dir)
+                or path_is_within(full_path, output_dir)
+            ):
                 return ToolResult(text="ERROR: path must be within workspace or output directory")
         except Exception:
             logger.debug("operation_failed", exc_info=True)
@@ -299,8 +302,8 @@ class ReadFileTool:
                 # files on disk. WriteFileTool had this check; ReadFileTool
                 # did not.
                 if not (
-                    str(full_path).startswith(str(data_root))
-                    or str(full_path).startswith(str(output_root))
+                    path_is_within(full_path, data_root)
+                    or path_is_within(full_path, output_root)
                 ):
                     continue
                 if full_path.exists() and full_path.is_file():

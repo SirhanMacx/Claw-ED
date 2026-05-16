@@ -427,7 +427,7 @@ def _handle_daemon(args: list[str]) -> None:
             "1. Open Telegram and message @BotFather\n"
             "2. Send /newbot and follow the steps\n"
             "3. Copy the bot token\n"
-            "4. Run: clawed config set-token --telegram YOUR_TOKEN\n"
+            "4. Run: clawed config set-token YOUR_TOKEN\n"
         )
         sys.exit(0)
 

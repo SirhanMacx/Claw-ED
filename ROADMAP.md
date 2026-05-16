@@ -1,10 +1,15 @@
 # Roadmap
 
-Current version: **v4.25.2026**
+Current version: **v5.15.2026**
 
-## v4.17 — What's next
+## v5.16 — What's next
 
-### Recently shipped (v4.16)
+### Recently shipped (v5.15)
+- [x] **Boundary-aware filesystem guards** — agent file tools now use `clawed.paths.path_is_within()` instead of string-prefix checks, closing prefix-sibling path escapes across workspace reads, self-modification, output organization, and material ingestion
+- [x] **Runtime API token path resolution** — API token storage now resolves `EDUAGENT_DATA_DIR` at call time through `clawed.paths.api_token_path()`
+- [x] **Security wording tightened** — compliance docs now describe the real local-first posture without implying formal FERPA/COPPA/GDPR certification
+
+### Recently shipped (v4.16-v4.25)
 - [x] **`mypy --strict` project-wide** — 1074 errors → 0 across 270 files, 144 files touched. Surfaced and fixed 7+ real runtime bugs (wrong imports, sync calls to async methods, tuple-as-dict access, missing None guards)
 - [x] **B904 exception chaining** — 51 raise sites in `except` blocks now use `from <exc>` to preserve tracebacks. Suppression removed from ruff config
 - [x] **April 2026 audit regression pass** — 38/38 previously-fixed defects re-verified in v4.13 code; zero regressions
@@ -15,7 +20,7 @@ Current version: **v4.25.2026**
 - [ ] **Path centralization**: complete paths.py migration for all modules
 - [ ] **Test coverage**: add tests for export_pptx, generation, models (30 untested modules)
 - [ ] **conftest simplification**: one env var patch instead of 19 monkeypatches
-- [ ] **mypy CI gate**: enforce `--strict` in GitHub Actions (currently local-only check)
+- [x] **mypy CI gate**: enforce `--strict` in GitHub Actions
 
 ### Semantic knowledge graph (Graphify)
 - [ ] **LLM-powered entity extraction**: replace heuristic kg_extractor.py

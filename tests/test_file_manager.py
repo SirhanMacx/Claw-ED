@@ -73,6 +73,28 @@ class TestFileListTool:
         result = await tool.execute({"path": "sub"}, ctx)
         assert "quiz.docx" in result.text
 
+    @pytest.mark.asyncio
+    async def test_list_rejects_prefix_sibling_traversal(self, output_dir):
+        from clawed.agent_core.context import AgentContext
+        from clawed.models import AppConfig
+
+        sibling = output_dir.parent / f"{output_dir.name}-evil"
+        sibling.mkdir()
+        (sibling / "secret.docx").write_text("outside output", encoding="utf-8")
+
+        config = AppConfig()
+        config.output_dir = str(output_dir)
+        ctx = AgentContext(
+            teacher_id="t1", config=config,
+            teacher_profile={}, persona=None,
+            session_history=[], improvement_context="",
+        )
+
+        result = await FileListTool().execute({"path": f"../{sibling.name}"}, ctx)
+
+        assert "outside output directory" in result.text
+        assert "secret.docx" not in result.text
+
 
 class TestFileOrganizeTool:
     def test_schema_valid(self):
@@ -116,6 +138,62 @@ class TestFileOrganizeTool:
         assert "Moved" in result.text
         assert (output_dir / "sub" / "lesson1.docx").exists()
         assert not (output_dir / "lesson1.docx").exists()
+
+    @pytest.mark.asyncio
+    async def test_create_folder_rejects_prefix_sibling_traversal(self, output_dir):
+        from clawed.agent_core.context import AgentContext
+        from clawed.models import AppConfig
+
+        sibling = output_dir.parent / f"{output_dir.name}-evil"
+        sibling.mkdir()
+
+        config = AppConfig()
+        config.output_dir = str(output_dir)
+        ctx = AgentContext(
+            teacher_id="t1", config=config,
+            teacher_profile={}, persona=None,
+            session_history=[], improvement_context="",
+        )
+
+        result = await FileOrganizeTool().execute(
+            {
+                "action": "create_folder",
+                "destination": f"../{sibling.name}/pwned",
+            },
+            ctx,
+        )
+
+        assert "outside output directory" in result.text
+        assert not (sibling / "pwned").exists()
+
+    @pytest.mark.asyncio
+    async def test_move_file_rejects_prefix_sibling_traversal(self, output_dir):
+        from clawed.agent_core.context import AgentContext
+        from clawed.models import AppConfig
+
+        sibling = output_dir.parent / f"{output_dir.name}-evil"
+        sibling.mkdir()
+
+        config = AppConfig()
+        config.output_dir = str(output_dir)
+        ctx = AgentContext(
+            teacher_id="t1", config=config,
+            teacher_profile={}, persona=None,
+            session_history=[], improvement_context="",
+        )
+
+        result = await FileOrganizeTool().execute(
+            {
+                "action": "move_file",
+                "source": "lesson1.docx",
+                "destination": f"../{sibling.name}/lesson1.docx",
+            },
+            ctx,
+        )
+
+        assert "inside output directory" in result.text
+        assert not (sibling / "lesson1.docx").exists()
+        assert (output_dir / "lesson1.docx").exists()
 
 
 class TestWorkspaceStatusTool:

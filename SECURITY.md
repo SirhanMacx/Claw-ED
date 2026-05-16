@@ -25,10 +25,16 @@ Claw-ED is a local-first tool designed for teachers. Your data stays on your mac
 
 ## Compliance
 
-- **FERPA compatible** — no student education records are transmitted or aggregated
-- **COPPA compatible** — student interactions stay on the teacher's machine
-- **GDPR compatible** — local-first architecture with no data collection
-- **State education data laws** — check your state's requirements for AI tools in education
+Claw-ED is designed for local-first, teacher-controlled use, but it is not a
+formally certified FERPA/COPPA/GDPR compliance product.
+
+- Do not use Claw-ED with identifiable student records, IEP/504 documents,
+  school-issued accounts, or district-restricted data unless your district has
+  approved that workflow.
+- Student interactions stay on the teacher's machine by default, but cloud LLM
+  providers receive prompts when you choose a cloud model.
+- State education data laws vary. Check your district and state requirements
+  before using any AI tool with student data.
 
 ## Self-Equipping Safety
 
