@@ -23,6 +23,20 @@ def data_dir() -> Path:
     )
 
 
+def path_is_within(path: Path, root: Path) -> bool:
+    """Return True when path resolves inside root.
+
+    String prefix checks are unsafe for containment because sibling paths
+    like ``/tmp/base-evil`` also start with ``/tmp/base``. Resolve both
+    paths and use pathlib's boundary-aware relationship instead.
+    """
+    try:
+        path.expanduser().resolve().relative_to(root.expanduser().resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 # ── Workspace ────────────────────────────────────────────────────────
 
 def workspace_dir() -> Path:

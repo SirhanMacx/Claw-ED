@@ -1,5 +1,31 @@
 # Changelog
 
+## v5.15.2026 — 2026-05-15
+
+### Hardened — Filesystem Boundaries and Release Trust
+
+- Replaced unsafe string-prefix path containment checks with
+  boundary-aware `Path.relative_to()` containment through
+  `clawed.paths.path_is_within()`.
+- Hardened self-modification reads/writes, workspace reads, output file
+  listing/organization, and material ingestion against prefix-sibling path
+  escapes such as `/tmp/workspace-evil` being treated as inside
+  `/tmp/workspace`.
+- Moved API token path resolution from an import-time constant to
+  `clawed.paths.api_token_path()` so `EDUAGENT_DATA_DIR` changes are honored
+  at runtime.
+- Fixed a stale Telegram daemon setup hint so it points to the real
+  `clawed config set-token YOUR_TOKEN` command.
+- Updated architecture and security documentation to reflect the current
+  Python 3.11+ requirement, filesystem boundary layer, and non-certified
+  compliance posture.
+
+### Verified
+
+- `uv run --extra dev ruff check ...`: clean for changed source and tests.
+- `uv run --extra dev mypy --strict clawed`: 0 errors.
+- `uv run --extra dev python -m pytest -q tests/test_audit_fixes.py tests/test_file_manager.py tests/test_security.py`: 50 passed.
+
 ## v4.25.2026 — 2026-04-25
 
 ### Hardened — Release, Security, and Publish Readiness

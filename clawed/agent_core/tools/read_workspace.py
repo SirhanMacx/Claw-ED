@@ -40,11 +40,11 @@ class ReadWorkspaceTool:
     async def execute(
         self, params: dict[str, Any], context: AgentContext
     ) -> ToolResult:
-        from clawed.paths import workspace_dir
+        from clawed.paths import path_is_within, workspace_dir
         workspace = workspace_dir()
         filename = params["filename"]
         target = (workspace / filename).resolve()
-        if not str(target).startswith(str(workspace.resolve())):
+        if not path_is_within(target, workspace):
             return ToolResult(text="Access denied: path is outside the workspace.")
 
         if not target.exists():

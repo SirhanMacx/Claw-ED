@@ -235,3 +235,94 @@ class TestSendNotification:
 
         result = send_notification("test message")
         assert result is False
+
+
+class TestPathContainment:
+    """Path checks must be boundary-aware, not string-prefix checks."""
+
+    def test_path_is_within_rejects_prefix_sibling(self, tmp_path):
+        from clawed.paths import path_is_within
+
+        root = tmp_path / "base"
+        sibling = tmp_path / "base-evil"
+        root.mkdir()
+        sibling.mkdir()
+
+        assert path_is_within(root / "child.txt", root)
+        assert not path_is_within(sibling / "child.txt", root)
+
+    @pytest.mark.asyncio
+    async def test_read_file_blocks_prefix_sibling_escape(self, tmp_path, monkeypatch):
+        from clawed.agent_core.tools.self_modify import ReadFileTool
+
+        data_root = tmp_path / "ed"
+        sibling = tmp_path / "ed-evil"
+        data_root.mkdir()
+        sibling.mkdir()
+        (sibling / "secret.txt").write_text("do not read", encoding="utf-8")
+        monkeypatch.setenv("EDUAGENT_DATA_DIR", str(data_root))
+
+        result = await ReadFileTool().execute(
+            {"path": "../ed-evil/secret.txt"},
+            _ctx(),
+        )
+
+        assert "out of bounds" in result.text
+        assert "do not read" not in result.text
+
+    @pytest.mark.asyncio
+    async def test_write_file_blocks_prefix_sibling_escape(self, tmp_path, monkeypatch):
+        from clawed.agent_core.tools.self_modify import WriteFileTool
+
+        data_root = tmp_path / "ed"
+        sibling = tmp_path / "ed-evil"
+        data_root.mkdir()
+        sibling.mkdir()
+        monkeypatch.setenv("EDUAGENT_DATA_DIR", str(data_root))
+
+        result = await WriteFileTool().execute(
+            {
+                "path": "workspace/../../ed-evil/pwned.txt",
+                "content": "do not write",
+            },
+            _ctx(),
+        )
+
+        assert "within workspace or output directory" in result.text
+        assert not (sibling / "pwned.txt").exists()
+
+    @pytest.mark.asyncio
+    async def test_read_workspace_blocks_prefix_sibling_escape(self, tmp_path, monkeypatch):
+        from clawed.agent_core.tools.read_workspace import ReadWorkspaceTool
+
+        data_root = tmp_path / "ed"
+        workspace = data_root / "workspace"
+        sibling = data_root / "workspace-evil"
+        workspace.mkdir(parents=True)
+        sibling.mkdir()
+        (sibling / "secret.txt").write_text("do not read", encoding="utf-8")
+        monkeypatch.setenv("EDUAGENT_DATA_DIR", str(data_root))
+
+        result = await ReadWorkspaceTool().execute(
+            {"filename": "../workspace-evil/secret.txt"},
+            _ctx(),
+        )
+
+        assert "outside the workspace" in result.text
+        assert "do not read" not in result.text
+
+    def test_api_token_respects_runtime_data_dir(self, tmp_path, monkeypatch):
+        from clawed.api.deps import get_api_token
+
+        first = tmp_path / "first"
+        second = tmp_path / "second"
+
+        monkeypatch.setenv("EDUAGENT_DATA_DIR", str(first))
+        first_token = get_api_token()
+
+        monkeypatch.setenv("EDUAGENT_DATA_DIR", str(second))
+        second_token = get_api_token()
+
+        assert (first / "api_token").read_text(encoding="utf-8").strip() == first_token
+        assert (second / "api_token").read_text(encoding="utf-8").strip() == second_token
+        assert first_token != second_token

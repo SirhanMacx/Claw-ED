@@ -13,12 +13,12 @@ import time
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from pathlib import Path
 from typing import Any, TypeVar
 
 from fastapi import HTTPException, Request
 
 from clawed.database import Database
+from clawed.paths import api_token_path
 
 F = TypeVar("F", bound=Callable[..., Awaitable[Any]])
 
@@ -117,22 +117,18 @@ limiter = _RateLimiter()
 
 # ── Auth Token ───────────────────────────────────────────────────────
 
-_TOKEN_FILE = Path(
-    os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent"))
-) / "api_token"
-
-
 def _get_or_create_token() -> str:
     """Get existing API token or generate a new one."""
-    if _TOKEN_FILE.exists():
-        token = _TOKEN_FILE.read_text(encoding="utf-8").strip()
+    token_file = api_token_path()
+    if token_file.exists():
+        token = token_file.read_text(encoding="utf-8").strip()
         if token:
             return token
     token = secrets.token_urlsafe(32)
-    _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _TOKEN_FILE.write_text(token, encoding="utf-8")
+    token_file.parent.mkdir(parents=True, exist_ok=True)
+    token_file.write_text(token, encoding="utf-8")
     with contextlib.suppress(OSError):
-        _TOKEN_FILE.chmod(0o600)
+        token_file.chmod(0o600)
     return token
 
 

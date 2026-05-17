@@ -437,7 +437,7 @@ wheels = [
 
 [[package]]
 name = "clawed"
-version = "4.25.2026"
+version = "5.15.2026"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },

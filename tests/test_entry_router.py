@@ -120,7 +120,7 @@ def test_main_version_uses_python_package_version(capsys):
             main()
 
     captured = capsys.readouterr()
-    assert "4.25.2026 (Claw-ED)" in captured.out
+    assert "5.15.2026 (Claw-ED)" in captured.out
     mock_run.assert_not_called()
 
 

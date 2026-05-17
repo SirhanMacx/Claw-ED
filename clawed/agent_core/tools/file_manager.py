@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
+from clawed.paths import path_is_within
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,12 @@ def _get_output_dir(context: AgentContext) -> Path:
     """Get the teacher's output directory."""
     output_dir = getattr(context.config, "output_dir", "~/clawed_output")
     return Path(output_dir).expanduser()
+
+
+def _resolve_output_path(output_dir: Path, relative_path: str) -> Path | None:
+    """Resolve a user-supplied path under output_dir, rejecting traversal."""
+    candidate = (output_dir / relative_path).expanduser().resolve()
+    return candidate if path_is_within(candidate, output_dir) else None
 
 
 class FileListTool:
@@ -56,9 +63,13 @@ class FileListTool:
         subpath = params.get("path", "")
         pattern = params.get("pattern", "*")
 
-        target = (output_dir / subpath).resolve() if subpath else output_dir.resolve()
+        target = (
+            _resolve_output_path(output_dir, subpath)
+            if subpath
+            else output_dir.resolve()
+        )
         # Prevent path traversal outside output directory
-        if not str(target).startswith(str(output_dir.resolve())):
+        if target is None:
             return ToolResult(text="ERROR: path outside output directory")
         if not target.exists():
             return ToolResult(text=f"Directory not found: {target}")
@@ -130,15 +141,19 @@ class FileOrganizeTool:
 
         try:
             if action == "create_folder":
-                folder = output_dir / (dest or source)
+                folder = _resolve_output_path(output_dir, dest or source)
+                if folder is None:
+                    return ToolResult(text="ERROR: destination outside output directory")
                 folder.mkdir(parents=True, exist_ok=True)
                 return ToolResult(text=f"Created folder: {folder}")
 
             elif action == "move_file":
                 if not source or not dest:
                     return ToolResult(text="ERROR: both source and destination required for move_file")
-                src_path = output_dir / source
-                dst_path = output_dir / dest
+                src_path = _resolve_output_path(output_dir, source)
+                dst_path = _resolve_output_path(output_dir, dest)
+                if src_path is None or dst_path is None:
+                    return ToolResult(text="ERROR: source and destination must stay inside output directory")
                 if not src_path.exists():
                     return ToolResult(text=f"Source not found: {src_path}")
                 dst_path.parent.mkdir(parents=True, exist_ok=True)
