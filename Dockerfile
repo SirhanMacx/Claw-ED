@@ -16,10 +16,6 @@ COPY pyproject.toml README.md ./
 COPY clawed/ clawed/
 COPY eduagent/ eduagent/
 
-# Create empty CLI bundle dir (hatchling requires it)
-RUN mkdir -p clawed/_cli_bundle && \
-    echo '{"type":"module"}' > clawed/_cli_bundle/package.json
-
 # Non-editable install, base deps only
 RUN pip install --no-cache-dir .
 
