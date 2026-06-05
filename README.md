@@ -6,7 +6,7 @@ An open-source CLI agent that generates complete lesson bundles — plans, hando
 
 **Sibling project:** [Claw-STU](https://sirhanmacx.github.io/Claw-STU/) — the student-facing personal learning agent. Ed builds the lessons; Stuart helps students understand them.
 
-Claw-ED is maintained as part of [MacxLabs](https://macxlabs.app/?src=github-claw-ed-readme). If it saves you prep time, [support us here](https://macxlabs.app/support/?src=github-claw-ed-readme).
+Claw-ED is maintained as part of [MacxLabs](https://macxlabs.app/?src=github-claw-ed-readme). Teaching AP or Regents? We also build [Review Arcade Teacher HQ](https://macxlabs.app/teacherhq/?src=github-claw-ed-readme) — ready-to-run review-week sprints, made by a fellow teacher. If Claw-ED saves you prep time, you can also [support the project](https://macxlabs.app/support/?src=github-claw-ed-readme).
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-v5.15.2026-blue" alt="Version">
