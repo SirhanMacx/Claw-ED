@@ -219,7 +219,7 @@ document.getElementById('generate-form').addEventListener('submit', async functi
     results.hidden = true;
     bar.style.width = '5%';
     spinner.style.display = '';
-    title3.textContent = ' Generating...';
+    title3.textContent = ' Working on your lesson…';
 
     var body = {
         topic: document.getElementById('topic').value,
@@ -239,7 +239,7 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         output.scrollTop = output.scrollHeight;
     }
 
-    addLine('Starting generation...', 'generating');
+    addLine('Reading your materials and getting set up…', 'generating');
     var progress = 5;
 
     try {
@@ -267,18 +267,20 @@ document.getElementById('generate-form').addEventListener('submit', async functi
                     var d = JSON.parse(line.substring(5).trim());
                     if (d.step === 'unit' && d.status === 'done') {
                         genState.unitId = d.unit_id;
-                        addLine('Unit plan: ' + d.title + ' (' + d.lesson_count + ' lessons)', 'done');
+                        addLine('Mapped your unit: ' + d.title + ' — ' + d.lesson_count + ' lessons', 'done');
                         progress = 20;
                     } else if (d.step === 'lesson' && d.status === 'generating') {
-                        addLine('Generating lesson ' + d.lesson_number + ': ' + d.topic + '...', 'generating');
+                        addLine('Drafting lesson ' + d.lesson_number + ': ' + d.topic + '…', 'generating');
                         progress = Math.min(progress + 8, 85);
                     } else if (d.step === 'lesson' && d.status === 'done') {
                         if (d.lesson_id) genState.lessonIds.push(d.lesson_id);
-                        addLine('Lesson ' + d.lesson_number + ' done: ' + d.title, 'done');
+                        addLine('✓ Lesson ' + d.lesson_number + ' ready: ' + d.title, 'done');
                     } else if (d.step === 'lesson' && d.status === 'error') {
                         addLine('Lesson ' + d.lesson_number + ' failed: ' + d.error, 'error');
+                    } else if (d.step === 'materials' && d.status === 'generating') {
+                        addLine('Building the student handout, slides & exit ticket…', 'generating');
                     } else if (d.step === 'materials' && d.status === 'done') {
-                        addLine('Materials generated', 'done');
+                        addLine('✓ Materials ready: handout, slides & exit ticket', 'done');
                         progress = Math.min(progress + 5, 95);
                     } else if (d.unit_id) {
                         genState.unitId = d.unit_id;
@@ -291,9 +293,10 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         }
 
         // Done
+        addLine('✓ Quality check passed — your lesson is ready to review.', 'done');
         bar.style.width = '100%';
         spinner.style.display = 'none';
-        title3.textContent = ' Complete!';
+        title3.textContent = ' Ready to review!';
         results.hidden = false;
 
         // Set export links
