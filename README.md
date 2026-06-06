@@ -45,14 +45,18 @@ $ clawed
   ✓ French_Revolution_slides.pptx
 ```
 
+**New — a no-terminal app.** Run `clawed app` and Claw-ED opens a clean local web app in your browser — warm, calm, teacher-first — with a guided setup that walks you through getting an API key step by step. Same engine, your files stay on your machine, no command line required.
+
 It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to make something from your phone and the files show up in chat.
 
 ---
 
 ## Features
 
-- **51 agent tools** — lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation, project arcs, and more
+- **52 agent tools** — lesson gen, assessments, games, simulations, **narrated videos** (slides + free neural voiceover → MP4, fully local), animations, curriculum maps, differentiation, project arcs, and more
 - **Quality gate with auto-retry** — 12 pedagogical checks (Bloom's progression, stimulus-based assessment, differentiation specificity, diversity audit) validate every lesson before delivery. Failures auto-retry with specific feedback.
+- **Revise in plain English** — after a lesson is made, just say "make it shorter," "add a primary source," or "lower it to 9th-grade reading level" and it updates that lesson — no regenerating from scratch.
+- **Student-safe handouts** — every student-facing document is auto-scanned for accidentally-leaked answer keys before it's delivered.
 - **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum). Vision model filters for quality.
 - **Writes like you** — AI-ism removal strips "delve", "utilize", "leverage" and 70+ other LLM tells so output reads like a teacher wrote it
 - **Structured jigsaws + creative activities** — generates timed rotation schedules, graphic organizers, role plays, debates, podcast scripts, gallery walks, mock trials
