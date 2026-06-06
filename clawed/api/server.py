@@ -495,11 +495,22 @@ async def _page_settings(request: Request, templates: Jinja2Templates) -> HTMLRe
     except (ImportError, sqlite3.OperationalError):
         pass
 
+    anthropic_key = get_api_key("anthropic")
+    openai_key = get_api_key("openai")
+    openrouter_key = get_api_key("openrouter")
+    google_key = get_api_key("google")
+
     return templates.TemplateResponse(request, "settings.html", {
         "config": cfg,
         "persona": persona_data,
-        "anthropic_key_masked": mask_api_key(get_api_key("anthropic")),
-        "openai_key_masked": mask_api_key(get_api_key("openai")),
+        "anthropic_key_masked": mask_api_key(anthropic_key),
+        "openai_key_masked": mask_api_key(openai_key),
+        "openrouter_key_masked": mask_api_key(openrouter_key),
+        "google_key_masked": mask_api_key(google_key),
+        "has_anthropic_key": bool(anthropic_key),
+        "has_openai_key": bool(openai_key),
+        "has_openrouter_key": bool(openrouter_key),
+        "has_google_key": bool(google_key),
         "states": list_states(),
         "teacher_state": teacher_state,
         "teacher_subjects": teacher_subjects,

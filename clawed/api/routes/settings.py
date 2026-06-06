@@ -31,6 +31,8 @@ class SaveSettingsRequest(BaseModel):
     openai_model: str = "gpt-4o"
     ollama_model: str = "llama3.2"
     ollama_base_url: str = "http://localhost:11434"
+    openrouter_model: str | None = None
+    google_model: str | None = None
     default_grade: str = ""
     default_subject: str = ""
     include_homework: bool = True
@@ -88,6 +90,8 @@ async def get_settings() -> dict[str, Any]:
     cfg = AppConfig.load()
     anthropic_key = get_api_key("anthropic")
     openai_key = get_api_key("openai")
+    openrouter_key = get_api_key("openrouter")
+    google_key = get_api_key("google")
 
     return {
         "provider": cfg.provider.value,
@@ -95,10 +99,16 @@ async def get_settings() -> dict[str, Any]:
         "openai_model": cfg.openai_model,
         "ollama_model": cfg.ollama_model,
         "ollama_base_url": cfg.ollama_base_url,
+        "openrouter_model": cfg.openrouter_model,
+        "google_model": cfg.google_model,
         "anthropic_key_masked": mask_api_key(anthropic_key),
         "openai_key_masked": mask_api_key(openai_key),
+        "openrouter_key_masked": mask_api_key(openrouter_key),
+        "google_key_masked": mask_api_key(google_key),
         "has_anthropic_key": bool(anthropic_key),
         "has_openai_key": bool(openai_key),
+        "has_openrouter_key": bool(openrouter_key),
+        "has_google_key": bool(google_key),
         "include_homework": cfg.include_homework,
         "export_format": cfg.export_format,
     }
@@ -163,6 +173,10 @@ async def save_settings(req: SaveSettingsRequest) -> Any:
     cfg.anthropic_model = req.anthropic_model
     cfg.openai_model = req.openai_model
     cfg.ollama_model = req.ollama_model
+    if req.openrouter_model is not None:
+        cfg.openrouter_model = req.openrouter_model
+    if req.google_model is not None:
+        cfg.google_model = req.google_model
 
     # v4.11.2026 SSRF fix: validate and normalize ollama_base_url.
     normalized_url, err = _validate_ollama_url(req.ollama_base_url)
