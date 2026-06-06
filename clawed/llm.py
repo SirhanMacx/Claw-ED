@@ -33,6 +33,7 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: int = 4096,
         demo_hint: str = "",
+        json_mode: bool = False,
     ) -> str:
         """Generate text from the configured LLM backend.
 
@@ -57,7 +58,7 @@ class LLMClient:
         elif self.config.provider == LLMProvider.OPENAI:
             raw = await self._openai(prompt, system, temperature, max_tokens)
         elif self.config.provider == LLMProvider.OLLAMA:
-            raw = await self._ollama(prompt, system, temperature, max_tokens)
+            raw = await self._ollama(prompt, system, temperature, max_tokens, json_mode)
         elif self.config.provider == LLMProvider.GOOGLE:
             raw = await self._google(prompt, system, temperature, max_tokens)
         elif self.config.provider == LLMProvider.OPENROUTER:
@@ -443,7 +444,10 @@ class LLMClient:
             demo_hint: str = "",
     ) -> dict[str, Any]:
             """Generate and parse a JSON response from the LLM."""
-            raw = await self.generate(prompt, system, temperature, max_tokens, demo_hint=demo_hint)
+            raw = await self.generate(
+                prompt, system, temperature, max_tokens,
+                demo_hint=demo_hint, json_mode=True,
+            )
             if not raw or not raw.strip():
                 raise ValueError(
                     "LLM returned empty output. This model may not support "
@@ -883,7 +887,8 @@ class LLMClient:
     # ── Ollama ───────────────────────────────────────────────────────────
 
     async def _ollama(
-            self, prompt: str, system: str, temperature: float, max_tokens: int
+            self, prompt: str, system: str, temperature: float, max_tokens: int,
+            json_mode: bool = False,
     ) -> str:
             # Support both local Ollama (no auth) and Ollama Cloud (Bearer token)
             api_key = getattr(self.config, "ollama_api_key", None) or os.environ.get("OLLAMA_API_KEY")
@@ -933,21 +938,46 @@ class LLMClient:
                             raise RuntimeError("Ollama Cloud returned an empty response")
                         return str(choices[0].get("message", {}).get("content", "") or "")
                 else:
-                    # Local Ollama (or Ollama Cloud — cloud models need longer timeout)
-                    full_prompt = f"{system}\n\n{prompt}" if system else prompt
+                    # Local Ollama: use the chat endpoint so the model's chat
+                    # template is applied. Modern instruct/reasoning models
+                    # (Gemma 4, Qwen, etc.) return an EMPTY completion from the
+                    # raw /api/generate endpoint because the template isn't
+                    # applied; /api/chat fixes that. We also disable thinking
+                    # mode ("think": False) for fast, direct output — mirroring
+                    # the vision path — so a local 12B model answers in seconds
+                    # instead of spending hundreds of tokens reasoning aloud.
+                    messages = []
+                    if system:
+                        messages.append({"role": "system", "content": system})
+                    messages.append({"role": "user", "content": prompt})
+                    # Cap the context window. Some local models (e.g. Gemma 4)
+                    # ship a 128K default num_ctx; loading that KV cache is slow
+                    # and memory-hungry on consumer hardware. 8K is ample for a
+                    # persona + instructions + a generation, and keeps a local
+                    # 12B responsive. Overridable via config.ollama_num_ctx.
+                    num_ctx = getattr(self.config, "ollama_num_ctx", 0) or 8192
+                    payload: dict[str, Any] = {
+                        "model": model,
+                        "messages": messages,
+                        "stream": False,
+                        "think": False,
+                        "options": {
+                            "temperature": temperature,
+                            "num_predict": max_tokens,
+                            "num_ctx": num_ctx,
+                        },
+                    }
+                    if json_mode:
+                        # Constrain decoding to valid JSON. This eliminates
+                        # parse failures and the costly validate-then-retry
+                        # round-trip, which roughly halves wall-clock time for
+                        # structured generation on a local model.
+                        payload["format"] = "json"
                     async with httpx.AsyncClient(timeout=600.0) as client:
                         resp = await client.post(
-                            f"{base}/api/generate",
+                            f"{base}/api/chat",
                             headers=headers,
-                            json={
-                                "model": model,
-                                "prompt": full_prompt,
-                                "stream": False,
-                                "options": {
-                                    "temperature": temperature,
-                                    "num_predict": max_tokens,
-                                },
-                            },
+                            json=payload,
                         )
                         if resp.status_code == 404:
                             # Parse Ollama's error body for details
@@ -963,7 +993,17 @@ class LLMClient:
                             )
                         resp.raise_for_status()
                         data = resp.json()
-                        return str(data.get("response", "") or "")
+                        content = str(
+                            data.get("message", {}).get("content", "") or ""
+                        )
+                        # Belt-and-suspenders: some builds ignore think=False and
+                        # still emit a <think>…</think> preamble — strip it.
+                        import re as _re
+
+                        content = _re.sub(
+                            r"<think>.*?</think>", "", content, flags=_re.DOTALL
+                        ).strip()
+                        return content
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to Ollama.\n"
