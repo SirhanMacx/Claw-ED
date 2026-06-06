@@ -52,6 +52,21 @@
                 <h3>Sub Packet</h3>
                 <p>Substitute teacher packet</p>
             </div>
+            <div class="type-card" data-type="quiz" onclick="pickGenType(this)">
+                <div class="type-card-icon">&#9989;</div>
+                <h3>Quiz / Assessment</h3>
+                <p>Auto-built quiz with answer key</p>
+            </div>
+            <div class="type-card" data-type="differentiate" onclick="pickGenType(this)">
+                <div class="type-card-icon">&#129309;</div>
+                <h3>Differentiate</h3>
+                <p>Adapt a lesson: struggling, advanced, ELL, IEP</p>
+            </div>
+            <div class="type-card" data-type="game" onclick="pickGenType(this)">
+                <div class="type-card-icon">&#127918;</div>
+                <h3>Review Game</h3>
+                <p>Interactive HTML game students can play</p>
+            </div>
         </div>
     </div>
 
@@ -95,14 +110,52 @@
                     <input type="range" id="duration_weeks" name="duration_weeks" min="1" max="8" value="3">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="template-group">
                     <label for="template_slug">Lesson Structure</label>
                     <select id="template_slug" name="template_slug">
                         <option value="">Default (I Do / We Do / You Do)</option>
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="num-questions-group" style="display:none">
+                    <label for="num_questions">Number of questions: <span id="nq-display">10</span></label>
+                    <input type="range" id="num_questions" name="num_questions" min="3" max="30" value="10">
+                </div>
+
+                <div class="form-group" id="game-type-group" style="display:none">
+                    <label for="game_type">Game style (optional)</label>
+                    <select id="game_type" name="game_type">
+                        <option value="">Surprise me (AI picks the best fit)</option>
+                        <option value="quiz_show">Quiz Show</option>
+                        <option value="jeopardy">Jeopardy</option>
+                        <option value="matching">Matching</option>
+                        <option value="timeline">Timeline</option>
+                        <option value="vocabulary">Vocabulary</option>
+                        <option value="escape_room">Escape Room</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="lesson-picker-group" style="display:none">
+                    <label for="lesson_id">Lesson to adapt</label>
+                    <select id="lesson_id" name="lesson_id">
+                        <option value="">Loading your lessons…</option>
+                    </select>
+                    <small style="color: var(--text-secondary);">Or paste a lesson ID below if it's not listed.</small>
+                    <input type="text" id="lesson_id_manual" name="lesson_id_manual"
+                           placeholder="Lesson ID (optional)" style="margin-top:0.5rem">
+                </div>
+
+                <div class="form-group" id="profile-group" style="display:none">
+                    <label for="profile">Adapt for</label>
+                    <select id="profile" name="profile">
+                        <option value="struggling">Struggling learners</option>
+                        <option value="advanced">Advanced learners</option>
+                        <option value="ell">English language learners (ELL)</option>
+                        <option value="iep">IEP</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="homework-group">
                     <label>
                         <input type="checkbox" id="include_homework" name="include_homework" checked>
                         Include homework assignments
@@ -155,6 +208,16 @@
                     <a href="/library" class="btn btn-primary">View in Library</a>
                 </div>
             </div>
+
+            {# ── Simple results (quiz / differentiate / game) ─── #}
+            <div id="gen-simple-results" hidden>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <span style="color: var(--green); font-size: 1.3rem;">&#10003;</span>
+                    <strong style="color: var(--green);" id="gen-simple-title">Done!</strong>
+                </div>
+                <div id="gen-simple-actions" class="export-row" style="margin-bottom: 1rem;"></div>
+                <pre id="gen-simple-output" style="white-space:pre-wrap;word-break:break-word;background:var(--bg-subtle, #f6f8fa);border:1px solid var(--border-strong);border-radius:12px;padding:1rem;max-height:60vh;overflow:auto;font-size:0.9rem"></pre>
+            </div>
         </div>
     </div>
 </div>
@@ -180,14 +243,80 @@ var genState = { type: 'full', unitId: null, lessonIds: [] };
     }).catch(function(){});
 })();
 
+var SIMPLE_TYPES = ['quiz', 'differentiate', 'game'];
+
+function showGroup(id, show) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+}
+
 function pickGenType(el) {
     document.querySelectorAll('.type-card').forEach(function(c) { c.classList.remove('selected'); });
     el.classList.add('selected');
     genState.type = el.dataset.type;
     document.getElementById('gen-type').value = genState.type;
-    // Hide duration for single lesson / materials
-    document.getElementById('duration-group').style.display = (genState.type === 'full' || genState.type === 'sub-packet') ? '' : 'none';
+    var t = genState.type;
+
+    // Duration applies only to multi-lesson builds.
+    showGroup('duration-group', t === 'full' || t === 'sub-packet');
+    // Lesson-only fields.
+    showGroup('template-group', t === 'full' || t === 'lesson');
+    showGroup('homework-group', t === 'full' || t === 'lesson' || t === 'sub-packet');
+    // Quiz / game / differentiate specific fields.
+    showGroup('num-questions-group', t === 'quiz');
+    showGroup('game-type-group', t === 'game');
+    showGroup('lesson-picker-group', t === 'differentiate');
+    showGroup('profile-group', t === 'differentiate');
+
+    // Differentiate works on an existing lesson, so the Topic field is
+    // not required (and not used). Toggle the requirement + visibility.
+    var topicEl = document.getElementById('topic');
+    var topicGroup = topicEl ? topicEl.closest('.form-group') : null;
+    if (t === 'differentiate') {
+        if (topicEl) topicEl.required = false;
+        if (topicGroup) topicGroup.style.display = 'none';
+        loadLessonsForPicker();
+    } else {
+        if (topicEl) topicEl.required = true;
+        if (topicGroup) topicGroup.style.display = '';
+    }
+
     goGenStep(2);
+}
+
+var lessonsLoaded = false;
+function loadLessonsForPicker() {
+    if (lessonsLoaded) return;
+    lessonsLoaded = true;
+    var sel = document.getElementById('lesson_id');
+    fetch('/api/units').then(function(r){ return r.json(); }).then(async function(data) {
+        var units = (data && data.units) || [];
+        var options = [];
+        for (var i = 0; i < units.length; i++) {
+            var u = units[i];
+            try {
+                var lr = await fetch('/api/lessons/' + u.id);
+                var ld = await lr.json();
+                (ld.lessons || []).forEach(function(les) {
+                    options.push({ id: les.id, label: (u.title ? u.title + ' — ' : '') + (les.title || 'Lesson') });
+                });
+            } catch (e) {}
+        }
+        sel.innerHTML = '';
+        if (!options.length) {
+            var o = document.createElement('option');
+            o.value = ''; o.textContent = 'No lessons yet — paste an ID below';
+            sel.appendChild(o);
+        } else {
+            options.forEach(function(opt) {
+                var o = document.createElement('option');
+                o.value = opt.id; o.textContent = opt.label;
+                sel.appendChild(o);
+            });
+        }
+    }).catch(function() {
+        sel.innerHTML = '<option value="">Could not load lessons — paste an ID below</option>';
+    });
 }
 
 function goGenStep(n) {
@@ -213,6 +342,11 @@ document.getElementById('duration_weeks').addEventListener('input', function() {
 document.getElementById('generate-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     goGenStep(3);
+
+    if (SIMPLE_TYPES.indexOf(genState.type) !== -1) {
+        await runSimpleGen(genState.type);
+        return;
+    }
 
     var output = document.getElementById('stream-output');
     var bar = document.getElementById('gen-progress-bar');
@@ -325,6 +459,145 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         title3.textContent = ' Failed';
     }
 });
+
+async function runSimpleGen(type) {
+    var streamOut = document.getElementById('stream-output');
+    var bar = document.getElementById('gen-progress-bar');
+    var spinner = document.getElementById('gen-spinner');
+    var title3 = document.getElementById('gen-step3-title');
+    var lessonResults = document.getElementById('gen-results');
+    var simple = document.getElementById('gen-simple-results');
+    var simpleTitle = document.getElementById('gen-simple-title');
+    var simpleOut = document.getElementById('gen-simple-output');
+    var simpleActions = document.getElementById('gen-simple-actions');
+
+    lessonResults.hidden = true;
+    simple.hidden = true;
+    streamOut.innerHTML = '';
+    simpleActions.innerHTML = '';
+    spinner.style.display = '';
+    bar.style.width = '15%';
+
+    function line(text, cls) {
+        var div = document.createElement('div');
+        div.className = 'stream-line ' + (cls || '');
+        div.textContent = text;
+        streamOut.appendChild(div);
+    }
+
+    var url, body, label;
+    if (type === 'quiz') {
+        label = 'quiz';
+        title3.textContent = ' Building your quiz…';
+        line('Writing questions and the answer key…', 'generating');
+        url = '/api/quiz';
+        body = {
+            topic: document.getElementById('topic').value,
+            subject: document.getElementById('subject').value,
+            grade_level: document.getElementById('grade_level').value,
+            num_questions: parseInt(document.getElementById('num_questions').value, 10)
+        };
+    } else if (type === 'game') {
+        label = 'game';
+        title3.textContent = ' Building your review game…';
+        line('Designing an interactive game (this can take a minute)…', 'generating');
+        url = '/api/game';
+        body = {
+            topic: document.getElementById('topic').value,
+            subject: document.getElementById('subject').value,
+            grade_level: document.getElementById('grade_level').value,
+            game_type: document.getElementById('game_type').value
+        };
+    } else {
+        label = 'differentiated lesson';
+        title3.textContent = ' Adapting the lesson…';
+        line('Applying scaffolds and accommodations…', 'generating');
+        var lid = (document.getElementById('lesson_id_manual').value || '').trim()
+                  || document.getElementById('lesson_id').value;
+        if (!lid) {
+            spinner.style.display = 'none';
+            title3.textContent = ' Pick a lesson first';
+            line('Please choose a lesson (or paste a lesson ID) to differentiate.', 'error');
+            return;
+        }
+        url = '/api/differentiate/' + encodeURIComponent(lid);
+        body = { profile: document.getElementById('profile').value };
+    }
+    bar.style.width = '40%';
+
+    try {
+        var resp = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        var data = await resp.json();
+        bar.style.width = '100%';
+        spinner.style.display = 'none';
+
+        if (!resp.ok || data.error) {
+            title3.textContent = ' Failed';
+            line('Error: ' + (data.error || ('Request failed (' + resp.status + ')')), 'error');
+            return;
+        }
+
+        title3.textContent = ' Ready!';
+        simple.hidden = false;
+
+        if (type === 'game') {
+            simpleTitle.textContent = 'Your review game is ready!';
+            var open = document.createElement('a');
+            open.className = 'btn btn-primary'; open.href = data.game_url;
+            open.target = '_blank'; open.rel = 'noopener';
+            open.innerHTML = '&#127918; Open Game';
+            simpleActions.appendChild(open);
+            simpleOut.textContent = 'Game file: ' + (data.filename || '') +
+                '\nOpen it in a new tab, then save or share the link with students.';
+        } else if (type === 'quiz') {
+            simpleTitle.textContent = 'Quiz ready: ' + (data.topic || '') +
+                ' (' + (data.question_count || 0) + ' questions, ' + (data.total_points || 0) + ' pts)';
+            simpleOut.textContent = JSON.stringify(data.quiz, null, 2);
+            addCopyBtn(simpleActions, simpleOut);
+        } else {
+            simpleTitle.textContent = 'Differentiated lesson created: ' + (data.title || '');
+            if (data.lesson_id) {
+                var view = document.createElement('a');
+                view.className = 'btn btn-primary';
+                view.href = '/lesson/' + data.lesson_id;
+                view.textContent = 'View lesson';
+                simpleActions.appendChild(view);
+                var pdf = document.createElement('a');
+                pdf.className = 'btn btn-sm btn-icon';
+                pdf.href = '/api/export/' + data.lesson_id + '?fmt=pdf';
+                pdf.target = '_blank'; pdf.innerHTML = '&#128196; PDF';
+                simpleActions.appendChild(pdf);
+            }
+            simpleOut.textContent = JSON.stringify(data.lesson, null, 2);
+            addCopyBtn(simpleActions, simpleOut);
+        }
+
+        if (window.eduToast) window.eduToast(simpleTitle.textContent, 'success');
+        if (window.eduNotify) window.eduNotify();
+    } catch (err) {
+        spinner.style.display = 'none';
+        title3.textContent = ' Failed';
+        line('Network error: ' + err.message, 'error');
+    }
+}
+
+function addCopyBtn(container, sourceEl) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-icon';
+    btn.innerHTML = '&#128203; Copy';
+    btn.addEventListener('click', function() {
+        navigator.clipboard.writeText(sourceEl.textContent).then(function() {
+            btn.innerHTML = '&#10003; Copied!';
+            setTimeout(function() { btn.innerHTML = '&#128203; Copy'; }, 2000);
+        });
+    });
+    container.appendChild(btn);
+}
 
 function copyGenOutput() {
     var output = document.getElementById('stream-output');

@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -66,6 +67,86 @@ class CourseRequest(BaseModel):
     grade_level: str = Field(..., min_length=1, max_length=20)
     topics: list[str]
     weeks_per_topic: int = Field(2, ge=1, le=52)
+
+
+class QuizRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    grade_level: str = Field("8", min_length=1, max_length=20)
+    subject: str = Field("General", min_length=1, max_length=100)
+    num_questions: int = Field(10, ge=1, le=50)
+
+
+DifferentiationProfile = Literal["struggling", "advanced", "ell", "iep"]
+
+
+class DifferentiateRequest(BaseModel):
+    profile: DifferentiationProfile = "struggling"
+
+
+class GameRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    grade_level: str = Field("8", min_length=1, max_length=20)
+    subject: str = Field("General", min_length=1, max_length=100)
+    game_type: str = Field("", max_length=50)
+
+
+# Each profile maps to a synthetic IEPProfile that drives the existing
+# differentiation engine (clawed.differentiation). The keys mirror the
+# four profiles the Create UI offers.
+_DIFFERENTIATION_PROFILES: dict[str, dict[str, list[str]]] = {
+    "struggling": {
+        "accommodations": [
+            "Chunk instructions into one step at a time",
+            "Provide a word bank and sentence starters",
+            "Extend time and reduce the number of required items",
+        ],
+        "modifications": [
+            "Simplify reading level while keeping the same objective",
+            "Add a partially completed graphic organizer",
+        ],
+        "goals": ["Access grade-level content with scaffolds"],
+    },
+    "advanced": {
+        "accommodations": [
+            "Offer an open-ended extension that deepens analysis",
+            "Encourage independent inquiry and synthesis",
+        ],
+        "modifications": [
+            "Raise the rigor with higher-order, evaluative prompts",
+            "Add a challenge task that connects to a broader theme",
+        ],
+        "goals": ["Stretch beyond grade-level expectations"],
+    },
+    "ell": {
+        "accommodations": [
+            "Provide bilingual glossary and visual supports",
+            "Use sentence frames and pre-teach key vocabulary",
+            "Pair written text with images and simplified language",
+        ],
+        "modifications": [
+            "Reduce linguistic load while keeping the content goal",
+        ],
+        "goals": ["Build academic language alongside content"],
+    },
+    "iep": {
+        "accommodations": [
+            "Apply extended time and chunked tasks",
+            "Provide explicit step-by-step models and checklists",
+            "Offer alternative response formats",
+        ],
+        "modifications": [
+            "Adjust complexity to meet IEP goals while keeping the standard",
+        ],
+        "goals": ["Meet individualized learning goals with supports"],
+    },
+}
+
+_PROFILE_LABELS: dict[str, str] = {
+    "struggling": "Struggling Learners",
+    "advanced": "Advanced Learners",
+    "ell": "English Language Learners",
+    "iep": "IEP",
+}
 
 
 def _get_persona(db: Database) -> tuple[TeacherPersona | None, str | None]:
@@ -203,6 +284,197 @@ async def create_materials(request: Request, req: MaterialsRequest) -> Any:
         "lesson_id": req.lesson_id,
         "materials": materials.model_dump(),
     }
+
+
+@router.post("/quiz")
+@limiter.limit("10/minute")
+async def create_quiz(request: Request, req: QuizRequest) -> Any:
+    """Generate a standalone quiz/assessment on a topic.
+
+    Reuses ``clawed.assessment.AssessmentGenerator``. Assessments are not
+    persisted (no assessment table exists), so the full quiz is returned
+    inline for the UI to render and copy.
+    """
+    from clawed.assessment import AssessmentGenerator
+
+    db = get_db()
+    # Persona is optional for quizzes — generate_quiz defaults to a blank
+    # persona, so a missing persona is not a hard error here.
+    persona, _ = _get_persona(db)
+
+    try:
+        gen = AssessmentGenerator()
+        quiz = await gen.generate_quiz(
+            topic=req.topic,
+            question_count=req.num_questions,
+            grade=req.grade_level,
+            persona=persona,
+        )
+    except Exception:
+        logger.error("Quiz generation failed", exc_info=True)
+        return JSONResponse(
+            {"error": "Quiz generation failed. Please try again."},
+            status_code=500,
+        )
+
+    return {
+        "topic": quiz.topic,
+        "subject": req.subject,
+        "grade_level": quiz.grade_level,
+        "total_points": quiz.total_points,
+        "question_count": len(quiz.questions),
+        "quiz": quiz.model_dump(),
+    }
+
+
+@router.post("/differentiate/{lesson_id}")
+@limiter.limit("10/minute")
+async def differentiate_lesson_endpoint(
+    request: Request, lesson_id: str, req: DifferentiateRequest
+) -> Any:
+    """Produce a differentiated version of an existing lesson.
+
+    Reuses ``clawed.differentiation.generate_iep_lesson_modifications`` by
+    building a synthetic profile for the requested learner type. The result
+    is persisted as a new lesson under the same unit so it gets its own
+    viewable page and export links.
+    """
+    from clawed.differentiation import generate_iep_lesson_modifications
+    from clawed.models import IEPProfile
+
+    db = get_db()
+    lesson_row = db.get_lesson(lesson_id)
+    if not lesson_row:
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
+
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error(
+            "Could not parse lesson %s for differentiation", lesson_id, exc_info=True
+        )
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and cannot be differentiated."},
+            status_code=400,
+        )
+
+    spec = _DIFFERENTIATION_PROFILES[req.profile]
+    label = _PROFILE_LABELS[req.profile]
+    profile = IEPProfile(
+        student_name=label,
+        disability_type=label,
+        accommodations=spec["accommodations"],
+        modifications=spec["modifications"],
+        goals=spec["goals"],
+    )
+
+    try:
+        modified = await generate_iep_lesson_modifications(lesson, [profile])
+    except Exception:
+        logger.error("Differentiation failed for lesson %s", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "Differentiation failed. Please try again."},
+            status_code=500,
+        )
+
+    new_lesson = modified.get(label)
+    if new_lesson is None:
+        return JSONResponse(
+            {"error": "Differentiation produced no output. Please try again."},
+            status_code=502,
+        )
+
+    new_lesson.title = f"{lesson.title} ({label})"
+    new_id = db.insert_lesson(
+        unit_id=lesson_row["unit_id"],
+        lesson_number=lesson.lesson_number,
+        title=new_lesson.title,
+        lesson_json=new_lesson.model_dump_json(),
+    )
+
+    return {
+        "lesson_id": new_id,
+        "source_lesson_id": lesson_id,
+        "profile": req.profile,
+        "title": new_lesson.title,
+        "lesson": new_lesson.model_dump(),
+    }
+
+
+@router.post("/game")
+@limiter.limit("5/minute")
+async def create_game(request: Request, req: GameRequest) -> Any:
+    """Generate an interactive HTML review game.
+
+    Reuses ``clawed.compile_game.compile_game``. The generated single-file
+    HTML game is written to the output directory; we return a URL that
+    serves it via ``GET /api/game/file``.
+    """
+    from clawed.compile_game import compile_game
+    from clawed.master_content import MasterContent
+
+    db = get_db()
+    persona, _ = _get_persona(db)
+
+    # compile_game accepts MasterContent or any object exposing the lesson
+    # fields it reads. A minimal stub is sufficient — the compiler fills the
+    # rest with defaults (matching the agent_core game tool).
+    master = MasterContent(  # type: ignore[call-arg]
+        title=f"{req.topic} Review Game",
+        subject=req.subject,
+        grade_level=req.grade_level,
+        topic=req.topic,
+        objective=f"Review and reinforce {req.topic} concepts",
+    )
+
+    try:
+        game_path = await compile_game(
+            master=master,
+            persona=persona,
+            output_dir=None,
+            game_style=req.game_type,
+        )
+    except Exception:
+        logger.error("Game generation failed", exc_info=True)
+        return JSONResponse(
+            {"error": "Game generation failed. Please try again."},
+            status_code=500,
+        )
+
+    from urllib.parse import quote
+
+    return {
+        "topic": req.topic,
+        "filename": game_path.name,
+        "game_url": f"/api/game/file?name={quote(game_path.name)}",
+    }
+
+
+@router.get("/game/file")
+@limiter.limit("60/minute")
+async def serve_game_file(request: Request, name: str) -> Any:
+    """Serve a generated game HTML file by name from the output directory.
+
+    Only plain ``.html`` filenames inside the output directory are served;
+    any path separators or traversal attempts are rejected.
+    """
+    from fastapi.responses import FileResponse
+
+    from clawed.io import output_dir as get_output_dir
+
+    # Reject anything that is not a bare filename to prevent path traversal.
+    if name != Path(name).name or "/" in name or "\\" in name:
+        return JSONResponse({"error": "Invalid file name."}, status_code=400)
+    if not name.endswith(".html"):
+        return JSONResponse({"error": "Invalid file type."}, status_code=400)
+
+    base = get_output_dir().resolve()
+    target = (base / name).resolve()
+    # Confine to the output directory and require the file to exist.
+    if base not in target.parents or not target.is_file():
+        return JSONResponse({"error": "Game not found."}, status_code=404)
+
+    return FileResponse(str(target), media_type="text/html")
 
 
 @router.post("/full")
