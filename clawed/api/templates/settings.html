@@ -39,10 +39,20 @@
         {# Anthropic settings #}
         <div class="provider-settings" id="anthropic-settings" {% if config.provider.value != 'anthropic' %}hidden{% endif %}>
             <div class="form-group">
-                <label for="anthropic-key">API Key</label>
+                <label for="anthropic-key">API Key {% if has_anthropic_key %}<span style="color:var(--green);font-weight:600">&#10003; saved</span>{% endif %}</label>
                 <div class="key-input-row">
                     <input type="password" id="anthropic-key" name="anthropic_key" placeholder="{% if anthropic_key_masked %}{{ anthropic_key_masked }}{% else %}sk-ant-...{% endif %}">
                     <button type="button" class="btn btn-sm" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show</button>
+                </div>
+                <div class="key-help">
+                    <strong>Don&rsquo;t have a key yet? Here&rsquo;s how &mdash; about 2 minutes:</strong>
+                    <ol>
+                        <li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign in (or make a free account).</li>
+                        <li>Click <strong>Create Key</strong>, name it &ldquo;Claw-ED,&rdquo; and copy it.</li>
+                        <li>Paste it in the box above and click <strong>Save Settings</strong>. (It starts with <code>sk-ant-</code>.)</li>
+                    </ol>
+                    <a class="key-cta" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get an Anthropic key &rarr;</a>
+                    <span class="key-note">&#128274; Your key is stored only on this computer and is sent only to Anthropic to write your lessons &mdash; never to us. Anthropic is pay-as-you-go; a typical lesson costs only a few cents.</span>
                 </div>
             </div>
             <div class="form-group">
@@ -58,10 +68,20 @@
         {# OpenAI settings #}
         <div class="provider-settings" id="openai-settings" {% if config.provider.value != 'openai' %}hidden{% endif %}>
             <div class="form-group">
-                <label for="openai-key">API Key</label>
+                <label for="openai-key">API Key {% if has_openai_key %}<span style="color:var(--green);font-weight:600">&#10003; saved</span>{% endif %}</label>
                 <div class="key-input-row">
                     <input type="password" id="openai-key" name="openai_key" placeholder="{% if openai_key_masked %}{{ openai_key_masked }}{% else %}sk-...{% endif %}">
                     <button type="button" class="btn btn-sm" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show</button>
+                </div>
+                <div class="key-help">
+                    <strong>How to get an OpenAI key:</strong>
+                    <ol>
+                        <li>Open <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> and sign in.</li>
+                        <li>Click <strong>Create new secret key</strong> and copy it.</li>
+                        <li>Paste it above and click <strong>Save Settings</strong>. (It starts with <code>sk-</code>.)</li>
+                    </ol>
+                    <a class="key-cta" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key &rarr;</a>
+                    <span class="key-note">&#128274; Stored only on this computer; sent only to OpenAI.</span>
                 </div>
             </div>
             <div class="form-group">

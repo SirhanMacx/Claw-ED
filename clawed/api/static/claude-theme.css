@@ -1,0 +1,127 @@
+/* ============================================================================
+   Claw-ED — Claude design layer
+   Loaded AFTER style.css. Overrides the design tokens to the warm Anthropic
+   palette (cream canvas, clay accent, serif display) so the whole app re-skins
+   at once. No layout changes — pure tokens + light component polish.
+   ========================================================================== */
+
+:root {
+    /* Warm neutral ramp (replaces cool grays) */
+    --gray-50:  #FAF9F5;
+    --gray-100: #F2F0E9;
+    --gray-200: #E9E5DA;
+    --gray-300: #DAD5C8;
+    --gray-500: #6B6557;
+    --gray-700: #44403A;
+    --gray-900: #1F1D19;
+
+    /* Clay accent (repurposes --blue everywhere it's referenced) */
+    --blue:       #C96442;   /* Claude clay / terracotta */
+    --blue-light: #F4E7DE;   /* soft peach surface */
+    --blue-dark:  #2B2722;   /* warm espresso (nav + headings) */
+
+    --green:  #3E7C55;
+    --red:    #B5483A;
+    --orange: #C17A2B;
+
+    --radius: 10px;
+    --shadow:    0 1px 2px rgba(40, 36, 28, 0.05);
+    --shadow-md: 0 6px 22px rgba(40, 36, 28, 0.08);
+
+    /* Semantic */
+    --bg: #FAF9F5;                 /* warm paper canvas — the signature move */
+    --bg-surface: #F2F0E9;
+    --bg-surface-hover: #ECE8DE;
+    --text: #1F1D19;              /* warm ink, not pure black */
+    --text-secondary: #6B6557;
+    --text-heading: #2B2722;
+    --border: #E9E5DA;
+    --border-strong: #DAD5C8;
+    --nav-bg: #2B2722;            /* warm espresso top bar */
+    --nav-text: rgba(255, 255, 255, 0.80);
+    --input-bg: #FFFFFF;
+    --input-border: #D7D2C6;
+    --card-bg: #FFFFFF;           /* crisp white cards on cream canvas */
+    --code-bg: #2B2722;
+    --code-text: #EDE8DC;
+    --chart-bar: #C96442;
+    --chart-bar-alt: #E0A685;
+    --chart-line: #3E7C55;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+
+[data-theme="dark"] {
+    --gray-50: #2B2722; --gray-100: #353029; --gray-200: #423C33; --gray-300: #4F4840;
+    --gray-500: #A39C8C; --gray-700: #CFC7B6; --gray-900: #EDE8DC;
+    --blue: #DB9072; --blue-light: #3A2E26; --blue-dark: #1A1714;
+    --green: #5FA177; --red: #D98273; --orange: #D8A85B;
+    --bg: #211E1A; --bg-surface: #2B2722; --bg-surface-hover: #353029;
+    --text: #ECE7DC; --text-secondary: #A39C8C; --text-heading: #F0EADD;
+    --border: #3A352D; --border-strong: #4A443A;
+    --nav-bg: #1A1714; --nav-text: rgba(255, 255, 255, 0.78);
+    --input-bg: #2B2722; --input-border: #4A443A; --card-bg: #2B2722;
+    --code-bg: #15120F; --code-text: #D5CEBF;
+    --chart-bar: #DB9072; --chart-bar-alt: #E0A685; --chart-line: #5FA177;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Typography: serif display, warm sans body ───────────────────────────── */
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, .page-title, .nav-brand {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+    font-weight: 600;
+}
+.nav-brand { font-size: 1.3rem; }
+.page-title { letter-spacing: -0.02em; }
+
+/* ── Buttons — clay primary, soft corners ────────────────────────────────── */
+.btn { border-radius: 8px; }
+.btn-primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn-primary:hover { background: #B4573A; border-color: #B4573A; }
+
+/* ── Surfaces + focus ────────────────────────────────────────────────────── */
+.card, .settings-section, .radio-card { border-radius: var(--radius); }
+.radio-card.active { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-light);
+}
+a { color: var(--blue); }
+
+/* ── "How to get a key" help block ───────────────────────────────────────── */
+.key-help {
+    background: var(--blue-light);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 0.95rem 1.15rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text);
+}
+.key-help strong { color: var(--text-heading); }
+.key-help ol { margin: 0.5rem 0 0.25rem 1.2rem; padding: 0; }
+.key-help li { margin: 0.3rem 0; }
+.key-help a { font-weight: 600; text-decoration: underline; }
+.key-help .key-note {
+    display: block;
+    margin-top: 0.65rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+.key-help .key-cta {
+    display: inline-block;
+    margin-top: 0.6rem;
+    background: var(--blue);
+    color: #fff;
+    padding: 0.4rem 0.85rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.key-help .key-cta:hover { background: #B4573A; color: #fff; }

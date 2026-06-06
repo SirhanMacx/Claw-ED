@@ -383,6 +383,65 @@ def serve(
         )
 
 
+@bot_app.command(name="app")
+def app_launcher(
+    port: int = typer.Option(
+        8000, "--port", "-p", help="Port to listen on"
+    ),
+    no_open: bool = typer.Option(
+        False, "--no-open", help="Don't open the browser automatically"
+    ),
+) -> None:
+    """Launch the Claw-ED app — opens the local web experience in your browser.
+
+    The friendly, no-terminal way to use Claw-ED. Starts the server bound to
+    your own computer (127.0.0.1), trusts localhost so you skip the token
+    prompt, and opens the app in your default browser. Nothing is exposed to
+    the network. First-time users land on the API-key setup page.
+    """
+    import os as _os
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    # Trust same-machine requests so a teacher never hits a token wall.
+    # Safe: the server only binds to 127.0.0.1 (this computer).
+    _os.environ["EDUAGENT_LOCAL_AUTH_BYPASS"] = "1"
+
+    cfg = AppConfig.load()
+    from clawed.config import get_api_key, has_config
+
+    needs_key = (not has_config()) or (
+        cfg.provider.value != "ollama"
+        and not get_api_key(cfg.provider.value)
+    )
+    landing = "/settings" if needs_key else "/"
+    url = f"http://127.0.0.1:{port}{landing}"
+
+    intro = (
+        "[yellow]First time?[/yellow] Add your API key on the Settings page"
+        " — there are step-by-step instructions right there.\n\n"
+        if needs_key
+        else ""
+    )
+    console.print(
+        Panel(
+            f"[bold]Claw-ED is starting[/bold]\n"
+            f"Opening [cyan]{url}[/cyan] in your browser…\n\n"
+            f"{intro}"
+            "[dim]Runs only on this computer. Press Ctrl+C to stop.[/dim]",
+            title="Claw-ED",
+            border_style="green",
+        )
+    )
+
+    if not no_open:
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+
+    uvicorn.run("clawed.api.server:app", host="127.0.0.1", port=port)
+
+
 def _serve_with_tui(
     token: str | None,
     host: str,
