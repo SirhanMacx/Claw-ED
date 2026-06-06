@@ -677,6 +677,53 @@ function copyShareLink() {
 
     function setStatus(t) { if (status) status.textContent = t; }
 
+    function escapeHtml(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    // Minimal, XSS-safe Markdown -> HTML (input is escaped first).
+    function renderMarkdown(src) {
+        var lines = escapeHtml(src).split('\n');
+        var html = '', inUl = false, inOl = false;
+        function closeLists() {
+            if (inUl) { html += '</ul>'; inUl = false; }
+            if (inOl) { html += '</ol>'; inOl = false; }
+        }
+        function inline(t) {
+            return t
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+                .replace(/`([^`]+)`/g, '<code style="background:#eee;padding:0 .25em;border-radius:4px">$1</code>');
+        }
+        for (var i = 0; i < lines.length; i++) {
+            var ln = lines[i];
+            var h = ln.match(/^(#{1,4})\s+(.*)$/);
+            var ul = ln.match(/^\s*[-*]\s+(.*)$/);
+            var ol = ln.match(/^\s*\d+\.\s+(.*)$/);
+            var bq = ln.match(/^\s*&gt;\s?(.*)$/);
+            if (h) {
+                closeLists();
+                var lvl = Math.min(h[1].length + 2, 6);
+                html += '<h' + lvl + ' style="margin:.6rem 0 .3rem">' + inline(h[2]) + '</h' + lvl + '>';
+            } else if (ul) {
+                if (!inUl) { closeLists(); html += '<ul style="margin:.3rem 0;padding-left:1.3rem">'; inUl = true; }
+                html += '<li>' + inline(ul[1]) + '</li>';
+            } else if (ol) {
+                if (!inOl) { closeLists(); html += '<ol style="margin:.3rem 0;padding-left:1.4rem">'; inOl = true; }
+                html += '<li>' + inline(ol[1]) + '</li>';
+            } else if (bq) {
+                closeLists();
+                html += '<blockquote style="margin:.3rem 0;padding-left:.8rem;border-left:3px solid var(--accent,#C96442);color:#555">' + inline(bq[1]) + '</blockquote>';
+            } else if (ln.trim() === '') {
+                closeLists();
+            } else {
+                closeLists();
+                html += '<p style="margin:.4rem 0">' + inline(ln) + '</p>';
+            }
+        }
+        closeLists();
+        return html;
+    }
+
     async function ask() {
         var q = (input.value || '').trim();
         if (!q || busy) return;
@@ -684,6 +731,7 @@ function copyShareLink() {
         out.hidden = false; out.textContent = '';
         setStatus('Thinking…');
         var gotToken = false;
+        var rawAnswer = '';
         try {
             var resp = await fetch('/api/ask/stream', {
                 method: 'POST',
@@ -708,10 +756,13 @@ function copyShareLink() {
                     try { data = JSON.parse(dl); } catch (e) { continue; }
                     if (ev === 'token' && data.text) {
                         if (!gotToken) { setStatus('Writing…'); gotToken = true; }
-                        out.textContent += data.text;
+                        rawAnswer += data.text;
+                        out.innerHTML = renderMarkdown(rawAnswer);
                         out.scrollTop = out.scrollHeight;
                     } else if (ev === 'error') {
-                        out.textContent += (out.textContent ? '\n\n' : '') + '⚠ ' + (data.error || 'Error');
+                        out.innerHTML = renderMarkdown(rawAnswer) +
+                            '<div style="color:#b00020;margin-top:.5rem">⚠ ' +
+                            escapeHtml(data.error || 'Error') + '</div>';
                     }
                 }
             }
