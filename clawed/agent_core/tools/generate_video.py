@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
@@ -26,9 +27,9 @@ from clawed.failure_codes import FailureCode
 logger = logging.getLogger(__name__)
 
 
-def _video_dir():
+def _video_dir() -> Path:
     from clawed.paths import data_dir
-    return data_dir() / "videos"
+    return Path(data_dir()) / "videos"
 
 
 _SCRIPT_SYSTEM_PROMPT = """\

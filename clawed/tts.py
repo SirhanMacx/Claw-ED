@@ -57,7 +57,7 @@ def _synthesize_edge(
     """
     # Preferred: invoke the installed module directly.
     try:
-        import edge_tts  # noqa: F401
+        import edge_tts  # type: ignore[import-not-found]  # noqa: F401
 
         result = subprocess.run(
             [sys.executable, "-m", "edge_tts", "--voice", voice,

@@ -592,6 +592,159 @@ def _synthesize_scene_audio(
     ])
 
 
+# ── Pipeline stages (kept small; orchestrated by build_video) ────────
+
+
+def _render_slides(
+    scenes: list[dict[str, Any]],
+    slides_dir: Path,
+    chrome: str,
+    width: int,
+    height: int,
+    brand: str,
+    tag: str,
+    image_resolver: Callable[[dict[str, Any]], Path | None] | None,
+) -> list[Path]:
+    """Resolve optional backgrounds, then render each slide to a PNG."""
+    if image_resolver is not None:
+        for sc in scenes:
+            try:
+                img = image_resolver(sc)
+                if img and Path(img).exists():
+                    sc["art"] = str(Path(img).resolve())
+            except Exception as exc:  # never let image sourcing break a build
+                logger.debug("image_resolver failed for scene %s: %s", sc.get("id"), exc)
+
+    png_paths: list[Path] = []
+    for i, sc in enumerate(scenes):
+        sid = str(sc["id"])
+        hp = slides_dir / f"{sid}.html"
+        pp = slides_dir / f"{sid}.png"
+        hp.write_text(
+            _slide_html(sc, i, len(scenes), width, height, brand, tag),
+            encoding="utf-8",
+        )
+        _run([
+            chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+            "--no-sandbox", "--force-device-scale-factor=1",
+            f"--window-size={width},{height}",
+            f"--screenshot={pp}", hp.resolve().as_uri(),
+        ])
+        if not pp.exists() or pp.stat().st_size == 0:
+            raise VideoBuildError(f"Chrome did not produce a screenshot for scene {sid}.")
+        png_paths.append(pp)
+    return png_paths
+
+
+def _render_voiceover(
+    scenes: list[dict[str, Any]],
+    audio_dir: Path,
+    work: Path,
+    ffmpeg: str,
+    ffprobe: str,
+    voice: str,
+    edge_rate: str,
+    edge_bin: str | None,
+    say_bin: str | None,
+    say_voice: str,
+    say_rate: int,
+) -> tuple[list[float], Path]:
+    """Synthesize per-scene narration and concatenate into one voice track."""
+    durations: list[float] = []
+    wav_paths: list[Path] = []
+    for sc in scenes:
+        sid = str(sc["id"])
+        wav = audio_dir / f"{sid}.wav"
+        narr = str(sc.get("narration", "")).strip() or str(sc.get("caption", "")).strip() or " "
+        _synthesize_scene_audio(
+            narr, wav, audio_dir, ffmpeg, voice, edge_rate,
+            edge_bin, say_bin, say_voice, say_rate,
+        )
+        durations.append(_duration_of(ffprobe, wav))
+        wav_paths.append(wav)
+
+    voice_list = work / "voice_list.txt"
+    voice_list.write_text(
+        "".join(f"file '{w.as_posix()}'\n" for w in wav_paths),
+        encoding="utf-8",
+    )
+    voice_wav = work / "voice.wav"
+    _run([
+        ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(voice_list),
+        "-c", "copy", str(voice_wav),
+    ])
+    return durations, voice_wav
+
+
+def _render_clips(
+    png_paths: list[Path],
+    durations: list[float],
+    scenes: list[dict[str, Any]],
+    clips_dir: Path,
+    ffmpeg: str,
+    width: int,
+    height: int,
+    fps: int,
+) -> list[Path]:
+    """Build a slow Ken-Burns zoom clip for each still."""
+    clip_paths: list[Path] = []
+    for png, dur, sc in zip(png_paths, durations, scenes, strict=False):
+        sid = str(sc["id"])
+        clip = clips_dir / f"{sid}.mp4"
+        frames = max(2, round(dur * fps))
+        z = f"min(1.0+(0.06/{frames})*on,1.06)"
+        vf = (
+            f"scale={width * 2}:{height * 2},"
+            f"zoompan=z='{z}':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+            f"s={width}x{height}:fps={fps},format=yuv420p"
+        )
+        _run([
+            ffmpeg, "-y", "-loop", "1", "-framerate", str(fps), "-t", f"{dur:.3f}",
+            "-i", str(png), "-vf", vf, "-frames:v", str(frames),
+            "-c:v", "libx264", "-preset", "medium", "-crf", "18", str(clip),
+        ])
+        clip_paths.append(clip)
+    return clip_paths
+
+
+def _assemble_video(
+    clip_paths: list[Path],
+    work: Path,
+    ffmpeg: str,
+    out_path: Path,
+    total: float,
+    no_audio: bool,
+    voice_wav: Path | None,
+) -> None:
+    """Concatenate clips, mux the voice track (if any), and fade to/from black."""
+    clips_list = work / "clips_list.txt"
+    clips_list.write_text(
+        "".join(f"file '{c.as_posix()}'\n" for c in clip_paths),
+        encoding="utf-8",
+    )
+    raw = work / "video_raw.mp4"
+    _run([
+        ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(clips_list),
+        "-c", "copy", str(raw),
+    ])
+
+    fade_out = max(0.0, total - 0.45)
+    vfade = f"fade=t=in:st=0:d=0.35,fade=t=out:st={fade_out:.2f}:d=0.45"
+    if not no_audio and voice_wav is not None:
+        _run([
+            ffmpeg, "-y", "-i", str(raw), "-i", str(voice_wav),
+            "-vf", vfade, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "+faststart", "-shortest", str(out_path),
+        ])
+    else:
+        _run([
+            ffmpeg, "-y", "-i", str(raw), "-vf", vfade,
+            "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+            "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out_path),
+        ])
+
+
 # ── Main pipeline ─────────────────────────────────────────────────────
 
 
@@ -665,6 +818,9 @@ def build_video(
             "Chrome can be pointed at explicitly with the EDUAGENT_CHROME env var."
         )
 
+    # The missing-check above guarantees these are non-None; narrow for mypy.
+    assert ffmpeg is not None and ffprobe is not None and chrome is not None
+
     no_audio = bool(meta.get("no_audio"))
     edge_bin = None if no_audio else find_edge_tts()
     say_bin = None if no_audio else find_say()
@@ -711,114 +867,25 @@ def build_video(
         for i, sc in enumerate(scenes):
             sc.setdefault("id", f"{i:02d}_scene")
 
-        # 1) Optional image resolution → "art" background per scene.
-        if image_resolver is not None:
-            for sc in scenes:
-                try:
-                    img = image_resolver(sc)
-                    if img and Path(img).exists():
-                        sc["art"] = str(Path(img).resolve())
-                except Exception as exc:  # never let image sourcing break a build
-                    logger.debug("image_resolver failed for scene %s: %s", sc.get("id"), exc)
+        png_paths = _render_slides(
+            scenes, slides_dir, chrome, width, height, brand, tag, image_resolver,
+        )
 
-        # 2) Render each slide to PNG via Chrome headless.
-        png_paths: list[Path] = []
-        for i, sc in enumerate(scenes):
-            sid = str(sc["id"])
-            hp = slides_dir / f"{sid}.html"
-            pp = slides_dir / f"{sid}.png"
-            hp.write_text(
-                _slide_html(sc, i, len(scenes), width, height, brand, tag),
-                encoding="utf-8",
-            )
-            _run([
-                chrome, "--headless=new", "--disable-gpu", "--hide-scrollbars",
-                "--no-sandbox", "--force-device-scale-factor=1",
-                f"--window-size={width},{height}",
-                f"--screenshot={pp}", hp.resolve().as_uri(),
-            ])
-            if not pp.exists() or pp.stat().st_size == 0:
-                raise VideoBuildError(f"Chrome did not produce a screenshot for scene {sid}.")
-            png_paths.append(pp)
-
-        # 3) Voiceover per scene (or fixed-length silent timing).
-        durations: list[float] = []
-        wav_paths: list[Path] = []
         if not no_audio:
-            for sc in scenes:
-                sid = str(sc["id"])
-                wav = audio_dir / f"{sid}.wav"
-                narr = str(sc.get("narration", "")).strip() or str(sc.get("caption", "")).strip() or " "
-                _synthesize_scene_audio(
-                    narr, wav, audio_dir, ffmpeg, voice, edge_rate,
-                    edge_bin, say_bin, say_voice, say_rate,
-                )
-                durations.append(_duration_of(ffprobe, wav))
-                wav_paths.append(wav)
-
-            # Concatenate the per-scene voice WAVs into one track.
-            voice_list = work / "voice_list.txt"
-            voice_list.write_text(
-                "".join(f"file '{w.as_posix()}'\n" for w in wav_paths),
-                encoding="utf-8",
+            durations, voice_wav = _render_voiceover(
+                scenes, audio_dir, work, ffmpeg, ffprobe, voice, edge_rate,
+                edge_bin, say_bin, say_voice, say_rate,
             )
-            voice_wav = work / "voice.wav"
-            _run([
-                ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(voice_list),
-                "-c", "copy", str(voice_wav),
-            ])
         else:
-            durations = [3.0] * len(scenes)
+            durations, voice_wav = [3.0] * len(scenes), None
 
         total = sum(durations)
-
-        # 4) Ken-Burns clip per scene (slow zoom on the still).
-        clip_paths: list[Path] = []
-        for png, dur, sc in zip(png_paths, durations, scenes, strict=False):
-            sid = str(sc["id"])
-            clip = clips_dir / f"{sid}.mp4"
-            frames = max(2, round(dur * fps))
-            z = f"min(1.0+(0.06/{frames})*on,1.06)"
-            vf = (
-                f"scale={width * 2}:{height * 2},"
-                f"zoompan=z='{z}':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-                f"s={width}x{height}:fps={fps},format=yuv420p"
-            )
-            _run([
-                ffmpeg, "-y", "-loop", "1", "-framerate", str(fps), "-t", f"{dur:.3f}",
-                "-i", str(png), "-vf", vf, "-frames:v", str(frames),
-                "-c:v", "libx264", "-preset", "medium", "-crf", "18", str(clip),
-            ])
-            clip_paths.append(clip)
-
-        # 5) Concat clips → raw silent video.
-        clips_list = work / "clips_list.txt"
-        clips_list.write_text(
-            "".join(f"file '{c.as_posix()}'\n" for c in clip_paths),
-            encoding="utf-8",
+        clip_paths = _render_clips(
+            png_paths, durations, scenes, clips_dir, ffmpeg, width, height, fps,
         )
-        raw = work / "video_raw.mp4"
-        _run([
-            ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(clips_list),
-            "-c", "copy", str(raw),
-        ])
-
-        # 6) Mux audio (if any) + global fade from/to black.
-        fade_out = max(0.0, total - 0.45)
-        vfade = f"fade=t=in:st=0:d=0.35,fade=t=out:st={fade_out:.2f}:d=0.45"
-        if not no_audio:
-            _run([
-                ffmpeg, "-y", "-i", str(raw), "-i", str(voice_wav),
-                "-vf", vfade, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
-                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
-                "-movflags", "+faststart", "-shortest", str(out_path),
-            ])
-        else:
-            _run([
-                ffmpeg, "-y", "-i", str(raw), "-vf", vfade,
-                "-c:v", "libx264", "-preset", "medium", "-crf", "19",
-                "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out_path),
-            ])
+        _assemble_video(
+            clip_paths, work, ffmpeg, out_path, total, no_audio, voice_wav,
+        )
 
     # 7) Verify the finished file.
     if not out_path.exists() or out_path.stat().st_size == 0:

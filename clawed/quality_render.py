@@ -130,7 +130,7 @@ def _extract_docx_text(path: Path) -> str:
     return "\n".join(parts)
 
 
-def extract_text(source: str | Path) -> str:
+def extract_text(source: object) -> str:
     """Coerce *source* into scannable text.
 
     *source* may be:
