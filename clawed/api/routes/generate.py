@@ -695,15 +695,8 @@ async def improve_lesson_endpoint(
             status_code=502,
         )
 
-    if not isinstance(raw, dict):
-        logger.warning("Revision for %s returned non-object JSON", lesson_id)
-        return JSONResponse(
-            {"error": "The revision came back in an unexpected format. Try rephrasing."},
-            status_code=502,
-        )
-
-    # Preserve the lesson number even if the model dropped or changed it.
-    raw.setdefault("lesson_number", lesson.lesson_number)
+    # generate_json returns a dict; force the lesson number to stay stable even
+    # if the model changed it. (Any schema problems are caught by validation below.)
     raw["lesson_number"] = lesson.lesson_number
 
     try:
