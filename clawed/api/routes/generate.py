@@ -46,6 +46,10 @@ class MaterialsRequest(BaseModel):
     lesson_id: str
 
 
+class ImproveRequest(BaseModel):
+    instruction: str = Field(..., min_length=1, max_length=1000)
+
+
 class FullRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=500)
     grade_level: str = Field("8", min_length=1, max_length=20)
@@ -603,6 +607,121 @@ async def suggest_improvements_endpoint(request: Request, lesson_id: str) -> Any
         lesson, feedback_notes=notes
     )
     return {"lesson_id": lesson_id, "suggestions": suggestions}
+
+
+@router.post("/improve/{lesson_id}")
+@limiter.limit("10/minute")
+async def improve_lesson_endpoint(
+    request: Request, lesson_id: str, req: ImproveRequest
+) -> Any:
+    """Apply a plain-English revision to a lesson in place ("Revise in plain English").
+
+    The teacher types a natural-language change (e.g. "make it shorter",
+    "add a primary source", "lower the reading level to 9th grade",
+    "add Regents-style questions"). We load the existing lesson, ask the
+    LLM to apply ONLY that change and return the full revised lesson as
+    JSON, re-validate it against ``DailyLesson``, and persist it under the
+    same ``lesson_id`` (``update_lesson_json`` bumps ``edit_count``). No
+    full regeneration — unchanged sections are preserved verbatim.
+    """
+    from clawed.llm import LLMClient
+
+    instruction = req.instruction.strip()
+    if not instruction:
+        return JSONResponse(
+            {"error": "Please describe the change you want."}, status_code=400
+        )
+
+    db = get_db()
+    lesson_row = db.get_lesson(lesson_id)
+    if not lesson_row:
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
+
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error("Could not parse lesson %s for revision", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and cannot be revised."},
+            status_code=400,
+        )
+
+    # Reuse the same persona-as-voice context the generation pipeline uses,
+    # so revisions stay in the teacher's voice and grade band.
+    persona, _ = _get_persona(db)
+    persona_context = ""
+    if persona is not None:
+        try:
+            persona_context = persona.to_prompt_context()
+        except Exception:
+            # Persona context is best-effort; revisions still work without it.
+            persona_context = ""
+
+    current_json = lesson.model_dump_json(indent=2)
+    prompt = (
+        "You are an expert curriculum editor. A teacher has an existing daily "
+        "lesson (given below as JSON) and wants ONE specific change applied.\n\n"
+        f"{persona_context}\n\n"
+        f"## Existing lesson (JSON)\n{current_json}\n\n"
+        f"## Teacher's requested change\n{instruction}\n\n"
+        "## Instructions\n"
+        "1. Apply ONLY the requested change. Leave every other section exactly "
+        "as it is — do not rewrite content that the change does not touch.\n"
+        "2. Keep the SAME JSON shape and keys as the input. Do not add, rename, "
+        "or drop keys. Preserve the 'lesson_number' value unchanged.\n"
+        "3. Keep the teacher's voice, formatting, and standards alignment.\n"
+        "4. 'exit_ticket' is a list of objects with 'question' and "
+        "'expected_response'. 'differentiation' has 'struggling', 'advanced', "
+        "and 'ell' string lists.\n\n"
+        "Return ONLY the complete revised lesson as a single JSON object — no "
+        "prose, no markdown fences."
+    )
+
+    try:
+        client = LLMClient()
+        raw = await client.generate_json(
+            prompt=prompt,
+            system=(
+                "You are a curriculum editor. Return only one JSON object: the "
+                "full revised lesson, same schema as the input."
+            ),
+            temperature=0.4,
+            max_tokens=8192,
+        )
+    except Exception:
+        logger.error("Revision LLM call failed for lesson %s", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "Could not apply that change right now. Please try again."},
+            status_code=502,
+        )
+
+    if not isinstance(raw, dict):
+        logger.warning("Revision for %s returned non-object JSON", lesson_id)
+        return JSONResponse(
+            {"error": "The revision came back in an unexpected format. Try rephrasing."},
+            status_code=502,
+        )
+
+    # Preserve the lesson number even if the model dropped or changed it.
+    raw.setdefault("lesson_number", lesson.lesson_number)
+    raw["lesson_number"] = lesson.lesson_number
+
+    try:
+        revised = DailyLesson.model_validate(raw)
+    except Exception:
+        logger.warning("Revised lesson %s failed validation", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "The revision didn't pass validation. Try a simpler change."},
+            status_code=502,
+        )
+
+    db.update_lesson_json(lesson_id, revised.model_dump_json())
+
+    return {
+        "lesson_id": lesson_id,
+        "ok": True,
+        "summary": f"Applied: {instruction}",
+    }
 
 
 @router.get("/templates")

@@ -81,6 +81,27 @@
         {% endif %}
 
         {% if not is_shared|default(false) %}
+        <!-- Revise in plain English -->
+        <div class="lesson-section" id="revise-section">
+            <h3>Revise in Plain English</h3>
+            <p class="revise-hint">Type a change and we'll apply it to this lesson — no full regeneration.</p>
+            <div class="revise-chips">
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Make this lesson shorter and tighter without losing the key content.">Shorter</button>
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Add a relevant primary source document with 2-3 analysis questions.">Add a primary source</button>
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Lower the reading level to 9th grade. Simplify vocabulary and sentence structure.">Lower reading level</button>
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Add 3 Regents-style multiple-choice questions aligned to the objective.">Add Regents-style questions</button>
+            </div>
+            <form id="revise-form">
+                <div class="chat-input-row">
+                    <input type="text" name="instruction" id="revise-input" autocomplete="off"
+                           placeholder="e.g. Make it shorter, add a primary source, lower to 9th-grade reading level">
+                    <button type="submit" class="btn btn-sm btn-primary" id="revise-btn">Apply</button>
+                </div>
+            </form>
+            <div id="revise-loading" hidden class="status-box loading">Applying your change...</div>
+            <div id="revise-status" hidden class="status-box"></div>
+        </div>
+
         <!-- Quality Scores -->
         <div class="lesson-section" id="quality-section">
             <h3>Quality Score</h3>
@@ -228,6 +249,63 @@ function suggestImprovements() {
         loading.hidden = true;
         btn.hidden = false;
     });
+}
+
+function submitRevision(instruction) {
+    instruction = (instruction || '').trim();
+    var status = document.getElementById('revise-status');
+    var loading = document.getElementById('revise-loading');
+    var btn = document.getElementById('revise-btn');
+    var input = document.getElementById('revise-input');
+    if (!instruction) {
+        status.hidden = false;
+        status.className = 'status-box error';
+        status.textContent = 'Type a change first, or tap one of the chips above.';
+        return;
+    }
+    status.hidden = true;
+    loading.hidden = false;
+    btn.disabled = true;
+    fetch('/api/improve/' + lessonId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({instruction: instruction})
+    }).then(function(r){return r.json();}).then(function(data) {
+        loading.hidden = true;
+        if (data && data.ok) {
+            status.hidden = false;
+            status.className = 'status-box loading';
+            status.textContent = (data.summary || 'Change applied.') + ' Reloading...';
+            window.location.reload();
+        } else {
+            btn.disabled = false;
+            status.hidden = false;
+            status.className = 'status-box error';
+            status.textContent = (data && data.error) ? data.error : 'Could not apply that change.';
+        }
+    }).catch(function() {
+        loading.hidden = true;
+        btn.disabled = false;
+        status.hidden = false;
+        status.className = 'status-box error';
+        status.textContent = 'Network error. Please try again.';
+    });
+}
+
+var reviseForm = document.getElementById('revise-form');
+if (reviseForm) {
+    reviseForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitRevision(document.getElementById('revise-input').value);
+    });
+    var chips = document.querySelectorAll('.revise-chip');
+    for (var i = 0; i < chips.length; i++) {
+        chips[i].addEventListener('click', function() {
+            var instr = this.getAttribute('data-revise');
+            document.getElementById('revise-input').value = instr;
+            submitRevision(instr);
+        });
+    }
 }
 
 function exportClassroom() {
