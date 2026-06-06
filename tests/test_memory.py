@@ -63,6 +63,26 @@ class TestCurriculumStateLayer:
 
 
 class TestEmbeddingProvider:
+    def test_falls_back_when_onnx_model_unavailable(self, monkeypatch):
+        from clawed.agent_core.memory import embeddings
+
+        attempts = {"count": 0}
+
+        def fail_onnx(_self):
+            attempts["count"] += 1
+            return False
+
+        def fail_ollama(*_args, **_kwargs):
+            raise RuntimeError("ollama unavailable")
+
+        monkeypatch.setattr(embeddings, "_ONNX_UNAVAILABLE", False)
+        monkeypatch.setattr(embeddings.ONNXMiniLMEmbedder, "_ensure_model", fail_onnx)
+        monkeypatch.setattr("httpx.get", fail_ollama)
+
+        embedder = embeddings.get_embedder()
+        assert isinstance(embedder, embeddings.TFIDFEmbedder)
+        assert attempts["count"] <= 1
+
     def test_tfidf_embed(self):
         from clawed.agent_core.memory.embeddings import get_embedder
         embedder = get_embedder()

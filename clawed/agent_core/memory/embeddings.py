@@ -10,7 +10,6 @@ Produces 384-dimensional dense vectors — compact, fast, high quality.
 """
 from __future__ import annotations
 
-import json
 import logging
 import math
 import os
@@ -32,6 +31,8 @@ _TOKENIZER_URL = (
     "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/"
     "resolve/main/tokenizer.json"
 )
+
+_ONNX_UNAVAILABLE = False
 
 
 # ── ONNX MiniLM Embedder ────────────────────────────────────────────
@@ -315,18 +316,21 @@ def get_embedder() -> ONNXMiniLMEmbedder | OllamaEmbedder | TFIDFEmbedder:
     Priority: ONNX MiniLM > Ollama (local) > TF-IDF fallback.
     """
     # 1. ONNX MiniLM — best quality, offline, 384-dim
-    try:
-        import numpy  # noqa: F401
-        import onnxruntime  # noqa: F401
-        import tokenizers  # noqa: F401
-        embedder = ONNXMiniLMEmbedder()
-        if embedder._ensure_model():
-            return embedder
-        logger.debug("ONNX MiniLM model not yet downloaded, will try on next use")
-        # Return it anyway — it'll download on first embed() call
-        return embedder
-    except ImportError:
-        pass
+    global _ONNX_UNAVAILABLE
+    if not _ONNX_UNAVAILABLE:
+        try:
+            import numpy  # noqa: F401
+            import onnxruntime  # noqa: F401
+            import tokenizers  # noqa: F401
+            embedder = ONNXMiniLMEmbedder()
+            if embedder._ensure_model():
+                return embedder
+            _ONNX_UNAVAILABLE = True
+            logger.warning(
+                "ONNX MiniLM model unavailable; using fallback embedder for this process"
+            )
+        except ImportError:
+            _ONNX_UNAVAILABLE = True
 
     # 2. Ollama (local server with embedding model)
     try:
@@ -338,8 +342,8 @@ def get_embedder() -> ONNXMiniLMEmbedder | OllamaEmbedder | TFIDFEmbedder:
             if embed_models:
                 logger.debug("Using Ollama embedder: %s", embed_models[0])
                 return OllamaEmbedder(model=embed_models[0])
-    except (json.JSONDecodeError, KeyError):
-        pass
+    except Exception as e:
+        logger.debug("Ollama embedder unavailable: %s", e)
 
     # 3. TF-IDF fallback
     logger.debug(
