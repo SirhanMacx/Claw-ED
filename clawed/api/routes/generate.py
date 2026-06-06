@@ -1027,3 +1027,73 @@ async def list_lessons(request: Request, unit_id: str) -> dict[str, Any]:
     db = get_db()
     lessons = db.list_lessons(unit_id)
     return {"lessons": lessons}
+
+
+class AskRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=4000)
+    grade_level: str = Field("", max_length=20)
+    subject: str = Field("", max_length=100)
+
+
+@router.post("/ask/stream")
+@limiter.limit("30/minute")
+async def ask_stream(request: Request, req: AskRequest) -> EventSourceResponse:
+    """Stream a co-teacher answer token-by-token (live, like Claude Code).
+
+    Open-ended teaching help — lesson ideas, rewrites, examples,
+    differentiation. Uses the teacher's persona for voice when one exists,
+    but works without ingestion too. Streams via the configured provider
+    (e.g. OpenRouter / minimax-m3) so the answer appears as it's written.
+    """
+    from clawed.llm import LLMClient
+
+    db = get_db()
+    persona, _ = _get_persona(db)
+    style = ""
+    if persona is not None:
+        try:
+            style = persona.to_prompt_context()
+        except Exception:
+            style = ""
+
+    system = (
+        "You are Claw-ED, a warm, practical co-teacher for a K-12 teacher. "
+        "Give concrete, classroom-ready help: lesson ideas, rewrites, worked "
+        "examples, explanations, and differentiation. Be concise and useful, "
+        "and format with short paragraphs or lists a teacher can use as-is."
+    )
+    if style:
+        system += f"\n\nMatch this teacher's style where it fits:\n{style}"
+
+    qualifiers = ""
+    if req.subject:
+        qualifiers += f" Subject: {req.subject}."
+    if req.grade_level:
+        qualifiers += f" Grade level: {req.grade_level}."
+    user_prompt = req.question + (f"\n\n({qualifiers.strip()})" if qualifiers else "")
+
+    async def event_stream() -> AsyncGenerator[dict[str, str], None]:
+        client = LLMClient()
+        produced = False
+        try:
+            async for chunk in client.generate_stream(
+                user_prompt, system=system, temperature=0.7, max_tokens=1500
+            ):
+                produced = True
+                yield _sse("token", text=chunk)
+        except Exception:
+            logger.error("ask_stream failed", exc_info=True)
+            yield _sse(
+                "error",
+                error="Generation failed. Check your provider/API key in Settings.",
+            )
+            return
+        if not produced:
+            yield _sse(
+                "error",
+                error="No response. Check your provider/API key in Settings.",
+            )
+            return
+        yield _sse("done")
+
+    return EventSourceResponse(event_stream())

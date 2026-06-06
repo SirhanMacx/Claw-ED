@@ -13,6 +13,8 @@ from pydantic import BaseModel, ValidationError
 from clawed.models import AppConfig, LLMProvider
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from clawed.models import AdminLessonPlan, StudentPacket
 
 logger = logging.getLogger(__name__)
@@ -66,6 +68,151 @@ class LLMClient:
         else:
             raise ValueError(f"Unknown provider: {self.config.provider}")
         return sanitize_text(raw)
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system: str = "",
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> AsyncIterator[str]:
+        """Stream a text completion token-by-token.
+
+        Yields incremental text chunks as the model produces them, so the UI
+        can render the answer live. OpenRouter and Ollama stream natively;
+        other providers fall back to a single yield of the full result.
+        """
+        from clawed.demo import is_demo_mode
+
+        if is_demo_mode(config=self.config):
+            yield self._demo_response(prompt, demo_hint="")
+            return
+
+        system = self._enrich_system_prompt(system, prompt=prompt)
+        provider = self.config.provider
+        if provider == LLMProvider.OPENROUTER:
+            async for chunk in self._openrouter_stream(
+                prompt, system, temperature, max_tokens
+            ):
+                yield chunk
+            return
+        if provider == LLMProvider.OLLAMA:
+            async for chunk in self._ollama_stream(
+                prompt, system, temperature, max_tokens
+            ):
+                yield chunk
+            return
+
+        # Providers without a streaming path here: emit the full result once.
+        from clawed.sanitize import sanitize_text
+
+        if provider == LLMProvider.ANTHROPIC:
+            raw = await self._anthropic(prompt, system, temperature, max_tokens)
+        elif provider == LLMProvider.OPENAI:
+            raw = await self._openai(prompt, system, temperature, max_tokens)
+        elif provider == LLMProvider.GOOGLE:
+            raw = await self._google(prompt, system, temperature, max_tokens)
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
+        yield sanitize_text(raw)
+
+    async def _openrouter_stream(
+        self, prompt: str, system: str, temperature: float, max_tokens: int
+    ) -> AsyncIterator[str]:
+        from clawed.config import get_api_key
+
+        api_key = get_api_key("openrouter")
+        if not api_key:
+            raise OSError(
+                "OpenRouter API key not found. Get one at https://openrouter.ai/keys"
+            )
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        base_url = getattr(
+            self.config, "openrouter_base_url", "https://openrouter.ai/api/v1"
+        )
+        async with httpx.AsyncClient(timeout=7200.0) as client, client.stream(
+            "POST",
+            f"{base_url.rstrip('/')}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/SirhanMacx/Claw-ED",
+                "X-Title": "Claw-ED",
+            },
+            json={
+                "model": self.config.openrouter_model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True,
+                # Quick co-teacher help should feel instant. Tell reasoning
+                # models (e.g. minimax-m3) to skip the long chain-of-thought
+                # so the answer streams right away. Ignored by non-reasoning
+                # models. (OpenRouter unified `reasoning` control.)
+                "reasoning": {"enabled": False},
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line or not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                choices = obj.get("choices") or [{}]
+                delta = choices[0].get("delta", {}).get("content")
+                if delta:
+                    yield str(delta)
+
+    async def _ollama_stream(
+        self, prompt: str, system: str, temperature: float, max_tokens: int
+    ) -> AsyncIterator[str]:
+        api_key = getattr(self.config, "ollama_api_key", None) or os.environ.get(
+            "OLLAMA_API_KEY"
+        )
+        headers = {}
+        if api_key and api_key != "ollama":
+            headers["Authorization"] = f"Bearer {api_key}"
+        base = self.config.ollama_base_url.rstrip("/")
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        num_ctx = getattr(self.config, "ollama_num_ctx", 0) or 8192
+        async with httpx.AsyncClient(timeout=600.0) as client, client.stream(
+            "POST",
+            f"{base}/api/chat",
+            headers=headers,
+            json={
+                "model": self.config.ollama_model,
+                "messages": messages,
+                "stream": True,
+                "think": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens,
+                    "num_ctx": num_ctx,
+                },
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line.strip():
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                chunk = obj.get("message", {}).get("content")
+                if chunk:
+                    yield str(chunk)
 
     async def generate_with_image(
         self,

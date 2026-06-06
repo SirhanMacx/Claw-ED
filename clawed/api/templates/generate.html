@@ -6,6 +6,27 @@
 {% block content %}
 <h1>Generate Content</h1>
 
+<div class="coteacher-card" style="margin:0 0 1.5rem;border:1px solid var(--border-strong);border-radius:14px;padding:1.1rem 1.4rem;background:var(--bg-subtle,#fff)">
+    <div style="display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap">
+        <strong style="font-size:1.15rem">Ask your co&#8209;teacher</strong>
+        <span style="font-size:.8rem;color:var(--text-muted,#8a8a8a)">live &middot; powered by your model</span>
+    </div>
+    <p style="margin:.3rem 0 .7rem;color:var(--text-muted,#666);font-size:.9rem">
+        Lesson ideas, rewrites, worked examples, differentiation &mdash; ask in plain English and watch it write.
+    </p>
+    <textarea id="ask-input" rows="3"
+        placeholder="e.g. Give me 3 hook questions for a 9th&#8209;grade lesson on the Columbian Exchange"
+        style="width:100%;box-sizing:border-box;padding:.75rem;border:1px solid var(--border-strong);border-radius:10px;font:inherit;resize:vertical"></textarea>
+    <div style="display:flex;gap:.6rem;align-items:center;margin-top:.55rem">
+        <button id="ask-btn" class="btn btn-primary"
+            style="background:var(--accent,#C96442);color:#fff;border:none;padding:.6rem 1.3rem;border-radius:10px;font:inherit;font-weight:600;cursor:pointer">Ask</button>
+        <span id="ask-status" style="font-size:.85rem;color:var(--text-muted,#8a8a8a)"></span>
+        <span style="margin-left:auto;font-size:.75rem;color:var(--text-muted,#b0b0b0)">&#8984;/Ctrl + Enter</span>
+    </div>
+    <div id="ask-output" hidden
+        style="white-space:pre-wrap;word-break:break-word;margin-top:.9rem;padding:1rem;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg,#fff);max-height:50vh;overflow:auto;line-height:1.55;font-size:.93rem"></div>
+</div>
+
 {% if not has_persona %}
 <div class="alert alert-warning">
     <strong>No persona found.</strong> <a href="/">Upload teaching materials</a> first to extract your teaching style.
@@ -642,6 +663,72 @@ function copyShareLink() {
         if (fullCard) { fullCard.classList.add('selected'); genState.type = 'full'; }
         goGenStep(2);
     }
+})();
+</script>
+<script>
+// "Ask your co-teacher" — live token streaming via /api/ask/stream (SSE over fetch).
+(function () {
+    var btn = document.getElementById('ask-btn');
+    var input = document.getElementById('ask-input');
+    var out = document.getElementById('ask-output');
+    var status = document.getElementById('ask-status');
+    if (!btn || !input || !out) return;
+    var busy = false;
+
+    function setStatus(t) { if (status) status.textContent = t; }
+
+    async function ask() {
+        var q = (input.value || '').trim();
+        if (!q || busy) return;
+        busy = true; btn.disabled = true; btn.style.opacity = '0.6';
+        out.hidden = false; out.textContent = '';
+        setStatus('Thinking…');
+        var gotToken = false;
+        try {
+            var resp = await fetch('/api/ask/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: q })
+            });
+            if (!resp.ok || !resp.body) throw new Error('HTTP ' + resp.status);
+            var reader = resp.body.getReader();
+            var dec = new TextDecoder();
+            var buf = '';
+            while (true) {
+                var r = await reader.read();
+                if (r.done) break;
+                buf += dec.decode(r.value, { stream: true }).replace(/\r/g, '');
+                var blocks = buf.split('\n\n');
+                buf = blocks.pop();
+                for (var i = 0; i < blocks.length; i++) {
+                    var ev = (blocks[i].match(/event:\s*(.*)/) || [])[1];
+                    var dl = (blocks[i].match(/data:\s*([\s\S]*)/) || [])[1];
+                    if (!dl) continue;
+                    var data;
+                    try { data = JSON.parse(dl); } catch (e) { continue; }
+                    if (ev === 'token' && data.text) {
+                        if (!gotToken) { setStatus('Writing…'); gotToken = true; }
+                        out.textContent += data.text;
+                        out.scrollTop = out.scrollHeight;
+                    } else if (ev === 'error') {
+                        out.textContent += (out.textContent ? '\n\n' : '') + '⚠ ' + (data.error || 'Error');
+                    }
+                }
+            }
+            setStatus(gotToken ? 'Done' : '');
+        } catch (e) {
+            setStatus('');
+            out.textContent = '⚠ ' + (e.message || 'Request failed') +
+                '. Check your provider / API key in Settings.';
+        } finally {
+            busy = false; btn.disabled = false; btn.style.opacity = '1';
+        }
+    }
+
+    btn.addEventListener('click', ask);
+    input.addEventListener('keydown', function (e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); ask(); }
+    });
 })();
 </script>
 {% endblock %}
