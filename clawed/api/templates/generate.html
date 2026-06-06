@@ -138,6 +138,11 @@
                     <strong style="color: var(--green);">Generation complete!</strong>
                 </div>
 
+                <div id="gen-preview-wrap" style="display:none;margin-bottom:1.25rem">
+                    <div style="font-weight:600;color:var(--text-heading);margin-bottom:0.5rem">Preview</div>
+                    <iframe id="gen-preview-frame" title="Your lesson preview" style="width:100%;height:72vh;border:1px solid var(--border-strong);border-radius:12px;background:#fff;box-shadow:var(--shadow-md)"></iframe>
+                </div>
+
                 <div class="export-row">
                     <button class="btn btn-sm btn-icon copy-btn" onclick="copyGenOutput()">&#128203; Copy All</button>
                     <a class="btn btn-sm btn-icon" id="export-pdf" href="#" target="_blank">&#128196; PDF</a>
@@ -304,6 +309,10 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         if (lid) {
             document.getElementById('export-pdf').href = '/api/export/' + lid + '?fmt=pdf';
             document.getElementById('export-docx').href = '/api/export/' + lid + '?fmt=docx';
+            // Inline preview: embed the finished lesson (nav/footer hidden via ?embed=1).
+            var pf = document.getElementById('gen-preview-frame');
+            var pw = document.getElementById('gen-preview-wrap');
+            if (pf && pw) { pf.src = '/lesson/' + lid + '?embed=1'; pw.style.display = 'block'; }
         }
 
         // Fire notification

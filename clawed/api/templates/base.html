@@ -15,6 +15,7 @@
     </script>
 </head>
 <body>
+    {% if not request.query_params.get('embed') %}
     <nav class="navbar">
         <div class="nav-inner">
             <a href="/" class="nav-brand">Claw-ED</a>
@@ -35,10 +36,12 @@
             </div>
         </div>
     </nav>
+    {% endif %}
     {% block breadcrumbs %}{% endblock %}
     <main class="container">
         {% block content %}{% endblock %}
     </main>
+    {% if not request.query_params.get('embed') %}
     <footer class="footer">
         <div class="status-bar" id="status-bar">
             <span class="status-dot" id="status-dot"></span>
@@ -46,6 +49,7 @@
         </div>
         <p>Claw-ED &mdash; Your teaching files, your AI co-teacher.</p>
     </footer>
+    {% endif %}
     <div class="toast" id="toast"></div>
     <script src="/static/app.js"></script>
     {% block scripts %}{% endblock %}
