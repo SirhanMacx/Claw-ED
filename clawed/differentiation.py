@@ -77,6 +77,19 @@ async def generate_iep_lesson_modifications(
             max_tokens=8192,
         )
 
+        # Backfill the required identity fields the model tends to drop or null
+        # out. A differentiated version of lesson N is still lesson N with the
+        # same objective, so anchor those from the source lesson rather than
+        # letting a missing key 500 the request (DailyLesson.lesson_number is a
+        # required int; `objective` is required too).
+        if isinstance(data, dict):
+            if data.get("lesson_number") is None:
+                data["lesson_number"] = lesson.lesson_number
+            if not data.get("objective"):
+                data["objective"] = lesson.objective
+            if not data.get("title"):
+                data["title"] = lesson.title
+
         results[profile.student_name] = DailyLesson.model_validate(data)
 
     return results
