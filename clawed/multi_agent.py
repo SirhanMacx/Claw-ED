@@ -32,6 +32,18 @@ MASTER_PROMPT_PATH = _PROMPTS_DIR / "master_content.txt"
 RESEARCHER_PROMPT_PATH = _PROMPTS_DIR / "multi_agent_researcher.txt"
 REVIEWER_PROMPT_PATH = _PROMPTS_DIR / "multi_agent_reviewer.txt"
 
+# Generous output budgets. Reasoning models (e.g. minimax-m3) spend a large,
+# variable share of their token budget on hidden reasoning *before* emitting
+# output, so a tight cap silently truncates the lesson JSON — the writer was
+# previously capped at 6000 and its trailing sections (guided_notes /
+# exit_ticket / differentiation) were getting cut off, failing validation and
+# the whole lesson. Per product directive there are no artificial token caps:
+# teachers may have large projects needing lots of tokens and full reasoning.
+# Mirrors clawed/phases/pipeline.py:_PHASE_MAX_TOKENS.
+_WRITER_MAX_TOKENS = 32000
+_RESEARCHER_MAX_TOKENS = 16000
+_REVIEWER_MAX_TOKENS = 8000
+
 # ---------------------------------------------------------------------------
 # Review result schema
 # ---------------------------------------------------------------------------
@@ -94,7 +106,7 @@ async def _run_researcher(
             prompt=user_prompt,
             system=system_prompt,
             temperature=0.7,
-            max_tokens=4096,
+            max_tokens=_RESEARCHER_MAX_TOKENS,
         )
         logger.info("Researcher produced %d-char brief", len(brief))
         return brief
@@ -154,7 +166,7 @@ async def _run_writer(
             model_class=MasterContent,
             system=system_prompt,
             temperature=0.5,
-            max_tokens=6000,
+            max_tokens=_WRITER_MAX_TOKENS,
         )
         logger.info("Writer produced MasterContent for '%s'", topic)
         return result
@@ -195,7 +207,7 @@ async def _run_reviewer(
             model_class=ReviewResult,
             system=system_prompt,
             temperature=0.3,
-            max_tokens=2048,
+            max_tokens=_REVIEWER_MAX_TOKENS,
         )
         logger.info(
             "Reviewer scores — voice: %d, pedagogy: %d, diff: %d, passed: %s",

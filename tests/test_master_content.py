@@ -257,3 +257,149 @@ def test_guided_note_section_ref():
         section_ref="Background: Pre-Industrial Britain",
     )
     assert note.section_ref == "Background: Pre-Industrial Britain"
+
+
+# ── test 8: cross-model drift normalization (regression) ───────────────────
+#
+# These lock in the fix for a real, observed failure: minimax-m3 returned
+# lesson JSON that was semantically correct but structurally off (a section
+# body under `content` with no `teacher_script`, and trailing required
+# sections omitted entirely), which crashed the ENTIRE lesson with a Pydantic
+# ValidationError. For a tool meant to be dependable for any teacher on any
+# model, recoverable drift must degrade gracefully — never crash the lesson.
+
+def _raw_lesson(**overrides) -> dict:
+    """A raw dict shaped like an LLM emits it (plain dicts, not model instances)."""
+    base = dict(
+        title="The Scientific Revolution",
+        subject="Global History",
+        grade_level="9",
+        topic="Scientific Revolution",
+        objective="SWBAT analyze primary sources on the Scientific Revolution.",
+        do_now={
+            "stimulus": "Copernicus argued the Earth moves around the Sun.",
+            "stimulus_type": "text_excerpt",
+            "questions": ["What does he claim?"],
+            "answers": ["The Earth moves."],
+        },
+        direct_instruction=[
+            {"heading": "Section 1", "content": "Body text", "teacher_script": "Say..."}
+        ],
+        guided_notes=[
+            {"prompt": "The Sun is at the ______.", "answer": "center", "section_ref": "Section 1"}
+        ],
+        exit_ticket=[
+            {
+                "stimulus": "Galileo defended heliocentrism.",
+                "stimulus_type": "text_excerpt",
+                "question": "Why was this controversial?",
+                "answer": "It contradicted Church teaching.",
+            }
+        ],
+        differentiation={"struggling": ["x"], "advanced": ["y"], "ell": ["z"]},
+    )
+    base.update(overrides)
+    return base
+
+
+def test_drift_missing_teacher_script_is_recovered():
+    """The exact minimax-m3 failure: section with heading+content but no
+    teacher_script, plus trailing required sections omitted entirely."""
+    raw = _raw_lesson(
+        direct_instruction=[
+            {"heading": "Section 1: The Heavens",
+             "content": "Copernicus argued the Catholic Church also resisted heliocentrism."}
+        ],
+    )
+    for k in ("guided_notes", "exit_ticket", "differentiation"):
+        raw.pop(k)
+
+    mc = MasterContent.model_validate(raw)  # must NOT raise
+
+    assert mc.direct_instruction[0].teacher_script.strip()
+    assert "Copernicus" in mc.direct_instruction[0].teacher_script
+    assert mc.guided_notes == []
+    assert mc.exit_ticket == []
+    assert isinstance(mc.differentiation, DifferentiationNotes)
+    # still compiles to a DailyLesson (the document-export path)
+    dl = mc.to_daily_lesson()
+    assert isinstance(dl, DailyLesson)
+
+
+def test_drift_teacher_script_under_alias_keys():
+    for alias in ("script", "narration", "body", "text"):
+        raw = _raw_lesson(direct_instruction=[{"heading": "H", alias: "The narration text"}])
+        mc = MasterContent.model_validate(raw)
+        assert mc.direct_instruction[0].teacher_script == "The narration text"
+
+
+def test_drift_single_object_coerced_to_list():
+    raw = _raw_lesson(
+        direct_instruction={"heading": "Solo", "content": "c", "teacher_script": "t"}
+    )
+    mc = MasterContent.model_validate(raw)
+    assert len(mc.direct_instruction) == 1
+    assert mc.direct_instruction[0].heading == "Solo"
+
+
+def test_drift_section_synonym_top_level_key():
+    raw = _raw_lesson()
+    raw["instruction"] = raw.pop("direct_instruction")  # model used a synonym key
+    mc = MasterContent.model_validate(raw)
+    assert len(mc.direct_instruction) == 1
+
+
+def test_drift_exit_ticket_missing_stimulus_anchored_to_question():
+    raw = _raw_lesson(exit_ticket=[{"question": "Why did Galileo recant?", "answer": "Pressure."}])
+    mc = MasterContent.model_validate(raw)
+    assert len(mc.exit_ticket) == 1
+    assert "Galileo" in mc.exit_ticket[0].stimulus
+
+
+def test_drift_exit_ticket_unusable_item_dropped_not_crash():
+    raw = _raw_lesson(exit_ticket=[{"answer": "no question and no stimulus here"}])
+    mc = MasterContent.model_validate(raw)
+    assert mc.exit_ticket == []  # one bad item dropped, lesson survives
+
+
+def test_drift_missing_do_now_and_differentiation_default():
+    raw = _raw_lesson()
+    raw.pop("do_now")
+    raw.pop("differentiation")
+    mc = MasterContent.model_validate(raw)
+    assert isinstance(mc.do_now, DoNow)
+    assert mc.do_now.stimulus.strip()
+    assert isinstance(mc.differentiation, DifferentiationNotes)
+
+
+def test_drift_vocabulary_missing_context_sentence():
+    raw = _raw_lesson(vocabulary=[{"term": "Heliocentric", "definition": "Sun-centered."}])
+    mc = MasterContent.model_validate(raw)
+    assert mc.vocabulary[0].term == "Heliocentric"
+    assert mc.vocabulary[0].context_sentence == ""  # defaulted, no crash
+
+
+def test_drift_primary_source_alias_keys():
+    raw = _raw_lesson(primary_sources=[{
+        "title": "Letter to the Grand Duchess Christina",
+        "author": "Galileo Galilei",
+        "text": "Some years ago, as Your Serene Highness well knows, I discovered...",
+    }])
+    mc = MasterContent.model_validate(raw)
+    ps = mc.primary_sources[0]
+    assert ps.attribution == "Galileo Galilei"   # author -> attribution
+    assert "Some years ago" in ps.content_text   # text -> content_text
+    assert ps.id                                 # id backfilled
+
+
+def test_drift_correct_payload_is_unchanged_noop():
+    """A fully-correct raw payload passes through normalization untouched."""
+    raw = _raw_lesson()
+    mc = MasterContent.model_validate(raw)
+    assert mc.direct_instruction[0].teacher_script == "Say..."
+    assert mc.direct_instruction[0].content == "Body text"
+    assert len(mc.guided_notes) == 1
+    assert mc.guided_notes[0].answer == "center"
+    assert len(mc.exit_ticket) == 1
+    assert mc.exit_ticket[0].stimulus == "Galileo defended heliocentrism."
+    assert mc.differentiation.struggling == ["x"]
