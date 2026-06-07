@@ -111,8 +111,15 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
     # Static files
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
-    # Templates
-    return Jinja2Templates(directory=str(_TEMPLATE_DIR))
+    # Templates. Expose the app version as a Jinja global so templates can
+    # cache-bust static assets (e.g. style.css?v={{ asset_v }}): the URL changes
+    # on every release, so browsers fetch fresh CSS/JS instead of serving stale
+    # cached copies.
+    from clawed import __version__
+
+    templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+    templates.env.globals["asset_v"] = __version__
+    return templates
 
 
 def _register_api_routes(app: FastAPI) -> None:

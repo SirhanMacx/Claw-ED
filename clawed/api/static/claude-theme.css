@@ -155,4 +155,12 @@ a { color: var(--blue); }
         min-height: 44px;
     }
     .ask-chip { padding: 0.5rem 1rem; }
+
+    /* On phones, stack the lesson into one column and float the sidebar
+       (Rate This Lesson / Ask About This Lesson) above the long lesson body so
+       those actions aren't buried at the bottom of a scroll. Flex column (not
+       block/grid) so `order` actually reorders the children. */
+    .lesson-grid { display: flex; flex-direction: column; }
+    .lesson-sidebar { order: -1; margin-bottom: 1.5rem; }
+    .lesson-main { order: 0; }
 }

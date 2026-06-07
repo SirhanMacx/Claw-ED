@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}{{ lesson_data.get('title', 'Lesson') }} — Claw-ED{% endblock %}
 {% block content %}
 <div class="lesson-header">
@@ -7,7 +8,10 @@
         {% if lesson_data.get('standards') %}
         <span class="meta-tag">{{ lesson_data['standards']|join(', ') }}</span>
         {% endif %}
-        <span class="meta-tag">Share: <a href="{{ share_url }}">{{ share_url }}</a></span>
+        {% if not is_shared|default(false) %}
+        <button type="button" class="btn btn-sm btn-icon" id="copy-student-link"
+                data-url="{{ share_url }}">{{ icon('link', 16) }} Copy student link</button>
+        {% endif %}
     </div>
 </div>
 
@@ -138,10 +142,10 @@
         <div class="lesson-actions">
             <h3>Export</h3>
             <div class="btn-group">
-                <a href="/api/export/{{ lesson.id }}?fmt=markdown" class="btn btn-sm">Markdown</a>
-                <a href="/api/export/{{ lesson.id }}?fmt=pdf" class="btn btn-sm">PDF</a>
-                <a href="/api/export/{{ lesson.id }}?fmt=docx" class="btn btn-sm">DOCX</a>
-                <button class="btn btn-sm" onclick="exportClassroom()">Google Classroom</button>
+                <a href="/api/export/{{ lesson.id }}?fmt=markdown" class="btn btn-sm btn-icon">{{ icon('copy', 16) }} Markdown</a>
+                <a href="/api/export/{{ lesson.id }}?fmt=pdf" class="btn btn-sm btn-icon">{{ icon('file-text', 16) }} PDF</a>
+                <a href="/api/export/{{ lesson.id }}?fmt=docx" class="btn btn-sm btn-icon">{{ icon('download', 16) }} DOCX</a>
+                <button class="btn btn-sm btn-icon" onclick="exportClassroom()">{{ icon('upload', 16) }} Google Classroom</button>
             </div>
             <div id="classroom-output" hidden class="classroom-json"></div>
         </div>
@@ -201,13 +205,28 @@
 <script>
 var lessonId = '{{ lesson.id }}';
 
+// Keep an action button visible but disabled with an inline spinner while its
+// request is in flight, then restore its original label. Teachers stay oriented
+// (the button doesn't vanish) and can't double-fire it.
+function setBtnBusy(btn, busy, busyLabel) {
+    if (!btn) return;
+    if (busy) {
+        if (btn.dataset.label === undefined) btn.dataset.label = btn.innerHTML;
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = '<span class="spinner"></span> ' + (busyLabel || 'Working…');
+    } else {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        if (btn.dataset.label !== undefined) { btn.innerHTML = btn.dataset.label; delete btn.dataset.label; }
+    }
+}
+
 function scoreLesson() {
     var btn = document.getElementById('score-btn');
-    var loading = document.getElementById('score-loading');
-    btn.hidden = true;
-    loading.hidden = false;
+    setBtnBusy(btn, true, 'Scoring…');
     fetch('/api/score/' + lessonId).then(function(r){return r.json();}).then(function(data) {
-        loading.hidden = true;
+        setBtnBusy(btn, false);
         if (data.scores) {
             var html = '<div class="score-grid">';
             var dims = ['objective_clarity','do_now_relevance','instruction_depth','differentiation_quality','exit_ticket_alignment','materials_completeness'];
@@ -227,18 +246,15 @@ function scoreLesson() {
             document.getElementById('quality-scores').innerHTML = html;
         }
     }).catch(function(e) {
-        loading.hidden = true;
-        btn.hidden = false;
+        setBtnBusy(btn, false);
     });
 }
 
 function suggestImprovements() {
     var btn = document.getElementById('suggest-btn');
-    var loading = document.getElementById('suggest-loading');
-    btn.hidden = true;
-    loading.hidden = false;
+    setBtnBusy(btn, true, 'Thinking…');
     fetch('/api/suggest/' + lessonId, {method:'POST'}).then(function(r){return r.json();}).then(function(data) {
-        loading.hidden = true;
+        setBtnBusy(btn, false);
         if (data.suggestions) {
             var html = '<ul class="suggestions-list">';
             data.suggestions.forEach(function(s) { html += '<li>' + s + '</li>'; });
@@ -246,8 +262,7 @@ function suggestImprovements() {
             document.getElementById('suggestions-list').innerHTML = html;
         }
     }).catch(function(e) {
-        loading.hidden = true;
-        btn.hidden = false;
+        setBtnBusy(btn, false);
     });
 }
 
@@ -265,7 +280,7 @@ function submitRevision(instruction) {
     }
     status.hidden = true;
     loading.hidden = false;
-    btn.disabled = true;
+    setBtnBusy(btn, true, 'Applying…');
     fetch('/api/improve/' + lessonId, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -278,14 +293,14 @@ function submitRevision(instruction) {
             status.textContent = (data.summary || 'Change applied.') + ' Reloading...';
             window.location.reload();
         } else {
-            btn.disabled = false;
+            setBtnBusy(btn, false);
             status.hidden = false;
             status.className = 'status-box error';
             status.textContent = (data && data.error) ? data.error : 'Could not apply that change.';
         }
     }).catch(function() {
         loading.hidden = true;
-        btn.disabled = false;
+        setBtnBusy(btn, false);
         status.hidden = false;
         status.className = 'status-box error';
         status.textContent = 'Network error. Please try again.';
@@ -323,5 +338,26 @@ function exportClassroom() {
         }
     }).catch(function() {});
 }
+
+// Copy the student-facing share link (the shared URL is path-only on the server,
+// so prepend the current origin for a full, pasteable link).
+(function () {
+    var btn = document.getElementById('copy-student-link');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var url = window.location.origin + btn.getAttribute('data-url');
+        var done = function () {
+            var orig = btn.dataset.label || btn.innerHTML;
+            btn.dataset.label = orig;
+            btn.textContent = 'Copied!';
+            setTimeout(function () { btn.innerHTML = btn.dataset.label; delete btn.dataset.label; }, 1800);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt('Copy this student link:', url); });
+        } else {
+            window.prompt('Copy this student link:', url);
+        }
+    });
+})();
 </script>
 {% endblock %}
