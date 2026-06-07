@@ -73,10 +73,12 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('/api/health').then(function (r) { return r.json(); }).then(function (data) {
             if (data.llm_connected) {
                 statusDot.className = 'status-dot connected';
-                statusText.textContent = 'Connected \u2014 ' + data.llm_model;
+                statusText.textContent = 'Connected';
+                // Keep the model slug for power users, but off the teacher's screen.
+                statusText.title = data.llm_model ? ('Model: ' + data.llm_model) : '';
             } else {
                 statusDot.className = 'status-dot disconnected';
-                statusText.textContent = 'Not connected \u2014 check settings';
+                statusText.textContent = 'Not connected \u2014 add a key in Settings';
             }
         }).catch(function () {
             statusDot.className = 'status-dot disconnected';

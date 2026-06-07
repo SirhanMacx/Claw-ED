@@ -42,6 +42,14 @@
     --input-bg: #FFFFFF;
     --input-border: #D7D2C6;
     --card-bg: #FFFFFF;           /* crisp white cards on cream canvas */
+
+    /* Compat aliases — a few inline styles reference these names. Map them to
+       real theme tokens so they auto-skin (light + dark) and pass contrast,
+       instead of falling back to off-token hardcoded hex. */
+    --text-muted: var(--text-secondary);   /* was undefined -> #8a8a8a (fails AA) */
+    --accent: var(--blue);                  /* clay */
+    --bg-subtle: var(--card-bg);
+
     --code-bg: #2B2722;
     --code-text: #EDE8DC;
     --chart-bar: #C96442;
@@ -125,3 +133,26 @@ a { color: var(--blue); }
     font-size: 0.85rem;
 }
 .key-help .key-cta:hover { background: #B4573A; color: #fff; }
+
+/* ── Audit fixes: off-palette leaks + a11y ──────────────────────────────── */
+
+/* Disabled primary buttons leaked default blue (#93c5fd) on the first screen. */
+.btn-primary:disabled,
+.btn-primary[disabled] {
+    background: #E0B6A6;        /* muted clay tint */
+    border-color: #E0B6A6;
+    color: #fff;
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+/* Star ratings used a saturated amber off the warm palette. */
+.star.active, .star:hover, .fb-rating { color: var(--orange); }
+
+/* Touch targets: teachers open this on a phone via the Mac app's QR/LAN. */
+@media (max-width: 768px) {
+    .btn-sm, .ask-chip, .revise-chip, .quick-action, .chip {
+        min-height: 44px;
+    }
+    .ask-chip { padding: 0.5rem 1rem; }
+}

@@ -64,10 +64,10 @@
         </div>
         {% endif %}
 
-        {% if lesson_data.get('differentiation') %}
+        {% set diff = lesson_data.get('differentiation') or {} %}
+        {% if diff.get('struggling') or diff.get('advanced') or diff.get('ell') %}
         <div class="lesson-section">
             <h3>Differentiation</h3>
-            {% set diff = lesson_data['differentiation'] %}
             {% if diff.get('struggling') %}
             <p><strong>Struggling:</strong> {{ diff['struggling']|join('; ') }}</p>
             {% endif %}
