@@ -64,6 +64,18 @@ a wall. For true plug-and-play, the wizard must guarantee a working provider
    or a guided 1-tap free key) so it *just works* with no setup at all. The
    strongest "miracle" but depends on a reliably-free path.
 
+**Status (verified this cycle):** The web app serves the whole no-terminal path
+end-to-end — `/`, `/generate` (Create), `/settings`, static assets, and the
+health endpoint all return 200, and `/api/health` reports the right
+provider/model with `llm_connected: true`. The detection mechanism that all
+three options need — **`GET /api/onboarding/detect`** — is built, tested, and
+verified serving (it correctly surfaced the configured OpenRouter key as
+"ready to use"). **But nothing in the wizard UI calls it yet** — it's a ready
+backend waiting on the front-end wiring, which lives in the stashed onboarding-
+wizard work and is gated on this decision. In other words: the hard part
+(reliable detection) is done; the remaining work is choosing the flow and
+connecting it.
+
 A capable model is also required for the deep lesson pipeline (structured JSON +
 long output) — the default/recommended provider must clear that bar.
 
