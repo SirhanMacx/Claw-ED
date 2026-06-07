@@ -160,7 +160,13 @@ def _get_persona(db: Database) -> tuple[TeacherPersona | None, str | None]:
     teacher = db.get_default_teacher()
     if not teacher or not teacher.get("persona_json"):
         return None, None
-    persona = TeacherPersona.model_validate_json(teacher["persona_json"])
+    try:
+        persona = TeacherPersona.model_validate_json(teacher["persona_json"])
+    except Exception:
+        logger.error(
+            "Could not parse stored persona — treating as missing", exc_info=True
+        )
+        return None, None
     return persona, teacher["id"]
 
 
@@ -733,7 +739,17 @@ async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1) 
             {"error": "Unit not found."}, status_code=404
         )
 
-    unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    try:
+        unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    except Exception:
+        logger.error(
+            "Could not parse unit %s for lesson stream", unit_id, exc_info=True
+        )
+        return JSONResponse(
+            {"error": "This unit's data is incomplete or from an older format "
+             "and can't be used to generate a lesson."},
+            status_code=400,
+        )
 
     async def event_stream() -> AsyncGenerator[dict[str, str], None]:
         yield _sse(
@@ -863,14 +879,28 @@ async def score_lesson(request: Request, lesson_id: str) -> Any:
             {"error": "Lesson not found."}, status_code=404
         )
 
-    lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error("Could not parse lesson %s for scoring", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and can't be scored."},
+            status_code=400,
+        )
     materials = None
     if lesson_row.get("materials_json"):
         from clawed.models import LessonMaterials
 
-        materials = LessonMaterials.model_validate_json(
-            lesson_row["materials_json"]
-        )
+        try:
+            materials = LessonMaterials.model_validate_json(
+                lesson_row["materials_json"]
+            )
+        except Exception:
+            logger.warning(
+                "Could not parse materials for lesson %s — scoring without them",
+                lesson_id,
+            )
+            materials = None
 
     scorer = LessonQualityScore()
     scores = await scorer.score(lesson, materials)
@@ -894,7 +924,15 @@ async def suggest_improvements_endpoint(request: Request, lesson_id: str) -> Any
             {"error": "Lesson not found."}, status_code=404
         )
 
-    lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error(
+            "Could not parse lesson %s for suggestions", lesson_id, exc_info=True
+        )
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted."}, status_code=400
+        )
 
     # Check for feedback notes
     feedback_list = db.get_feedback_for_lesson(lesson_id)
