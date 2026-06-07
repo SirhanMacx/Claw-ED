@@ -49,17 +49,41 @@ The shortest path to something Jon can actually use phone↔Mac-mini.
       wizard, upload/scratch cards, "Connected" status), **0 console errors**,
       4 responsive `@media` queries + viewport meta. The connect→load→use
       mechanism works; a phone gets the full agent UI. ✅
-- [ ] A2. Add a QR-scanner plugin so pairing is one scan of the Mac's QR (the
-      Mac already renders the LAN-URL QR). Manual entry stays as fallback.
+- [ ] A2. (DEFERRED to a follow-up build) QR-scanner plugin for one-scan
+      pairing. Manual URL entry already works, so it doesn't block the first test.
 - [x] A3. **Done (23ed99e)** — the Mac menu now shows the LAN URL + QR (which
       encodes `NetworkInfo.lanURL`) **only when Share-on-Wi-Fi is on**; with
       sharing off it nudges the teacher to enable it instead of showing a QR
       that can't connect. `swift build` clean. ✅
-- [ ] A4. Rebuild the iOS app (cap sync → Xcode archive → TestFlight) and verify
-      the build is VALID.
-- [ ] A5. Write Jon's test steps (Mac: launch menu-bar app, toggle Share on
-      Wi-Fi, show QR; iPhone: open TestFlight build, scan, use the agent).
+- [x] A4. **Already done — no rebuild needed.** ASC shows TestFlight build **1
+      (VALID, not expired)** for `com.macxlabs.clawed`, uploaded 2026-06-07 after
+      the connect shell was committed; the iOS app has had **zero changes since**,
+      and the local archive that produced it contains `connect.js`. So the
+      current connect-shell app is already installable from TestFlight. ✅
+- [x] A5. Test steps written (below). ✅
 - **Jon tests A:** Mac mini + iPhone on the same Wi-Fi.
+
+### ▶ Jon's test steps — Milestone A (same Wi-Fi)
+**On the Mac mini (serve the agent on the LAN):**
+1. `cd ~/Projects/Claw-ED/mac-app && swift run` → the Claw-ED icon appears in the
+   menu bar. Click it.
+2. Click **Settings** (⌘,) → turn **ON** "Share on my Wi-Fi" (it's off by
+   default). Read the orange warning — anyone on your Wi-Fi can reach it while on.
+3. Back in the menu, click **Start** (or Stop→Start if it was already running) so
+   the server rebinds to the LAN. The menu now shows an **"Open on your phone"**
+   LAN URL + a **QR code**.
+   - *Simplest alt (no menu bar):* `clawed app --host 0.0.0.0 --port 8000`, then
+     get the Mac's IP from System Settings → Wi-Fi (e.g. `192.168.1.42`).
+**On the iPhone (same Wi-Fi):**
+4. Open **TestFlight** → install/open **Claw-ED** (build 1). On the "Connect to
+   your classroom server" screen, type the Mac's LAN URL (e.g.
+   `http://192.168.1.42:8000`) and tap **Connect**. (One-scan QR comes in a
+   follow-up build.)
+5. The phone loads the full Claw-ED agent — chat, generate a lesson, etc., all
+   running on the Mac mini with your files. **That's the prototype.**
+
+> Note: this is **same Wi-Fi only** (LAN). True "on the go" (cellular) is
+> Milestone B (the Tailscale remote bridge), in progress.
 
 ## Milestone B — on-the-go (remote bridge)
 The full vision: control the Mac-mini agent from anywhere.
