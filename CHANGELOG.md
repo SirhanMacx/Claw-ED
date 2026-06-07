@@ -1,5 +1,76 @@
 # Changelog
 
+## Unreleased (v5.16.2026) — 2026-06-06
+
+> Committed on the `claude/app-experience` line; the published package version
+> (`clawed/__init__.py`, `pyproject.toml`) is bumped at release time.
+
+### Added — A no-terminal teacher experience
+
+- **Claude design layer for the web app.** A new `claude-theme.css` re-skins the
+  whole local web app to the warm Anthropic palette (cream canvas, clay accent,
+  serif display) on top of the existing layout — a calmer, teacher-first feel.
+  Backed by a teacher-first design pass that resolved the audit's P1 issues plus
+  key P2/P3 polish.
+- **"Ask your co-teacher" — live streaming.** Type a request in plain English
+  (a hook, a Do Now, three discussion questions, an IEP scaffold) and the answer
+  streams in token-by-token over Server-Sent Events (`/api/ask/stream`), rendered
+  as Markdown (bold, italics, lists, headers), with one-click **Copy** and
+  **Download .md**. Five quick-start chips — Do Now, Hook, Discussion Qs, Exit
+  ticket, Differentiate — prefill the box. Works on any configured provider,
+  including OpenRouter (e.g. `minimax/minimax-m3`) and a fully local Ollama model.
+- **Create flow now offers six artifact types** as pickable cards: Full Unit,
+  Single Lesson, Materials Only, Quiz / Assessment, Differentiate, and Review
+  Game — each wired to its own endpoint (`/api/unit`, `/lesson`, `/materials`,
+  `/quiz`, `/differentiate/{id}`, `/game`). Lessons render in an inline preview.
+- **OpenRouter + Google (Gemini) providers** added to settings alongside
+  Anthropic, OpenAI, and local Ollama, each with bring-your-own-key onboarding —
+  a masked key field, step-by-step "get a key" instructions, and a "stored only
+  on this computer" note. OpenRouter lets a teacher name any model (DeepSeek,
+  MiniMax, Qwen, …) at pay-as-you-go rates.
+- **Mac menu-bar app** (`mac-app/`, SwiftUI). A small, calm launcher that lives
+  in the menu bar (no Dock icon), starts/stops the local Claw-ED server with one
+  click, shows a green health dot, and displays the **local URL**, the **LAN
+  URL**, and a **QR code** so a teacher can open Claw-ED on their phone over the
+  same Wi-Fi. localhost-only by default, no telemetry, and it can only
+  start/stop the known server — never a terminal or arbitrary command.
+- **Narrated educational videos.** A `generate_video` agent tool turns a lesson
+  into slides plus a free neural-TTS voiceover and renders an MP4, fully on your
+  machine.
+
+### Fixed
+
+- **Local Ollama models actually run now.** The local path used the raw
+  `/api/generate` endpoint with a concatenated prompt, so modern instruct/
+  reasoning models (Gemma 4, Qwen, …) returned an empty completion because their
+  chat template was never applied. Switched to `/api/chat` with proper
+  system/user roles, disabled "thinking" output, capped the context window, and
+  enabled JSON mode where needed.
+- **Model routing respects your configured model.** Artifact endpoints that
+  route by tier (game, differentiation, the unit/lesson pipeline) were sending
+  the Ollama-centric default to OpenRouter — an invalid model ID there — so every
+  routed generation 400'd. `resolve_model` now keeps the teacher's configured
+  model for any provider that has no built-in tier map, and OpenRouter's HTTP
+  error body is surfaced instead of an opaque 500.
+- **Status bar shows the real provider state.** The `/api/health` probe now
+  reports the configured provider and model and logs (instead of silently
+  swallowing) any probe failure, so "Not connected" reflects reality.
+
+### Added — Quality & safety
+
+- **Answer-key leakage gate.** Every student-facing document is scanned for an
+  accidentally-leaked answer key before it's delivered.
+
+### Verified
+
+- `ruff check` clean on the changed source.
+- `mypy --strict clawed`: no new errors.
+- Web app exercised end-to-end against OpenRouter (`minimax/minimax-m3`) and a
+  local Ollama model: co-teacher streaming, Create artifact types, settings
+  onboarding, and the health/status bar.
+- iOS TestFlight client and Apple Developer signing are **not** part of this
+  release — see `docs/product/TESTFLIGHT_READINESS.md`.
+
 ## v5.15.2026 — 2026-05-15
 
 ### Hardened — Filesystem Boundaries and Release Trust
