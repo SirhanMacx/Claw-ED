@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#FAF9F5" />
+    <title>Claw-ED</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="connect" role="main">
+      <header class="brand">
+        <div class="mark" aria-hidden="true">C</div>
+        <h1 class="wordmark">Claw-ED</h1>
+        <p class="tagline">Connect to your classroom server.</p>
+      </header>
+
+      <!-- Reconnect card: shown only when a previous URL is remembered. -->
+      <section
+        id="reconnect-card"
+        class="card reconnect"
+        hidden
+        aria-labelledby="reconnect-label"
+      >
+        <p id="reconnect-label" class="card-label">Welcome back</p>
+        <button id="reconnect-btn" class="btn btn-primary reconnect-btn" type="button">
+          <span class="btn-line">Reconnect to</span>
+          <span id="reconnect-url" class="reconnect-url">—</span>
+        </button>
+        <button id="forget-btn" class="btn btn-text" type="button">
+          Use a different server
+        </button>
+      </section>
+
+      <!-- Manual connect form. -->
+      <section id="connect-card" class="card" aria-labelledby="connect-label">
+        <form id="connect-form" novalidate>
+          <label id="connect-label" class="field-label" for="server-url">
+            Server address
+          </label>
+          <p class="field-hint">
+            On your Mac, open the Claw-ED menu-bar app and read the LAN URL (or
+            scan its QR code).
+          </p>
+          <input
+            id="server-url"
+            class="field-input"
+            type="url"
+            inputmode="url"
+            autocomplete="url"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            placeholder="http://192.168.1.42:8000"
+            aria-describedby="connect-error"
+          />
+          <p id="connect-error" class="field-error" role="alert" hidden></p>
+
+          <div class="actions">
+            <button id="connect-btn" class="btn btn-primary" type="submit">
+              Connect
+            </button>
+            <button id="scan-btn" class="btn btn-ghost" type="button">
+              <span class="qr-glyph" aria-hidden="true"></span>
+              Scan QR
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <footer class="foot">
+        <p class="foot-note">
+          Same Wi-Fi only. Your data stays between this device and your Mac —
+          nothing is sent to MacxLabs.
+        </p>
+      </footer>
+    </main>
+
+    <script src="connect.js"></script>
+  </body>
+</html>
