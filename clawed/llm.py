@@ -1023,7 +1023,23 @@ class LLMClient:
                     choices = data.get("choices", [])
                     if not choices:
                         raise RuntimeError("OpenRouter returned an empty response (no choices)")
-                    return str(choices[0].get("message", {}).get("content", "") or "")
+                    msg = choices[0].get("message", {}) or {}
+                    content = str(msg.get("content", "") or "")
+                    if not content.strip() and max_tokens > 64:
+                        # Reasoning models (e.g. minimax-m3) can spend the whole
+                        # max_tokens budget on chain-of-thought and return empty
+                        # content (finish_reason=length). Log a precise diagnostic
+                        # instead of an opaque empty string.
+                        finish = choices[0].get("finish_reason")
+                        reasoning = str(msg.get("reasoning") or msg.get("reasoning_content") or "")
+                        usage = data.get("usage", {})
+                        logger.warning(
+                            "OpenRouter %s empty content: finish_reason=%s "
+                            "reasoning_chars=%d completion_tokens=%s max_tokens=%d",
+                            self.config.openrouter_model, finish, len(reasoning),
+                            usage.get("completion_tokens"), max_tokens,
+                        )
+                    return content
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to OpenRouter. Check your internet connection."

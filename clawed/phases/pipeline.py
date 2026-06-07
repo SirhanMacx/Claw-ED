@@ -32,8 +32,14 @@ _PhaseT = TypeVar("_PhaseT", bound=_PydanticBaseModel)
 logger = logging.getLogger(__name__)
 
 _PROMPT_DIR = Path(__file__).parent / "prompts"
-_PHASE_TIMEOUT_SEC = 240  # 4 minutes per phase (5x shorter than monolith)
+_PHASE_TIMEOUT_SEC = 900  # generous: large projects + full reasoning can run long
 _PHASE_MAX_RETRIES = 2
+# No artificial output cap. A reasoning model (e.g. minimax-m3) needs room for
+# BOTH its full chain-of-thought AND a complete, possibly large, lesson. The old
+# 4000 starved it — it spent the entire budget reasoning and returned empty
+# content (finish_reason=length). Give it real headroom so teachers with big
+# projects get full output and full reasoning.
+_PHASE_MAX_TOKENS = 32000
 
 # Ollama Cloud model fallback chain. When a phase fails repeatedly on the
 # configured model, we rotate through these alternatives automatically.
@@ -280,7 +286,7 @@ async def _run_phase(
                             model_class=model_class,
                             system=system,
                             temperature=0.6,
-                            max_tokens=4000,
+                            max_tokens=_PHASE_MAX_TOKENS,
                         ),
                         timeout=_PHASE_TIMEOUT_SEC,
                     )
