@@ -45,9 +45,16 @@ need Jon's product judgment are flagged.
 - **Runs on a free model** (`nvidia/nemotron-3-super-120b-a12b:free`) — proof
   that a teacher needs no paid key to get real output.
 
-## ⚠️ Open product decision (Jon) — the #1 plug-and-play gap
-The first-run **web wizard** (`/`, `index.html`) flows Welcome → Upload‑files‑or‑
-describe‑style → Persona → **Generate** — but it **never sets up an AI provider**.
+## ✅ RESOLVED — the #1 plug-and-play gap (shipped 08f806e)
+Jon's call (delegated): **inline setup step + auto-detect**. The wizard now routes
+through a "Connect your AI" step before the setup path, auto-detecting a ready
+provider (Ollama / configured key) via `/api/onboarding/detect` and otherwise
+showing a provider chooser with per-provider key entry — and advancing is gated
+on a real tested connection, so Generate is never reachable unconfigured. The
+remaining options below are kept for context / alpha refinement.
+
+The original gap, for the record: the first-run **web wizard** flowed Welcome →
+Upload‑files‑or‑describe‑style → Persona → **Generate** — but it **never set up an AI provider**.
 Provider/key setup lives only in **Settings** (a small link in Step 1). So a fresh
 teacher can reach "Generate Your First Lesson" with no provider connected and hit
 a wall. For true plug-and-play, the wizard must guarantee a working provider
@@ -83,11 +90,21 @@ long output) — the default/recommended provider must clear that bar.
 - [x] (e) Lesson-output quality pass (humanities) — judged two real, ingested-
       source lessons; both read like a master teacher's and match the teacher's
       style. ✅
-- [ ] (e2) **Generalization** — verify quality holds for a *non-humanities*
-      subject/grade (science or math). Both lessons proven so far are document-
-      based Global History. Ingest a different-subject corpus and judge whether
-      the pipeline adapts (or over-imposes CRQ/primary-source structure where it
-      doesn't fit). The "any subject, any grade" promise hinges on this.
+- [x] (e2) **Generalization — PASSED.** Ingested a real Economics corpus (23
+      quantitative files: demand, elasticity, supply, equilibrium, GDP) and
+      generated a "Price Elasticity of Demand" lesson. It adapted at BOTH layers,
+      with NO CRQ/primary-source over-imposition:
+      • Persona learned an econ-native framework — **"TEG (Term-Example-Graph)"**
+        centered on *curves*, MC-with-data-tables + graphing assessments, Fed/NCEE
+        sources — nothing like the Global-History CRQ persona.
+      • Lesson taught the actual **midpoint formula**, total-revenue test, and six
+        determinants; used real CBO/AAA elasticity data; a numerical-calculation
+        exit ticket; and "primary sources" intelligently re-read as econ-relevant
+        (Marshall 1890 — the origin of elasticity — + a Reuters gas-tax article),
+        not forced history documents. Standards: AP Macro 1.6 / NCEE.
+      Caveat: one subject, and still Jon's own materials. A pure-STEM test
+      (chem lab / symbolic algebra) and a different teacher would harden it
+      further — but the over-imposition failure mode did NOT occur.
 - [~] (e3) **Voice-match score** — root cause found + fixed: the CLI showed a
       constant "3.0/5.0" because it called `score_voice_match` WITHOUT an LLM
       client (the neutral fallback). Now wired to the real model (commit
