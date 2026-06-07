@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.launcherPath) private var launcherPath = ""
     @AppStorage(SettingsKey.port) private var port = ClawED.defaultPort
     @AppStorage(SettingsKey.autoOpenOnStart) private var autoOpen = true
+    @AppStorage(SettingsKey.shareOnLan) private var shareOnLan = false
 
     @State private var detected: String = "Checking…"
 
@@ -47,10 +48,20 @@ struct SettingsView: View {
                     LabeledContent("Port", value: String(port))
                 }
                 Toggle("Open my browser when Claw-ED is ready", isOn: $autoOpen)
+                Toggle("Share on my Wi-Fi (open from my phone)", isOn: $shareOnLan)
+                if shareOnLan {
+                    Text("⚠︎ While this is on, anyone on your Wi-Fi can open Claw-ED. "
+                         + "Only use it on a network you trust — scan the QR code in the "
+                         + "menu to open it on your phone. Restart Claw-ED after changing this.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
             } header: {
                 Text("Server")
             } footer: {
-                Text("Claw-ED runs only on this computer (127.0.0.1). No data leaves your machine, and there’s no telemetry.")
+                Text(shareOnLan
+                     ? "Shared on your local Wi-Fi. Turn this off to keep Claw-ED on this computer only."
+                     : "Claw-ED runs only on this computer (127.0.0.1). No data leaves your machine, and there’s no telemetry.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

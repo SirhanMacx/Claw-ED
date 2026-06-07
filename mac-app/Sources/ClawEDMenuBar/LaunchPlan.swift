@@ -87,7 +87,12 @@ struct LaunchPlan {
     private static func clawedPlan(executable: URL, port: Int, environment: [String: String]) -> LaunchPlan {
         // `clawed app --port <port>` — `--no-open` because the Mac app opens
         // the browser itself (only once the server is verified healthy).
-        let args = ["app", "--port", String(port), "--no-open"]
+        var args = ["app", "--port", String(port), "--no-open"]
+        // Opt-in LAN sharing: bind 0.0.0.0 so a phone on the same Wi-Fi can
+        // open the QR/LAN URL. Off by default (loopback-only).
+        if UserDefaults.standard.clawedShareOnLan {
+            args += ["--host", "0.0.0.0"]
+        }
         return LaunchPlan(
             executableURL: executable,
             arguments: args,
@@ -100,8 +105,10 @@ struct LaunchPlan {
         // The documented module fallback drives `main()` with argv ['clawed','app'].
         // `clawed app` reads the port from --port; the entry router forwards
         // argv to the typer app, so we append the port flag to argv too.
+        // Opt-in LAN sharing mirrors the console-script path (bind 0.0.0.0).
+        let hostArgs = UserDefaults.standard.clawedShareOnLan ? ",'--host','0.0.0.0'" : ""
         let code =
-            "import sys; sys.argv=['clawed','app','--port','\(port)','--no-open']; " +
+            "import sys; sys.argv=['clawed','app','--port','\(port)','--no-open'\(hostArgs)]; " +
             "from clawed._entry_router import main; main()"
         let args = ["-c", code]
         return LaunchPlan(

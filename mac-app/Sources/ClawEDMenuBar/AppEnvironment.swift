@@ -40,6 +40,11 @@ enum SettingsKey {
 
     /// Whether to automatically open the browser when the server reports healthy.
     static let autoOpenOnStart = "clawed.autoOpenOnStart"
+
+    /// Whether to bind the server to the LAN (0.0.0.0) so other devices on the
+    /// same Wi-Fi (e.g. the teacher's phone, via the QR code) can open it.
+    /// Off by default — this is opt-in network exposure.
+    static let shareOnLan = "clawed.shareOnLan"
 }
 
 extension UserDefaults {
@@ -58,6 +63,12 @@ extension UserDefaults {
     var clawedAutoOpenOnStart: Bool {
         // Default true on first run (object(forKey:) is nil ⇒ teacher-friendly).
         object(forKey: SettingsKey.autoOpenOnStart) as? Bool ?? true
+    }
+
+    /// Whether to share the app on the local Wi-Fi (bind 0.0.0.0). Defaults to
+    /// false — opt-in network exposure, surfaced with a warning in Settings.
+    var clawedShareOnLan: Bool {
+        bool(forKey: SettingsKey.shareOnLan)
     }
 }
 
