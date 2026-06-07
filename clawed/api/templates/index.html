@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Claw-ED — AI Co-Teacher{% endblock %}
 {% block content %}
 
@@ -42,16 +43,17 @@
             <p class="hero-sub">Claw-ED learns from your existing materials and generates lessons, units, and worksheets in your exact teaching voice.</p>
             <div class="wizard-paths">
                 <button class="wizard-path-btn" id="path-upload">
-                    <span class="path-icon">&#128193;</span>
+                    <span class="path-icon">{{ icon('upload', 34) }}</span>
                     <strong>I have lesson plan files to upload</strong>
                     <span class="path-desc">Upload PDFs, DOCX, PPTX, or other files</span>
                 </button>
                 <button class="wizard-path-btn" id="path-scratch">
-                    <span class="path-icon">&#9997;</span>
+                    <span class="path-icon">{{ icon('pencil', 34) }}</span>
                     <strong>I'll start from scratch</strong>
                     <span class="path-desc">Tell us about your teaching style</span>
                 </button>
             </div>
+            <p class="muted">First time? You'll connect a free or low-cost AI provider in <a href="/settings">Settings</a> (about 2 minutes).</p>
             <div class="wizard-demo-preview">
                 <p class="demo-label">See what Claw-ED can create:</p>
                 <div class="demo-placeholder">
@@ -69,7 +71,7 @@
         <p class="wizard-desc">Drop your lesson plans, worksheets, slides, or notes here</p>
         <form id="wizard-upload-form" enctype="multipart/form-data">
             <div class="upload-zone upload-zone-lg" id="wizard-upload-zone">
-                <span class="upload-icon">&#128228;</span>
+                <span class="upload-icon">{{ icon('upload', 40) }}</span>
                 <p class="upload-text">Drag &amp; drop files here, or click to browse</p>
                 <p class="upload-formats">PDF, DOCX, PPTX, TXT, Markdown, ZIP</p>
                 <input type="file" id="wizard-file-input" name="files" multiple accept=".pdf,.docx,.pptx,.txt,.md,.zip" hidden>
@@ -131,7 +133,7 @@
         <h2>Here's What Claw-ED Learned About You</h2>
         <div class="persona-card" id="persona-card">
             <div class="persona-card-header">
-                <span class="persona-avatar">&#127891;</span>
+                <span class="persona-avatar">{{ icon('users', 30) }}</span>
                 <h3 id="persona-name-display">Your Teaching Persona</h3>
             </div>
             <div class="persona-tags" id="persona-tags"></div>
@@ -221,7 +223,7 @@
     {# ── Step 5: Success ──────────────────────────────────────── #}
     <div class="wizard-panel" id="step-5">
         <div class="wizard-success">
-            <div class="success-emoji">&#127881;</div>
+            <div class="success-emoji">{{ icon('sparkles', 44) }}</div>
             <h2>Your first lesson is ready!</h2>
             <div class="action-cards">
                 <a href="#" class="action-card" id="success-export">

@@ -385,6 +385,23 @@ body {
 .wizard-next-hint { margin-top: 1.5rem; color: var(--text-secondary); font-size: 0.9rem; }
 .wizard-next-hint a { color: var(--blue); }
 
+/* ── Inline line-icons (from _icons.html) ────────────────────
+   Replace OS emoji with consistent currentColor SVGs. Inside buttons/text they
+   sit on the baseline; inside the big "icon" containers they scale up + tint. */
+.ui-icon { vertical-align: -0.15em; flex-shrink: 0; }
+.btn .ui-icon, .btn-icon .ui-icon { vertical-align: -0.18em; }
+/* Onboarding + persona + success: tint to clay and inherit the slot's size. */
+.path-icon .ui-icon,
+.upload-zone-lg .upload-icon .ui-icon,
+.persona-avatar .ui-icon,
+.success-emoji .ui-icon { color: var(--blue); display: block; margin: 0 auto; vertical-align: middle; }
+.path-icon, .persona-avatar { line-height: 1; }
+.success-emoji { line-height: 1; }
+
+/* Muted helper text (first-run hints, intros). */
+.muted { color: var(--text-secondary); font-size: 0.9rem; }
+.muted a { color: var(--blue); }
+
 /* ── Settings Page ───────────────────────────────────────── */
 .page-title { margin-bottom: 2rem; color: var(--text-heading); }
 .settings-section {
@@ -395,6 +412,19 @@ body {
 .settings-section:last-child { border-bottom: none; }
 .settings-section h2 { margin-bottom: 1rem; font-size: 1.2rem; color: var(--text-heading); }
 .settings-divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+/* Intro line under the Settings H1 (pulls up under the title, which has a 2rem gap). */
+.settings-intro { margin: -1.25rem 0 1.75rem; max-width: 60ch; line-height: 1.55; }
+
+/* Sticky Save bar — the form is long; keep Save reachable while scrolling. */
+.settings-save-bar {
+    position: sticky;
+    bottom: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 0.85rem;
+    background: linear-gradient(to top, var(--bg) 65%, transparent);
+    z-index: 5;
+}
 
 /* Radio cards for provider selection */
 .radio-group {
@@ -923,7 +953,8 @@ body {
 }
 .type-card:hover { border-color: var(--blue); box-shadow: var(--shadow-md); }
 .type-card.selected { border-color: var(--blue); background: var(--blue-light); }
-.type-card-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+.type-card-icon { font-size: 2rem; margin-bottom: 0.5rem; line-height: 1; }
+.type-card-icon svg { width: 34px; height: 34px; color: var(--blue); }
 .type-card h3 { font-size: 1rem; color: var(--text-heading); margin-bottom: 0.25rem; }
 .type-card p { font-size: 0.8rem; color: var(--text-secondary); }
 

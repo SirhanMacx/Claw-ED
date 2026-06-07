@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Generate — Claw-ED{% endblock %}
 {% block breadcrumbs %}
 <div class="breadcrumbs"><div class="container"><a href="/">Home</a><span class="sep">/</span>Generate</div></div>
@@ -76,37 +77,37 @@
         <p style="color: var(--text-secondary); margin-bottom: 1rem;">What would you like to create?</p>
         <div class="type-picker">
             <div class="type-card" data-type="full" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128218;</div>
+                <div class="type-card-icon">{{ icon('book') }}</div>
                 <h3>Full Unit</h3>
                 <p>Unit plan + all lessons + materials</p>
             </div>
             <div class="type-card" data-type="lesson" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128196;</div>
+                <div class="type-card-icon">{{ icon('file-text') }}</div>
                 <h3>Single Lesson</h3>
                 <p>One lesson plan with activities</p>
             </div>
             <div class="type-card" data-type="materials" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128221;</div>
+                <div class="type-card-icon">{{ icon('layers') }}</div>
                 <h3>Materials Only</h3>
                 <p>Worksheet, assessment, rubric</p>
             </div>
             <div class="type-card" data-type="sub-packet" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128188;</div>
+                <div class="type-card-icon">{{ icon('briefcase') }}</div>
                 <h3>Sub Packet</h3>
                 <p>Substitute teacher packet</p>
             </div>
             <div class="type-card" data-type="quiz" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#9989;</div>
+                <div class="type-card-icon">{{ icon('clipboard-check') }}</div>
                 <h3>Quiz / Assessment</h3>
                 <p>Auto-built quiz with answer key</p>
             </div>
             <div class="type-card" data-type="differentiate" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#129309;</div>
+                <div class="type-card-icon">{{ icon('users') }}</div>
                 <h3>Differentiate</h3>
                 <p>Adapt a lesson: struggling, advanced, ELL, IEP</p>
             </div>
             <div class="type-card" data-type="game" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#127918;</div>
+                <div class="type-card-icon">{{ icon('gamepad') }}</div>
                 <h3>Review Game</h3>
                 <p>Interactive HTML game students can play</p>
             </div>
@@ -240,11 +241,11 @@
                 </div>
 
                 <div class="export-row">
-                    <button class="btn btn-sm btn-icon copy-btn" onclick="copyGenOutput()">&#128203; Copy All</button>
-                    <a class="btn btn-sm btn-icon" id="export-pdf" href="#" target="_blank">&#128196; PDF</a>
-                    <a class="btn btn-sm btn-icon" id="export-docx" href="#" target="_blank">&#128462; DOCX</a>
-                    <button class="btn btn-sm btn-icon" id="export-classroom" onclick="exportClassroom()">&#127891; Google Classroom</button>
-                    <button class="btn btn-sm btn-icon" id="export-share" onclick="copyShareLink()">&#128279; Share Link</button>
+                    <button class="btn btn-sm btn-icon copy-btn" onclick="copyGenOutput()">{{ icon('copy', 18) }} Copy All</button>
+                    <a class="btn btn-sm btn-icon" id="export-pdf" href="#" target="_blank">{{ icon('file-text', 18) }} PDF</a>
+                    <a class="btn btn-sm btn-icon" id="export-docx" href="#" target="_blank">{{ icon('download', 18) }} DOCX</a>
+                    <button class="btn btn-sm btn-icon" id="export-classroom" onclick="exportClassroom()">{{ icon('upload', 18) }} Google Classroom</button>
+                    <button class="btn btn-sm btn-icon" id="export-share" onclick="copyShareLink()">{{ icon('link', 18) }} Share Link</button>
                 </div>
 
                 <div style="margin-top: 1rem;">
@@ -268,6 +269,13 @@
 
 {% block scripts %}
 <script>
+// Inline icon markup for JS-built buttons (kept in sync with _icons.html via the
+// server-rendered macro; |tojson makes each a safe JS string literal).
+var UI_ICON = {
+    copy: {{ icon('copy', 18)|tojson }},
+    gamepad: {{ icon('gamepad', 18)|tojson }},
+    fileText: {{ icon('file-text', 16)|tojson }}
+};
 var genState = { type: 'full', unitId: null, lessonIds: [] };
 
 // Load lesson templates
@@ -592,7 +600,8 @@ async function runSimpleGen(type) {
             var open = document.createElement('a');
             open.className = 'btn btn-primary'; open.href = data.game_url;
             open.target = '_blank'; open.rel = 'noopener';
-            open.innerHTML = '&#127918; Open Game';
+            open.classList.add('btn-icon');
+            open.innerHTML = UI_ICON.gamepad + ' Open Game';
             simpleActions.appendChild(open);
             simpleOut.textContent = 'Game file: ' + (data.filename || '') +
                 '\nOpen it in a new tab, then save or share the link with students.';
@@ -612,7 +621,7 @@ async function runSimpleGen(type) {
                 var pdf = document.createElement('a');
                 pdf.className = 'btn btn-sm btn-icon';
                 pdf.href = '/api/export/' + data.lesson_id + '?fmt=pdf';
-                pdf.target = '_blank'; pdf.innerHTML = '&#128196; PDF';
+                pdf.target = '_blank'; pdf.classList.add('btn-icon'); pdf.innerHTML = UI_ICON.fileText + ' PDF';
                 simpleActions.appendChild(pdf);
             }
             simpleOut.textContent = JSON.stringify(data.lesson, null, 2);
@@ -632,11 +641,11 @@ function addCopyBtn(container, sourceEl) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-sm btn-icon';
-    btn.innerHTML = '&#128203; Copy';
+    btn.innerHTML = UI_ICON.copy + ' Copy';
     btn.addEventListener('click', function() {
         navigator.clipboard.writeText(sourceEl.textContent).then(function() {
             btn.innerHTML = '&#10003; Copied!';
-            setTimeout(function() { btn.innerHTML = '&#128203; Copy'; }, 2000);
+            setTimeout(function() { btn.innerHTML = UI_ICON.copy + ' Copy'; }, 2000);
         });
     });
     container.appendChild(btn);
@@ -649,7 +658,7 @@ function copyGenOutput() {
         var btn = document.querySelector('.copy-btn');
         btn.classList.add('copied');
         btn.innerHTML = '&#10003; Copied!';
-        setTimeout(function() { btn.classList.remove('copied'); btn.innerHTML = '&#128203; Copy All'; }, 2000);
+        setTimeout(function() { btn.classList.remove('copied'); btn.innerHTML = UI_ICON.copy + ' Copy All'; }, 2000);
     });
 }
 
@@ -750,7 +759,13 @@ function copyShareLink() {
     async function ask() {
         var q = (input.value || '').trim();
         if (!q || busy) return;
-        busy = true; btn.disabled = true; btn.style.opacity = '0.6';
+        busy = true; btn.disabled = true;
+        // Keep the button visible + disabled with an inline spinner while in flight.
+        btn.dataset.label = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner"></span> Asking…';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '.4rem';
         out.hidden = false; out.textContent = '';
         var actsEl = document.getElementById('ask-actions');
         if (actsEl) actsEl.hidden = true;
@@ -800,6 +815,7 @@ function copyShareLink() {
                 '. Check your provider / API key in Settings.';
         } finally {
             busy = false; btn.disabled = false; btn.style.opacity = '1';
+            if (btn.dataset.label !== undefined) { btn.innerHTML = btn.dataset.label; delete btn.dataset.label; }
         }
     }
 

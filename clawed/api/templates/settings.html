@@ -1,16 +1,18 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Settings — Claw-ED{% endblock %}
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
     <div class="container">
-        <a href="/">Home</a> &rsaquo; <span>Settings</span>
+        <a href="/">Home</a><span class="sep">/</span><span>Settings</span>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <h1 class="page-title">Settings</h1>
+<p class="muted settings-intro">Connect an AI provider so Claw-ED can write in your voice. Your API key stays on this computer &mdash; pick a provider below, paste a key, and Save. It takes about 2 minutes.</p>
 
 {# ── LLM Provider ───────────────────────────────────────────── #}
 <section class="settings-section">
@@ -62,7 +64,7 @@
                         <li>Paste it in the box above and click <strong>Save Settings</strong>. (It starts with <code>sk-ant-</code>.)</li>
                     </ol>
                     <a class="key-cta" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get an Anthropic key &rarr;</a>
-                    <span class="key-note">&#128274; Your key is stored only on this computer and is sent only to Anthropic to write your lessons &mdash; never to us. Anthropic is pay-as-you-go; a typical lesson costs only a few cents.</span>
+                    <span class="key-note">{{ icon('lock', 14) }}Your key is stored only on this computer and is sent only to Anthropic to write your lessons &mdash; never to us. Anthropic is pay-as-you-go; a typical lesson costs only a few cents.</span>
                 </div>
             </div>
             <div class="form-group">
@@ -91,7 +93,7 @@
                         <li>Paste it above and click <strong>Save Settings</strong>. (It starts with <code>sk-</code>.)</li>
                     </ol>
                     <a class="key-cta" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key &rarr;</a>
-                    <span class="key-note">&#128274; Stored only on this computer; sent only to OpenAI.</span>
+                    <span class="key-note">{{ icon('lock', 14) }}Stored only on this computer; sent only to OpenAI.</span>
                 </div>
             </div>
             <div class="form-group">
@@ -131,7 +133,7 @@
                         <li>Paste it above, type a model slug in the box below, and click <strong>Save Settings</strong>. (It starts with <code>sk-or-</code>.)</li>
                     </ol>
                     <a class="key-cta" href="https://openrouter.ai/keys" target="_blank" rel="noopener">Get an OpenRouter key &rarr;</a>
-                    <span class="key-note">&#128274; Your key is stored only on this computer and is sent only to OpenRouter to write your lessons &mdash; never to us. OpenRouter routes to any model you name, so you can run open or Chinese models (e.g. DeepSeek, MiniMax, Qwen) at their pay-as-you-go rates.</span>
+                    <span class="key-note">{{ icon('lock', 14) }}Your key is stored only on this computer and is sent only to OpenRouter to write your lessons &mdash; never to us. OpenRouter routes to any model you name, so you can run open or Chinese models (e.g. DeepSeek, MiniMax, Qwen) at their pay-as-you-go rates.</span>
                 </div>
             </div>
             <div class="form-group">
@@ -157,7 +159,7 @@
                         <li>Paste it above and click <strong>Save Settings</strong>. (It starts with <code>AIza</code>.)</li>
                     </ol>
                     <a class="key-cta" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a Google Gemini key &rarr;</a>
-                    <span class="key-note">&#128274; Your key is stored only on this computer and is sent only to Google to write your lessons &mdash; never to us. Gemini offers a generous free tier plus low pay-as-you-go pricing.</span>
+                    <span class="key-note">{{ icon('lock', 14) }}Your key is stored only on this computer and is sent only to Google to write your lessons &mdash; never to us. Gemini offers a generous free tier plus low pay-as-you-go pricing.</span>
                 </div>
             </div>
             <div class="form-group">
@@ -265,7 +267,9 @@
         </div>
 
         <div id="settings-save-status" class="status-box" hidden></div>
-        <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
+        <div class="settings-save-bar">
+            <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
+        </div>
     </form>
 </section>
 
