@@ -410,21 +410,26 @@ async def create_game(request: Request, req: GameRequest) -> Any:
     HTML game is written to the output directory; we return a URL that
     serves it via ``GET /api/game/file``.
     """
+    from types import SimpleNamespace
+
     from clawed.compile_game import compile_game
-    from clawed.master_content import MasterContent
 
     db = get_db()
     persona, _ = _get_persona(db)
 
-    # compile_game accepts MasterContent or any object exposing the lesson
-    # fields it reads. A minimal stub is sufficient — the compiler fills the
-    # rest with defaults (matching the agent_core game tool).
-    master = MasterContent(  # type: ignore[call-arg]
+    # compile_game reads a handful of lesson fields off ``master`` (title,
+    # objective, subject, grade_level, topic, vocabulary, plus a few optional
+    # getattr() ones). A full MasterContent has 10 required fields including a
+    # nested DoNow — overkill for a standalone game and brittle if that schema
+    # shifts — so pass a lightweight duck-typed stub exposing exactly what the
+    # compiler reads. (This is what the endpoint always intended.)
+    master = SimpleNamespace(
         title=f"{req.topic} Review Game",
         subject=req.subject,
         grade_level=req.grade_level,
         topic=req.topic,
         objective=f"Review and reinforce {req.topic} concepts",
+        vocabulary=[],
     )
 
     try:

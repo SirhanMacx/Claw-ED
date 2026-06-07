@@ -1014,7 +1014,11 @@ class LLMClient:
                             "max_tokens": max_tokens,
                         },
                     )
-                    resp.raise_for_status()
+                    if resp.status_code >= 400:
+                        detail = resp.text[:600]
+                        raise ConnectionError(
+                            f"OpenRouter request failed ({resp.status_code}): {detail}"
+                        )
                     data = resp.json()
                     choices = data.get("choices", [])
                     if not choices:
