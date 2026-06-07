@@ -341,3 +341,213 @@ a { color: var(--blue); }
     .gen-live-sub { font-size: 0.88rem; }
     .gen-phase { font-size: 0.9rem; }
 }
+
+/* ============================================================================
+   Connect your AI — first-run wizard step 2.
+   The make-or-break moment: a teacher auto-detects or picks a provider, pastes
+   a key, and is connected. Calm cream surfaces, clay accent, serif headings.
+   ========================================================================== */
+/* The [hidden] attribute is how the wizard JS toggles these blocks. A bare
+   `display:flex/grid` on an element beats the UA `[hidden]{display:none}` rule,
+   so re-assert it for everything in this step. */
+#step-connect [hidden] { display: none !important; }
+
+.connect-head { text-align: center; margin-bottom: 1.5rem; }
+.connect-head h2 { color: var(--text-heading); margin-bottom: 0.4rem; }
+.connect-head .wizard-desc { max-width: 46ch; margin: 0 auto; }
+
+/* Detecting shimmer line */
+.connect-detecting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.6rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+.connect-spinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--blue);
+    animation: connectSpin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes connectSpin { to { transform: rotate(360deg); } }
+
+/* The "magic" detected card */
+.connect-magic-card {
+    position: relative;
+    background: var(--card-bg);
+    border: 1.5px solid var(--blue);
+    border-radius: 16px;
+    padding: 1.6rem 1.5rem 1.4rem;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    overflow: hidden;
+}
+.connect-magic-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--chart-bar-alt, #E0A685));
+}
+.connect-magic-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--blue-light);
+    color: var(--blue);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+}
+.connect-magic-badge .ui-icon { color: var(--blue); }
+.connect-magic-card h3 {
+    font-family: var(--font-serif);
+    color: var(--text-heading);
+    font-size: 1.3rem;
+    margin-bottom: 0.4rem;
+}
+.connect-magic-note {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin: 0 auto 1.25rem;
+    max-width: 42ch;
+}
+.connect-magic-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+.connect-magic-actions .btn-lg { width: auto; min-width: 240px; }
+.connect-other-btn {
+    background: transparent;
+    border: none;
+    color: var(--blue);
+    font-weight: 600;
+    text-decoration: underline;
+    padding: 0.3rem;
+    cursor: pointer;
+}
+.connect-other-btn:hover { color: #B4573A; }
+
+/* Provider chooser */
+.connect-chooser-label {
+    font-weight: 600;
+    color: var(--text-heading);
+    margin-bottom: 0.75rem;
+}
+.connect-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+.connect-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.35rem;
+    padding: 0.95rem 1.05rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+.connect-card:hover { border-color: var(--blue); box-shadow: var(--shadow-md); }
+.connect-card.active { border-color: var(--blue); background: var(--blue-light); }
+.connect-card-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.connect-card-top strong { color: var(--text-heading); font-size: 1rem; }
+.connect-card-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+}
+.connect-tag-free { color: var(--green); background: rgba(62, 124, 85, 0.10); border-color: rgba(62, 124, 85, 0.35); }
+.connect-tag-local { color: var(--blue); background: var(--blue-light); border-color: rgba(201, 100, 66, 0.35); }
+.connect-card-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; }
+
+/* Per-provider connect form */
+.connect-form-wrap {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    margin-top: 0.25rem;
+}
+.connect-form .form-group { margin-top: 1rem; }
+.connect-form-actions { margin-top: 1.25rem; }
+.connect-form-actions .btn-lg { width: auto; min-width: 200px; }
+
+/* Success state */
+.connect-success {
+    text-align: center;
+    background: var(--card-bg);
+    border: 1.5px solid var(--green);
+    border-radius: 16px;
+    padding: 1.8rem 1.5rem;
+    box-shadow: var(--shadow-md);
+}
+.connect-success-check {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(62, 124, 85, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.6rem;
+}
+.connect-success-check .ui-icon { color: var(--green); }
+.connect-success h3 {
+    font-family: var(--font-serif);
+    color: var(--text-heading);
+    font-size: 1.35rem;
+    margin-bottom: 0.4rem;
+}
+.connect-success-note {
+    color: var(--text-secondary);
+    font-size: 0.93rem;
+    line-height: 1.55;
+    max-width: 44ch;
+    margin: 0 auto 1.3rem;
+}
+.connect-success .btn-lg { width: auto; min-width: 200px; }
+.connect-reconnect-btn {
+    display: block;
+    margin: 0.7rem auto 0;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.connect-reconnect-btn:hover { color: var(--blue); }
+
+/* Inline status inside the magic card */
+#connect-detected-status.status-inline { margin-top: 0.9rem; text-align: left; }
+
+@media (max-width: 768px) {
+    .connect-cards { grid-template-columns: 1fr; }
+    .connect-magic-actions .btn-lg,
+    .connect-form-actions .btn-lg,
+    .connect-success .btn-lg { width: 100%; min-width: 0; }
+}
