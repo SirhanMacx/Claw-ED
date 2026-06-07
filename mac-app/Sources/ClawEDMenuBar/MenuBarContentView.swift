@@ -18,6 +18,7 @@ struct MenuBarContentView: View {
     @Environment(\.openURL) private var openURL
 
     private var autoOpen: Bool { UserDefaults.standard.clawedAutoOpenOnStart }
+    private var shareOnLan: Bool { UserDefaults.standard.clawedShareOnLan }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -134,11 +135,16 @@ struct MenuBarContentView: View {
                        url: server.localURL,
                        systemImage: "desktopcomputer")
 
-            if let lan = server.lanURL {
-                Divider().padding(.vertical, 2)
-                Text("Open on your phone (same Wi-Fi)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+            // Phone access only works when LAN sharing is ON (server bound to
+            // 0.0.0.0). Showing a QR that points at a localhost-only server
+            // would just fail to connect, so we only render the address + QR
+            // when sharing is on; otherwise we nudge the teacher to enable it.
+            Divider().padding(.vertical, 2)
+            Text("Open on your phone (same Wi-Fi)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if shareOnLan, let lan = server.lanURL {
                 addressRow(label: lan.absoluteString,
                            url: lan,
                            systemImage: "iphone")
@@ -147,15 +153,17 @@ struct MenuBarContentView: View {
                     Spacer()
                     VStack(spacing: 6) {
                         QRCodeView(string: lan.absoluteString, side: 150)
-                        Text("Scan with your phone’s camera")
+                        Text("Scan with the Claw-ED app on your phone")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
                 .padding(.top, 4)
-
-                Text("Phone access needs LAN sharing on. By default Claw-ED stays private to this computer — turn on sharing in Settings only if you want phones to connect.")
+            } else {
+                Text(shareOnLan
+                     ? "Couldn’t find a Wi-Fi/Ethernet address on this Mac. Connect to a network and reopen this menu."
+                     : "Turn on “Share on my Wi-Fi” in Settings to show a QR code your phone can scan. It’s off by default — Claw-ED stays private to this computer until you enable it.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
