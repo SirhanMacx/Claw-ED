@@ -6,7 +6,8 @@
   "server": {
     "androidScheme": "https",
     "iosScheme": "capacitor",
-    "cleartext": true
+    "cleartext": true,
+    "allowNavigation": ["*"]
   },
   "ios": {
     "contentInset": "always",
