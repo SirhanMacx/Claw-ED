@@ -1,0 +1,25 @@
+# ── Claw-ED iOS (Capacitor) ignores ──────────────────────────────────
+# Everything below is regenerable from the committed config + web source:
+#   npm install && npx cap sync ios && (cd ios/App && pod install)
+
+# Node
+node_modules/
+package-lock.json
+
+# Capacitor-synced / regenerable native bits
+ios/App/Pods/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/capacitor-cordova-ios-plugins/
+
+# Xcode build output + per-user state
+ios/App/build/
+ios/App/DerivedData/
+**/*.xcuserstate
+**/xcuserdata/
+
+# Local export/build artifacts (IPA, archive, logs). Also caught by root build/.
+build/
+
+# One-off migration backup
+capacitor.config.ts.bak
