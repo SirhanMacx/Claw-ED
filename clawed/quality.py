@@ -174,7 +174,12 @@ async def score_voice_match(
     try:
         import json as _json
 
-        raw = await llm_client.generate(prompt, temperature=0.2, max_tokens=200)
+        # Generous budget: reasoning models (e.g. minimax-m3) spend tokens on
+        # hidden reasoning BEFORE emitting the tiny score JSON. A 200-token cap
+        # let reasoning consume the whole budget → empty content → a misleading
+        # constant 3.0. Actual output here is ~30 tokens, so the real cost stays
+        # tiny; the cap only needs to be large enough not to starve reasoning.
+        raw = await llm_client.generate(prompt, temperature=0.2, max_tokens=8000)
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")[1:]
