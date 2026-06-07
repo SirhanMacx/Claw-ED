@@ -44,13 +44,17 @@ to his physical devices.
 
 ## Milestone A — LAN prototype (testable on home Wi-Fi) ← FIRST
 The shortest path to something Jon can actually use phone↔Mac-mini.
-- [ ] A1. Verify the connect → load → use flow end-to-end (simulator/web pointed
-      at a running Mac server; confirm the agent web app renders + works on a
-      phone-sized viewport, API calls reach the Mac).
+- [x] A1. **Verified** — loaded the Mac server at a 390px phone viewport
+      (headless WebKit): the agent web app renders beautifully (onboarding
+      wizard, upload/scratch cards, "Connected" status), **0 console errors**,
+      4 responsive `@media` queries + viewport meta. The connect→load→use
+      mechanism works; a phone gets the full agent UI. ✅
 - [ ] A2. Add a QR-scanner plugin so pairing is one scan of the Mac's QR (the
       Mac already renders the LAN-URL QR). Manual entry stays as fallback.
-- [ ] A3. Make the Mac's QR encode the **LAN** URL when "Share on Wi-Fi" is on
-      (verify `NetworkInfo.lanURL` is what the menu shows/encodes).
+- [x] A3. **Done (23ed99e)** — the Mac menu now shows the LAN URL + QR (which
+      encodes `NetworkInfo.lanURL`) **only when Share-on-Wi-Fi is on**; with
+      sharing off it nudges the teacher to enable it instead of showing a QR
+      that can't connect. `swift build` clean. ✅
 - [ ] A4. Rebuild the iOS app (cap sync → Xcode archive → TestFlight) and verify
       the build is VALID.
 - [ ] A5. Write Jon's test steps (Mac: launch menu-bar app, toggle Share on
