@@ -87,13 +87,32 @@ The shortest path to something Jon can actually use phone↔Mac-mini.
 
 ## Milestone B — on-the-go (remote bridge)
 The full vision: control the Mac-mini agent from anywhere.
-- [ ] B1. Embed **Tailscale (tsnet)** in the Mac app (near-zero infra, E2E,
-      NAT-traversal) OR stand up a small MacxLabs relay (branded, hosted, must be
-      E2E-encrypted). Start with Tailscale for alpha.
-- [ ] B2. Pairing carries the remote (tailnet) address; connect screen uses it.
-- [ ] B3. Tighten remote auth — the approval gate stays the backstop for
-      sensitive actions; add a paired-device secret so only Jon's phone connects.
-- **Jon tests B:** iPhone on cellular, Mac mini at home.
+
+### ▶ B-MVP — works TODAY via the Tailscale app (zero new code)
+`clawed app --host 0.0.0.0` binds **all** interfaces, including the Tailscale
+virtual interface; the connect screen accepts any URL. So:
+1. Install the free **Tailscale** app on the Mac mini AND the iPhone; sign both
+   into the same account (one-time, ~5 min).
+2. On the Mac: `clawed app --host 0.0.0.0 --port 8000` (or menu-bar + Share on
+   Wi-Fi). Get the Mac's **tailnet IP** from the Tailscale app (looks like
+   `100.x.y.z`).
+3. On the iPhone (cellular, anywhere): open Claw-ED → enter `http://100.x.y.z:8000`
+   → use the agent. Tailscale carries the encrypted tunnel over the internet.
+- **Security note:** over the tailnet the server is private to Jon's own devices,
+  but `EDUAGENT_LOCAL_AUTH_BYPASS=1` means any device on that tailnet needs no
+  token. Fine for a personal test; **B3 below hardens this** before wider use.
+- **Jon tests B-MVP:** iPhone on cellular, Mac mini at home — *today*.
+
+### B-polish (the real product; needs Jon's direction + device feedback)
+- [ ] B1. **Embed** Tailscale (tsnet) in the Mac app so there's NO separate
+      Tailscale install — OR stand up a small **MacxLabs relay** (branded,
+      hosted, must be E2E-encrypted). Decision pending; tsnet-embed is a Go↔Swift
+      bridge (non-trivial); the relay is hosting + crypto. Both are real builds.
+- [ ] B2. In-app pairing (QR carries the remote address) so the teacher never
+      types an IP.
+- [ ] B3. **Tighten remote auth** — replace the blanket local-auth bypass on
+      non-loopback binds with a paired-device secret so only the teacher's phone
+      connects; keep the approval gate as the backstop for sensitive actions.
 
 ## Milestone C — distribution + polish (for launch, not for Jon's test)
 - [ ] C1. Bundle the Python engine into a notarized `.app` (PyInstaller/py2app)
