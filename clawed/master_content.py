@@ -346,7 +346,12 @@ class MasterContent(BaseModel):
         working without modification while the rest of the codebase migrates to
         the Master Content Track.
         """
-        from clawed.models import DailyLesson, ExitTicketQuestion
+        from clawed.models import (
+            DailyLesson,
+            ExitTicketQuestion,
+            PrimarySourceDocument,
+            VocabularyTerm,
+        )
 
         do_now_text = self.do_now.stimulus
         if self.do_now.questions:
@@ -370,6 +375,33 @@ class MasterContent(BaseModel):
             for q in self.exit_ticket
         ]
 
+        # Carry the enrichment Phase 1 produced. MasterContent and DailyLesson
+        # use different sub-models for vocabulary / primary sources, so map them
+        # field-by-field. The previous converter omitted these entirely, which
+        # left EVERY generated lesson with empty vocabulary + primary sources —
+        # regardless of model or provider — even when the model returned them.
+        vocab_terms = [
+            VocabularyTerm(
+                term=v.term,
+                definition=(
+                    f"{v.definition} — e.g., {v.context_sentence}"
+                    if getattr(v, "context_sentence", "")
+                    else v.definition
+                ),
+            )
+            for v in self.vocabulary
+        ]
+        source_docs = [
+            PrimarySourceDocument(
+                document_label=getattr(ps, "id", "") or "",
+                title=ps.title,
+                author=ps.attribution,
+                full_text=ps.content_text,
+                analysis_questions=list(ps.scaffolding_questions),
+            )
+            for ps in self.primary_sources
+        ]
+
         return DailyLesson(
             title=self.title,
             lesson_number=1,
@@ -383,4 +415,6 @@ class MasterContent(BaseModel):
             homework=self.homework or "",
             differentiation=self.differentiation,
             materials_needed=self.materials_needed,
+            vocabulary=vocab_terms,
+            primary_sources=source_docs,
         )
