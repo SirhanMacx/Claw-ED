@@ -71,9 +71,16 @@ the native app loaded and rendered the full agent web app inside the WKWebView**
 API all working. Screenshots: `/tmp/sim_connect.png` (connect screen),
 `/tmp/sim_agent.png` (agent loaded in-app). The core mechanism — *phone app runs
 the Mac agent over the network* — is verified end-to-end, not just reasoned.
-- **Note (polish):** the off-origin navigation shows a small in-app browser bar
-  (`‹ 127.0.0.1 ⟳ ⋯`) instead of seamless full-screen. Investigate using the
-  WKWebView main frame / a cleaner present so the agent fills the screen.
+- **P1 RESOLVED (e8393f5):** the off-origin-nav browser bar is gone — set
+  `server.allowNavigation:["*"]` so the agent loads seamless full-screen in the
+  app's own WKWebView (verified: no Safari, only com.macxlabs.clawed running).
+- **P2 DONE (a2ddee1):** one-tap pairing — the Mac QR now encodes
+  `clawed://connect?url=<server>`; scanning with the phone Camera opens the app
+  (@capacitor/app + `clawed` URL scheme + connect.js appUrlOpen handler) and
+  auto-connects. Verified in sim: iOS recognizes the scheme + prompts "Open in
+  Claw-ED" (the teacher's one tap). Manual entry stays as fallback.
+- **NEXT — P3:** fresh TestFlight build 2 carrying P1+P2 so Jon installs the
+  polished version on his phone.
 - **Could not (Jon away):** computer-use needs his one-time access approval, and
   there's no idb; so the *literal tap-Connect* was simulated by injecting the
   same `window.location.replace` into the installed bundle (repo source
