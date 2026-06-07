@@ -1019,10 +1019,28 @@ class LLMClient:
                         raise ConnectionError(
                             f"OpenRouter request failed ({resp.status_code}): {detail}"
                         )
-                    data = resp.json()
+                    try:
+                        data = resp.json()
+                    except Exception as exc:
+                        # Free / overloaded tiers sometimes return a truncated or
+                        # non-JSON body. Surface it as a clean, retryable error
+                        # (the phase retry loop will try again) instead of letting
+                        # a raw JSONDecodeError escape.
+                        raise ConnectionError(
+                            "OpenRouter returned a malformed response body "
+                            f"({len(resp.text)} chars) — likely a transient "
+                            "free-tier hiccup; retrying."
+                        ) from exc
                     choices = data.get("choices", [])
                     if not choices:
-                        raise RuntimeError("OpenRouter returned an empty response (no choices)")
+                        # No choices usually means an API-level error (rate limit,
+                        # model overloaded, content filter). Surface the actual
+                        # reason so it's diagnosable and rate-limit-detectable.
+                        err = data.get("error")
+                        detail = f": {err}" if err else ""
+                        raise RuntimeError(
+                            f"OpenRouter returned no choices{detail}"
+                        )
                     msg = choices[0].get("message", {}) or {}
                     content = str(msg.get("content", "") or "")
                     if not content.strip() and max_tokens > 64:
