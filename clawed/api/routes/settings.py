@@ -225,6 +225,71 @@ async def test_connection() -> dict[str, Any]:
     return result
 
 
+@router.get("/onboarding/detect", dependencies=[Depends(require_auth)])
+async def detect_providers() -> dict[str, Any]:
+    """Auto-detect AI backends so first-run onboarding is near-zero-config.
+
+    Surfaces local Ollama (the plug-and-play dream — free, local, private, no
+    key needed) and any provider whose key is already present, so the teacher
+    can usually just click "Use it" instead of hunting for an API key.
+    """
+    import httpx
+
+    from clawed.config import get_api_key
+
+    labels = {
+        "anthropic": "Anthropic (Claude)",
+        "openai": "OpenAI",
+        "google": "Google Gemini",
+        "openrouter": "OpenRouter",
+    }
+    detected: list[dict[str, Any]] = []
+
+    # 1. Local Ollama — zero-config, fully local, free, private.
+    try:
+        r = httpx.get("http://localhost:11434/api/tags", timeout=2.5)
+        if r.status_code == 200:
+            models = [
+                m.get("name", "") for m in r.json().get("models", []) if m.get("name")
+            ]
+            detected.append({
+                "provider": "ollama",
+                "label": "Ollama — local, free, private",
+                "ready": bool(models),
+                "models": models[:12],
+                "note": (
+                    f"Running on your Mac with {len(models)} model(s) — no API key, "
+                    "nothing leaves your computer."
+                    if models
+                    else "Installed and running, but no model pulled yet. "
+                    "Run: ollama pull qwen3.5"
+                ),
+            })
+    except Exception:
+        logger.debug("Ollama probe failed (absence is normal)", exc_info=True)
+
+    # 2. Providers whose key is already configured (or in the environment).
+    for prov, env in (
+        ("anthropic", "ANTHROPIC_API_KEY"),
+        ("openai", "OPENAI_API_KEY"),
+        ("google", "GOOGLE_API_KEY"),
+        ("openrouter", "OPENROUTER_API_KEY"),
+    ):
+        try:
+            has_key = bool(get_api_key(prov)) or bool(os.environ.get(env))
+        except Exception:
+            has_key = bool(os.environ.get(env))
+        if has_key:
+            detected.append({
+                "provider": prov,
+                "label": labels[prov],
+                "ready": True,
+                "note": "API key already configured — ready to use.",
+            })
+
+    return {"detected": detected, "any": bool(detected)}
+
+
 @router.post("/settings/clear-content", dependencies=[Depends(require_auth)])
 async def clear_content() -> dict[str, Any]:
     """Clear all generated content (danger zone)."""
