@@ -224,7 +224,18 @@ async def create_lesson(request: Request, req: LessonRequest) -> Any:
             {"error": "Unit not found."}, status_code=404
         )
 
-    unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    try:
+        unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    except Exception:
+        logger.error(
+            "Could not parse unit %s for lesson generation",
+            req.unit_id, exc_info=True,
+        )
+        return JSONResponse(
+            {"error": "This unit's data is incomplete or from an older format "
+             "and can't be used to generate a lesson. Try regenerating the unit."},
+            status_code=400,
+        )
 
     try:
         lesson = await generate_lesson(
@@ -267,7 +278,18 @@ async def create_materials(request: Request, req: MaterialsRequest) -> Any:
             {"error": "Lesson not found."}, status_code=404
         )
 
-    lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error(
+            "Could not parse lesson %s for materials generation",
+            req.lesson_id, exc_info=True,
+        )
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and can't be used to "
+             "generate materials."},
+            status_code=400,
+        )
 
     try:
         materials = await generate_all_materials(lesson, persona)
