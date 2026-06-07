@@ -8,12 +8,15 @@ Non-secret config lives in ~/.eduagent/config.json via AppConfig.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import stat
 from pathlib import Path
 from typing import Any
 
 from clawed.models import AppConfig
+
+logger = logging.getLogger(__name__)
 
 # Legacy name: `EDUAGENT_DATA_DIR` is kept for backward compatibility with existing installations.
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
@@ -51,6 +54,15 @@ def _try_keyring_get(key: str) -> str | None:
         return pw
     except ImportError:
         return None  # keyring is optional; silently fall through to env/file
+    except Exception:
+        # A keychain backend can fail for reasons unrelated to the key being
+        # absent: a locked keychain, a headless / SSH / cron session, or a
+        # macOS security context where the keychain is unreachable (error
+        # -25291). That must NEVER crash config loading — the key may well be
+        # in secrets.json or the environment. Fall through to the next source
+        # instead of taking down the whole app with a "not configured" error.
+        logger.debug("keyring get failed; falling through to env/secrets", exc_info=True)
+        return None
 
 
 def _try_keyring_set(key: str, value: str) -> bool:
@@ -60,6 +72,12 @@ def _try_keyring_set(key: str, value: str) -> bool:
         return True
     except ImportError:
         return False  # keyring is optional; caller checks return value
+    except Exception:
+        # Keychain write can fail (locked / headless / permissions). Signal
+        # failure so the caller falls back to the secrets.json file rather
+        # than crashing the save.
+        logger.debug("keyring set failed; falling back to secrets file", exc_info=True)
+        return False
 
 
 def _try_keyring_delete(key: str) -> bool:
@@ -69,6 +87,11 @@ def _try_keyring_delete(key: str) -> bool:
         return True
     except ImportError:
         return False  # keyring is optional; caller checks return value
+    except Exception:
+        # Delete can fail if the entry is absent or the keychain is locked;
+        # the caller's secrets.json cleanup still runs, so just signal failure.
+        logger.debug("keyring delete failed; secrets-file cleanup still runs", exc_info=True)
+        return False
 
 
 def _resolve_claude_code_token() -> str | None:
