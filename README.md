@@ -45,7 +45,7 @@ $ clawed
   ✓ French_Revolution_slides.pptx
 ```
 
-**New — a no-terminal app.** Run `clawed app` and Claw-ED opens a clean local web app in your browser — warm, calm, teacher-first — with a guided setup that walks you through getting an API key step by step. Same engine, your files stay on your machine, no command line required.
+**New — a no-terminal app.** Run `clawed app` and Claw-ED opens a clean local web app in your browser — warm, calm, teacher-first — with a guided setup that walks you through getting an API key step by step. Same engine, your files stay on your machine, no command line required. There's also a **Mac menu-bar app** (`mac-app/`) that starts and stops Claw-ED with one click and shows a QR code, so you can open it from your phone on the same Wi-Fi.
 
 It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to make something from your phone and the files show up in chat.
 
@@ -56,6 +56,7 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 - **52 agent tools** — lesson gen, assessments, games, simulations, **narrated videos** (slides + free neural voiceover → MP4, fully local), animations, curriculum maps, differentiation, project arcs, and more
 - **Quality gate with auto-retry** — 12 pedagogical checks (Bloom's progression, stimulus-based assessment, differentiation specificity, diversity audit) validate every lesson before delivery. Failures auto-retry with specific feedback.
 - **Revise in plain English** — after a lesson is made, just say "make it shorter," "add a primary source," or "lower it to 9th-grade reading level" and it updates that lesson — no regenerating from scratch.
+- **Ask your co-teacher (live)** — type a request in plain English — a hook, a do-now, three discussion questions, an IEP scaffold — and watch the answer stream in token-by-token, then Copy it or Download it as Markdown. Works on any provider, including OpenRouter (e.g. minimax-m3) or a fully local model.
 - **Student-safe handouts** — every student-facing document is auto-scanned for accidentally-leaked answer keys before it's delivered.
 - **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum). Vision model filters for quality.
 - **Writes like you** — AI-ism removal strips "delve", "utilize", "leverage" and 70+ other LLM tells so output reads like a teacher wrote it

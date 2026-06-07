@@ -10,13 +10,13 @@ or explicitly blocked-on-Jon (Apple signing only).
 - [x] Claude design system
 - [x] Live streaming "Ask your co-teacher" (chips, Markdown, copy/download)
 - [x] Mac menu-bar launcher app
-- [ ] **Mobile-responsive UI** — every core page usable at 390px (phone via the
+- [x] **Mobile-responsive UI** — every core page usable at 390px (phone via the
       Mac app's LAN URL/QR). Nav, Create wizard, co-teacher, library, settings.
-- [ ] First-run / empty states — friendly guidance when no persona/lessons yet
-- [ ] Connection/health clarity — the footer "Not connected" must reflect the
+- [x] First-run / empty states — friendly guidance when no persona/lessons yet
+- [x] Connection/health clarity — the footer "Not connected" must reflect the
       real provider state and link to a fix
 - [ ] All artifact endpoints verified end-to-end on OpenRouter/minimax-m3
-- [ ] README / quickstart current (clawed app, BYO-key, phone access)
+- [x] README / quickstart current (clawed app, BYO-key, phone access)
 
 ## B. iOS app (Capacitor client) — autonomous up to signing
 Architecture (per the security model: local-first, no shell to mobile): the iOS
