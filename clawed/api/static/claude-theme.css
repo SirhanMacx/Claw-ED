@@ -164,3 +164,180 @@ a { color: var(--blue); }
     .lesson-sidebar { order: -1; margin-bottom: 1.5rem; }
     .lesson-main { order: 0; }
 }
+
+/* ============================================================================
+   Live generation progress — the hero "watch it build" moment on /generate.
+   Calm, premium, teacher-friendly. Cream stage, clay accent, serif heading.
+   Driven by the SSE `progress`/`done`/`error` events from /stream/{unit,lesson}.
+   ========================================================================== */
+.gen-live {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.6rem 1.6rem 1.4rem;
+    box-shadow: var(--shadow-md);
+    margin: 0.25rem 0 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+/* Soft clay wash along the top edge — a quiet sign of "live". */
+.gen-live::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--chart-bar-alt, #E0A685));
+    opacity: 0.9;
+}
+
+.gen-live-head {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.2rem;
+}
+.gen-live-title {
+    font-family: var(--font-serif);
+    font-size: 1.32rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-heading);
+    line-height: 1.2;
+}
+/* Breathing clay dot — signals "working" without a noisy spinner. */
+.gen-live-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--blue);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.5);
+    animation: genPulse 1.8s ease-out infinite;
+}
+@keyframes genPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.45); }
+    70%  { box-shadow: 0 0 0 9px rgba(201, 100, 66, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(201, 100, 66, 0); }
+}
+.gen-live.is-done .gen-live-dot { background: var(--green); animation: none; }
+.gen-live.is-error .gen-live-dot { background: var(--red); animation: none; }
+
+.gen-live-sub {
+    margin: 0.15rem 0 1.15rem;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    min-height: 1.4em;
+    transition: color 0.2s ease;
+}
+.gen-live.is-error .gen-live-sub { color: var(--red); }
+
+/* Progress bar — taller, rounded, with a subtle moving sheen while active. */
+.gen-live-track {
+    width: 100%;
+    height: 10px;
+    background: var(--bg-surface);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 0.35rem;
+}
+.gen-live-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--blue), var(--chart-bar-alt, #E0A685));
+    transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    overflow: hidden;
+}
+.gen-live-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: translateX(-100%);
+    animation: genSheen 1.7s linear infinite;
+}
+.gen-live.is-done .gen-live-fill { background: var(--green); }
+.gen-live.is-done .gen-live-fill::after,
+.gen-live.is-error .gen-live-fill::after { animation: none; opacity: 0; }
+.gen-live.is-error .gen-live-fill { background: var(--red); }
+@keyframes genSheen {
+    to { transform: translateX(100%); }
+}
+.gen-live-pct {
+    text-align: right;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 1.15rem;
+}
+
+/* Phase checklist — the calm "table of contents" of the build. */
+.gen-phases {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+.gen-phase {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.15rem 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.45;
+    transition: color 0.25s ease;
+}
+.gen-phase-ic {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    background: var(--card-bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.05rem;
+    position: relative;
+    transition: border-color 0.25s ease, background 0.25s ease;
+}
+/* Pending: hollow ring. Active: clay ring with a spinning arc. Done: filled check. */
+.gen-phase.pending .gen-phase-label { color: var(--text-secondary); opacity: 0.72; }
+.gen-phase.active { color: var(--text-heading); font-weight: 600; }
+.gen-phase.active .gen-phase-ic {
+    border-color: var(--blue);
+    border-top-color: transparent;
+    animation: genSpin 0.85s linear infinite;
+}
+.gen-phase.done { color: var(--text-heading); }
+.gen-phase.done .gen-phase-ic {
+    border-color: var(--green);
+    background: var(--green);
+    animation: none;
+}
+.gen-phase.done .gen-phase-ic::after {
+    content: "";
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-0.5px, -1px);
+}
+@keyframes genSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .gen-live-dot, .gen-live-fill::after, .gen-phase.active .gen-phase-ic { animation: none; }
+}
+
+/* Mobile (≤768px): tighten padding, keep the hierarchy legible. */
+@media (max-width: 768px) {
+    .gen-live { padding: 1.15rem 1.1rem 1.1rem; border-radius: 14px; }
+    .gen-live-title { font-size: 1.18rem; }
+    .gen-live-sub { font-size: 0.88rem; }
+    .gen-phase { font-size: 0.9rem; }
+}

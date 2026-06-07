@@ -219,11 +219,27 @@
     {# ── Step 3: Watch It Generate ───────────── #}
     <div class="gen-panel" id="gen-step-3">
         <div class="gen-form-panel">
-            <h3 style="margin-bottom: 1rem;">
+            {# ── Live "watch it build" panel (SSE-driven). Hidden until a #}
+            {#    streaming build starts; the legacy block below is the fallback. #}
+            <div class="gen-live" id="gen-live" hidden>
+                <div class="gen-live-head">
+                    <span class="gen-live-dot" aria-hidden="true"></span>
+                    <span class="gen-live-title" id="gen-live-title">Building your unit</span>
+                </div>
+                <p class="gen-live-sub" id="gen-live-sub" aria-live="polite">Getting set up…</p>
+                <div class="gen-live-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="gen-live-track">
+                    <div class="gen-live-fill" id="gen-live-fill"></div>
+                </div>
+                <div class="gen-live-pct" id="gen-live-pct">0%</div>
+                <ul class="gen-phases" id="gen-phases"></ul>
+            </div>
+
+            {# ── Legacy spinner + plain progress (fallback / simple types) ─── #}
+            <h3 style="margin-bottom: 1rem;" id="gen-legacy-head">
                 <span class="spinner" id="gen-spinner"></span>
                 <span id="gen-step3-title"> Generating...</span>
             </h3>
-            <div class="progress-bar-container">
+            <div class="progress-bar-container" id="gen-legacy-bar-wrap">
                 <div class="progress-bar" id="gen-progress-bar" style="width: 0%"></div>
             </div>
             <div class="stream-output" id="stream-output"></div>
@@ -390,6 +406,9 @@ document.getElementById('duration_weeks').addEventListener('input', function() {
     document.getElementById('weeks-display').textContent = this.value;
 });
 
+// Types that build a unit/lesson and support the live SSE "watch it build" view.
+var STREAM_TYPES = ['full', 'lesson'];
+
 document.getElementById('generate-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     goGenStep(3);
@@ -398,6 +417,23 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         await runSimpleGen(genState.type);
         return;
     }
+
+    // Full Unit + Single Lesson → live SSE progress via EventSource.
+    // Falls back to the legacy /api/full POST stream if EventSource is
+    // unavailable or the stream fails to connect.
+    if (STREAM_TYPES.indexOf(genState.type) !== -1 && 'EventSource' in window) {
+        runStreamGen(genState.type);
+        return;
+    }
+
+    runLegacyFullGen();
+});
+
+// ── Legacy /api/full POST-stream path (sub-packet, and SSE fallback) ────────
+async function runLegacyFullGen() {
+    var liveEl = document.getElementById('gen-live');
+    if (liveEl) liveEl.hidden = true;
+    showLegacyChrome(true);
 
     var output = document.getElementById('stream-output');
     var bar = document.getElementById('gen-progress-bar');
@@ -410,6 +446,7 @@ document.getElementById('generate-form').addEventListener('submit', async functi
     bar.style.width = '5%';
     spinner.style.display = '';
     title3.textContent = ' Working on your lesson…';
+    genState.lessonIds = [];  // fresh run — don't reuse a prior build's lessons
 
     var body = {
         topic: document.getElementById('topic').value,
@@ -488,6 +525,7 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         spinner.style.display = 'none';
         title3.textContent = ' Ready to review!';
         results.hidden = false;
+        showUnitlessExports(true);  // un-hide in case a prior unit run hid them
 
         // Set export links
         var lid = genState.lessonIds[0];
@@ -509,9 +547,365 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         spinner.style.display = 'none';
         title3.textContent = ' Failed';
     }
-});
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  Live SSE generation — the hero "watch the model build it" experience.
+//  Uses EventSource against GET /stream/unit and GET /stream/lesson.
+//  SSE contract (from clawed/api/routes/generate.py):
+//    event: progress  data: {status, progress 0-100, message, ...}
+//    event: done      data: {unit_id}  -or-  {lesson_id}
+//    event: error     data: {error}
+// ════════════════════════════════════════════════════════════════════════
+
+// Show/hide the legacy spinner + plain progress bar (used by fallback paths).
+function showLegacyChrome(show) {
+    ['gen-legacy-head', 'gen-legacy-bar-wrap', 'stream-output'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+    });
+}
+
+// Phase blueprints per build type. Each phase owns a slice of the 0-100 bar so
+// the checklist advances in step with real `progress` events (and a gentle
+// simulated drift between them, capped just under the next real milestone).
+var GEN_PHASES = {
+    full: [
+        { key: 'plan',   label: 'Designing the unit arc',          at: 8  },
+        { key: 'build',  label: 'Sequencing the daily lessons',    at: 45 },
+        { key: 'align',  label: 'Aligning to standards & pacing',  at: 80 },
+        { key: 'polish', label: 'Polishing the unit plan',         at: 96 }
+    ],
+    lesson: [
+        { key: 'unit',   label: 'Framing the unit context',        at: 8  },
+        { key: 'sources',label: 'Researching primary sources',     at: 35 },
+        { key: 'write',  label: 'Writing the instruction',         at: 62 },
+        { key: 'assess', label: 'Building the assessment',         at: 84 },
+        { key: 'polish', label: 'Polishing the lesson',            at: 96 }
+    ]
+};
+
+var liveCtl = null; // active controller (so a new build supersedes an old one)
+
+function renderPhases(phases) {
+    var ul = document.getElementById('gen-phases');
+    ul.innerHTML = '';
+    phases.forEach(function(p) {
+        var li = document.createElement('li');
+        li.className = 'gen-phase pending';
+        li.dataset.key = p.key;
+        var ic = document.createElement('span');
+        ic.className = 'gen-phase-ic';
+        ic.setAttribute('aria-hidden', 'true');
+        var lab = document.createElement('span');
+        lab.className = 'gen-phase-label';
+        lab.textContent = p.label;
+        li.appendChild(ic);
+        li.appendChild(lab);
+        ul.appendChild(li);
+    });
+}
+
+// Advance the checklist: every phase whose threshold is below `pct` is done,
+// the first phase at/above it is active, the rest stay pending.
+function syncPhases(phases, pct) {
+    var ul = document.getElementById('gen-phases');
+    var items = ul.children;
+    var activeSet = false;
+    for (var i = 0; i < phases.length; i++) {
+        var li = items[i];
+        if (!li) continue;
+        li.classList.remove('pending', 'active', 'done');
+        if (pct >= phases[i].at) {
+            li.classList.add('done');
+        } else if (!activeSet) {
+            li.classList.add('active');
+            activeSet = true;
+        } else {
+            li.classList.add('pending');
+        }
+    }
+}
+
+function setLivePct(pct) {
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    var fill = document.getElementById('gen-live-fill');
+    var track = document.getElementById('gen-live-track');
+    var label = document.getElementById('gen-live-pct');
+    if (fill) fill.style.width = pct + '%';
+    if (track) track.setAttribute('aria-valuenow', String(pct));
+    if (label) label.textContent = pct + '%';
+}
+
+function setLiveSub(text) {
+    var el = document.getElementById('gen-live-sub');
+    if (el && text) el.textContent = text;
+}
+
+// Friendly fallback messages keyed off the backend `status` string, so the
+// status line stays human even before a `message` field arrives.
+function humanizeStatus(status, type) {
+    if (!status) return null;
+    if (status === 'planning_unit') return 'Planning the unit structure…';
+    if (status === 'unit_complete') return 'Unit structure ready.';
+    if (status === 'lesson_complete') return 'Lesson drafted — finishing up…';
+    if (status.indexOf('generating_lesson') === 0) return 'Writing the lesson…';
+    return null;
+}
+
+// Build the EventSource URL for a given build type/stage.
+// The generate router is mounted under /api, so the SSE endpoints live at
+// /api/stream/unit and /api/stream/lesson.
+function streamUrl(stage, params) {
+    var q = new URLSearchParams(params).toString();
+    return (stage === 'unit' ? '/api/stream/unit?' : '/api/stream/lesson?') + q;
+}
+
+// Core: open one EventSource stage, drive the live UI, resolve on `done`.
+// Resolves with the parsed `done` payload; rejects on `error`/connection loss.
+function streamStage(opts) {
+    // opts: { url, phases, baseMsg, floorPct, ceilPct, onProgress }
+    return new Promise(function(resolve, reject) {
+        var es;
+        try { es = new EventSource(opts.url); }
+        catch (e) { reject({ kind: 'open', error: e }); return; }
+
+        liveCtl = { es: es, cancelled: false };
+        var self = liveCtl;
+        var lastReal = opts.floorPct || 0;
+        var shown = lastReal;
+        var settled = false;
+        var opened = false;
+
+        // Gentle simulated drift toward (but never reaching) the next real
+        // milestone, so the bar breathes during long silent model calls.
+        var drift = setInterval(function() {
+            if (settled) return;
+            var ceil = Math.min((opts.ceilPct || 100) - 2, lastReal + 30);
+            if (shown < ceil) {
+                shown += Math.max(0.15, (ceil - shown) * 0.03);
+                setLivePct(shown);
+                if (opts.phases) syncPhases(opts.phases, shown);
+            }
+        }, 280);
+
+        function cleanup() {
+            settled = true;
+            clearInterval(drift);
+            try { es.close(); } catch (e) {}
+        }
+
+        es.addEventListener('open', function() { opened = true; });
+
+        es.addEventListener('progress', function(ev) {
+            if (self.cancelled) return;
+            var d;
+            try { d = JSON.parse(ev.data); } catch (e) { return; }
+            if (typeof d.progress === 'number') {
+                // Map the stage's 0-100 onto this stage's [floor, ceil] band.
+                var floor = opts.floorPct || 0, ceil = opts.ceilPct || 100;
+                var mapped = floor + (ceil - floor) * (d.progress / 100);
+                lastReal = mapped;
+                if (mapped > shown) { shown = mapped; }
+                setLivePct(shown);
+                if (opts.phases) syncPhases(opts.phases, shown);
+            }
+            var msg = d.message || humanizeStatus(d.status, null);
+            if (msg) setLiveSub(opts.baseMsg ? msg : msg);
+            if (opts.onProgress) opts.onProgress(d);
+        });
+
+        es.addEventListener('done', function(ev) {
+            if (self.cancelled) return;
+            var d = {};
+            try { d = JSON.parse(ev.data); } catch (e) {}
+            cleanup();
+            resolve(d);
+        });
+
+        es.addEventListener('error', function(ev) {
+            if (self.cancelled || settled) return;
+            // A `data`-bearing error event = an application error from the
+            // server (graceful). A bare error with the socket closed and
+            // nothing ever opened = a connection failure → trigger fallback.
+            var appErr = null;
+            if (ev && ev.data) {
+                try { appErr = JSON.parse(ev.data).error; } catch (e) {}
+            }
+            cleanup();
+            if (appErr) {
+                reject({ kind: 'app', error: appErr });
+            } else if (!opened) {
+                reject({ kind: 'open', error: 'connection failed' });
+            } else {
+                reject({ kind: 'conn', error: 'connection lost' });
+            }
+        });
+    });
+}
+
+async function runStreamGen(type) {
+    // Reset + reveal the live panel; hide the legacy chrome + any old results.
+    showLegacyChrome(false);
+    document.getElementById('gen-results').hidden = true;
+    document.getElementById('gen-simple-results').hidden = true;
+
+    var live = document.getElementById('gen-live');
+    live.hidden = false;
+    live.classList.remove('is-done', 'is-error');
+
+    var phases = GEN_PHASES[type] || GEN_PHASES.full;
+    renderPhases(phases);
+    setLivePct(0);
+    syncPhases(phases, 0);
+
+    var titleEl = document.getElementById('gen-live-title');
+    var common = {
+        topic: document.getElementById('topic').value,
+        subject: document.getElementById('subject').value,
+        grade_level: document.getElementById('grade_level').value
+    };
+    var weeks = parseInt(document.getElementById('duration_weeks').value, 10) || 3;
+
+    try {
+        if (type === 'full') {
+            titleEl.textContent = 'Building your unit';
+            setLiveSub('Designing the unit arc…');
+            var unitDone = await streamStage({
+                url: streamUrl('unit', {
+                    topic: common.topic, subject: common.subject,
+                    grade_level: common.grade_level, duration_weeks: weeks
+                }),
+                phases: phases, floorPct: 0, ceilPct: 100,
+                onProgress: function(d) { if (d.title) titleEl.textContent = d.title; }
+            });
+            finishLiveUnit(unitDone.unit_id);
+        } else {
+            // Single Lesson: stage 1 plans a unit (lessons need a unit_id),
+            // stage 2 streams the actual lesson. Two real EventSource streams,
+            // mapped onto a single continuous 0-100 bar (0-40, then 40-100).
+            titleEl.textContent = 'Building your lesson';
+            setLiveSub('Framing the unit context…');
+            var unit = await streamStage({
+                url: streamUrl('unit', {
+                    topic: common.topic, subject: common.subject,
+                    grade_level: common.grade_level, duration_weeks: 1
+                }),
+                phases: phases, floorPct: 0, ceilPct: 40
+            });
+            if (!unit.unit_id) throw { kind: 'app', error: 'Could not set up the unit for this lesson.' };
+            genState.unitId = unit.unit_id;
+
+            var lessonDone = await streamStage({
+                url: streamUrl('lesson', { unit_id: unit.unit_id, lesson_number: 1 }),
+                phases: phases, floorPct: 40, ceilPct: 100,
+                onProgress: function(d) { if (d.title) titleEl.textContent = d.title; }
+            });
+            finishLiveLesson(lessonDone.lesson_id);
+        }
+    } catch (errObj) {
+        // App-level errors are shown gracefully in place. Connection-level
+        // failures (could not open / lost) fall back to the legacy POST path.
+        if (errObj && errObj.kind === 'app') {
+            liveError(errObj.error || 'Generation failed. Please try again.');
+        } else {
+            // Graceful degradation: hide the live panel, run the proven path.
+            live.hidden = true;
+            showLegacyChrome(true);
+            if (window.eduToast) window.eduToast('Live view unavailable — generating…', 'info');
+            await runLegacyFullGen();
+        }
+    }
+}
+
+function liveError(msg) {
+    var live = document.getElementById('gen-live');
+    live.classList.add('is-error');
+    live.classList.remove('is-done');
+    setLiveSub(msg);
+    var t = document.getElementById('gen-live-title');
+    if (t) t.textContent = 'Something went wrong';
+    if (window.eduToast) window.eduToast(msg, 'error');
+}
+
+// Mark the live panel complete, then reveal results + preview using the SAME
+// rendering the non-streaming flow uses (iframe embed + export links).
+function markLiveDone(finalTitle) {
+    var live = document.getElementById('gen-live');
+    live.classList.add('is-done');
+    setLivePct(100);
+    var phases = GEN_PHASES[genState.type] || GEN_PHASES.full;
+    syncPhases(phases, 101); // all done
+    if (finalTitle) {
+        var t = document.getElementById('gen-live-title');
+        if (t) t.textContent = finalTitle;
+    }
+}
+
+function finishLiveUnit(unitId) {
+    genState.unitId = unitId;
+    markLiveDone(null);
+    setLiveSub('Your unit is ready to review.');
+
+    var results = document.getElementById('gen-results');
+    results.hidden = false;
+    // A bare unit plan has no single lesson page to embed, so hide the iframe
+    // and point the actions at the Library where the unit + its lessons live.
+    var pw = document.getElementById('gen-preview-wrap');
+    if (pw) pw.style.display = 'none';
+    hideUnitlessExports();
+
+    if (window.eduToast) window.eduToast('Unit plan ready!', 'success');
+    if (window.eduNotify) window.eduNotify();
+}
+
+function finishLiveLesson(lessonId) {
+    if (lessonId) genState.lessonIds = [lessonId];
+    markLiveDone(null);
+    setLiveSub('Your lesson is ready to review.');
+
+    var results = document.getElementById('gen-results');
+    results.hidden = false;
+
+    if (lessonId) {
+        document.getElementById('export-pdf').href = '/api/export/' + lessonId + '?fmt=pdf';
+        document.getElementById('export-docx').href = '/api/export/' + lessonId + '?fmt=docx';
+        // Reuse the exact preview rendering of the non-streaming flow: embed
+        // the finished lesson page with nav/footer hidden (?embed=1).
+        var pf = document.getElementById('gen-preview-frame');
+        var pw = document.getElementById('gen-preview-wrap');
+        if (pf && pw) { pf.src = '/lesson/' + lessonId + '?embed=1'; pw.style.display = 'block'; }
+        showUnitlessExports(true);
+    }
+
+    if (window.eduToast) window.eduToast('Lesson ready!', 'success');
+    if (window.eduNotify) window.eduNotify();
+}
+
+// The unit-only result can't power lesson-scoped exports (PDF/DOCX/Classroom/
+// Share all need a lesson_id). Hide them so we never show dead buttons.
+function hideUnitlessExports() {
+    ['export-pdf', 'export-docx', 'export-classroom', 'export-share'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    var copy = document.querySelector('#gen-results .copy-btn');
+    if (copy) copy.style.display = 'none';
+}
+function showUnitlessExports(show) {
+    ['export-pdf', 'export-docx', 'export-classroom', 'export-share'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+    });
+    var copy = document.querySelector('#gen-results .copy-btn');
+    if (copy) copy.style.display = show ? '' : 'none';
+}
 
 async function runSimpleGen(type) {
+    var liveEl = document.getElementById('gen-live');
+    if (liveEl) liveEl.hidden = true;
+    showLegacyChrome(true);
+
     var streamOut = document.getElementById('stream-output');
     var bar = document.getElementById('gen-progress-bar');
     var spinner = document.getElementById('gen-spinner');
