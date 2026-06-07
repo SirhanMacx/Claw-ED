@@ -55,12 +55,35 @@ The agent does not just respond to commands. It takes initiative:
 
 | Method | How to use it |
 |--------|--------------|
+| **No-terminal web app** | `clawed app` — opens a warm, Claude-style local web app in your browser, with guided API-key setup |
+| **Mac menu-bar app** | `mac-app/` — one-click start/stop, health dot, and a QR code to open Claw-ED on your phone over the LAN |
 | **Terminal chat** | `clawed` or `clawed chat` |
+| **Web dashboard** | `clawed serve` (the same web app, without auto-opening a browser) |
 | **Telegram bot** | `clawed bot --token TOKEN` |
-| **Web dashboard** | `clawed serve` |
 | **Full-screen TUI** | `pip install 'clawed[tui]'` then `clawed tui` |
 | **Student bot** | Students join with class codes, ask questions in your voice |
 | **MCP server** | Expose tools to any AI agent |
+
+### Ask your co-teacher (live)
+
+From the web app's **Create** screen, type a request in plain English — a hook, a
+Do Now, three discussion questions, an IEP scaffold — and the answer streams in
+token-by-token, rendered as Markdown, with one-click **Copy** and **Download .md**.
+Quick-start chips prefill common asks. It runs on whichever provider you've
+configured, including OpenRouter (e.g. `minimax/minimax-m3`) or a fully local model.
+
+### Create any artifact
+
+The same Create screen builds full artifacts from a pickable card — **full unit**,
+**single lesson**, **materials only**, **quiz / assessment**, **differentiated
+version**, or **review game** — and shows lessons in an inline preview before you
+download.
+
+### Bring your own model
+
+Choose **Anthropic**, **OpenAI**, **Google (Gemini)**, or **OpenRouter** (any model
+it routes to), each with in-app onboarding that walks you through getting a key —
+or run a fully local **Ollama** model offline. Keys are stored only on your machine.
 
 ---
 

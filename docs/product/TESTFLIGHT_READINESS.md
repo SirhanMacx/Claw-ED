@@ -32,9 +32,33 @@ app is a **thin client** that opens the teacher's own Claw-ED server over the LA
 ## C. Ship gate
 - [ ] Full test suite + CI green at HEAD
 - [ ] Function-size cap (HEARTBEAT) green
-- [ ] No secrets in repo; secrets.json gitignored; key read from env/keyring/file
+- [x] No secrets in repo; secrets.json gitignored; key read from env/keyring/file
+      (`.gitignore` lists `secrets.json`, `**/secrets.json`, `api_token`, `.env`;
+      no secret files are tracked)
 
 ## Loop protocol
 Build → ruff + mypy --strict + browser-verify → commit → push → CI green →
 next item. Stop when A+B(non-blocked)+C are checked; report the Apple-signing
 handoff to Jon.
+
+## Verification notes (where each ticked A-item lives)
+- **Core generation:** routes in `clawed/api/routes/generate.py`
+  (`/unit`, `/lesson`, `/materials`, `/quiz`, `/differentiate/{id}`, `/game`),
+  surfaced as cards on the Create screen (`clawed/api/templates/generate.html`).
+- **BYO-key + local Ollama:** five providers in
+  `clawed/api/routes/settings.py` and `clawed/api/templates/settings.html`
+  (Anthropic, OpenAI, Ollama, OpenRouter, Google), each with a guided key flow.
+- **Claude design:** `clawed/api/static/claude-theme.css`, loaded from `base.html`.
+- **Live co-teacher:** SSE endpoint `/api/ask/stream` in `generate.py`; chips,
+  Markdown render, Copy / Download .md in `generate.html`.
+- **Mac menu-bar app:** `mac-app/` (SwiftUI) — `ServerController.swift`,
+  `QRCode.swift`, `MenuBarContentView.swift` show local + LAN URLs and a QR code.
+- **Mobile-responsive:** `width=device-width` viewport in `base.html`;
+  `@media (max-width: 768px)` rules in `claude-theme.css` and `style.css`.
+- **Connection/health clarity:** `/api/health` reports the real provider/model
+  (`settings.py`); the status bar reads it.
+- **README:** "no-terminal app", BYO-key incl. OpenRouter/minimax-m3, phone
+  access via the Mac app's LAN URL/QR.
+
+The iOS Capacitor client (section B) is **in progress**; Apple Developer signing
+remains the owner's step.
