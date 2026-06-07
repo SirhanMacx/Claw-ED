@@ -11,9 +11,16 @@
         <strong style="font-size:1.15rem">Ask your co&#8209;teacher</strong>
         <span style="font-size:.8rem;color:var(--text-muted,#8a8a8a)">live &middot; powered by your model</span>
     </div>
-    <p style="margin:.3rem 0 .7rem;color:var(--text-muted,#666);font-size:.9rem">
+    <p style="margin:.3rem 0 .6rem;color:var(--text-muted,#666);font-size:.9rem">
         Lesson ideas, rewrites, worked examples, differentiation &mdash; ask in plain English and watch it write.
     </p>
+    <div id="ask-chips" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem">
+        <button type="button" class="ask-chip" data-prompt="Give me a 5-minute Do Now / bell-ringer for a lesson on ">Do Now</button>
+        <button type="button" class="ask-chip" data-prompt="Write an attention-grabbing hook to open a lesson on ">Hook</button>
+        <button type="button" class="ask-chip" data-prompt="Give me 3 higher-order discussion questions about ">Discussion Qs</button>
+        <button type="button" class="ask-chip" data-prompt="Write a 3-question exit ticket for a lesson on ">Exit ticket</button>
+        <button type="button" class="ask-chip" data-prompt="Suggest ELL and IEP scaffolds for a lesson on ">Differentiate</button>
+    </div>
     <textarea id="ask-input" rows="3"
         placeholder="e.g. Give me 3 hook questions for a 9th&#8209;grade lesson on the Columbian Exchange"
         style="width:100%;box-sizing:border-box;padding:.75rem;border:1px solid var(--border-strong);border-radius:10px;font:inherit;resize:vertical"></textarea>
@@ -25,7 +32,16 @@
     </div>
     <div id="ask-output" hidden
         style="white-space:pre-wrap;word-break:break-word;margin-top:.9rem;padding:1rem;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg,#fff);max-height:50vh;overflow:auto;line-height:1.55;font-size:.93rem"></div>
+    <div id="ask-actions" hidden style="display:flex;gap:.5rem;margin-top:.55rem">
+        <button type="button" id="ask-copy" style="background:transparent;border:1px solid var(--border-strong);border-radius:8px;padding:.4rem .9rem;font:inherit;cursor:pointer">Copy</button>
+        <button type="button" id="ask-download" style="background:transparent;border:1px solid var(--border-strong);border-radius:8px;padding:.4rem .9rem;font:inherit;cursor:pointer">Download .md</button>
+    </div>
 </div>
+<style>
+    .ask-chip{background:var(--bg,#fff);border:1px solid var(--border-strong);border-radius:999px;
+        padding:.3rem .85rem;font:inherit;font-size:.82rem;color:var(--text,#333);cursor:pointer;transition:all .12s}
+    .ask-chip:hover{background:var(--bg-subtle,#f3eee8);border-color:var(--accent,#C96442);color:var(--accent,#C96442)}
+</style>
 
 {% if not has_persona %}
 <div class="alert alert-warning">
@@ -674,6 +690,7 @@ function copyShareLink() {
     var status = document.getElementById('ask-status');
     if (!btn || !input || !out) return;
     var busy = false;
+    var lastAnswer = '';
 
     function setStatus(t) { if (status) status.textContent = t; }
 
@@ -729,6 +746,8 @@ function copyShareLink() {
         if (!q || busy) return;
         busy = true; btn.disabled = true; btn.style.opacity = '0.6';
         out.hidden = false; out.textContent = '';
+        var actsEl = document.getElementById('ask-actions');
+        if (actsEl) actsEl.hidden = true;
         setStatus('Thinking…');
         var gotToken = false;
         var rawAnswer = '';
@@ -767,6 +786,8 @@ function copyShareLink() {
                 }
             }
             setStatus(gotToken ? 'Done' : '');
+            lastAnswer = rawAnswer;
+            if (actsEl) actsEl.hidden = !gotToken;
         } catch (e) {
             setStatus('');
             out.textContent = '⚠ ' + (e.message || 'Request failed') +
@@ -779,6 +800,34 @@ function copyShareLink() {
     btn.addEventListener('click', ask);
     input.addEventListener('keydown', function (e) {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); ask(); }
+    });
+
+    // Quick-start chips: prefill the prompt and focus so the teacher adds the topic.
+    document.querySelectorAll('.ask-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            input.value = chip.getAttribute('data-prompt') || '';
+            input.focus();
+            try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+        });
+    });
+
+    var copyBtn = document.getElementById('ask-copy');
+    if (copyBtn) copyBtn.addEventListener('click', function () {
+        var text = out.innerText || lastAnswer;
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () {
+            var o = copyBtn.textContent; copyBtn.textContent = 'Copied!';
+            setTimeout(function () { copyBtn.textContent = o; }, 1500);
+        });
+    });
+
+    var dlBtn = document.getElementById('ask-download');
+    if (dlBtn) dlBtn.addEventListener('click', function () {
+        var blob = new Blob([lastAnswer || out.innerText], { type: 'text/markdown' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'clawed-coteacher.md';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
     });
 })();
 </script>
