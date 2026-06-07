@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 from typing import Any
 
@@ -22,6 +23,7 @@ from clawed.config import (
 from clawed.models import AppConfig, LLMProvider
 
 router = APIRouter(tags=["settings"])
+logger = logging.getLogger(__name__)
 
 
 class SaveSettingsRequest(BaseModel):
@@ -64,9 +66,6 @@ async def health_check() -> dict[str, Any]:
     model = ""
     connected = False
     try:
-        from clawed.config import get_api_key
-        from clawed.models import LLMProvider
-
         cfg = AppConfig.load()
         provider = cfg.provider.value
         model = getattr(cfg, f"{provider}_model", "") or ""
@@ -75,7 +74,7 @@ async def health_check() -> dict[str, Any]:
         else:
             connected = bool(get_api_key(provider))
     except Exception:
-        pass
+        logger.debug("health provider probe failed", exc_info=True)
     return {
         "status": "ok",
         "version": __version__,
