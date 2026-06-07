@@ -248,8 +248,44 @@
     }
   }
 
+  // ---- deep-link pairing (clawed://connect?url=<server>) ----------------
+  // The Mac's QR encodes a clawed:// URL. Scanning it with the phone's normal
+  // camera opens this app and hands the URL to us here — so the teacher pairs
+  // in ONE tap, with no typing and no in-app scanner. Works on cold launch
+  // (app opened by the link) and warm open (link tapped while running).
+  function serverFromDeepLink(urlStr) {
+    try {
+      var u = new URL(urlStr);
+      var s = u.searchParams.get('url') || u.searchParams.get('server');
+      return s || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function wireDeepLink() {
+    var cap = window.Capacitor;
+    var app = cap && cap.Plugins && cap.Plugins.App;
+    if (!app) {
+      return; // not running inside the native app; manual entry still works
+    }
+    if (typeof app.getLaunchUrl === 'function') {
+      app.getLaunchUrl().then(function (res) {
+        var s = res && res.url ? serverFromDeepLink(res.url) : null;
+        if (s) { connectTo(s); }
+      }).catch(function () {});
+    }
+    if (typeof app.addListener === 'function') {
+      app.addListener('appUrlOpen', function (data) {
+        var s = data && data.url ? serverFromDeepLink(data.url) : null;
+        if (s) { connectTo(s); }
+      });
+    }
+  }
+
   // ---- wire up ----------------------------------------------------------
   function init() {
+    wireDeepLink();
     var saved = loadSavedUrl();
     renderReconnect(saved);
 

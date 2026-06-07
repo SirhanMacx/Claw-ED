@@ -20,6 +20,17 @@ struct MenuBarContentView: View {
     private var autoOpen: Bool { UserDefaults.standard.clawedAutoOpenOnStart }
     private var shareOnLan: Bool { UserDefaults.standard.clawedShareOnLan }
 
+    /// The pairing deep link the QR encodes. Scanning it with the iPhone's
+    /// normal camera opens the Claw-ED app and connects it to this Mac in one
+    /// tap — no typing, no in-app scanner. The connect screen parses
+    /// `clawed://connect?url=<server>`.
+    private func deepLink(for server: URL) -> String {
+        let encoded = server.absoluteString.addingPercentEncoding(
+            withAllowedCharacters: .alphanumerics
+        ) ?? server.absoluteString
+        return "clawed://connect?url=\(encoded)"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
@@ -152,8 +163,8 @@ struct MenuBarContentView: View {
                 HStack {
                     Spacer()
                     VStack(spacing: 6) {
-                        QRCodeView(string: lan.absoluteString, side: 150)
-                        Text("Scan with the Claw-ED app on your phone")
+                        QRCodeView(string: deepLink(for: lan), side: 150)
+                        Text("Scan with your phone’s camera — opens Claw-ED & connects")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
