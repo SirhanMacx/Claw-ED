@@ -88,16 +88,31 @@ long output) — the default/recommended provider must clear that bar.
       based Global History. Ingest a different-subject corpus and judge whether
       the pipeline adapts (or over-imposes CRQ/primary-source structure where it
       doesn't fit). The "any subject, any grade" promise hinges on this.
-- [ ] (e3) **Voice-match calibration** — the multi-agent reviewer self-scored
-      "voice match 3.0/5.0" on a lesson that actually reproduced the teacher's
-      signature hook. The reviewer rubric (or the writer's persona injection)
-      is mis-calibrated; tighten `multi_agent_reviewer.txt` / persona context.
+- [~] (e3) **Voice-match score** — root cause found + fixed: the CLI showed a
+      constant "3.0/5.0" because it called `score_voice_match` WITHOUT an LLM
+      client (the neutral fallback). Now wired to the real model (commit
+      e9de26b). Remaining: confirm the now-real score is well-calibrated — needs
+      one paid lesson run to observe an actual score, so deferred with the other
+      paid checks.
 - [ ] (d) Confirm a full lesson generates COMPLETE on the **free** model E2E
       (free model historically truncates long structured output; the drift
       normalizer should now make partial output usable rather than fatal).
-- [ ] (f) Deep README claim-by-claim audit (shallow pass: all claims have
-      backing code; verify each actually works — no vaporware).
-- [ ] One-click Mac menu-bar launch is smooth end-to-end (`mac-app/`).
+- [x] (f) Deep README claim-by-claim audit — **honest, no vaporware.** Every
+      documented command + subcommand exists; high-risk features all have real
+      backing modules; specific numbers check out ("70+ tells" → 125 actual,
+      "12 pedagogical checks" → ~12-14 real with auto-retry); `clawed demo`
+      (no-API-key path) runs and produces a compelling sample. ✅
+- [x] One-click Mac menu-bar launch (`mac-app/`) — **reviewed, core solid.**
+      Find-clawed→start→health-poll→auto-open-browser is correctly wired
+      (`LaunchPlan` resolves clawed/PATH/python + augments the minimal GUI PATH;
+      `ServerController` start/stop/health/teardown all correct; relies on the
+      keyring-resilience fix to survive GUI-launched keychain access). ✅
+      Open gap (NOT a bug — disclosed in UI): the **phone QR / LAN URL won't
+      connect by default** because `clawed app` binds `127.0.0.1` and the
+      launcher has no LAN-exposure opt-in. Adding a "share on Wi-Fi" toggle
+      that launches with `--host 0.0.0.0` is the fix — but it's security-
+      sensitive (LAN exposure) and Swift (can't verify headless), so it needs
+      Jon's intent before building.
 
 ## Guardrails
 Parked: no merge to `main`, no release tag — no rush to market. Testing on the
