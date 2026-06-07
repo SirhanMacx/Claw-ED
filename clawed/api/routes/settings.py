@@ -54,10 +54,34 @@ class OnboardingStepRequest(BaseModel):
 
 @router.get("/health")
 async def health_check() -> dict[str, Any]:
-    """Lightweight liveness check — no DB or LLM calls."""
+    """Lightweight liveness + provider readiness (no DB or LLM network calls).
+
+    The status bar polls this, so it must stay fast: we report which provider
+    is configured, its model, and whether it's usable (a key is present, or it's
+    the local Ollama backend which needs none). No outbound LLM request is made.
+    """
+    provider = ""
+    model = ""
+    connected = False
+    try:
+        from clawed.config import get_api_key
+        from clawed.models import LLMProvider
+
+        cfg = AppConfig.load()
+        provider = cfg.provider.value
+        model = getattr(cfg, f"{provider}_model", "") or ""
+        if cfg.provider == LLMProvider.OLLAMA:
+            connected = True  # local backend, no API key required
+        else:
+            connected = bool(get_api_key(provider))
+    except Exception:
+        pass
     return {
         "status": "ok",
         "version": __version__,
+        "llm_provider": provider,
+        "llm_model": model,
+        "llm_connected": connected,
     }
 
 
