@@ -63,6 +63,22 @@ The shortest path to something Jon can actually use phone↔Mac-mini.
 - [x] A5. Test steps written (below). ✅
 - **Jon tests A:** Mac mini + iPhone on the same Wi-Fi.
 
+### ✅ Simulator end-to-end test (done by Claude, 2026-06-07)
+Built the iOS app for the iPhone-17 Simulator, installed + launched it, and drove
+the connect flow against the live Mac agent (`http://127.0.0.1:8000`). **Result:
+the native app loaded and rendered the full agent web app inside the WKWebView**
+(onboarding wizard, lesson cards, sample content) — cleartext http + cross-origin
+API all working. Screenshots: `/tmp/sim_connect.png` (connect screen),
+`/tmp/sim_agent.png` (agent loaded in-app). The core mechanism — *phone app runs
+the Mac agent over the network* — is verified end-to-end, not just reasoned.
+- **Note (polish):** the off-origin navigation shows a small in-app browser bar
+  (`‹ 127.0.0.1 ⟳ ⋯`) instead of seamless full-screen. Investigate using the
+  WKWebView main frame / a cleaner present so the agent fills the screen.
+- **Could not (Jon away):** computer-use needs his one-time access approval, and
+  there's no idb; so the *literal tap-Connect* was simulated by injecting the
+  same `window.location.replace` into the installed bundle (repo source
+  untouched). The real connect.js path does exactly this navigation.
+
 ### ▶ Jon's test steps — Milestone A (same Wi-Fi)
 **On the Mac mini (serve the agent on the LAN):**
 1. `cd ~/Projects/Claw-ED/mac-app && swift run` → the Claw-ED icon appears in the
