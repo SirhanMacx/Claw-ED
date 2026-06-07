@@ -37,9 +37,12 @@ app is a **thin client** that opens the teacher's own Claw-ED server over the LA
       autonomous verify (thin client; Jon also device-tests on TestFlight).
 - [x] ASC metadata draft (name, subtitle, description, keywords, age rating,
       privacy, review notes) — `docs/product/ASC_METADATA.md`
-- [ ] **BLOCKED ON JON:** ASC app record (Apple forbids API creation — 403) +
-      TestFlight upload. The upload itself is one command on the ASC API key,
-      no browser/credentials needed — see "Handoff" below.
+- [x] **DONE:** ASC app record created (Jon signed into ASC in the extension's
+      Chrome → I drove the New App form) — **App ID 6777690676**, Claw-ED,
+      com.macxlabs.clawed, SKU CLAWED001. **IPA uploaded to TestFlight via
+      altool — UPLOAD SUCCEEDED** (Delivery UUID ccaaab0b-59c8-405b-9397-fb55dab107b6,
+      2026-06-07). Build processing on Apple's side; appears in TestFlight in
+      a few minutes (`asc.mjs verify-build --version 1`).
 
 ## C. Ship gate
 - [x] Full test suite + CI green at HEAD (run 27081492544 — success, 3m31s;
