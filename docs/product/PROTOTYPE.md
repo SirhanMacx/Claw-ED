@@ -79,8 +79,28 @@ the Mac agent over the network* — is verified end-to-end, not just reasoned.
   (@capacitor/app + `clawed` URL scheme + connect.js appUrlOpen handler) and
   auto-connects. Verified in sim: iOS recognizes the scheme + prompts "Open in
   Claw-ED" (the teacher's one tap). Manual entry stays as fallback.
-- **NEXT — P3:** fresh TestFlight build 2 carrying P1+P2 so Jon installs the
-  polished version on his phone.
+- **P-AUTO DONE (2c9e1fe) — the "open it and it's just there" win.** The phone
+  app now **auto-connects on launch**: once paired, it opens straight into the
+  Mac agent with no connect screen and no typing — Jon's "everything should
+  happen inside the app… like Codex/ChatGPT… should be easier." On launch it
+  decides deep-link → remembered-server → manual-form, and health-checks
+  `GET /api/health` behind a cancelable "Opening your classroom" interstitial so
+  an unreachable Mac falls back to a **friendly retry** instead of the dead
+  WebView error page that made build 1 feel "busted." **Verified by Claude on
+  the iPhone-17 Simulator against the live Mac agent — all three states:**
+  - saved + reachable → opens straight into the agent (screenshot
+    `/tmp/sim_auto_loaded.png`: onboarding + live sample, no connect screen)
+  - saved + unreachable → interstitial → graceful retry form
+    (`/tmp/sim_auto_fallback2.png`)
+  - first run → clean connect form (`/tmp/sim_firstrun.png`)
+  (Needed two server-side enables, both shipped: CORS now allows the app's
+  `capacitor://localhost` origin so the probe is readable; and a
+  `[hidden]{display:none!important}` rule so a hidden interstitial can't out-rank
+  its own `display:flex`.)
+- **NEXT — P3:** the remote bridge (Milestone B) + a device token, then ONE
+  TestFlight build carrying P1+P2+P-AUTO. **Holding the TestFlight ship until the
+  remote path works** — a Wi-Fi-only build would repeat the "busted/WiFi"
+  complaint; the build is only worth installing once it opens from anywhere.
 - **Could not (Jon away):** computer-use needs his one-time access approval, and
   there's no idb; so the *literal tap-Connect* was simulated by injecting the
   same `window.location.replace` into the installed bundle (repo source
@@ -108,34 +128,53 @@ the Mac agent over the network* — is verified end-to-end, not just reasoned.
 > Note: this is **same Wi-Fi only** (LAN). True "on the go" (cellular) is
 > Milestone B (the Tailscale remote bridge), in progress.
 
-## Milestone B — on-the-go (remote bridge)
-The full vision: control the Mac-mini agent from anywhere.
+## Milestone B — on-the-go (remote bridge) ← the real wall, Jon-gated
+The full vision: control the Mac-mini agent from anywhere, in-app, not
+Wi-Fi-dependent. Auto-connect (P-AUTO) already gives the "just opens" feel; what
+remains is a reachable-from-cellular address for it to open.
 
-### ▶ B-MVP — works TODAY via the Tailscale app (zero new code)
-`clawed app --host 0.0.0.0` binds **all** interfaces, including the Tailscale
-virtual interface; the connect screen accepts any URL. So:
-1. Install the free **Tailscale** app on the Mac mini AND the iPhone; sign both
-   into the same account (one-time, ~5 min).
-2. On the Mac: `clawed app --host 0.0.0.0 --port 8000` (or menu-bar + Share on
-   Wi-Fi). Get the Mac's **tailnet IP** from the Tailscale app (looks like
-   `100.x.y.z`).
-3. On the iPhone (cellular, anywhere): open Claw-ED → enter `http://100.x.y.z:8000`
-   → use the agent. Tailscale carries the encrypted tunnel over the internet.
-- **Security note:** over the tailnet the server is private to Jon's own devices,
-  but `EDUAGENT_LOCAL_AUTH_BYPASS=1` means any device on that tailnet needs no
-  token. Fine for a personal test; **B3 below hardens this** before wider use.
-- **Jon tests B-MVP:** iPhone on cellular, Mac mini at home — *today*.
+### Architecture finding (2026-06-07) — pick an **https named tunnel**, not Tailscale-over-http
+The iOS app's ATS is `NSAllowsLocalNetworking` (Info.plist), which permits
+cleartext **only** to loopback + LAN/private ranges — **not** Tailscale's
+`100.64.0.0/10` CGNAT range. So `http://100.x.y.z:8000` over a tailnet would need
+the broad `NSAllowsArbitraryLoads` exception (App-Store-review friction). The
+clean answer is an **https domain**, which is ATS-clean *and* App-Store-safe:
+- **Recommended: Cloudflare *named* tunnel → `https://clawed.macxlabs.app`.**
+  Jon already runs `macxlabs.app` on Cloudflare (the marketing site), so the zone
+  exists. A `cloudflared` named tunnel gives a **stable https URL** — which is
+  exactly what auto-connect wants to bake in ("just opens, anywhere") — runs
+  always-on as a launchd service on the always-on Mac mini, and needs no separate
+  app on the phone. Quick (`trycloudflare`) tunnels were tried and are too flaky
+  (single edge connection); the named tunnel is the durable path.
+- **The one-time step only Jon can do:** `cloudflared tunnel login` (a browser
+  OAuth into *his* Cloudflare account — account auth I must not perform for him).
+  Everything after that (create tunnel, DNS route, launchd plist, bake the URL
+  into the app + auto-connect) I can script and verify locally.
 
-### B-polish (the real product; needs Jon's direction + device feedback)
-- [ ] B1. **Embed** Tailscale (tsnet) in the Mac app so there's NO separate
-      Tailscale install — OR stand up a small **MacxLabs relay** (branded,
-      hosted, must be E2E-encrypted). Decision pending; tsnet-embed is a Go↔Swift
-      bridge (non-trivial); the relay is hosting + crypto. Both are real builds.
-- [ ] B2. In-app pairing (QR carries the remote address) so the teacher never
-      types an IP.
-- [ ] B3. **Tighten remote auth** — replace the blanket local-auth bypass on
-      non-loopback binds with a paired-device secret so only the teacher's phone
-      connects; keep the approval gate as the backstop for sensitive actions.
+### B-plan
+- [ ] B1. **Device-token auth (do FIRST — buildable + verifiable without Jon).**
+      A public https tunnel exposes the agent, so URL-obscurity is not enough:
+      replace the blanket `EDUAGENT_LOCAL_AUTH_BYPASS` on non-loopback binds with
+      a **paired-device bearer token** (phone stores it, sends it; loopback stays
+      bypassed for the menu-bar/browser path). Keep the approval gate as the
+      backstop for sensitive actions. Locally verifiable: `curl` with/without the
+      token → 200/401, plus a sim run. **This is the next loop step.**
+- [ ] B2. **Named tunnel + always-on.** `cloudflared` named tunnel +
+      `clawed.macxlabs.app` DNS + launchd service; the menu-bar app shows/QRs the
+      remote https URL. Gated on Jon's `cloudflared tunnel login`.
+- [ ] B3. **Bake + ship.** Bake the stable URL into auto-connect (carry the
+      device token), then one TestFlight build with P1+P2+P-AUTO+token. Jon
+      installs once → opens straight into his classroom from anywhere.
+
+### Known robustness gap (found 2026-06-07, not yet fixed)
+On a **headless / SSH / launchd** launch with no GUI session, `keyring.get_password`
+in `config.py` can **hang** in a Mach call to securityd (not error) — the
+broad-except keyring-resilience fix only catches *errors*, so a hang slips
+through and the server never binds. Workaround for now:
+`PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring` (falls straight through to
+`secrets.json`). Jon's interactive menu-bar launch is unaffected (keychain is
+serviceable in his GUI session). **Follow-up:** wrap the keyring read in a short
+timeout (or skip it when no GUI session) so a login-item/daemon launch is robust.
 
 ## Milestone C — distribution + polish (for launch, not for Jon's test)
 - [ ] C1. Bundle the Python engine into a notarized `.app` (PyInstaller/py2app)
