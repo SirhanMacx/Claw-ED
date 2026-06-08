@@ -166,15 +166,17 @@ clean answer is an **https domain**, which is ATS-clean *and* App-Store-safe:
       device token), then one TestFlight build with P1+P2+P-AUTO+token. Jon
       installs once → opens straight into his classroom from anywhere.
 
-### Known robustness gap (found 2026-06-07, not yet fixed)
-On a **headless / SSH / launchd** launch with no GUI session, `keyring.get_password`
-in `config.py` can **hang** in a Mach call to securityd (not error) — the
-broad-except keyring-resilience fix only catches *errors*, so a hang slips
-through and the server never binds. Workaround for now:
-`PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring` (falls straight through to
-`secrets.json`). Jon's interactive menu-bar launch is unaffected (keychain is
-serviceable in his GUI session). **Follow-up:** wrap the keyring read in a short
-timeout (or skip it when no GUI session) so a login-item/daemon launch is robust.
+### Robustness: keychain-hang on headless launch — FIXED
+On a **headless / SSH / launchd-at-login** launch with no GUI session,
+`keyring.get_password` in `config.py` could **hang** in a Mach call to securityd
+(not error) — the broad-except keyring-resilience only catches *errors*, so a
+hang slipped through and the server never bound. This matters because the
+always-on Mac service the iPhone connects to may run as a login item/daemon.
+**Fixed:** each keychain call now runs under a 2s timeout (`_call_with_timeout`);
+on timeout it falls through to env / `secrets.json` like any other keyring
+failure. Verified — the agent binds + loads its key with NO
+`PYTHON_KEYRING_BACKEND` workaround in a headless launch (previously hung forever
+in `mach_msg2_trap`). A healthy GUI keychain returns in <50ms, so no change there.
 
 ## Milestone C — distribution + polish (for launch, not for Jon's test)
 - [ ] C1. Bundle the Python engine into a notarized `.app` (PyInstaller/py2app)
