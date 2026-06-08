@@ -12,6 +12,7 @@
   'use strict';
 
   var STORAGE_KEY = 'clawed.serverUrl';
+  var TOKEN_KEY = 'clawed.serverToken'; // device token for the paired server (remote/tunnel)
   var DEFAULT_PORT = '8000'; // matches `clawed app` / mac-app AppEnvironment.swift
 
   // Once true, we've committed the WebView to a server (navigation scheduled).
@@ -64,6 +65,58 @@
       window.localStorage.removeItem(STORAGE_KEY);
     } catch (err) {
       console.warn('[clawed] localStorage clear failed:', err);
+    }
+  }
+
+  // ---- device token (for a remote/tunnel server that requires auth) -------
+  // Paired once via the Mac's QR (clawed://connect?url=…&token=…). Stays on this
+  // device; delivered to the server as an HttpOnly cookie at connect time (see
+  // navigateToServer). A local/LAN server needs none.
+  function loadToken() {
+    try {
+      return window.localStorage.getItem(TOKEN_KEY) || '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function saveToken(token) {
+    try {
+      window.localStorage.setItem(TOKEN_KEY, token);
+    } catch (err) {
+      console.warn('[clawed] token write failed:', err);
+    }
+  }
+
+  function clearToken() {
+    try {
+      window.localStorage.removeItem(TOKEN_KEY);
+    } catch (err) {
+      /* no-op */
+    }
+  }
+
+  // ---- navigation into the server ---------------------------------------
+  // With a token (remote/tunnel server that requires auth): set the auth cookie
+  // via a top-level form POST to /api/auth/bootstrap — the token rides in the
+  // POST body (never the URL), the server sets a first-party HttpOnly cookie and
+  // 303-redirects into the app, and the WebView's same-origin /api calls then
+  // carry the cookie automatically. Without a token (local/LAN): just navigate.
+  function navigateToServer(url, token) {
+    if (token) {
+      var form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url + '/api/auth/bootstrap';
+      form.style.display = 'none';
+      var field = document.createElement('input');
+      field.type = 'hidden';
+      field.name = 'token';
+      field.value = token;
+      form.appendChild(field);
+      document.body.appendChild(form);
+      form.submit();
+    } else {
+      window.location.replace(url);
     }
   }
 
@@ -159,7 +212,7 @@
   // Hand the WebView over to the teacher's server. We save first so a relaunch
   // can offer "Reconnect", then replace the current document so the back gesture
   // doesn't bounce between the server and this CONNECT screen.
-  function connectTo(url) {
+  function connectTo(url, token) {
     if (committed) {
       return true; // already handing off to a server — ignore late callers
     }
@@ -171,12 +224,20 @@
     }
     clearError();
     saveUrl(normalized);
+    // A non-empty token (from QR pairing) is remembered; an explicit null
+    // (manual entry, typically a local server) clears any stale token; an
+    // omitted token (undefined: reconnect / auto-connect) keeps the saved one.
+    if (token) {
+      saveToken(token);
+    } else if (token === null) {
+      clearToken();
+    }
     committed = true;
     setBusy(true);
     showConnectingTo(normalized);
     // Defer the actual navigation a tick so the interstitial paints first.
     window.setTimeout(function () {
-      window.location.replace(normalized);
+      navigateToServer(normalized, loadToken());
     }, 60);
     return true;
   }
@@ -261,10 +322,19 @@
           showError('No QR code detected. Try again, or type the URL.');
           return;
         }
+        // The Mac QR is a clawed:// deep link carrying url (+ optional token);
+        // a hand-made QR may just be a plain URL.
+        if (/^clawed:/i.test(value)) {
+          var paired = serverFromDeepLink(value);
+          if (paired) {
+            connectTo(paired.url, paired.token);
+            return;
+          }
+        }
         if (els.input) {
           els.input.value = value;
         }
-        connectTo(value);
+        connectTo(value, null);
       })
       .catch(function (err) {
         setBusy(false);
@@ -306,7 +376,11 @@
     try {
       var u = new URL(urlStr);
       var s = u.searchParams.get('url') || u.searchParams.get('server');
-      return s || null;
+      if (!s) {
+        return null;
+      }
+      // The Mac QR may also carry the device token for a remote/tunnel server.
+      return { url: s, token: u.searchParams.get('token') || '' };
     } catch (err) {
       return null;
     }
@@ -327,7 +401,7 @@
     app.addListener('appUrlOpen', function (data) {
       var s = data && data.url ? serverFromDeepLink(data.url) : null;
       if (s) {
-        connectTo(s);
+        connectTo(s.url, s.token);
       }
     });
   }
@@ -416,7 +490,7 @@
         .then(function (res) {
           var s = res && res.url ? serverFromDeepLink(res.url) : null;
           if (s) {
-            connectTo(s);
+            connectTo(s.url, s.token);
             return;
           }
           autoOrForm();
@@ -447,7 +521,8 @@
     if (els.form) {
       els.form.addEventListener('submit', function (event) {
         event.preventDefault();
-        connectTo(els.input ? els.input.value : '');
+        // Manual entry is the local/LAN path — clear any stale paired token.
+        connectTo(els.input ? els.input.value : '', null);
       });
     }
 
@@ -468,6 +543,7 @@
     if (els.forgetBtn) {
       els.forgetBtn.addEventListener('click', function () {
         clearSavedUrl();
+        clearToken();
         renderReconnect('');
         revealConnectScreen();
         if (els.input) {
