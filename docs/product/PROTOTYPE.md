@@ -192,12 +192,33 @@ clean answer is an **https domain**, which is ATS-clean *and* App-Store-safe:
   Curl over the real tunnel also confirms: health 200, no-token 401, Bearer 200,
   cookie 200. One fix: auto-connect probe 3.5s→8s (the agent's `/api/health` is
   ~4.2s over Cloudflare; 97730c9).
-- ⏭ **Remaining — STEP 4 ship:** (a) Mac menu shows the **tunnel** URL + a QR
-  carrying `clawed.macxlabs.app` + the device token (Swift); (b) launchd
-  always-on services for the tunnel + agent (agent env `HTTPS=1` so cookies are
-  Secure); (c) rebuild iOS, bump `CURRENT_PROJECT_VERSION`, archive → export →
-  altool upload → poll VALID; (d) notify Jon: install the build, scan the Mac QR,
-  open straight into the classroom from anywhere.
+- ✅ **(a) Mac pairing QR — DONE (cbb1596):** the menu shows an "Open on your
+  phone (anywhere)" QR encoding `clawed://connect?url=https://clawed.macxlabs.app
+  &token=<device-token>`. The token is read from `~/.eduagent/api_token` locally
+  and only leaves by being scanned off-screen. `swift build` clean.
+- ✅ **(b) launchd always-on — DONE (b699f9c):** `scripts/launchd/install.sh`
+  installs `com.macxlabs.clawed-agent` + `com.macxlabs.clawed-tunnel` (RunAtLoad
+  + KeepAlive). Installed + verified live: agent 200, tunnel 4 edges,
+  protected-without-token 401, cookie-auth 200 — all through the launchd-managed
+  services. The Mac serves `clawed.macxlabs.app` from boot now.
+- ⛔ **(c) iOS build 3 → TestFlight — BLOCKED on Jon (codesign / keychain).**
+  Code is ready + committed (`CURRENT_PROJECT_VERSION=3`), but `codesign` HANGS
+  in this headless context: it can list the cert (`find-identity` works) but
+  *using* the signing private key needs a keychain authorization that has no GUI
+  to approve (verified: `codesign --sign … /tmp/file` → timeout/exit 124). I
+  can't enter Jon's keychain password. **Unblock = one of:** Jon runs
+  `security set-key-partition-list -S apple-tool:,apple:,codesign: -s ~/Library/Keychains/login.keychain-db`
+  (prompts for his login password; then I archive→export→altool upload→verify
+  VALID autonomously), OR Jon archives+uploads build 3 in Xcode (Product →
+  Archive → Distribute → TestFlight).
+- ⏭ **(d)** then notify Jon: install build 3, scan the Mac QR, open straight into
+  the classroom from anywhere.
+
+### Production status (2026-06-08)
+Backend is **production-ready**: secure always-on tunnel + agent (launchd),
+device-token auth, full phone-login validated end-to-end over the real https
+tunnel. The ONLY thing between here and Jon testing on his phone is signing the
+iOS build — Jon-gated on the keychain (above).
 
 ### Robustness: keychain-hang on headless launch — FIXED
 On a **headless / SSH / launchd-at-login** launch with no GUI session,
