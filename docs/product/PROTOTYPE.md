@@ -178,17 +178,26 @@ clean answer is an **https domain**, which is ATS-clean *and* App-Store-safe:
   absence — `deps.local_bypass_ok()`, shared by `require_auth` + `_check_page_auth`.
   Verified live: `/` → 200 local, 401 over (simulated) tunnel w/o token, 200 with
   Bearer. 8 regression tests (`tests/test_auth_tunnel.py`).
-- ⏭ **Remaining — phone login over the tunnel (NO frontend changes needed):** the
-  web UI already calls `/api/*` with same-origin `fetch()` (default credentials),
-  so a `clawed_token` cookie rides along automatically. Plan: (1) `require_auth`
-  ALSO accepts the `clawed_token` cookie (timing-safe); (2) bootstrap cookie set
-  `SameSite=Lax; Secure; HttpOnly` (Lax → same-origin fetch carries it, cross-site
-  POST/CSRF does not); (3) phone delivers the cookie (POST `/api/auth/bootstrap`
-  or native WKWebView cookie injection — test both in sim against the live https
-  tunnel; cross-origin Set-Cookie / ITP is the one real unknown). Then carry the
-  token via the QR deep link, bake URL into auto-connect, relaunch the tunnel as a
-  launchd service (+ the agent as a service for true always-on), ship one
-  TestFlight build.
+- ✅ **Phone login over the tunnel — DONE + VALIDATED in the real WKWebView.**
+  (1) `require_auth` now accepts the `clawed_token` cookie (4a250d4); (2) the
+  bootstrap cookie is `SameSite=Lax; Secure; HttpOnly` (Lax → same-origin fetch
+  carries it, cross-site POST/CSRF doesn't); (3) the phone delivers it via a
+  **top-level form POST** to `/api/auth/bootstrap` (token in the body, never the
+  URL) — `navigateToServer` (3d5b337). The QR deep link carries the token
+  (`clawed://connect?url=…&token=…`). **Verified end-to-end against the live
+  https tunnel in the iPhone Simulator** (`/tmp/sim_tunnel_loaded2.png`): cold
+  launch → auto-connect → bootstrap cookie → the agent web app renders with its
+  authenticated `/api` content. The cross-origin / ITP worry did NOT materialize
+  (the form-POST sets a first-party cookie, which WKWebView stores + sends).
+  Curl over the real tunnel also confirms: health 200, no-token 401, Bearer 200,
+  cookie 200. One fix: auto-connect probe 3.5s→8s (the agent's `/api/health` is
+  ~4.2s over Cloudflare; 97730c9).
+- ⏭ **Remaining — STEP 4 ship:** (a) Mac menu shows the **tunnel** URL + a QR
+  carrying `clawed.macxlabs.app` + the device token (Swift); (b) launchd
+  always-on services for the tunnel + agent (agent env `HTTPS=1` so cookies are
+  Secure); (c) rebuild iOS, bump `CURRENT_PROJECT_VERSION`, archive → export →
+  altool upload → poll VALID; (d) notify Jon: install the build, scan the Mac QR,
+  open straight into the classroom from anywhere.
 
 ### Robustness: keychain-hang on headless launch — FIXED
 On a **headless / SSH / launchd-at-login** launch with no GUI session,
