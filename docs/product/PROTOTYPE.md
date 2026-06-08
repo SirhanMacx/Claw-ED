@@ -166,6 +166,30 @@ clean answer is an **https domain**, which is ATS-clean *and* App-Store-safe:
       device token), then one TestFlight build with P1+P2+P-AUTO+token. Jon
       installs once → opens straight into his classroom from anywhere.
 
+### B progress (2026-06-08) — tunnel LIVE + SECURED; phone login is the last piece
+- ✅ **Named tunnel stood up** (Jon ran `cloudflared tunnel login`): `clawed`
+  tunnel created, `clawed.macxlabs.app` DNS routed, `~/.cloudflared/config.yml`
+  ingress → `localhost:8000`. Test run registered **4 redundant edge
+  connections** (QUIC, ewr/ord). Connector currently **stopped (door closed)**
+  until phone-login lands; tunnel/DNS/config/creds persist, ready to relaunch as
+  a launchd service. (cloudflared API calls need `dangerouslyDisableSandbox`.)
+- ✅ **Open-door gap closed (841e062):** tunnel traffic carries a `Cf-Ray`
+  header genuine loopback never has, so the local-auth bypass now keys on its
+  absence — `deps.local_bypass_ok()`, shared by `require_auth` + `_check_page_auth`.
+  Verified live: `/` → 200 local, 401 over (simulated) tunnel w/o token, 200 with
+  Bearer. 8 regression tests (`tests/test_auth_tunnel.py`).
+- ⏭ **Remaining — phone login over the tunnel (NO frontend changes needed):** the
+  web UI already calls `/api/*` with same-origin `fetch()` (default credentials),
+  so a `clawed_token` cookie rides along automatically. Plan: (1) `require_auth`
+  ALSO accepts the `clawed_token` cookie (timing-safe); (2) bootstrap cookie set
+  `SameSite=Lax; Secure; HttpOnly` (Lax → same-origin fetch carries it, cross-site
+  POST/CSRF does not); (3) phone delivers the cookie (POST `/api/auth/bootstrap`
+  or native WKWebView cookie injection — test both in sim against the live https
+  tunnel; cross-origin Set-Cookie / ITP is the one real unknown). Then carry the
+  token via the QR deep link, bake URL into auto-connect, relaunch the tunnel as a
+  launchd service (+ the agent as a service for true always-on), ship one
+  TestFlight build.
+
 ### Robustness: keychain-hang on headless launch — FIXED
 On a **headless / SSH / launchd-at-login** launch with no GUI session,
 `keyring.get_password` in `config.py` could **hang** in a Mach call to securityd
