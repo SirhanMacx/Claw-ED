@@ -488,4 +488,33 @@ async def test_llm_connection(config: AppConfig | None = None) -> dict[str, Any]
         except Exception as e:
             return _result(False, model, str(e), is_err=True)
 
+    elif provider == "openrouter":
+        api_key = get_api_key("openrouter")
+        model = cfg.openrouter_model
+        if not api_key:
+            return _result(False, model, "No API key configured. Set OPENROUTER_API_KEY.", is_err=True)
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://clawed.macxlabs.app",
+                    "X-Title": "Claw-ED",
+                }
+                body = {
+                    "model": model, "max_tokens": 5,
+                    "messages": [{"role": "user", "content": "Hi"}],
+                }
+                resp = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers, json=body,
+                )
+                if resp.status_code == 401:
+                    return _result(False, model, "API key invalid", is_err=True)
+                resp.raise_for_status()
+                return _result(True, model, f"{model} is ready")
+        except Exception as e:
+            return _result(False, model, str(e), is_err=True)
+
     return {"connected": False, "provider": provider, "error": "Unknown provider"}
