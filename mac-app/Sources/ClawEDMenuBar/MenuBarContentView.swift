@@ -20,15 +20,41 @@ struct MenuBarContentView: View {
     private var autoOpen: Bool { UserDefaults.standard.clawedAutoOpenOnStart }
     private var shareOnLan: Bool { UserDefaults.standard.clawedShareOnLan }
 
+    /// The always-on remote address: the named Cloudflare tunnel. The agent is
+    /// reachable here from anywhere over https; pairing carries the device token
+    /// so only the teacher's own phone can connect.
+    private let remoteURL = URL(string: "https://clawed.macxlabs.app")!
+
+    /// The agent's device token, read from `~/.eduagent/api_token`. It STAYS on
+    /// this Mac — it only ever leaves by being encoded into the on-screen pairing
+    /// QR that the teacher scans with their own phone. Returns nil before the
+    /// agent has run (no token file yet).
+    private func deviceToken() -> String? {
+        let path = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".eduagent/api_token")
+        guard let raw = try? String(contentsOf: path, encoding: .utf8) else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     /// The pairing deep link the QR encodes. Scanning it with the iPhone's
     /// normal camera opens the Claw-ED app and connects it to this Mac in one
     /// tap — no typing, no in-app scanner. The connect screen parses
-    /// `clawed://connect?url=<server>`.
+    /// `clawed://connect?url=<server>&token=<device-token>`. The token is
+    /// included for any non-loopback server (the tunnel, or a LAN address),
+    /// which the agent requires auth for; a local server needs none.
     private func deepLink(for server: URL) -> String {
-        let encoded = server.absoluteString.addingPercentEncoding(
+        let encodedURL = server.absoluteString.addingPercentEncoding(
             withAllowedCharacters: .alphanumerics
         ) ?? server.absoluteString
-        return "clawed://connect?url=\(encoded)"
+        var link = "clawed://connect?url=\(encodedURL)"
+        if let token = deviceToken() {
+            let encodedToken = token.addingPercentEncoding(
+                withAllowedCharacters: .alphanumerics
+            ) ?? token
+            link += "&token=\(encodedToken)"
+        }
+        return link
     }
 
     var body: some View {
@@ -145,6 +171,36 @@ struct MenuBarContentView: View {
             addressRow(label: server.localURL.absoluteString,
                        url: server.localURL,
                        systemImage: "desktopcomputer")
+
+            // Primary phone option: open from ANYWHERE over the named tunnel.
+            // The QR carries the tunnel URL + the device token, so the teacher
+            // scans once and the phone is paired and connects on any network.
+            Divider().padding(.vertical, 2)
+            Text("Open on your phone (anywhere)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            addressRow(label: remoteURL.absoluteString,
+                       url: remoteURL,
+                       systemImage: "globe")
+            if deviceToken() != nil {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 6) {
+                        QRCodeView(string: deepLink(for: remoteURL), side: 150)
+                        Text("Scan with your phone’s camera — opens Claw-ED & connects from anywhere")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    Spacer()
+                }
+                .padding(.top, 4)
+            } else {
+                Text("Start Claw-ED once to generate your device token, then reopen this menu to see the pairing QR.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             // Phone access only works when LAN sharing is ON (server bound to
             // 0.0.0.0). Showing a QR that points at a localhost-only server
