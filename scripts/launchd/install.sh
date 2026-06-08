@@ -24,6 +24,10 @@ set -euo pipefail
 cd "$HOME/Projects/Claw-ED"
 export EDUAGENT_LOCAL_AUTH_BYPASS=1
 export EDUAGENT_EMBEDDER=tfidf
+# Never touch the macOS Keychain from this headless service — it can't be
+# serviced without a GUI session and pops a password prompt on each launch.
+# The provider key is read from ~/.eduagent/secrets.json instead.
+export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
 exec /opt/homebrew/bin/python3 -c 'import sys; sys.argv=["clawed","serve","--host","127.0.0.1","--port","8000","--skip-setup"]; from clawed._entry_router import main; main()'
 SH
 chmod +x "$SUPPORT/run-agent.sh"
