@@ -70,6 +70,17 @@ keychain search list to login-only afterward (hygiene).
 already exist — reuse them; just rebuild the `/tmp` signing keychain (steps 3+5+6)
 if `/tmp` was cleared. No need to re-mint unless the cert was revoked/expired.
 
+**TestFlight delivery gotcha (fixed 2026-06-08):** a build can upload + show
+`VALID` / `READY_FOR_BETA_TESTING` in App Store Connect and STILL never appear in
+the TestFlight app — because the app had **no test group and no testers**, so
+nothing routed the build to a device (this stranded builds 1 AND 3 silently).
+Fixed via API: created an **internal** beta group (`Internal`, id
+`964a6f26-102f-4fed-957f-92fb2c0714ae`, `isInternalGroup` + `hasAccessToAllBuilds`)
+and added the account holder `sirhanmacx@icloud.com` as an internal tester →
+build flipped to `IN_BETA_TESTING`. Internal testing needs no Apple review.
+The tester's phone TestFlight must be signed into **that same Apple ID**. The group
+has all-builds access, so future builds appear automatically — no per-build assign.
+
 ---
 
 ## ⚠️ The keychain / codesign rule (MOST IMPORTANT)
