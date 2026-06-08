@@ -137,19 +137,48 @@ def get_api_token() -> str:
     return _get_or_create_token()
 
 
+def _via_cloudflare_edge(request: Request) -> bool:
+    """True if the request arrived through Cloudflare (i.e. the public tunnel).
+
+    Cloudflare stamps every request it proxies with a ``Cf-Ray`` header. Genuine
+    loopback traffic — the teacher's own browser or the menu-bar app hitting
+    127.0.0.1 directly — never has it. The agent binds loopback only, so the ONLY
+    way a request reaches it from off-machine is the named tunnel, which always
+    carries ``Cf-Ray``; an off-machine caller cannot strip it (Cloudflare adds it
+    at the edge, *after* they connect). So "no Cf-Ray" reliably means the request
+    is genuinely local.
+    """
+    return bool(request.headers.get("cf-ray"))
+
+
+def local_bypass_ok(request: Request) -> bool:
+    """Whether the loopback auth bypass applies to this request.
+
+    True only when ``EDUAGENT_LOCAL_AUTH_BYPASS=1`` AND the request is genuinely
+    local: a loopback client that did NOT come through Cloudflare. This is what
+    stops the public tunnel from being an open door — tunnel traffic always
+    carries a ``Cf-Ray`` header, so it never bypasses and must present a token,
+    while the teacher's own on-Mac browser/menu-bar access stays password-free.
+    """
+    if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") != "1":
+        return False
+    if _via_cloudflare_edge(request):
+        return False  # came over the public tunnel — never bypass
+    client_ip = request.client.host if request.client else ""
+    return client_ip in ("127.0.0.1", "::1", "localhost", "testclient")
+
+
 async def require_auth(request: Request) -> None:
     """FastAPI dependency: require Bearer token on sensitive routes.
 
-    Localhost requests (127.0.0.1) bypass auth when
-    EDUAGENT_LOCAL_AUTH_BYPASS=1 is set.
+    Genuinely-local requests bypass auth when EDUAGENT_LOCAL_AUTH_BYPASS=1, but
+    requests proxied through the public Cloudflare tunnel never do (see
+    local_bypass_ok) — so the tunnel always requires a token.
 
     v4.11.2026: uses secrets.compare_digest for timing-safe comparison.
     """
-    # Optional localhost bypass (also covers test clients)
-    if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
-        client_ip = request.client.host if request.client else ""
-        if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
-            return
+    if local_bypass_ok(request):
+        return
 
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer "):

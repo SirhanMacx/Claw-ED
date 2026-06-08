@@ -51,7 +51,7 @@ def _check_page_auth(request: Request) -> bool:
     """
     import secrets as _secrets
 
-    from clawed.api.deps import get_api_token
+    from clawed.api.deps import get_api_token, local_bypass_ok
 
     token = get_api_token()
     # Check cookie (primary method — set via POST /api/auth/bootstrap)
@@ -62,12 +62,9 @@ def _check_page_auth(request: Request) -> bool:
     auth = request.headers.get("authorization", "")
     if auth.startswith("Bearer ") and _secrets.compare_digest(auth[7:], token):
         return True
-    # Check localhost bypass
-    if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
-        client_ip = request.client.host if request.client else ""
-        if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
-            return True
-    return False
+    # Genuinely-local bypass — NOT tunnel traffic (see local_bypass_ok): a
+    # request proxied through Cloudflare carries Cf-Ray and never bypasses.
+    return local_bypass_ok(request)
 
 
 @asynccontextmanager
