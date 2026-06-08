@@ -169,27 +169,35 @@ def local_bypass_ok(request: Request) -> bool:
 
 
 async def require_auth(request: Request) -> None:
-    """FastAPI dependency: require Bearer token on sensitive routes.
+    """FastAPI dependency: require a valid token on sensitive routes.
 
-    Genuinely-local requests bypass auth when EDUAGENT_LOCAL_AUTH_BYPASS=1, but
-    requests proxied through the public Cloudflare tunnel never do (see
-    local_bypass_ok) — so the tunnel always requires a token.
+    Accepted, in order: the genuinely-local bypass; the ``clawed_token`` session
+    cookie (set by POST /api/auth/bootstrap — ``SameSite=Lax`` so a cross-site
+    POST can't carry it: CSRF-safe); or a Bearer token. Tunnel traffic (Cf-Ray)
+    never bypasses, so the public ingress always needs the cookie or Bearer. This
+    mirrors ``_check_page_auth`` so the iOS WebView's same-origin ``/api`` fetches
+    — which carry the cookie automatically — authenticate over the tunnel with no
+    frontend changes.
 
-    v4.11.2026: uses secrets.compare_digest for timing-safe comparison.
+    v4.11.2026: timing-safe comparison via secrets.compare_digest.
     """
     if local_bypass_ok(request):
         return
 
-    auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing auth token")
-    token = auth[7:]
     expected = _get_or_create_token()
-    # Timing-safe: compare_digest avoids leaking the first-diverging byte
-    # via wall-clock differences on mismatch. Both operands must be str
-    # (bytes also work) and must be the same type.
-    if not secrets.compare_digest(token, expected):
-        raise HTTPException(status_code=401, detail="Invalid auth token")
+
+    # Session cookie — how the iOS app / a browser authenticate over the tunnel.
+    # compare_digest is timing-safe (avoids leaking the first-diverging byte).
+    cookie = request.cookies.get("clawed_token", "")
+    if cookie and secrets.compare_digest(cookie, expected):
+        return
+
+    # Bearer token — for API-style / extension callers.
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer ") and secrets.compare_digest(auth[7:], expected):
+        return
+
+    raise HTTPException(status_code=401, detail="Missing or invalid auth token")
 
 
 # ── Database ─────────────────────────────────────────────────────────

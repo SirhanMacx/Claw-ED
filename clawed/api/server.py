@@ -159,11 +159,17 @@ def _register_api_routes(app: FastAPI) -> None:
     app.include_router(student_classroom_router, prefix="/api")  # No auth — class code is auth
 
 
-async def _page_auth_bootstrap(token: str = Form(...)) -> Any:
+async def _page_auth_bootstrap(request: Request, token: str = Form(...)) -> Any:
     """Accept auth token via POST and set a session cookie.
 
-    Replaces the old ?token= query param flow to prevent token
-    leakage through browser history, bookmarks, and referrers.
+    Replaces the old ?token= query param flow to prevent token leakage through
+    browser history, bookmarks, and referrers. The cookie is ``SameSite=Lax`` —
+    it rides the iOS shell's cross-site top-level navigation into the agent (so
+    the page loads) and the WebView's same-origin ``/api`` fetches (so the app
+    works), but a cross-site POST never carries it (CSRF-safe). It's marked
+    ``Secure`` whenever the original request was https — the public tunnel
+    terminates TLS at Cloudflare and forwards ``X-Forwarded-Proto=https`` — so the
+    token never rides an unencrypted hop.
     """
     import secrets as _secrets
 
@@ -173,12 +179,13 @@ async def _page_auth_bootstrap(token: str = Form(...)) -> Any:
     if not _secrets.compare_digest(token, expected):
         return JSONResponse({"error": "Invalid token"}, status_code=401)
 
-    is_https = os.environ.get("HTTPS", "").lower() in ("1", "true")
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+    is_https = forwarded_proto == "https" or os.environ.get("HTTPS", "").lower() in ("1", "true")
     response = RedirectResponse("/", status_code=303)
     response.set_cookie(
         "clawed_token", token,
         httponly=True,
-        samesite="strict",
+        samesite="lax",
         secure=is_https,
         max_age=86400,
     )
