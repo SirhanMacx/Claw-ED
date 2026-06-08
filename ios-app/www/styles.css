@@ -28,6 +28,12 @@
   box-sizing: border-box;
 }
 
+/* The HTML `hidden` attribute must always win, even over a card's own
+   `display: flex` (otherwise a hidden interstitial keeps showing). */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -304,6 +310,40 @@ body {
   margin-inline: auto;
 }
 
+/* ---- auto-connect interstitial -------------------------------------- */
+.auto {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.auto .card-label {
+  margin: 0;
+}
+
+.auto .reconnect-url {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.auto-spinner {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--clay);
+  animation: clawed-spin 0.8s linear infinite;
+}
+
+@keyframes clawed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ---- busy state ------------------------------------------------------ */
 body.is-busy {
   cursor: progress;
@@ -316,5 +356,8 @@ body.is-busy {
   }
   .btn:active {
     transform: none;
+  }
+  .auto-spinner {
+    animation-duration: 1.8s;
   }
 }

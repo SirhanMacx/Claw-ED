@@ -98,6 +98,11 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
         cors_origins = [
             "http://localhost:8000",
             "http://127.0.0.1:8000",
+            # iOS companion app: the Capacitor WKWebView's own origin. The phone
+            # probes GET /api/health from here before handing its WebView over to
+            # this server, so it can fail gracefully (show a friendly retry)
+            # instead of stranding the teacher on a dead browser error page.
+            "capacitor://localhost",
         ]
     app.add_middleware(
         CORSMiddleware,

@@ -14,6 +14,12 @@
   var STORAGE_KEY = 'clawed.serverUrl';
   var DEFAULT_PORT = '8000'; // matches `clawed app` / mac-app AppEnvironment.swift
 
+  // Once true, we've committed the WebView to a server (navigation scheduled).
+  // Every entry point checks this so a late health-check or warm deep-link can
+  // never double-navigate or yank the teacher back to the connect screen.
+  var committed = false;
+  var autoController = null; // AbortController for the in-flight launch probe
+
   // ---- tiny DOM helpers -------------------------------------------------
   function $(id) {
     return document.getElementById(id);
@@ -25,10 +31,14 @@
     error: $('connect-error'),
     connectBtn: $('connect-btn'),
     scanBtn: $('scan-btn'),
+    connectCard: $('connect-card'),
     reconnectCard: $('reconnect-card'),
     reconnectBtn: $('reconnect-btn'),
     reconnectUrl: $('reconnect-url'),
     forgetBtn: $('forget-btn'),
+    autoCard: $('auto-card'),
+    autoTarget: $('auto-target'),
+    autoCancelBtn: $('auto-cancel'),
   };
 
   // ---- storage (guarded; private mode / disabled storage must not crash) -
@@ -150,19 +160,58 @@
   // can offer "Reconnect", then replace the current document so the back gesture
   // doesn't bounce between the server and this CONNECT screen.
   function connectTo(url) {
+    if (committed) {
+      return true; // already handing off to a server — ignore late callers
+    }
     var normalized = normalizeUrl(url);
     if (!normalized) {
+      revealConnectScreen();
       showError('That does not look like a server address. Try something like http://192.168.1.42:8000');
       return false;
     }
     clearError();
     saveUrl(normalized);
+    committed = true;
     setBusy(true);
-    // Defer the actual navigation a tick so the busy state paints first.
+    showConnectingTo(normalized);
+    // Defer the actual navigation a tick so the interstitial paints first.
     window.setTimeout(function () {
       window.location.replace(normalized);
     }, 60);
     return true;
+  }
+
+  // ---- card visibility --------------------------------------------------
+  // Exactly one of {auto, reconnect+connect} is shown at a time. The brand
+  // header is always visible so the screen never looks blank while deciding.
+  function hideAllCards() {
+    [els.autoCard, els.connectCard, els.reconnectCard].forEach(function (card) {
+      if (card) {
+        card.hidden = true;
+      }
+    });
+  }
+
+  function showConnectingTo(url) {
+    hideAllCards();
+    if (els.autoTarget) {
+      els.autoTarget.textContent = url;
+    }
+    if (els.autoCard) {
+      els.autoCard.hidden = false;
+    }
+  }
+
+  // Reveal the manual connect form (used on first run, on cancel, or when a
+  // remembered server can't be reached). renderReconnect() then decides whether
+  // the "Welcome back" shortcut also appears above it.
+  function revealConnectScreen() {
+    if (els.autoCard) {
+      els.autoCard.hidden = true;
+    }
+    if (els.connectCard) {
+      els.connectCard.hidden = false;
+    }
   }
 
   function setBusy(isBusy) {
@@ -263,31 +312,137 @@
     }
   }
 
-  function wireDeepLink() {
+  function capApp() {
     var cap = window.Capacitor;
-    var app = cap && cap.Plugins && cap.Plugins.App;
-    if (!app) {
-      return; // not running inside the native app; manual entry still works
+    return (cap && cap.Plugins && cap.Plugins.App) || null;
+  }
+
+  // Warm deep-link: app already open, teacher scans the Mac QR. Always live so a
+  // pairing link wins over whatever screen is showing.
+  function wireWarmDeepLink() {
+    var app = capApp();
+    if (!app || typeof app.addListener !== 'function') {
+      return;
     }
-    if (typeof app.getLaunchUrl === 'function') {
-      app.getLaunchUrl().then(function (res) {
-        var s = res && res.url ? serverFromDeepLink(res.url) : null;
-        if (s) { connectTo(s); }
-      }).catch(function () {});
+    app.addListener('appUrlOpen', function (data) {
+      var s = data && data.url ? serverFromDeepLink(data.url) : null;
+      if (s) {
+        connectTo(s);
+      }
+    });
+  }
+
+  // ---- auto-connect on launch -------------------------------------------
+  // The "just works like Codex" path: if we already know the teacher's server,
+  // don't make them tap anything. Probe it first so we can fail gracefully (a
+  // friendly retry) instead of replacing the WebView with a dead error page,
+  // then open straight in. Probe uses GET /api/health; the server allow-lists
+  // this app's capacitor:// origin so the cross-origin check is readable.
+  function healthCheck(baseUrl, timeoutMs) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    autoController = ctrl;
+    var timer = window.setTimeout(function () {
+      if (ctrl) {
+        ctrl.abort();
+      }
+    }, timeoutMs || 3500);
+    var opts = { method: 'GET', cache: 'no-store' };
+    if (ctrl) {
+      opts.signal = ctrl.signal;
     }
-    if (typeof app.addListener === 'function') {
-      app.addListener('appUrlOpen', function (data) {
-        var s = data && data.url ? serverFromDeepLink(data.url) : null;
-        if (s) { connectTo(s); }
+    return fetch(baseUrl + '/api/health', opts)
+      .then(function (res) {
+        window.clearTimeout(timer);
+        return !!(res && res.ok);
+      })
+      .catch(function () {
+        window.clearTimeout(timer);
+        return false;
+      })
+      .then(function (ok) {
+        autoController = null;
+        return ok;
       });
+  }
+
+  function startAutoConnect(url) {
+    var normalized = normalizeUrl(url);
+    if (!normalized) {
+      revealConnectScreen();
+      renderReconnect('');
+      return;
+    }
+    showConnectingTo(normalized);
+    healthCheck(normalized, 3500).then(function (ok) {
+      if (committed) {
+        return; // a deep-link or manual tap already took over
+      }
+      if (ok) {
+        connectTo(normalized);
+      } else {
+        revealConnectScreen();
+        renderReconnect(normalized);
+        showError(
+          'Couldn’t reach ' + normalized + '. Make sure Claw-ED is running on ' +
+          'your Mac (and on the same network or your tunnel), then reconnect.'
+        );
+      }
+    });
+  }
+
+  function cancelAutoConnect() {
+    if (autoController) {
+      try {
+        autoController.abort();
+      } catch (err) {
+        /* no-op */
+      }
+    }
+    if (committed) {
+      return;
+    }
+    var saved = loadSavedUrl();
+    revealConnectScreen();
+    renderReconnect(saved);
+  }
+
+  // Decide what to show the instant the app opens: a pairing deep-link wins;
+  // else auto-connect to the remembered server; else the manual form.
+  function decideInitialAction() {
+    var app = capApp();
+    if (app && typeof app.getLaunchUrl === 'function') {
+      app
+        .getLaunchUrl()
+        .then(function (res) {
+          var s = res && res.url ? serverFromDeepLink(res.url) : null;
+          if (s) {
+            connectTo(s);
+            return;
+          }
+          autoOrForm();
+        })
+        .catch(autoOrForm);
+    } else {
+      autoOrForm();
+    }
+  }
+
+  function autoOrForm() {
+    if (committed) {
+      return;
+    }
+    var saved = loadSavedUrl();
+    if (saved) {
+      startAutoConnect(saved);
+    } else {
+      revealConnectScreen();
+      renderReconnect('');
     }
   }
 
   // ---- wire up ----------------------------------------------------------
   function init() {
-    wireDeepLink();
-    var saved = loadSavedUrl();
-    renderReconnect(saved);
+    wireWarmDeepLink();
 
     if (els.form) {
       els.form.addEventListener('submit', function (event) {
@@ -306,21 +461,28 @@
 
     if (els.reconnectBtn) {
       els.reconnectBtn.addEventListener('click', function () {
-        connectTo(saved);
+        connectTo(loadSavedUrl());
       });
     }
 
     if (els.forgetBtn) {
       els.forgetBtn.addEventListener('click', function () {
         clearSavedUrl();
-        saved = '';
         renderReconnect('');
+        revealConnectScreen();
         if (els.input) {
           els.input.value = '';
           els.input.focus();
         }
       });
     }
+
+    if (els.autoCancelBtn) {
+      els.autoCancelBtn.addEventListener('click', cancelAutoConnect);
+    }
+
+    // Decide the opening screen: pairing deep-link → auto-connect → form.
+    decideInitialAction();
   }
 
   if (document.readyState === 'loading') {

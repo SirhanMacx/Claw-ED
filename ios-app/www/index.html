@@ -19,6 +19,17 @@
         <p class="tagline">Connect to your classroom server.</p>
       </header>
 
+      <!-- Auto-connect interstitial: shown on launch while we open the saved
+           server, so the teacher never sees a connect screen once paired. -->
+      <section id="auto-card" class="card auto" hidden aria-live="polite">
+        <div class="auto-spinner" aria-hidden="true"></div>
+        <p class="card-label">Opening your classroom</p>
+        <p id="auto-target" class="reconnect-url">—</p>
+        <button id="auto-cancel" class="btn btn-text" type="button">
+          Use a different server
+        </button>
+      </section>
+
       <!-- Reconnect card: shown only when a previous URL is remembered. -->
       <section
         id="reconnect-card"
@@ -36,15 +47,16 @@
         </button>
       </section>
 
-      <!-- Manual connect form. -->
-      <section id="connect-card" class="card" aria-labelledby="connect-label">
+      <!-- Manual connect form (hidden until JS decides this is the right card). -->
+      <section id="connect-card" class="card" hidden aria-labelledby="connect-label">
         <form id="connect-form" novalidate>
           <label id="connect-label" class="field-label" for="server-url">
             Server address
           </label>
           <p class="field-hint">
-            On your Mac, open the Claw-ED menu-bar app and read the LAN URL (or
-            scan its QR code).
+            On your Mac, open the Claw-ED menu-bar app and scan its QR code — or
+            type the address it shows here. You only do this once; after that
+            Claw-ED opens straight to your classroom.
           </p>
           <input
             id="server-url"
@@ -74,8 +86,8 @@
 
       <footer class="foot">
         <p class="foot-note">
-          Same Wi-Fi only. Your data stays between this device and your Mac —
-          nothing is sent to MacxLabs.
+          Works on Wi-Fi or cellular. Your data stays between this device and
+          your Mac — nothing is sent to MacxLabs.
         </p>
       </footer>
     </main>
