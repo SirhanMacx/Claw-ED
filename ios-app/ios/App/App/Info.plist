@@ -40,8 +40,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Claw-ED uses the camera to capture worksheets and documents to upload to your lessons.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Claw-ED connects to your own classroom server on the same Wi-Fi network so this device can open it.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Claw-ED uses your photo library to attach images and documents to your lessons.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -239,6 +239,23 @@
     window.setTimeout(function () {
       navigateToServer(normalized, loadToken());
     }, 60);
+    // Watchdog against the "endless spinner": a SUCCESSFUL navigation destroys
+    // this document, so this timer never fires on success. If it DOES fire, the
+    // hand-off stalled (server unreachable, navigation blocked, POST hung) — so
+    // recover to a clear, retryable error instead of spinning forever.
+    window.setTimeout(function () {
+      if (!committed) {
+        return; // navigated away, or a later action already reset us
+      }
+      committed = false; // allow another attempt
+      setBusy(false);
+      revealConnectScreen();
+      renderReconnect(normalized);
+      showError(
+        'Couldn’t reach ' + normalized + ' — it didn’t respond in time. Make ' +
+        'sure Claw-ED is running on your Mac (the menu-bar app), then tap Reconnect.'
+      );
+    }, 15000);
     return true;
   }
 
