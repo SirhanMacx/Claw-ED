@@ -419,7 +419,7 @@
       if (ctrl) {
         ctrl.abort();
       }
-    }, timeoutMs || 3500);
+    }, timeoutMs || 8000);
     var opts = { method: 'GET', cache: 'no-store' };
     if (ctrl) {
       opts.signal = ctrl.signal;
@@ -447,7 +447,10 @@
       return;
     }
     showConnectingTo(normalized);
-    healthCheck(normalized, 3500).then(function (ok) {
+    // 8s, not 3.5s: a remote/tunnel server adds real round-trip latency (the
+    // agent's /api/health was ~4.2s over Cloudflare), so a tight timeout would
+    // falsely fall back on a perfectly reachable Mac.
+    healthCheck(normalized, 8000).then(function (ok) {
       if (committed) {
         return; // a deep-link or manual tap already took over
       }
