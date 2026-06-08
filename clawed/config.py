@@ -56,6 +56,14 @@ def _save_secrets(secrets: dict[str, str]) -> None:
 # This keeps a GUI-launched menu-bar app AND a daemon/SSH launch both robust.
 _KEYRING_TIMEOUT_S = 2.0
 
+# Once a keyring op fails or hangs (e.g. a headless launchd/SSH session with no
+# GUI keychain), skip the keyring for the rest of this process instead of paying
+# the timeout on EVERY call. A GUI session never trips this — its first call
+# succeeds, so the flag stays off. This keeps key reads — and /api/health, which
+# checks key presence and is polled by the app's connect probe — fast under the
+# always-on launchd agent (which otherwise paid ~2s per call).
+_keyring_disabled = False
+
 
 def _call_with_timeout(fn: Callable[[], Any], timeout: float) -> Any:
     """Run ``fn()`` in a daemon thread; raise TimeoutError if it overruns.
@@ -84,6 +92,10 @@ def _call_with_timeout(fn: Callable[[], Any], timeout: float) -> Any:
 
 
 def _try_keyring_get(key: str) -> str | None:
+    global _keyring_disabled
+    if _keyring_disabled:
+        return None
+
     def _get() -> str | None:
         import keyring
 
@@ -93,20 +105,28 @@ def _try_keyring_get(key: str) -> str | None:
     try:
         value = _call_with_timeout(_get, _KEYRING_TIMEOUT_S)
         return None if value is None else str(value)
+    except TimeoutError:
+        # Headless hang: no GUI keychain session, so the Mach call to securityd
+        # never returns. Disable the keyring for the rest of this process so we
+        # don't pay the 2s timeout on every call; fall through to env/secrets.
+        _keyring_disabled = True
+        logger.debug("keyring get timed out; disabling keyring for this process", exc_info=True)
+        return None
     except ImportError:
-        return None  # keyring is optional; silently fall through to env/file
+        _keyring_disabled = True  # keyring not installed — never retry
+        return None
     except Exception:
-        # A keychain backend can fail OR hang for reasons unrelated to the key
-        # being absent: a locked keychain, a headless / SSH / launchd session, a
-        # macOS security context where the keychain is unreachable (error
-        # -25291), or a Mach call to securityd that never returns. None of that
-        # may crash or stall config loading — the key may well be in secrets.json
-        # or the environment. Fall through to the next source.
-        logger.debug("keyring get failed/timed out; falling through to env/secrets", exc_info=True)
+        # Other fast backend failure (locked keychain, -25291, etc.): fall
+        # through to env/secrets, but don't disable — it's not the per-call hang.
+        logger.debug("keyring get failed; falling through to env/secrets", exc_info=True)
         return None
 
 
 def _try_keyring_set(key: str, value: str) -> bool:
+    global _keyring_disabled
+    if _keyring_disabled:
+        return False
+
     def _set() -> None:
         import keyring
 
@@ -115,17 +135,24 @@ def _try_keyring_set(key: str, value: str) -> bool:
     try:
         _call_with_timeout(_set, _KEYRING_TIMEOUT_S)
         return True
+    except TimeoutError:
+        _keyring_disabled = True
+        logger.debug("keyring set timed out; disabling keyring for this process", exc_info=True)
+        return False
     except ImportError:
-        return False  # keyring is optional; caller checks return value
+        _keyring_disabled = True
+        return False
     except Exception:
-        # Keychain write can fail or hang (locked / headless / permissions).
-        # Signal failure so the caller falls back to the secrets.json file
-        # rather than crashing or stalling the save.
-        logger.debug("keyring set failed/timed out; falling back to secrets file", exc_info=True)
+        # Keychain write failed (locked / permissions). Fall back to secrets.json.
+        logger.debug("keyring set failed; falling back to secrets file", exc_info=True)
         return False
 
 
 def _try_keyring_delete(key: str) -> bool:
+    global _keyring_disabled
+    if _keyring_disabled:
+        return False
+
     def _delete() -> None:
         import keyring
 
@@ -134,12 +161,17 @@ def _try_keyring_delete(key: str) -> bool:
     try:
         _call_with_timeout(_delete, _KEYRING_TIMEOUT_S)
         return True
+    except TimeoutError:
+        _keyring_disabled = True
+        logger.debug("keyring delete timed out; disabling keyring for this process", exc_info=True)
+        return False
     except ImportError:
-        return False  # keyring is optional; caller checks return value
+        _keyring_disabled = True
+        return False
     except Exception:
-        # Delete can fail/hang if the entry is absent or the keychain is locked;
-        # the caller's secrets.json cleanup still runs, so just signal failure.
-        logger.debug("keyring delete failed/timed out; secrets-file cleanup still runs", exc_info=True)
+        # Usually just "entry absent" — fall through (secrets.json cleanup runs);
+        # don't disable on this, the keyring itself is fine.
+        logger.debug("keyring delete failed; secrets-file cleanup still runs", exc_info=True)
         return False
 
 
