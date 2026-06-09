@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claw-ED — Design Reference · Calm Studio (Mac + iOS)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,16..72,400;0,16..72,500;1,16..72,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --clay:#C96442; --clay-ink:#A24E32; --clay-soft:#F0D9CF;
+    --cream:#FAF9F5; --paper:#F4F1EA; --raise:#FFFFFF;
+    --ink:#2A2722; --ink-soft:#6B645B; --ink-faint:#9A9388;
+    --line:#E7E1D6; --line-soft:#EFEAE0;
+    --ok:#2F8F6B; --warn:#C9893F; --stop:#B4493A;
+    --r:12px; --r-sm:9px;
+    --sh:0 1px 2px rgba(40,32,22,.05), 0 10px 30px rgba(40,32,22,.07);
+    --sh-card:0 1px 2px rgba(40,32,22,.05);
+    --ui:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    --voice:'Newsreader','Iowan Old Style',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--ui);color:var(--ink);
+    background:radial-gradient(1200px 700px at 70% -10%, #FBEDE6 0%, var(--cream) 45%) , var(--cream);
+    -webkit-font-smoothing:antialiased;line-height:1.5;padding:34px 24px 60px;}
+  .page-head{max-width:1240px;margin:0 auto 26px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .page-head h1{font-family:var(--voice);font-weight:500;font-size:26px;margin:0;letter-spacing:.2px}
+  .page-head .tag{font-size:12.5px;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);
+    padding:3px 10px;border-radius:999px}
+  .page-head .muted{font-size:13px;color:var(--ink-faint);margin-left:auto}
+  .stage{max-width:1240px;margin:0 auto;display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+
+  /* ---------- Mac window ---------- */
+  .mac{flex:1 1 720px;min-width:640px;max-width:840px;background:var(--cream);border:1px solid var(--line);
+    border-radius:16px;box-shadow:var(--sh);overflow:hidden}
+  .titlebar{height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;
+    background:linear-gradient(var(--paper),#EFEADF);border-bottom:1px solid var(--line)}
+  .lights{display:flex;gap:8px}
+  .lights i{width:12px;height:12px;border-radius:50%;display:block}
+  .lights .r{background:#ED6A5E}.lights .y{background:#F4BE4F}.lights .g{background:#61C554}
+  .tt-title{font-weight:600;font-size:13px;margin-left:6px;color:var(--ink-soft)}
+  .tt-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;
+    border:1px solid var(--line);background:var(--raise);border-radius:999px;padding:4px 10px;color:var(--ink-soft)}
+  .pill.model{cursor:pointer}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(47,143,107,.15)}
+  .body{display:grid;grid-template-columns:212px 1fr;height:560px}
+
+  /* rail */
+  .rail{background:var(--paper);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 12px}
+  .brand{display:flex;align-items:center;gap:9px;margin:2px 4px 16px}
+  .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(150deg,var(--clay),#D8794F);
+    color:#fff;font-family:var(--voice);font-weight:600;display:grid;place-items:center;font-size:17px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+  .brand b{font-size:14.5px;letter-spacing:.2px}
+  .nav{display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
+  .nav a{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--ink-soft);
+    text-decoration:none;padding:7px 9px;border-radius:8px}
+  .nav a.on{background:var(--clay-soft);color:var(--clay-ink);font-weight:600}
+  .nav a:hover:not(.on){background:#EBE5DA}
+  .nav .ic{width:15px;text-align:center;opacity:.85}
+  .rail .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-faint);margin:6px 8px 6px}
+  .sess{display:flex;flex-direction:column;gap:1px;overflow:auto}
+  .sess a{font-size:12.7px;color:var(--ink-soft);text-decoration:none;padding:6px 9px;border-radius:7px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sess a.on{background:#ECE6DB;color:var(--ink)}
+  .sess a:hover{background:#ECE6DB}
+  .rail .foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:10px;border-top:1px solid var(--line)}
+
+  /* chat */
+  .chat{display:flex;flex-direction:column;min-width:0;background:var(--cream)}
+  .ctx{height:40px;display:flex;align-items:center;gap:8px;padding:0 18px;border-bottom:1px solid var(--line-soft);
+    font-size:12.5px;color:var(--ink-faint)}
+  .feed{flex:1;overflow:auto;padding:20px 20px 8px}
+  .row{display:flex;gap:11px;margin-bottom:18px;align-items:flex-start}
+  .av{width:26px;height:26px;border-radius:7px;flex:none;display:grid;place-items:center;font-size:13px;font-weight:600}
+  .av.me{background:#E7E1D6;color:var(--ink-soft)}
+  .av.ai{background:linear-gradient(150deg,var(--clay),#D8794F);color:#fff;font-family:var(--voice)}
+  .msg{min-width:0}
+  .who{font-size:12px;color:var(--ink-faint);margin:2px 0 5px;font-weight:600;letter-spacing:.2px}
+  .bubble{font-size:14.5px;color:var(--ink)}
+  .bubble.me{background:var(--raise);border:1px solid var(--line);border-radius:4px 12px 12px 12px;
+    padding:10px 13px;display:inline-block}
+  .voice{font-family:var(--voice);font-size:16px;line-height:1.55;color:#34302A}
+
+  /* action / tool card */
+  .card{border:1px solid var(--line);background:var(--raise);border-radius:var(--r-sm);box-shadow:var(--sh-card);
+    margin:9px 0;overflow:hidden}
+  .act{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px}
+  .act .run{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--ink-soft);
+    background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  .act .tick{margin-left:auto;color:var(--ok);font-size:12px;font-weight:600}
+  .act .ic{width:16px;text-align:center}
+
+  /* approval card */
+  .approve{border:1px solid var(--clay-soft);background:#FFF8F4}
+  .approve .top{display:flex;gap:9px;align-items:center;padding:11px 13px 8px;font-size:13.5px;font-weight:600;color:var(--clay-ink)}
+  .approve .what{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);
+    background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin:0 13px 10px}
+  .approve .btns{display:flex;gap:8px;padding:0 13px 12px;flex-wrap:wrap}
+  .btn{font:inherit;font-size:12.5px;font-weight:600;border-radius:8px;padding:7px 13px;border:1px solid var(--line);
+    background:var(--raise);color:var(--ink);cursor:pointer}
+  .btn.primary{background:var(--clay);border-color:var(--clay);color:#fff}
+  .btn.ghost{color:var(--ink-soft)}
+  .btn.stop{color:var(--stop);border-color:#EAD4CF}
+
+  /* artifact card */
+  .artifact{display:flex;align-items:center;gap:12px;padding:12px 13px}
+  .doc{width:38px;height:46px;border-radius:5px;background:linear-gradient(160deg,#fff,#F3EFE7);
+    border:1px solid var(--line);position:relative;flex:none;box-shadow:var(--sh-card)}
+  .doc:before{content:"";position:absolute;left:7px;right:7px;top:9px;height:2px;background:var(--clay-soft);
+    box-shadow:0 5px 0 var(--line-soft),0 10px 0 var(--line-soft),0 15px 0 var(--line-soft)}
+  .artifact .meta b{font-size:13.5px}
+  .artifact .meta span{display:block;font-size:12px;color:var(--ink-faint);margin-top:2px}
+  .artifact .open{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--clay-ink);
+    border:1px solid var(--clay-soft);background:#FFF8F4;border-radius:8px;padding:6px 12px;cursor:pointer}
+
+  .stream{display:inline-flex;gap:4px;align-items:center;color:var(--ink-faint);font-size:13px;margin-top:3px}
+  .stream i{width:6px;height:6px;border-radius:50%;background:var(--ink-faint);animation:bl 1.2s infinite}
+  .stream i:nth-child(2){animation-delay:.2s}.stream i:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+  /* composer */
+  .composer{border-top:1px solid var(--line);background:var(--cream);padding:12px 16px 14px}
+  .inwrap{display:flex;align-items:center;gap:8px;background:var(--raise);border:1px solid var(--line);
+    border-radius:13px;padding:7px 8px 7px 14px;box-shadow:var(--sh-card)}
+  .inwrap input{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:var(--ink)}
+  .inwrap input::placeholder{color:var(--ink-faint)}
+  .iconbtn{width:32px;height:32px;border-radius:9px;border:1px solid transparent;background:transparent;
+    color:var(--ink-soft);display:grid;place-items:center;cursor:pointer;font-size:15px}
+  .iconbtn:hover{background:var(--paper);border-color:var(--line)}
+  .iconbtn.cam{color:var(--clay-ink)}
+  .send{width:34px;height:34px;border-radius:10px;background:var(--clay);color:#fff;border:0;display:grid;
+    place-items:center;cursor:pointer;font-size:15px}
+  .composer .hint{display:flex;gap:14px;margin:8px 4px 0;font-size:11.5px;color:var(--ink-faint)}
+  .kbd{font-family:ui-monospace,Menlo,monospace;background:var(--paper);border:1px solid var(--line);
+    border-radius:5px;padding:0 5px;font-size:11px;color:var(--ink-soft)}
+
+  /* ---------- iPhone ---------- */
+  .phone{flex:0 0 300px;width:300px;background:#1A1714;border-radius:46px;padding:11px;box-shadow:var(--sh);
+    border:1px solid #2a2722}
+  .screen{background:var(--cream);border-radius:36px;overflow:hidden;height:618px;display:flex;flex-direction:column;position:relative}
+  .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:108px;height:26px;background:#1A1714;border-radius:16px;z-index:5}
+  .pstat{display:flex;justify-content:space-between;align-items:center;padding:11px 20px 4px;font-size:12px;font-weight:600;color:var(--ink)}
+  .ptop{padding:6px 16px 10px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:9px}
+  .ptop .mark{width:24px;height:24px;font-size:14px;border-radius:7px}
+  .ptop b{font-size:14px}
+  .ptop .pair{margin-left:auto;font-size:11px;color:var(--ok);display:inline-flex;align-items:center;gap:5px}
+  .ptop .pair .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+  .pfeed{flex:1;overflow:auto;padding:14px 13px 6px}
+  .pfeed .row{margin-bottom:14px;gap:9px}
+  .pfeed .av{width:22px;height:22px;font-size:11px}
+  .pfeed .bubble{font-size:13.5px}
+  .pfeed .voice{font-size:14.5px}
+  .pfeed .act{font-size:12px;padding:8px 10px}
+  .pcomp{border-top:1px solid var(--line);padding:9px 12px 14px;background:var(--cream)}
+  .pcap{display:flex;align-items:center;gap:8px;justify-content:center;font-size:12.5px;font-weight:600;
+    color:var(--clay-ink);border:1px dashed var(--clay-soft);background:#FFF8F4;border-radius:11px;padding:8px;margin-bottom:8px;cursor:pointer}
+  .pinwrap{display:flex;align-items:center;gap:7px;background:var(--raise);border:1px solid var(--line);border-radius:13px;padding:5px 6px 5px 13px}
+  .pinwrap input{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:13.5px}
+  .legend{max-width:1240px;margin:30px auto 0;font-size:12.5px;color:var(--ink-soft);
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px}
+  .legend b{color:var(--ink)} .legend code{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1>Claw-ED</h1>
+    <span class="tag">Design reference · “Calm Studio”</span>
+    <span class="tag">Mac app + iPhone remote · one design</span>
+    <span class="muted">Static mockup — not production code. See REBUILD_DIRECTION.md §5.</span>
+  </div>
+
+  <div class="stage">
+    <!-- ===================== MAC ===================== -->
+    <div class="mac">
+      <div class="titlebar">
+        <span class="lights"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <span class="tt-title">Claw-ED</span>
+        <span class="tt-right">
+          <span class="pill model">minimax‑m3 ▾</span>
+          <span class="pill"><span class="dot"></span>Agent ready</span>
+        </span>
+      </div>
+      <div class="body">
+        <aside class="rail">
+          <div class="brand"><span class="mark">C</span><b>Claw‑ED</b></div>
+          <nav class="nav">
+            <a class="on"><span class="ic">✦</span> Chat</a>
+            <a><span class="ic">◆</span> Skills</a>
+            <a><span class="ic">▣</span> Workspace</a>
+          </nav>
+          <div class="lbl">Recent</div>
+          <div class="sess">
+            <a class="on">Unit 3 — who’s struggling?</a>
+            <a>Draft parent email · Maria</a>
+            <a>Make a Do‑Now from this PDF</a>
+            <a>Reorganize my lessons folder</a>
+            <a>Quiz from Chapter 7 notes</a>
+          </div>
+          <div class="foot">
+            <nav class="nav" style="margin:0">
+              <a><span class="ic">▢</span> Pair iPhone</a>
+              <a><span class="ic">⚙</span> Settings</a>
+            </nav>
+          </div>
+        </aside>
+
+        <section class="chat">
+          <div class="ctx">✦ &nbsp;Unit 3 — who’s struggling? &nbsp;·&nbsp; full Mac access · approvals on</div>
+          <div class="feed">
+
+            <div class="row">
+              <div class="av me">JM</div>
+              <div class="msg"><div class="who">You</div>
+                <div class="bubble me">Pull last week’s Unit 3 quiz scores off my Desktop and tell me who’s struggling — then draft a reteach plan.</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="av ai">c</div>
+              <div class="msg" style="flex:1">
+                <div class="who">Claw‑ED</div>
+                <div class="bubble voice">On it. I’ll read the scores, find the students below the class median, and sketch a focused reteach.</div>
+
+                <div class="card"><div class="act"><span class="ic">▣</span> Read <span class="run">~/Desktop/Unit3_scores.csv</span> <span class="tick">✓ 28 rows</span></div></div>
+                <div class="card"><div class="act"><span class="ic">∑</span> Analyzed scores · median 74% <span class="tick">✓</span></div></div>
+
+                <div class="bubble voice">Five students are clearly struggling (below 60%): <b>Maria, Devon, Aisha, Liam, Priya</b> — all missed the same two standards: <i>ratios (6.RP.3)</i> and <i>unit rate</i>. That’s a teachable cluster, not five separate problems.</div>
+
+                <div class="card artifact">
+                  <div class="doc"></div>
+                  <div class="meta"><b>Unit 3 — Reteach Plan.docx</b><span>1 page · Do‑Now + 12‑min mini‑lesson + exit ticket · 6.RP.3</span></div>
+                  <button class="open">Open</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="av ai">c</div>
+              <div class="msg" style="flex:1">
+                <div class="who">Claw‑ED</div>
+                <div class="bubble voice">Want me to drop the plan into your <b>Unit 3</b> folder and print copies?</div>
+                <div class="card approve">
+                  <div class="top"><span>⛉</span> Claw‑ED wants to run a command on your Mac</div>
+                  <div class="what">cp "Unit 3 — Reteach Plan.docx" ~/Lessons/Unit3/ &amp;&amp; lpr ...</div>
+                  <div class="btns">
+                    <button class="btn primary">Allow once</button>
+                    <button class="btn">Always allow copies</button>
+                    <button class="btn ghost">Details</button>
+                    <button class="btn stop">Deny</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="composer">
+            <div class="inwrap">
+              <input placeholder="Message Claw‑ED — ask it to do anything on your Mac…">
+              <button class="iconbtn" title="Attach">⎘</button>
+              <button class="iconbtn cam" title="Capture a document">▣</button>
+              <button class="iconbtn" title="Voice">🎙</button>
+              <button class="send" title="Send">↑</button>
+            </div>
+            <div class="hint"><span><span class="kbd">⌘K</span> Commands</span><span><span class="kbd">⌘↵</span> Send</span><span>Approvals on · nothing runs without you</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================== iPHONE ===================== -->
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="pstat"><span>9:41</span><span>● Paired&nbsp; 100%</span></div>
+        <div class="ptop">
+          <span class="mark">C</span><b>Claw‑ED</b>
+          <span class="pair"><span class="dot"></span>Mac mini</span>
+        </div>
+        <div class="pfeed">
+          <div class="row">
+            <div class="av me">JM</div>
+            <div class="msg"><div class="who">You</div>
+              <div class="bubble me">Who’s struggling in Unit 3? Draft a reteach.</div></div>
+          </div>
+          <div class="row">
+            <div class="av ai">c</div>
+            <div class="msg" style="flex:1"><div class="who">Claw‑ED</div>
+              <div class="bubble voice">Read your Desktop scores. Five students below 60% — all on <i>ratios</i>. Reteach drafted.</div>
+              <div class="card"><div class="act"><span class="ic">▣</span> Read <span class="run">Unit3_scores.csv</span><span class="tick">✓</span></div></div>
+              <div class="card artifact" style="padding:10px">
+                <div class="doc" style="width:30px;height:38px"></div>
+                <div class="meta"><b>Reteach Plan.docx</b><span>1 page · 6.RP.3</span></div>
+                <button class="open">Open</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pcomp">
+          <div class="pcap">▣ &nbsp;Capture a worksheet</div>
+          <div class="pinwrap">
+            <input placeholder="Message your Mac agent…">
+            <button class="send" style="width:30px;height:30px">↑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <b>What this reference shows (the patterns to build):</b> &nbsp;chat‑first agent ·
+    <b>action/tool cards</b> (the agent showing what it does on the Mac) ·
+    <b>approval cards</b> (nothing destructive runs without an explicit Allow — the safety for shell/file access) ·
+    <b>artifact cards</b> (generated lessons/docs are first‑class, openable inline — the “Notebook” idea) ·
+    a warm <b>serif “voice”</b> for the agent + humanist sans for UI ·
+    a <b>real status pill</b> driven by the local sidecar (fixes the old menu‑bar “not connected” lie) ·
+    a composer with <b>camera capture</b> for documents ·
+    and the <b>same design on iPhone</b> as a remote into the Mac’s agent.
+    Tokens + components are in <code>REBUILD_DIRECTION.md §5</code>. Build it for real with the <b>frontend‑design skill</b>.
+  </div>
+</body>
+</html>
