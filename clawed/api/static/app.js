@@ -73,10 +73,12 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('/api/health').then(function (r) { return r.json(); }).then(function (data) {
             if (data.llm_connected) {
                 statusDot.className = 'status-dot connected';
-                statusText.textContent = 'Connected \u2014 ' + data.llm_model;
+                statusText.textContent = 'Connected';
+                // Keep the model slug for power users, but off the teacher's screen.
+                statusText.title = data.llm_model ? ('Model: ' + data.llm_model) : '';
             } else {
                 statusDot.className = 'status-dot disconnected';
-                statusText.textContent = 'Not connected \u2014 check settings';
+                statusText.textContent = 'Not connected \u2014 add a key in Settings';
             }
         }).catch(function () {
             statusDot.className = 'status-dot disconnected';
@@ -97,7 +99,15 @@ document.addEventListener('DOMContentLoaded', function () {
             var target = document.getElementById(stepId);
             if (target) target.classList.add('active');
 
-            var stepNum = parseInt(stepId.replace('step-', '').replace('a', '').replace('b', ''));
+            // Prefer an explicit data-indicator on the panel (decouples panel
+            // ids from the numbered progress bar). Fall back to parsing the id
+            // for any panel that predates the attribute.
+            var stepNum;
+            if (target && target.dataset.indicator) {
+                stepNum = parseInt(target.dataset.indicator);
+            } else {
+                stepNum = parseInt(stepId.replace('step-', '').replace('a', '').replace('b', ''));
+            }
             stepIndicators.forEach(function (s) {
                 var sNum = parseInt(s.dataset.step);
                 s.classList.remove('active');
@@ -105,13 +115,363 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (sNum < stepNum) s.classList.add('completed');
                 if (sNum === stepNum) s.classList.add('active');
             });
+            // Keep the wizard in view when advancing on small screens.
+            if (target && typeof target.scrollIntoView === 'function') {
+                try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+            }
         }
 
-        // Step 1: Path selection
+        // Step 1: Path selection. We remember which setup path the teacher
+        // picked, route them through the new "Connect your AI" step first, then
+        // continue to their chosen path (upload vs. quick form).
         var pathUpload = document.getElementById('path-upload');
         var pathScratch = document.getElementById('path-scratch');
-        if (pathUpload) pathUpload.addEventListener('click', function () { goToStep('step-2a'); });
-        if (pathScratch) pathScratch.addEventListener('click', function () { goToStep('step-2b'); });
+        wizardState.setupPath = 'step-2b';
+        if (pathUpload) pathUpload.addEventListener('click', function () {
+            wizardState.setupPath = 'step-2a';
+            enterConnectStep();
+        });
+        if (pathScratch) pathScratch.addEventListener('click', function () {
+            wizardState.setupPath = 'step-2b';
+            enterConnectStep();
+        });
+
+        // ── Step 2: Connect your AI ──────────────────────────────────
+        // Backend does the heavy lifting: /api/onboarding/detect surfaces a
+        // ready provider (local Ollama or an already-configured key); the
+        // teacher clicks "Use it", or picks a provider, pastes a key, and we
+        // POST /api/settings then GET /api/settings/test-connection. On success
+        // the app is fully configured — no tier/other config required.
+        var PROVIDER_LABELS = {
+            anthropic: 'Anthropic (Claude)',
+            openai: 'OpenAI',
+            ollama: 'Ollama',
+            openrouter: 'OpenRouter',
+            google: 'Google Gemini'
+        };
+        var DEFAULT_MODELS = {
+            anthropic: 'claude-sonnet-4-6',
+            openai: 'gpt-4.1',
+            ollama: '',
+            openrouter: 'nvidia/nemotron-3-super-120b-a12b:free',
+            google: 'gemini-2.5-flash'
+        };
+
+        var connDetecting = document.getElementById('connect-detecting');
+        var connDetected = document.getElementById('connect-detected');
+        var connDetectedLabel = document.getElementById('connect-detected-label');
+        var connDetectedNote = document.getElementById('connect-detected-note');
+        var connDetectedStatus = document.getElementById('connect-detected-status');
+        var connUseDetected = document.getElementById('connect-use-detected');
+        var connShowChooser = document.getElementById('connect-show-chooser');
+        var connChooser = document.getElementById('connect-chooser');
+        var connCards = document.getElementById('connect-cards');
+        var connFormWrap = document.getElementById('connect-form-wrap');
+        var connStatus = document.getElementById('connect-status');
+        var connSubmit = document.getElementById('connect-submit');
+        var connSuccess = document.getElementById('connect-success');
+        var connSuccessTitle = document.getElementById('connect-success-title');
+        var connContinue = document.getElementById('connect-continue');
+        var connReconnect = document.getElementById('connect-reconnect');
+
+        var connectState = { detected: null, selected: null, baseSettings: null, detectLoaded: false };
+
+        function show(el) { if (el) el.hidden = false; }
+        function hide(el) { if (el) el.hidden = true; }
+
+        // Fetch current settings once so we can preserve unrelated fields
+        // (models for other providers, ollama url) when we POST our change.
+        function loadBaseSettings() {
+            return fetch('/api/settings')
+                .then(function (r) { return r.json(); })
+                .then(function (s) { connectState.baseSettings = s || {}; return connectState.baseSettings; })
+                .catch(function () { connectState.baseSettings = {}; return connectState.baseSettings; });
+        }
+
+        function enterConnectStep() {
+            goToStep('step-connect');
+            loadBaseSettings();
+            if (!connectState.detectLoaded) {
+                connectState.detectLoaded = true;
+                runDetect();
+            }
+        }
+
+        function runDetect() {
+            show(connDetecting);
+            hide(connDetected);
+            hide(connChooser);
+            hide(connSuccess);
+            fetch('/api/onboarding/detect')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    hide(connDetecting);
+                    var list = (data && data.detected) || [];
+                    if (data && data.any && list.length) {
+                        // Prefer the first ready provider; Ollama (local) sorts
+                        // first from the backend, then configured keys.
+                        var pick = null;
+                        for (var i = 0; i < list.length; i++) {
+                            if (list[i].ready) { pick = list[i]; break; }
+                        }
+                        if (!pick) pick = list[0];
+                        connectState.detected = pick;
+                        if (connDetectedLabel) connDetectedLabel.textContent = 'We found ' + (pick.label || PROVIDER_LABELS[pick.provider] || pick.provider) + ' on your machine';
+                        if (connDetectedNote) connDetectedNote.textContent = pick.note || 'Ready to use.';
+                        show(connDetected);
+                    } else {
+                        // Nothing ready — go straight to the chooser.
+                        showChooser();
+                    }
+                })
+                .catch(function () {
+                    hide(connDetecting);
+                    showChooser();
+                });
+        }
+
+        function showChooser() {
+            hide(connDetected);
+            hide(connSuccess);
+            show(connChooser);
+        }
+
+        function defaultModelFor(prov) {
+            // Use a detected Ollama model if we have one; else the recommended default.
+            if (prov === 'ollama' && connectState.detected &&
+                connectState.detected.provider === 'ollama' &&
+                connectState.detected.models && connectState.detected.models.length) {
+                return connectState.detected.models[0];
+            }
+            return DEFAULT_MODELS[prov] || '';
+        }
+
+        // "Use it & continue" — save the detected provider as-is and continue.
+        if (connUseDetected) {
+            connUseDetected.addEventListener('click', function () {
+                var d = connectState.detected;
+                if (!d) { showChooser(); return; }
+                connUseDetected.disabled = true;
+                connUseDetected.textContent = 'Connecting...';
+                showStatus(connDetectedStatus, 'Connecting to ' + (d.label || d.provider) + '...', 'loading');
+
+                var model = '';
+                // For a key-already-configured provider, keep whatever model is
+                // already saved; for Ollama, use the detected model name.
+                if (d.provider === 'ollama') {
+                    model = defaultModelFor('ollama');
+                } else {
+                    var bs = connectState.baseSettings || {};
+                    model = bs[d.provider + '_model'] || DEFAULT_MODELS[d.provider] || '';
+                }
+                saveAndTest(d.provider, '', model, function (ok, msg, testedModel, soft) {
+                    connUseDetected.disabled = false;
+                    connUseDetected.textContent = 'Use it & continue';
+                    if (ok) {
+                        onConnected(d.provider, testedModel || model, soft);
+                    } else {
+                        showStatus(connDetectedStatus, msg || 'Could not connect. Try a different provider.', 'error');
+                    }
+                });
+            });
+        }
+
+        if (connShowChooser) {
+            connShowChooser.addEventListener('click', function () { showChooser(); });
+        }
+
+        // Provider card selection → reveal that provider's form.
+        if (connCards) {
+            connCards.querySelectorAll('.connect-card').forEach(function (card) {
+                card.addEventListener('click', function () {
+                    var prov = card.dataset.provider;
+                    connectState.selected = prov;
+                    connCards.querySelectorAll('.connect-card').forEach(function (c) { c.classList.remove('active'); });
+                    card.classList.add('active');
+                    // Toggle the matching form.
+                    ['anthropic', 'openai', 'ollama', 'openrouter', 'google'].forEach(function (p) {
+                        var f = document.getElementById('cf-' + p);
+                        if (f) f.hidden = (p !== prov);
+                    });
+                    // Pre-fill model default (esp. detected Ollama model).
+                    var modelInput = document.getElementById('cf-' + prov + '-model');
+                    if (modelInput && prov === 'ollama' && !modelInput.value) {
+                        modelInput.value = defaultModelFor('ollama');
+                    }
+                    hide(connStatus);
+                    show(connFormWrap);
+                    if (connFormWrap && typeof connFormWrap.scrollIntoView === 'function') {
+                        connFormWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+            });
+        }
+
+        // Show/hide key toggles inside the connect forms.
+        if (connFormWrap) {
+            connFormWrap.querySelectorAll('.connect-show-key').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var input = btn.previousElementSibling;
+                    if (input && input.tagName === 'INPUT') {
+                        input.type = input.type === 'password' ? 'text' : 'password';
+                        btn.textContent = input.type === 'password' ? 'Show' : 'Hide';
+                    }
+                });
+            });
+        }
+
+        // POST /api/settings then GET /api/settings/test-connection.
+        function saveAndTest(provider, apiKey, model, cb) {
+            var bs = connectState.baseSettings || {};
+            // Start from current settings so we don't clobber other providers'
+            // models or the (validated) ollama base url, then override ours.
+            var body = {
+                provider: provider,
+                api_key: apiKey || null,
+                anthropic_model: bs.anthropic_model || DEFAULT_MODELS.anthropic,
+                openai_model: bs.openai_model || DEFAULT_MODELS.openai,
+                ollama_model: bs.ollama_model || 'llama3.2',
+                ollama_base_url: bs.ollama_base_url || 'http://localhost:11434',
+                openrouter_model: bs.openrouter_model || DEFAULT_MODELS.openrouter,
+                google_model: bs.google_model || DEFAULT_MODELS.google,
+                include_homework: (bs.include_homework !== undefined) ? bs.include_homework : true,
+                export_format: bs.export_format || 'markdown'
+            };
+            if (model) body[provider + '_model'] = model;
+
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+              .then(function (res) {
+                if (!res.ok || (res.data && res.data.error)) {
+                    cb(false, (res.data && res.data.error) || 'Could not save settings.', null);
+                    return;
+                }
+                // Refresh cached settings to reflect the save.
+                connectState.baseSettings = Object.assign({}, bs, { provider: provider });
+                connectState.baseSettings[provider + '_model'] = model || body[provider + '_model'];
+                return fetch('/api/settings/test-connection')
+                    .then(function (r) { return r.json(); })
+                    .then(function (t) {
+                        if (t && t.connected) {
+                            cb(true, t.message || '', t.model || model);
+                            return;
+                        }
+                        // The connection tester only validates ollama / anthropic
+                        // / openai. For other providers (openrouter, google) it
+                        // returns "Unknown provider" — that's not a real failure,
+                        // the settings saved fine. Confirm readiness via /health
+                        // (key present) so we don't falsely block the teacher.
+                        var errText = (t && (t.error || t.message)) || '';
+                        if (/unknown provider/i.test(errText)) {
+                            return fetch('/api/health')
+                                .then(function (r) { return r.json(); })
+                                .then(function (h) {
+                                    if (h && h.llm_connected) {
+                                        cb(true, '', (h.llm_model || model), true);
+                                    } else {
+                                        cb(false, 'Saved, but Claw-ED could not confirm a working key. Double-check your key and model, then try again.', null);
+                                    }
+                                });
+                        }
+                        cb(false, errText || 'The provider rejected the connection. Double-check your key and model.', null);
+                    });
+            }).catch(function (err) {
+                cb(false, 'Connection error: ' + err, null);
+            });
+        }
+
+        // "Connect" button in the chooser form.
+        if (connSubmit) {
+            connSubmit.addEventListener('click', function () {
+                var prov = connectState.selected;
+                if (!prov) { showStatus(connStatus, 'Pick a provider first.', 'error'); return; }
+
+                var keyInput = document.getElementById('cf-' + prov + '-key');
+                var modelInput = document.getElementById('cf-' + prov + '-model');
+                var apiKey = keyInput ? keyInput.value.trim() : '';
+                var model = modelInput ? modelInput.value.trim() : '';
+
+                // Ollama needs no key; everyone else does (unless one is already saved).
+                if (prov !== 'ollama' && !apiKey) {
+                    var bs = connectState.baseSettings || {};
+                    var alreadyHas = bs['has_' + prov + '_key'];
+                    if (!alreadyHas) {
+                        showStatus(connStatus, 'Please paste your API key above.', 'error');
+                        if (keyInput) keyInput.focus();
+                        return;
+                    }
+                }
+                if (!model && prov === 'ollama') {
+                    showStatus(connStatus, 'Enter the Ollama model name you pulled (e.g. qwen3.5).', 'error');
+                    if (modelInput) modelInput.focus();
+                    return;
+                }
+
+                connSubmit.disabled = true;
+                connSubmit.textContent = 'Connecting...';
+                showStatus(connStatus, 'Saving and testing your connection...', 'loading');
+
+                saveAndTest(prov, apiKey, model, function (ok, msg, testedModel, soft) {
+                    connSubmit.disabled = false;
+                    connSubmit.textContent = 'Connect';
+                    if (ok) {
+                        onConnected(prov, testedModel || model, soft);
+                    } else {
+                        showStatus(connStatus, msg || 'Could not connect. Check your key and try again.', 'error');
+                    }
+                });
+            });
+        }
+
+        // Reached a working connection — show the reassuring success state.
+        // `soft` = saved + key present, but this provider isn't covered by the
+        // live connection tester (openrouter/google); we phrase it honestly.
+        function onConnected(provider, model, soft) {
+            hide(connDetected);
+            hide(connChooser);
+            hide(connDetecting);
+            var label = PROVIDER_LABELS[provider] || provider;
+            if (connSuccessTitle) {
+                if (model) {
+                    connSuccessTitle.textContent = soft
+                        ? (label + ' is set up — using ' + model + '!')
+                        : ('Connected — using ' + model + '!');
+                } else {
+                    connSuccessTitle.textContent = soft
+                        ? (label + ' is set up and ready!')
+                        : ('Connected to ' + label + '!');
+                }
+            }
+            show(connSuccess);
+            // Refresh the top status bar dot so it flips to "Connected".
+            refreshStatusBar();
+        }
+
+        function refreshStatusBar() {
+            var dot = document.getElementById('status-dot');
+            var txt = document.getElementById('status-text');
+            if (!dot || !txt) return;
+            fetch('/api/health').then(function (r) { return r.json(); }).then(function (data) {
+                if (data.llm_connected) {
+                    dot.className = 'status-dot connected';
+                    txt.textContent = 'Connected';
+                    txt.title = data.llm_model ? ('Model: ' + data.llm_model) : '';
+                }
+            }).catch(function () {});
+        }
+
+        // Continue from success → the setup path the teacher chose at Welcome.
+        if (connContinue) {
+            connContinue.addEventListener('click', function () {
+                goToStep(wizardState.setupPath || 'step-2b');
+            });
+        }
+        if (connReconnect) {
+            connReconnect.addEventListener('click', function () { showChooser(); });
+        }
 
         // Step 2A: File Upload
         var wizUploadZone = document.getElementById('wizard-upload-zone');
@@ -198,11 +558,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // Back buttons
+        // Back buttons → return to the Connect step (which has its own
+        // "different provider" controls and remembers the detect result).
         var back2a = document.getElementById('wizard-back-2a');
         var back2b = document.getElementById('wizard-back-2b');
-        if (back2a) back2a.addEventListener('click', function () { goToStep('step-1'); });
-        if (back2b) back2b.addEventListener('click', function () { goToStep('step-1'); });
+        if (back2a) back2a.addEventListener('click', function () { goToStep('step-connect'); });
+        if (back2b) back2b.addEventListener('click', function () { goToStep('step-connect'); });
 
         // Step 2B: Quick Persona Form
         var wizPersonaForm = document.getElementById('wizard-persona-form');

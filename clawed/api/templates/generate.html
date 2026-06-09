@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Generate — Claw-ED{% endblock %}
 {% block breadcrumbs %}
 <div class="breadcrumbs"><div class="container"><a href="/">Home</a><span class="sep">/</span>Generate</div></div>
@@ -6,11 +7,54 @@
 {% block content %}
 <h1>Generate Content</h1>
 
+<div class="coteacher-card" style="margin:0 0 1.5rem;border:1px solid var(--border-strong);border-radius:14px;padding:1.1rem 1.4rem;background:var(--bg-subtle,#fff)">
+    <div style="display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap">
+        <strong style="font-size:1.15rem">Ask your co&#8209;teacher</strong>
+        <span style="font-size:.8rem;color:var(--text-muted,#8a8a8a)">live &middot; powered by your model</span>
+    </div>
+    <p style="margin:.3rem 0 .6rem;color:var(--text-muted,#666);font-size:.9rem">
+        Lesson ideas, rewrites, worked examples, differentiation &mdash; ask in plain English and watch it write.
+    </p>
+    <div id="ask-chips" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem">
+        <button type="button" class="ask-chip" data-prompt="Give me a 5-minute Do Now / bell-ringer for a lesson on ">Do Now</button>
+        <button type="button" class="ask-chip" data-prompt="Write an attention-grabbing hook to open a lesson on ">Hook</button>
+        <button type="button" class="ask-chip" data-prompt="Give me 3 higher-order discussion questions about ">Discussion Qs</button>
+        <button type="button" class="ask-chip" data-prompt="Write a 3-question exit ticket for a lesson on ">Exit ticket</button>
+        <button type="button" class="ask-chip" data-prompt="Suggest ELL and IEP scaffolds for a lesson on ">Differentiate</button>
+    </div>
+    <textarea id="ask-input" rows="3"
+        placeholder="e.g. Give me 3 hook questions for a 9th&#8209;grade lesson on the Columbian Exchange"
+        style="width:100%;box-sizing:border-box;padding:.75rem;border:1px solid var(--border-strong);border-radius:10px;font:inherit;resize:vertical"></textarea>
+    <div style="display:flex;gap:.6rem;align-items:center;margin-top:.55rem">
+        <button id="ask-btn" class="btn btn-primary"
+            style="background:var(--accent,#C96442);color:#fff;border:none;padding:.6rem 1.3rem;border-radius:10px;font:inherit;font-weight:600;cursor:pointer">Ask</button>
+        <span id="ask-status" style="font-size:.85rem;color:var(--text-muted,#8a8a8a)"></span>
+        <span style="margin-left:auto;font-size:.75rem;color:var(--text-muted,#b0b0b0)">&#8984;/Ctrl + Enter</span>
+    </div>
+    <div id="ask-output" hidden
+        style="white-space:pre-wrap;word-break:break-word;margin-top:.9rem;padding:1rem;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg,#fff);max-height:50vh;overflow:auto;line-height:1.55;font-size:.93rem"></div>
+    <div id="ask-actions" hidden style="display:flex;gap:.5rem;margin-top:.55rem">
+        <button type="button" id="ask-copy" style="background:transparent;border:1px solid var(--border-strong);border-radius:8px;padding:.4rem .9rem;font:inherit;cursor:pointer">Copy</button>
+        <button type="button" id="ask-download" style="background:transparent;border:1px solid var(--border-strong);border-radius:8px;padding:.4rem .9rem;font:inherit;cursor:pointer">Download .md</button>
+    </div>
+</div>
+<style>
+    .ask-chip{background:var(--bg,#fff);border:1px solid var(--border-strong);border-radius:999px;
+        padding:.3rem .85rem;font:inherit;font-size:.82rem;color:var(--text,#333);cursor:pointer;transition:all .12s}
+    .ask-chip:hover{background:var(--bg-subtle,#f3eee8);border-color:var(--accent,#C96442);color:var(--accent,#C96442)}
+</style>
+
 {% if not has_persona %}
 <div class="alert alert-warning">
     <strong>No persona found.</strong> <a href="/">Upload teaching materials</a> first to extract your teaching style.
 </div>
 {% endif %}
+
+<div style="display:flex;align-items:center;gap:.85rem;margin:1.75rem 0 1.1rem">
+    <span style="height:1px;flex:1;background:var(--border-strong)"></span>
+    <span style="font-size:.78rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-secondary);white-space:nowrap">Or build a full lesson, unit, quiz, or game</span>
+    <span style="height:1px;flex:1;background:var(--border-strong)"></span>
+</div>
 
 <div class="gen-wizard" id="gen-wizard">
     {# ── Step Indicators ─────────────────────── #}
@@ -33,24 +77,39 @@
         <p style="color: var(--text-secondary); margin-bottom: 1rem;">What would you like to create?</p>
         <div class="type-picker">
             <div class="type-card" data-type="full" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128218;</div>
+                <div class="type-card-icon">{{ icon('book') }}</div>
                 <h3>Full Unit</h3>
                 <p>Unit plan + all lessons + materials</p>
             </div>
             <div class="type-card" data-type="lesson" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128196;</div>
+                <div class="type-card-icon">{{ icon('file-text') }}</div>
                 <h3>Single Lesson</h3>
                 <p>One lesson plan with activities</p>
             </div>
             <div class="type-card" data-type="materials" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128221;</div>
+                <div class="type-card-icon">{{ icon('layers') }}</div>
                 <h3>Materials Only</h3>
                 <p>Worksheet, assessment, rubric</p>
             </div>
             <div class="type-card" data-type="sub-packet" onclick="pickGenType(this)">
-                <div class="type-card-icon">&#128188;</div>
+                <div class="type-card-icon">{{ icon('briefcase') }}</div>
                 <h3>Sub Packet</h3>
                 <p>Substitute teacher packet</p>
+            </div>
+            <div class="type-card" data-type="quiz" onclick="pickGenType(this)">
+                <div class="type-card-icon">{{ icon('clipboard-check') }}</div>
+                <h3>Quiz / Assessment</h3>
+                <p>Auto-built quiz with answer key</p>
+            </div>
+            <div class="type-card" data-type="differentiate" onclick="pickGenType(this)">
+                <div class="type-card-icon">{{ icon('users') }}</div>
+                <h3>Differentiate</h3>
+                <p>Adapt a lesson: struggling, advanced, ELL, IEP</p>
+            </div>
+            <div class="type-card" data-type="game" onclick="pickGenType(this)">
+                <div class="type-card-icon">{{ icon('gamepad') }}</div>
+                <h3>Review Game</h3>
+                <p>Interactive HTML game students can play</p>
             </div>
         </div>
     </div>
@@ -95,14 +154,52 @@
                     <input type="range" id="duration_weeks" name="duration_weeks" min="1" max="8" value="3">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="template-group">
                     <label for="template_slug">Lesson Structure</label>
                     <select id="template_slug" name="template_slug">
                         <option value="">Default (I Do / We Do / You Do)</option>
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="num-questions-group" style="display:none">
+                    <label for="num_questions">Number of questions: <span id="nq-display">10</span></label>
+                    <input type="range" id="num_questions" name="num_questions" min="3" max="30" value="10">
+                </div>
+
+                <div class="form-group" id="game-type-group" style="display:none">
+                    <label for="game_type">Game style (optional)</label>
+                    <select id="game_type" name="game_type">
+                        <option value="">Surprise me (AI picks the best fit)</option>
+                        <option value="quiz_show">Quiz Show</option>
+                        <option value="jeopardy">Jeopardy</option>
+                        <option value="matching">Matching</option>
+                        <option value="timeline">Timeline</option>
+                        <option value="vocabulary">Vocabulary</option>
+                        <option value="escape_room">Escape Room</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="lesson-picker-group" style="display:none">
+                    <label for="lesson_id">Lesson to adapt</label>
+                    <select id="lesson_id" name="lesson_id">
+                        <option value="">Loading your lessons…</option>
+                    </select>
+                    <small style="color: var(--text-secondary);">Or paste a lesson ID below if it's not listed.</small>
+                    <input type="text" id="lesson_id_manual" name="lesson_id_manual"
+                           placeholder="Lesson ID (optional)" style="margin-top:0.5rem">
+                </div>
+
+                <div class="form-group" id="profile-group" style="display:none">
+                    <label for="profile">Adapt for</label>
+                    <select id="profile" name="profile">
+                        <option value="struggling">Struggling learners</option>
+                        <option value="advanced">Advanced learners</option>
+                        <option value="ell">English language learners (ELL)</option>
+                        <option value="iep">IEP</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="homework-group">
                     <label>
                         <input type="checkbox" id="include_homework" name="include_homework" checked>
                         Include homework assignments
@@ -122,11 +219,27 @@
     {# ── Step 3: Watch It Generate ───────────── #}
     <div class="gen-panel" id="gen-step-3">
         <div class="gen-form-panel">
-            <h3 style="margin-bottom: 1rem;">
+            {# ── Live "watch it build" panel (SSE-driven). Hidden until a #}
+            {#    streaming build starts; the legacy block below is the fallback. #}
+            <div class="gen-live" id="gen-live" hidden>
+                <div class="gen-live-head">
+                    <span class="gen-live-dot" aria-hidden="true"></span>
+                    <span class="gen-live-title" id="gen-live-title">Building your unit</span>
+                </div>
+                <p class="gen-live-sub" id="gen-live-sub" aria-live="polite">Getting set up…</p>
+                <div class="gen-live-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="gen-live-track">
+                    <div class="gen-live-fill" id="gen-live-fill"></div>
+                </div>
+                <div class="gen-live-pct" id="gen-live-pct">0%</div>
+                <ul class="gen-phases" id="gen-phases"></ul>
+            </div>
+
+            {# ── Legacy spinner + plain progress (fallback / simple types) ─── #}
+            <h3 style="margin-bottom: 1rem;" id="gen-legacy-head">
                 <span class="spinner" id="gen-spinner"></span>
                 <span id="gen-step3-title"> Generating...</span>
             </h3>
-            <div class="progress-bar-container">
+            <div class="progress-bar-container" id="gen-legacy-bar-wrap">
                 <div class="progress-bar" id="gen-progress-bar" style="width: 0%"></div>
             </div>
             <div class="stream-output" id="stream-output"></div>
@@ -138,17 +251,32 @@
                     <strong style="color: var(--green);">Generation complete!</strong>
                 </div>
 
+                <div id="gen-preview-wrap" style="display:none;margin-bottom:1.25rem">
+                    <div style="font-weight:600;color:var(--text-heading);margin-bottom:0.5rem">Preview</div>
+                    <iframe id="gen-preview-frame" title="Your lesson preview" style="width:100%;height:72vh;border:1px solid var(--border-strong);border-radius:12px;background:#fff;box-shadow:var(--shadow-md)"></iframe>
+                </div>
+
                 <div class="export-row">
-                    <button class="btn btn-sm btn-icon copy-btn" onclick="copyGenOutput()">&#128203; Copy All</button>
-                    <a class="btn btn-sm btn-icon" id="export-pdf" href="#" target="_blank">&#128196; PDF</a>
-                    <a class="btn btn-sm btn-icon" id="export-docx" href="#" target="_blank">&#128462; DOCX</a>
-                    <button class="btn btn-sm btn-icon" id="export-classroom" onclick="exportClassroom()">&#127891; Google Classroom</button>
-                    <button class="btn btn-sm btn-icon" id="export-share" onclick="copyShareLink()">&#128279; Share Link</button>
+                    <button class="btn btn-sm btn-icon copy-btn" onclick="copyGenOutput()">{{ icon('copy', 18) }} Copy All</button>
+                    <a class="btn btn-sm btn-icon" id="export-pdf" href="#" target="_blank">{{ icon('file-text', 18) }} PDF</a>
+                    <a class="btn btn-sm btn-icon" id="export-docx" href="#" target="_blank">{{ icon('download', 18) }} DOCX</a>
+                    <button class="btn btn-sm btn-icon" id="export-classroom" onclick="exportClassroom()">{{ icon('upload', 18) }} Google Classroom</button>
+                    <button class="btn btn-sm btn-icon" id="export-share" onclick="copyShareLink()">{{ icon('link', 18) }} Share Link</button>
                 </div>
 
                 <div style="margin-top: 1rem;">
                     <a href="/library" class="btn btn-primary">View in Library</a>
                 </div>
+            </div>
+
+            {# ── Simple results (quiz / differentiate / game) ─── #}
+            <div id="gen-simple-results" hidden>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <span style="color: var(--green); font-size: 1.3rem;">&#10003;</span>
+                    <strong style="color: var(--green);" id="gen-simple-title">Done!</strong>
+                </div>
+                <div id="gen-simple-actions" class="export-row" style="margin-bottom: 1rem;"></div>
+                <pre id="gen-simple-output" style="white-space:pre-wrap;word-break:break-word;background:var(--bg-subtle, #f6f8fa);border:1px solid var(--border-strong);border-radius:12px;padding:1rem;max-height:60vh;overflow:auto;font-size:0.9rem"></pre>
             </div>
         </div>
     </div>
@@ -157,6 +285,13 @@
 
 {% block scripts %}
 <script>
+// Inline icon markup for JS-built buttons (kept in sync with _icons.html via the
+// server-rendered macro; |tojson makes each a safe JS string literal).
+var UI_ICON = {
+    copy: {{ icon('copy', 18)|tojson }},
+    gamepad: {{ icon('gamepad', 18)|tojson }},
+    fileText: {{ icon('file-text', 16)|tojson }}
+};
 var genState = { type: 'full', unitId: null, lessonIds: [] };
 
 // Load lesson templates
@@ -175,14 +310,80 @@ var genState = { type: 'full', unitId: null, lessonIds: [] };
     }).catch(function(){});
 })();
 
+var SIMPLE_TYPES = ['quiz', 'differentiate', 'game'];
+
+function showGroup(id, show) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+}
+
 function pickGenType(el) {
     document.querySelectorAll('.type-card').forEach(function(c) { c.classList.remove('selected'); });
     el.classList.add('selected');
     genState.type = el.dataset.type;
     document.getElementById('gen-type').value = genState.type;
-    // Hide duration for single lesson / materials
-    document.getElementById('duration-group').style.display = (genState.type === 'full' || genState.type === 'sub-packet') ? '' : 'none';
+    var t = genState.type;
+
+    // Duration applies only to multi-lesson builds.
+    showGroup('duration-group', t === 'full' || t === 'sub-packet');
+    // Lesson-only fields.
+    showGroup('template-group', t === 'full' || t === 'lesson');
+    showGroup('homework-group', t === 'full' || t === 'lesson' || t === 'sub-packet');
+    // Quiz / game / differentiate specific fields.
+    showGroup('num-questions-group', t === 'quiz');
+    showGroup('game-type-group', t === 'game');
+    showGroup('lesson-picker-group', t === 'differentiate');
+    showGroup('profile-group', t === 'differentiate');
+
+    // Differentiate works on an existing lesson, so the Topic field is
+    // not required (and not used). Toggle the requirement + visibility.
+    var topicEl = document.getElementById('topic');
+    var topicGroup = topicEl ? topicEl.closest('.form-group') : null;
+    if (t === 'differentiate') {
+        if (topicEl) topicEl.required = false;
+        if (topicGroup) topicGroup.style.display = 'none';
+        loadLessonsForPicker();
+    } else {
+        if (topicEl) topicEl.required = true;
+        if (topicGroup) topicGroup.style.display = '';
+    }
+
     goGenStep(2);
+}
+
+var lessonsLoaded = false;
+function loadLessonsForPicker() {
+    if (lessonsLoaded) return;
+    lessonsLoaded = true;
+    var sel = document.getElementById('lesson_id');
+    fetch('/api/units').then(function(r){ return r.json(); }).then(async function(data) {
+        var units = (data && data.units) || [];
+        var options = [];
+        for (var i = 0; i < units.length; i++) {
+            var u = units[i];
+            try {
+                var lr = await fetch('/api/lessons/' + u.id);
+                var ld = await lr.json();
+                (ld.lessons || []).forEach(function(les) {
+                    options.push({ id: les.id, label: (u.title ? u.title + ' — ' : '') + (les.title || 'Lesson') });
+                });
+            } catch (e) {}
+        }
+        sel.innerHTML = '';
+        if (!options.length) {
+            var o = document.createElement('option');
+            o.value = ''; o.textContent = 'No lessons yet — paste an ID below';
+            sel.appendChild(o);
+        } else {
+            options.forEach(function(opt) {
+                var o = document.createElement('option');
+                o.value = opt.id; o.textContent = opt.label;
+                sel.appendChild(o);
+            });
+        }
+    }).catch(function() {
+        sel.innerHTML = '<option value="">Could not load lessons — paste an ID below</option>';
+    });
 }
 
 function goGenStep(n) {
@@ -205,9 +406,34 @@ document.getElementById('duration_weeks').addEventListener('input', function() {
     document.getElementById('weeks-display').textContent = this.value;
 });
 
+// Types that build a unit/lesson and support the live SSE "watch it build" view.
+var STREAM_TYPES = ['full', 'lesson'];
+
 document.getElementById('generate-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     goGenStep(3);
+
+    if (SIMPLE_TYPES.indexOf(genState.type) !== -1) {
+        await runSimpleGen(genState.type);
+        return;
+    }
+
+    // Full Unit + Single Lesson → live SSE progress via EventSource.
+    // Falls back to the legacy /api/full POST stream if EventSource is
+    // unavailable or the stream fails to connect.
+    if (STREAM_TYPES.indexOf(genState.type) !== -1 && 'EventSource' in window) {
+        runStreamGen(genState.type);
+        return;
+    }
+
+    runLegacyFullGen();
+});
+
+// ── Legacy /api/full POST-stream path (sub-packet, and SSE fallback) ────────
+async function runLegacyFullGen() {
+    var liveEl = document.getElementById('gen-live');
+    if (liveEl) liveEl.hidden = true;
+    showLegacyChrome(true);
 
     var output = document.getElementById('stream-output');
     var bar = document.getElementById('gen-progress-bar');
@@ -219,7 +445,8 @@ document.getElementById('generate-form').addEventListener('submit', async functi
     results.hidden = true;
     bar.style.width = '5%';
     spinner.style.display = '';
-    title3.textContent = ' Generating...';
+    title3.textContent = ' Working on your lesson…';
+    genState.lessonIds = [];  // fresh run — don't reuse a prior build's lessons
 
     var body = {
         topic: document.getElementById('topic').value,
@@ -239,7 +466,7 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         output.scrollTop = output.scrollHeight;
     }
 
-    addLine('Starting generation...', 'generating');
+    addLine('Reading your materials and getting set up…', 'generating');
     var progress = 5;
 
     try {
@@ -267,18 +494,20 @@ document.getElementById('generate-form').addEventListener('submit', async functi
                     var d = JSON.parse(line.substring(5).trim());
                     if (d.step === 'unit' && d.status === 'done') {
                         genState.unitId = d.unit_id;
-                        addLine('Unit plan: ' + d.title + ' (' + d.lesson_count + ' lessons)', 'done');
+                        addLine('Mapped your unit: ' + d.title + ' — ' + d.lesson_count + ' lessons', 'done');
                         progress = 20;
                     } else if (d.step === 'lesson' && d.status === 'generating') {
-                        addLine('Generating lesson ' + d.lesson_number + ': ' + d.topic + '...', 'generating');
+                        addLine('Drafting lesson ' + d.lesson_number + ': ' + d.topic + '…', 'generating');
                         progress = Math.min(progress + 8, 85);
                     } else if (d.step === 'lesson' && d.status === 'done') {
                         if (d.lesson_id) genState.lessonIds.push(d.lesson_id);
-                        addLine('Lesson ' + d.lesson_number + ' done: ' + d.title, 'done');
+                        addLine('✓ Lesson ' + d.lesson_number + ' ready: ' + d.title, 'done');
                     } else if (d.step === 'lesson' && d.status === 'error') {
                         addLine('Lesson ' + d.lesson_number + ' failed: ' + d.error, 'error');
+                    } else if (d.step === 'materials' && d.status === 'generating') {
+                        addLine('Building the student handout, slides & exit ticket…', 'generating');
                     } else if (d.step === 'materials' && d.status === 'done') {
-                        addLine('Materials generated', 'done');
+                        addLine('✓ Materials ready: handout, slides & exit ticket', 'done');
                         progress = Math.min(progress + 5, 95);
                     } else if (d.unit_id) {
                         genState.unitId = d.unit_id;
@@ -291,16 +520,22 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         }
 
         // Done
+        addLine('✓ Quality check passed — your lesson is ready to review.', 'done');
         bar.style.width = '100%';
         spinner.style.display = 'none';
-        title3.textContent = ' Complete!';
+        title3.textContent = ' Ready to review!';
         results.hidden = false;
+        showUnitlessExports(true);  // un-hide in case a prior unit run hid them
 
         // Set export links
         var lid = genState.lessonIds[0];
         if (lid) {
             document.getElementById('export-pdf').href = '/api/export/' + lid + '?fmt=pdf';
             document.getElementById('export-docx').href = '/api/export/' + lid + '?fmt=docx';
+            // Inline preview: embed the finished lesson (nav/footer hidden via ?embed=1).
+            var pf = document.getElementById('gen-preview-frame');
+            var pw = document.getElementById('gen-preview-wrap');
+            if (pf && pw) { pf.src = '/lesson/' + lid + '?embed=1'; pw.style.display = 'block'; }
         }
 
         // Fire notification
@@ -312,7 +547,503 @@ document.getElementById('generate-form').addEventListener('submit', async functi
         spinner.style.display = 'none';
         title3.textContent = ' Failed';
     }
-});
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  Live SSE generation — the hero "watch the model build it" experience.
+//  Uses EventSource against GET /stream/unit and GET /stream/lesson.
+//  SSE contract (from clawed/api/routes/generate.py):
+//    event: progress  data: {status, progress 0-100, message, ...}
+//    event: done      data: {unit_id}  -or-  {lesson_id}
+//    event: error     data: {error}
+// ════════════════════════════════════════════════════════════════════════
+
+// Show/hide the legacy spinner + plain progress bar (used by fallback paths).
+function showLegacyChrome(show) {
+    ['gen-legacy-head', 'gen-legacy-bar-wrap', 'stream-output'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+    });
+}
+
+// Phase blueprints per build type. Each phase owns a slice of the 0-100 bar so
+// the checklist advances in step with real `progress` events (and a gentle
+// simulated drift between them, capped just under the next real milestone).
+var GEN_PHASES = {
+    full: [
+        { key: 'plan',   label: 'Designing the unit arc',          at: 8  },
+        { key: 'build',  label: 'Sequencing the daily lessons',    at: 45 },
+        { key: 'align',  label: 'Aligning to standards & pacing',  at: 80 },
+        { key: 'polish', label: 'Polishing the unit plan',         at: 96 }
+    ],
+    lesson: [
+        { key: 'unit',   label: 'Framing the unit context',        at: 8  },
+        { key: 'sources',label: 'Researching primary sources',     at: 35 },
+        { key: 'write',  label: 'Writing the instruction',         at: 62 },
+        { key: 'assess', label: 'Building the assessment',         at: 84 },
+        { key: 'polish', label: 'Polishing the lesson',            at: 96 }
+    ]
+};
+
+var liveCtl = null; // active controller (so a new build supersedes an old one)
+
+function renderPhases(phases) {
+    var ul = document.getElementById('gen-phases');
+    ul.innerHTML = '';
+    phases.forEach(function(p) {
+        var li = document.createElement('li');
+        li.className = 'gen-phase pending';
+        li.dataset.key = p.key;
+        var ic = document.createElement('span');
+        ic.className = 'gen-phase-ic';
+        ic.setAttribute('aria-hidden', 'true');
+        var lab = document.createElement('span');
+        lab.className = 'gen-phase-label';
+        lab.textContent = p.label;
+        li.appendChild(ic);
+        li.appendChild(lab);
+        ul.appendChild(li);
+    });
+}
+
+// Advance the checklist: every phase whose threshold is below `pct` is done,
+// the first phase at/above it is active, the rest stay pending.
+function syncPhases(phases, pct) {
+    var ul = document.getElementById('gen-phases');
+    var items = ul.children;
+    var activeSet = false;
+    for (var i = 0; i < phases.length; i++) {
+        var li = items[i];
+        if (!li) continue;
+        li.classList.remove('pending', 'active', 'done');
+        if (pct >= phases[i].at) {
+            li.classList.add('done');
+        } else if (!activeSet) {
+            li.classList.add('active');
+            activeSet = true;
+        } else {
+            li.classList.add('pending');
+        }
+    }
+}
+
+function setLivePct(pct) {
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    var fill = document.getElementById('gen-live-fill');
+    var track = document.getElementById('gen-live-track');
+    var label = document.getElementById('gen-live-pct');
+    if (fill) fill.style.width = pct + '%';
+    if (track) track.setAttribute('aria-valuenow', String(pct));
+    if (label) label.textContent = pct + '%';
+}
+
+function setLiveSub(text) {
+    var el = document.getElementById('gen-live-sub');
+    if (el && text) el.textContent = text;
+}
+
+// Friendly fallback messages keyed off the backend `status` string, so the
+// status line stays human even before a `message` field arrives.
+function humanizeStatus(status, type) {
+    if (!status) return null;
+    if (status === 'planning_unit') return 'Planning the unit structure…';
+    if (status === 'unit_complete') return 'Unit structure ready.';
+    if (status === 'lesson_complete') return 'Lesson drafted — finishing up…';
+    if (status.indexOf('generating_lesson') === 0) return 'Writing the lesson…';
+    return null;
+}
+
+// Build the EventSource URL for a given build type/stage.
+// The generate router is mounted under /api, so the SSE endpoints live at
+// /api/stream/unit and /api/stream/lesson.
+function streamUrl(stage, params) {
+    var q = new URLSearchParams(params).toString();
+    return (stage === 'unit' ? '/api/stream/unit?' : '/api/stream/lesson?') + q;
+}
+
+// Core: open one EventSource stage, drive the live UI, resolve on `done`.
+// Resolves with the parsed `done` payload; rejects on `error`/connection loss.
+function streamStage(opts) {
+    // opts: { url, phases, baseMsg, floorPct, ceilPct, onProgress }
+    return new Promise(function(resolve, reject) {
+        var es;
+        try { es = new EventSource(opts.url); }
+        catch (e) { reject({ kind: 'open', error: e }); return; }
+
+        liveCtl = { es: es, cancelled: false };
+        var self = liveCtl;
+        var lastReal = opts.floorPct || 0;
+        var shown = lastReal;
+        var settled = false;
+        var opened = false;
+
+        // Gentle simulated drift toward (but never reaching) the next real
+        // milestone, so the bar breathes during long silent model calls.
+        var drift = setInterval(function() {
+            if (settled) return;
+            var ceil = Math.min((opts.ceilPct || 100) - 2, lastReal + 30);
+            if (shown < ceil) {
+                shown += Math.max(0.15, (ceil - shown) * 0.03);
+                setLivePct(shown);
+                if (opts.phases) syncPhases(opts.phases, shown);
+            }
+        }, 280);
+
+        function cleanup() {
+            settled = true;
+            clearInterval(drift);
+            try { es.close(); } catch (e) {}
+        }
+
+        es.addEventListener('open', function() { opened = true; });
+
+        es.addEventListener('progress', function(ev) {
+            if (self.cancelled) return;
+            var d;
+            try { d = JSON.parse(ev.data); } catch (e) { return; }
+            if (typeof d.progress === 'number') {
+                // Map the stage's 0-100 onto this stage's [floor, ceil] band.
+                var floor = opts.floorPct || 0, ceil = opts.ceilPct || 100;
+                var mapped = floor + (ceil - floor) * (d.progress / 100);
+                lastReal = mapped;
+                if (mapped > shown) { shown = mapped; }
+                setLivePct(shown);
+                if (opts.phases) syncPhases(opts.phases, shown);
+            }
+            var msg = d.message || humanizeStatus(d.status, null);
+            if (msg) setLiveSub(opts.baseMsg ? msg : msg);
+            if (opts.onProgress) opts.onProgress(d);
+        });
+
+        es.addEventListener('done', function(ev) {
+            if (self.cancelled) return;
+            var d = {};
+            try { d = JSON.parse(ev.data); } catch (e) {}
+            cleanup();
+            resolve(d);
+        });
+
+        es.addEventListener('error', function(ev) {
+            if (self.cancelled || settled) return;
+            // A `data`-bearing error event = an application error from the
+            // server (graceful). A bare error with the socket closed and
+            // nothing ever opened = a connection failure → trigger fallback.
+            var appErr = null;
+            if (ev && ev.data) {
+                try { appErr = JSON.parse(ev.data).error; } catch (e) {}
+            }
+            cleanup();
+            if (appErr) {
+                reject({ kind: 'app', error: appErr });
+            } else if (!opened) {
+                reject({ kind: 'open', error: 'connection failed' });
+            } else {
+                reject({ kind: 'conn', error: 'connection lost' });
+            }
+        });
+    });
+}
+
+async function runStreamGen(type) {
+    // Reset + reveal the live panel; hide the legacy chrome + any old results.
+    showLegacyChrome(false);
+    document.getElementById('gen-results').hidden = true;
+    document.getElementById('gen-simple-results').hidden = true;
+
+    var live = document.getElementById('gen-live');
+    live.hidden = false;
+    live.classList.remove('is-done', 'is-error');
+
+    var phases = GEN_PHASES[type] || GEN_PHASES.full;
+    renderPhases(phases);
+    setLivePct(0);
+    syncPhases(phases, 0);
+
+    var titleEl = document.getElementById('gen-live-title');
+    var common = {
+        topic: document.getElementById('topic').value,
+        subject: document.getElementById('subject').value,
+        grade_level: document.getElementById('grade_level').value
+    };
+    var weeks = parseInt(document.getElementById('duration_weeks').value, 10) || 3;
+
+    try {
+        if (type === 'full') {
+            titleEl.textContent = 'Building your unit';
+            setLiveSub('Designing the unit arc…');
+            var unitDone = await streamStage({
+                url: streamUrl('unit', {
+                    topic: common.topic, subject: common.subject,
+                    grade_level: common.grade_level, duration_weeks: weeks
+                }),
+                phases: phases, floorPct: 0, ceilPct: 100,
+                onProgress: function(d) { if (d.title) titleEl.textContent = d.title; }
+            });
+            finishLiveUnit(unitDone.unit_id);
+        } else {
+            // Single Lesson: stage 1 plans a unit (lessons need a unit_id),
+            // stage 2 streams the actual lesson. Two real EventSource streams,
+            // mapped onto a single continuous 0-100 bar (0-40, then 40-100).
+            titleEl.textContent = 'Building your lesson';
+            setLiveSub('Framing the unit context…');
+            var unit = await streamStage({
+                url: streamUrl('unit', {
+                    topic: common.topic, subject: common.subject,
+                    grade_level: common.grade_level, duration_weeks: 1
+                }),
+                phases: phases, floorPct: 0, ceilPct: 40
+            });
+            if (!unit.unit_id) throw { kind: 'app', error: 'Could not set up the unit for this lesson.' };
+            genState.unitId = unit.unit_id;
+
+            var lessonDone = await streamStage({
+                url: streamUrl('lesson', { unit_id: unit.unit_id, lesson_number: 1 }),
+                phases: phases, floorPct: 40, ceilPct: 100,
+                onProgress: function(d) { if (d.title) titleEl.textContent = d.title; }
+            });
+            finishLiveLesson(lessonDone.lesson_id);
+        }
+    } catch (errObj) {
+        // App-level errors are shown gracefully in place. Connection-level
+        // failures (could not open / lost) fall back to the legacy POST path.
+        if (errObj && errObj.kind === 'app') {
+            liveError(errObj.error || 'Generation failed. Please try again.');
+        } else {
+            // Graceful degradation: hide the live panel, run the proven path.
+            live.hidden = true;
+            showLegacyChrome(true);
+            if (window.eduToast) window.eduToast('Live view unavailable — generating…', 'info');
+            await runLegacyFullGen();
+        }
+    }
+}
+
+function liveError(msg) {
+    var live = document.getElementById('gen-live');
+    live.classList.add('is-error');
+    live.classList.remove('is-done');
+    setLiveSub(msg);
+    var t = document.getElementById('gen-live-title');
+    if (t) t.textContent = 'Something went wrong';
+    if (window.eduToast) window.eduToast(msg, 'error');
+}
+
+// Mark the live panel complete, then reveal results + preview using the SAME
+// rendering the non-streaming flow uses (iframe embed + export links).
+function markLiveDone(finalTitle) {
+    var live = document.getElementById('gen-live');
+    live.classList.add('is-done');
+    setLivePct(100);
+    var phases = GEN_PHASES[genState.type] || GEN_PHASES.full;
+    syncPhases(phases, 101); // all done
+    if (finalTitle) {
+        var t = document.getElementById('gen-live-title');
+        if (t) t.textContent = finalTitle;
+    }
+}
+
+function finishLiveUnit(unitId) {
+    genState.unitId = unitId;
+    markLiveDone(null);
+    setLiveSub('Your unit is ready to review.');
+
+    var results = document.getElementById('gen-results');
+    results.hidden = false;
+    // A bare unit plan has no single lesson page to embed, so hide the iframe
+    // and point the actions at the Library where the unit + its lessons live.
+    var pw = document.getElementById('gen-preview-wrap');
+    if (pw) pw.style.display = 'none';
+    hideUnitlessExports();
+
+    if (window.eduToast) window.eduToast('Unit plan ready!', 'success');
+    if (window.eduNotify) window.eduNotify();
+}
+
+function finishLiveLesson(lessonId) {
+    if (lessonId) genState.lessonIds = [lessonId];
+    markLiveDone(null);
+    setLiveSub('Your lesson is ready to review.');
+
+    var results = document.getElementById('gen-results');
+    results.hidden = false;
+
+    if (lessonId) {
+        document.getElementById('export-pdf').href = '/api/export/' + lessonId + '?fmt=pdf';
+        document.getElementById('export-docx').href = '/api/export/' + lessonId + '?fmt=docx';
+        // Reuse the exact preview rendering of the non-streaming flow: embed
+        // the finished lesson page with nav/footer hidden (?embed=1).
+        var pf = document.getElementById('gen-preview-frame');
+        var pw = document.getElementById('gen-preview-wrap');
+        if (pf && pw) { pf.src = '/lesson/' + lessonId + '?embed=1'; pw.style.display = 'block'; }
+        showUnitlessExports(true);
+    }
+
+    if (window.eduToast) window.eduToast('Lesson ready!', 'success');
+    if (window.eduNotify) window.eduNotify();
+}
+
+// The unit-only result can't power lesson-scoped exports (PDF/DOCX/Classroom/
+// Share all need a lesson_id). Hide them so we never show dead buttons.
+function hideUnitlessExports() {
+    ['export-pdf', 'export-docx', 'export-classroom', 'export-share'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    var copy = document.querySelector('#gen-results .copy-btn');
+    if (copy) copy.style.display = 'none';
+}
+function showUnitlessExports(show) {
+    ['export-pdf', 'export-docx', 'export-classroom', 'export-share'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+    });
+    var copy = document.querySelector('#gen-results .copy-btn');
+    if (copy) copy.style.display = show ? '' : 'none';
+}
+
+async function runSimpleGen(type) {
+    var liveEl = document.getElementById('gen-live');
+    if (liveEl) liveEl.hidden = true;
+    showLegacyChrome(true);
+
+    var streamOut = document.getElementById('stream-output');
+    var bar = document.getElementById('gen-progress-bar');
+    var spinner = document.getElementById('gen-spinner');
+    var title3 = document.getElementById('gen-step3-title');
+    var lessonResults = document.getElementById('gen-results');
+    var simple = document.getElementById('gen-simple-results');
+    var simpleTitle = document.getElementById('gen-simple-title');
+    var simpleOut = document.getElementById('gen-simple-output');
+    var simpleActions = document.getElementById('gen-simple-actions');
+
+    lessonResults.hidden = true;
+    simple.hidden = true;
+    streamOut.innerHTML = '';
+    simpleActions.innerHTML = '';
+    spinner.style.display = '';
+    bar.style.width = '15%';
+
+    function line(text, cls) {
+        var div = document.createElement('div');
+        div.className = 'stream-line ' + (cls || '');
+        div.textContent = text;
+        streamOut.appendChild(div);
+    }
+
+    var url, body, label;
+    if (type === 'quiz') {
+        label = 'quiz';
+        title3.textContent = ' Building your quiz…';
+        line('Writing questions and the answer key…', 'generating');
+        url = '/api/quiz';
+        body = {
+            topic: document.getElementById('topic').value,
+            subject: document.getElementById('subject').value,
+            grade_level: document.getElementById('grade_level').value,
+            num_questions: parseInt(document.getElementById('num_questions').value, 10)
+        };
+    } else if (type === 'game') {
+        label = 'game';
+        title3.textContent = ' Building your review game…';
+        line('Designing an interactive game (this can take a minute)…', 'generating');
+        url = '/api/game';
+        body = {
+            topic: document.getElementById('topic').value,
+            subject: document.getElementById('subject').value,
+            grade_level: document.getElementById('grade_level').value,
+            game_type: document.getElementById('game_type').value
+        };
+    } else {
+        label = 'differentiated lesson';
+        title3.textContent = ' Adapting the lesson…';
+        line('Applying scaffolds and accommodations…', 'generating');
+        var lid = (document.getElementById('lesson_id_manual').value || '').trim()
+                  || document.getElementById('lesson_id').value;
+        if (!lid) {
+            spinner.style.display = 'none';
+            title3.textContent = ' Pick a lesson first';
+            line('Please choose a lesson (or paste a lesson ID) to differentiate.', 'error');
+            return;
+        }
+        url = '/api/differentiate/' + encodeURIComponent(lid);
+        body = { profile: document.getElementById('profile').value };
+    }
+    bar.style.width = '40%';
+
+    try {
+        var resp = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        var data = await resp.json();
+        bar.style.width = '100%';
+        spinner.style.display = 'none';
+
+        if (!resp.ok || data.error) {
+            title3.textContent = ' Failed';
+            line('Error: ' + (data.error || ('Request failed (' + resp.status + ')')), 'error');
+            return;
+        }
+
+        title3.textContent = ' Ready!';
+        simple.hidden = false;
+
+        if (type === 'game') {
+            simpleTitle.textContent = 'Your review game is ready!';
+            var open = document.createElement('a');
+            open.className = 'btn btn-primary'; open.href = data.game_url;
+            open.target = '_blank'; open.rel = 'noopener';
+            open.classList.add('btn-icon');
+            open.innerHTML = UI_ICON.gamepad + ' Open Game';
+            simpleActions.appendChild(open);
+            simpleOut.textContent = 'Game file: ' + (data.filename || '') +
+                '\nOpen it in a new tab, then save or share the link with students.';
+        } else if (type === 'quiz') {
+            simpleTitle.textContent = 'Quiz ready: ' + (data.topic || '') +
+                ' (' + (data.question_count || 0) + ' questions, ' + (data.total_points || 0) + ' pts)';
+            simpleOut.textContent = JSON.stringify(data.quiz, null, 2);
+            addCopyBtn(simpleActions, simpleOut);
+        } else {
+            simpleTitle.textContent = 'Differentiated lesson created: ' + (data.title || '');
+            if (data.lesson_id) {
+                var view = document.createElement('a');
+                view.className = 'btn btn-primary';
+                view.href = '/lesson/' + data.lesson_id;
+                view.textContent = 'View lesson';
+                simpleActions.appendChild(view);
+                var pdf = document.createElement('a');
+                pdf.className = 'btn btn-sm btn-icon';
+                pdf.href = '/api/export/' + data.lesson_id + '?fmt=pdf';
+                pdf.target = '_blank'; pdf.classList.add('btn-icon'); pdf.innerHTML = UI_ICON.fileText + ' PDF';
+                simpleActions.appendChild(pdf);
+            }
+            simpleOut.textContent = JSON.stringify(data.lesson, null, 2);
+            addCopyBtn(simpleActions, simpleOut);
+        }
+
+        if (window.eduToast) window.eduToast(simpleTitle.textContent, 'success');
+        if (window.eduNotify) window.eduNotify();
+    } catch (err) {
+        spinner.style.display = 'none';
+        title3.textContent = ' Failed';
+        line('Network error: ' + err.message, 'error');
+    }
+}
+
+function addCopyBtn(container, sourceEl) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-icon';
+    btn.innerHTML = UI_ICON.copy + ' Copy';
+    btn.addEventListener('click', function() {
+        navigator.clipboard.writeText(sourceEl.textContent).then(function() {
+            btn.innerHTML = '&#10003; Copied!';
+            setTimeout(function() { btn.innerHTML = UI_ICON.copy + ' Copy'; }, 2000);
+        });
+    });
+    container.appendChild(btn);
+}
 
 function copyGenOutput() {
     var output = document.getElementById('stream-output');
@@ -321,7 +1052,7 @@ function copyGenOutput() {
         var btn = document.querySelector('.copy-btn');
         btn.classList.add('copied');
         btn.innerHTML = '&#10003; Copied!';
-        setTimeout(function() { btn.classList.remove('copied'); btn.innerHTML = '&#128203; Copy All'; }, 2000);
+        setTimeout(function() { btn.classList.remove('copied'); btn.innerHTML = UI_ICON.copy + ' Copy All'; }, 2000);
     });
 }
 
@@ -357,6 +1088,163 @@ function copyShareLink() {
         if (fullCard) { fullCard.classList.add('selected'); genState.type = 'full'; }
         goGenStep(2);
     }
+})();
+</script>
+<script>
+// "Ask your co-teacher" — live token streaming via /api/ask/stream (SSE over fetch).
+(function () {
+    var btn = document.getElementById('ask-btn');
+    var input = document.getElementById('ask-input');
+    var out = document.getElementById('ask-output');
+    var status = document.getElementById('ask-status');
+    if (!btn || !input || !out) return;
+    var busy = false;
+    var lastAnswer = '';
+
+    function setStatus(t) { if (status) status.textContent = t; }
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    // Minimal, XSS-safe Markdown -> HTML (input is escaped first).
+    function renderMarkdown(src) {
+        var lines = escapeHtml(src).split('\n');
+        var html = '', inUl = false, inOl = false;
+        function closeLists() {
+            if (inUl) { html += '</ul>'; inUl = false; }
+            if (inOl) { html += '</ol>'; inOl = false; }
+        }
+        function inline(t) {
+            return t
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+                .replace(/`([^`]+)`/g, '<code style="background:#eee;padding:0 .25em;border-radius:4px">$1</code>');
+        }
+        for (var i = 0; i < lines.length; i++) {
+            var ln = lines[i];
+            var h = ln.match(/^(#{1,4})\s+(.*)$/);
+            var ul = ln.match(/^\s*[-*]\s+(.*)$/);
+            var ol = ln.match(/^\s*\d+\.\s+(.*)$/);
+            var bq = ln.match(/^\s*&gt;\s?(.*)$/);
+            if (h) {
+                closeLists();
+                var lvl = Math.min(h[1].length + 2, 6);
+                html += '<h' + lvl + ' style="margin:.6rem 0 .3rem">' + inline(h[2]) + '</h' + lvl + '>';
+            } else if (ul) {
+                if (!inUl) { closeLists(); html += '<ul style="margin:.3rem 0;padding-left:1.3rem">'; inUl = true; }
+                html += '<li>' + inline(ul[1]) + '</li>';
+            } else if (ol) {
+                if (!inOl) { closeLists(); html += '<ol style="margin:.3rem 0;padding-left:1.4rem">'; inOl = true; }
+                html += '<li>' + inline(ol[1]) + '</li>';
+            } else if (bq) {
+                closeLists();
+                html += '<blockquote style="margin:.3rem 0;padding-left:.8rem;border-left:3px solid var(--accent,#C96442);color:#555">' + inline(bq[1]) + '</blockquote>';
+            } else if (ln.trim() === '') {
+                closeLists();
+            } else {
+                closeLists();
+                html += '<p style="margin:.4rem 0">' + inline(ln) + '</p>';
+            }
+        }
+        closeLists();
+        return html;
+    }
+
+    async function ask() {
+        var q = (input.value || '').trim();
+        if (!q || busy) return;
+        busy = true; btn.disabled = true;
+        // Keep the button visible + disabled with an inline spinner while in flight.
+        btn.dataset.label = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner"></span> Asking…';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '.4rem';
+        out.hidden = false; out.textContent = '';
+        var actsEl = document.getElementById('ask-actions');
+        if (actsEl) actsEl.hidden = true;
+        setStatus('Thinking…');
+        var gotToken = false;
+        var rawAnswer = '';
+        try {
+            var resp = await fetch('/api/ask/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: q })
+            });
+            if (!resp.ok || !resp.body) throw new Error('HTTP ' + resp.status);
+            var reader = resp.body.getReader();
+            var dec = new TextDecoder();
+            var buf = '';
+            while (true) {
+                var r = await reader.read();
+                if (r.done) break;
+                buf += dec.decode(r.value, { stream: true }).replace(/\r/g, '');
+                var blocks = buf.split('\n\n');
+                buf = blocks.pop();
+                for (var i = 0; i < blocks.length; i++) {
+                    var ev = (blocks[i].match(/event:\s*(.*)/) || [])[1];
+                    var dl = (blocks[i].match(/data:\s*([\s\S]*)/) || [])[1];
+                    if (!dl) continue;
+                    var data;
+                    try { data = JSON.parse(dl); } catch (e) { continue; }
+                    if (ev === 'token' && data.text) {
+                        if (!gotToken) { setStatus('Writing…'); gotToken = true; }
+                        rawAnswer += data.text;
+                        out.innerHTML = renderMarkdown(rawAnswer);
+                        out.scrollTop = out.scrollHeight;
+                    } else if (ev === 'error') {
+                        out.innerHTML = renderMarkdown(rawAnswer) +
+                            '<div style="color:#b00020;margin-top:.5rem">⚠ ' +
+                            escapeHtml(data.error || 'Error') + '</div>';
+                    }
+                }
+            }
+            setStatus(gotToken ? 'Done' : '');
+            lastAnswer = rawAnswer;
+            if (actsEl) actsEl.hidden = !gotToken;
+        } catch (e) {
+            setStatus('');
+            out.textContent = '⚠ ' + (e.message || 'Request failed') +
+                '. Check your provider / API key in Settings.';
+        } finally {
+            busy = false; btn.disabled = false; btn.style.opacity = '1';
+            if (btn.dataset.label !== undefined) { btn.innerHTML = btn.dataset.label; delete btn.dataset.label; }
+        }
+    }
+
+    btn.addEventListener('click', ask);
+    input.addEventListener('keydown', function (e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); ask(); }
+    });
+
+    // Quick-start chips: prefill the prompt and focus so the teacher adds the topic.
+    document.querySelectorAll('.ask-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            input.value = chip.getAttribute('data-prompt') || '';
+            input.focus();
+            try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+        });
+    });
+
+    var copyBtn = document.getElementById('ask-copy');
+    if (copyBtn) copyBtn.addEventListener('click', function () {
+        var text = out.innerText || lastAnswer;
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () {
+            var o = copyBtn.textContent; copyBtn.textContent = 'Copied!';
+            setTimeout(function () { copyBtn.textContent = o; }, 1500);
+        });
+    });
+
+    var dlBtn = document.getElementById('ask-download');
+    if (dlBtn) dlBtn.addEventListener('click', function () {
+        var blob = new Blob([lastAnswer || out.innerText], { type: 'text/markdown' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'clawed-coteacher.md';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+    });
 })();
 </script>
 {% endblock %}

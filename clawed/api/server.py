@@ -51,7 +51,7 @@ def _check_page_auth(request: Request) -> bool:
     """
     import secrets as _secrets
 
-    from clawed.api.deps import get_api_token
+    from clawed.api.deps import get_api_token, local_bypass_ok
 
     token = get_api_token()
     # Check cookie (primary method — set via POST /api/auth/bootstrap)
@@ -62,12 +62,9 @@ def _check_page_auth(request: Request) -> bool:
     auth = request.headers.get("authorization", "")
     if auth.startswith("Bearer ") and _secrets.compare_digest(auth[7:], token):
         return True
-    # Check localhost bypass
-    if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
-        client_ip = request.client.host if request.client else ""
-        if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
-            return True
-    return False
+    # Genuinely-local bypass — NOT tunnel traffic (see local_bypass_ok): a
+    # request proxied through Cloudflare carries Cf-Ray and never bypasses.
+    return local_bypass_ok(request)
 
 
 @asynccontextmanager
@@ -98,6 +95,11 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
         cors_origins = [
             "http://localhost:8000",
             "http://127.0.0.1:8000",
+            # iOS companion app: the Capacitor WKWebView's own origin. The phone
+            # probes GET /api/health from here before handing its WebView over to
+            # this server, so it can fail gracefully (show a friendly retry)
+            # instead of stranding the teacher on a dead browser error page.
+            "capacitor://localhost",
         ]
     app.add_middleware(
         CORSMiddleware,
@@ -111,8 +113,15 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
     # Static files
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
-    # Templates
-    return Jinja2Templates(directory=str(_TEMPLATE_DIR))
+    # Templates. Expose the app version as a Jinja global so templates can
+    # cache-bust static assets (e.g. style.css?v={{ asset_v }}): the URL changes
+    # on every release, so browsers fetch fresh CSS/JS instead of serving stale
+    # cached copies.
+    from clawed import __version__
+
+    templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+    templates.env.globals["asset_v"] = __version__
+    return templates
 
 
 def _register_api_routes(app: FastAPI) -> None:
@@ -150,11 +159,17 @@ def _register_api_routes(app: FastAPI) -> None:
     app.include_router(student_classroom_router, prefix="/api")  # No auth — class code is auth
 
 
-async def _page_auth_bootstrap(token: str = Form(...)) -> Any:
+async def _page_auth_bootstrap(request: Request, token: str = Form(...)) -> Any:
     """Accept auth token via POST and set a session cookie.
 
-    Replaces the old ?token= query param flow to prevent token
-    leakage through browser history, bookmarks, and referrers.
+    Replaces the old ?token= query param flow to prevent token leakage through
+    browser history, bookmarks, and referrers. The cookie is ``SameSite=Lax`` —
+    it rides the iOS shell's cross-site top-level navigation into the agent (so
+    the page loads) and the WebView's same-origin ``/api`` fetches (so the app
+    works), but a cross-site POST never carries it (CSRF-safe). It's marked
+    ``Secure`` whenever the original request was https — the public tunnel
+    terminates TLS at Cloudflare and forwards ``X-Forwarded-Proto=https`` — so the
+    token never rides an unencrypted hop.
     """
     import secrets as _secrets
 
@@ -164,12 +179,13 @@ async def _page_auth_bootstrap(token: str = Form(...)) -> Any:
     if not _secrets.compare_digest(token, expected):
         return JSONResponse({"error": "Invalid token"}, status_code=401)
 
-    is_https = os.environ.get("HTTPS", "").lower() in ("1", "true")
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+    is_https = forwarded_proto == "https" or os.environ.get("HTTPS", "").lower() in ("1", "true")
     response = RedirectResponse("/", status_code=303)
     response.set_cookie(
         "clawed_token", token,
         httponly=True,
-        samesite="strict",
+        samesite="lax",
         secure=is_https,
         max_age=86400,
     )
@@ -495,11 +511,22 @@ async def _page_settings(request: Request, templates: Jinja2Templates) -> HTMLRe
     except (ImportError, sqlite3.OperationalError):
         pass
 
+    anthropic_key = get_api_key("anthropic")
+    openai_key = get_api_key("openai")
+    openrouter_key = get_api_key("openrouter")
+    google_key = get_api_key("google")
+
     return templates.TemplateResponse(request, "settings.html", {
         "config": cfg,
         "persona": persona_data,
-        "anthropic_key_masked": mask_api_key(get_api_key("anthropic")),
-        "openai_key_masked": mask_api_key(get_api_key("openai")),
+        "anthropic_key_masked": mask_api_key(anthropic_key),
+        "openai_key_masked": mask_api_key(openai_key),
+        "openrouter_key_masked": mask_api_key(openrouter_key),
+        "google_key_masked": mask_api_key(google_key),
+        "has_anthropic_key": bool(anthropic_key),
+        "has_openai_key": bool(openai_key),
+        "has_openrouter_key": bool(openrouter_key),
+        "has_google_key": bool(google_key),
         "states": list_states(),
         "teacher_state": teacher_state,
         "teacher_subjects": teacher_subjects,

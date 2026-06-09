@@ -1,0 +1,553 @@
+/* ============================================================================
+   Claw-ED — Claude design layer
+   Loaded AFTER style.css. Overrides the design tokens to the warm Anthropic
+   palette (cream canvas, clay accent, serif display) so the whole app re-skins
+   at once. No layout changes — pure tokens + light component polish.
+   ========================================================================== */
+
+:root {
+    /* Warm neutral ramp (replaces cool grays) */
+    --gray-50:  #FAF9F5;
+    --gray-100: #F2F0E9;
+    --gray-200: #E9E5DA;
+    --gray-300: #DAD5C8;
+    --gray-500: #6B6557;
+    --gray-700: #44403A;
+    --gray-900: #1F1D19;
+
+    /* Clay accent (repurposes --blue everywhere it's referenced) */
+    --blue:       #C96442;   /* Claude clay / terracotta */
+    --blue-light: #F4E7DE;   /* soft peach surface */
+    --blue-dark:  #2B2722;   /* warm espresso (nav + headings) */
+
+    --green:  #3E7C55;
+    --red:    #B5483A;
+    --orange: #C17A2B;
+
+    --radius: 10px;
+    --shadow:    0 1px 2px rgba(40, 36, 28, 0.05);
+    --shadow-md: 0 6px 22px rgba(40, 36, 28, 0.08);
+
+    /* Semantic */
+    --bg: #FAF9F5;                 /* warm paper canvas — the signature move */
+    --bg-surface: #F2F0E9;
+    --bg-surface-hover: #ECE8DE;
+    --text: #1F1D19;              /* warm ink, not pure black */
+    --text-secondary: #6B6557;
+    --text-heading: #2B2722;
+    --border: #E9E5DA;
+    --border-strong: #DAD5C8;
+    --nav-bg: #2B2722;            /* warm espresso top bar */
+    --nav-text: rgba(255, 255, 255, 0.80);
+    --input-bg: #FFFFFF;
+    --input-border: #D7D2C6;
+    --card-bg: #FFFFFF;           /* crisp white cards on cream canvas */
+
+    /* Compat aliases — a few inline styles reference these names. Map them to
+       real theme tokens so they auto-skin (light + dark) and pass contrast,
+       instead of falling back to off-token hardcoded hex. */
+    --text-muted: var(--text-secondary);   /* was undefined -> #8a8a8a (fails AA) */
+    --accent: var(--blue);                  /* clay */
+    --bg-subtle: var(--card-bg);
+
+    --code-bg: #2B2722;
+    --code-text: #EDE8DC;
+    --chart-bar: #C96442;
+    --chart-bar-alt: #E0A685;
+    --chart-line: #3E7C55;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+
+[data-theme="dark"] {
+    --gray-50: #2B2722; --gray-100: #353029; --gray-200: #423C33; --gray-300: #4F4840;
+    --gray-500: #A39C8C; --gray-700: #CFC7B6; --gray-900: #EDE8DC;
+    --blue: #DB9072; --blue-light: #3A2E26; --blue-dark: #1A1714;
+    --green: #5FA177; --red: #D98273; --orange: #D8A85B;
+    --bg: #211E1A; --bg-surface: #2B2722; --bg-surface-hover: #353029;
+    --text: #ECE7DC; --text-secondary: #A39C8C; --text-heading: #F0EADD;
+    --border: #3A352D; --border-strong: #4A443A;
+    --nav-bg: #1A1714; --nav-text: rgba(255, 255, 255, 0.78);
+    --input-bg: #2B2722; --input-border: #4A443A; --card-bg: #2B2722;
+    --code-bg: #15120F; --code-text: #D5CEBF;
+    --chart-bar: #DB9072; --chart-bar-alt: #E0A685; --chart-line: #5FA177;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Typography: serif display, warm sans body ───────────────────────────── */
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, .page-title, .nav-brand {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+    font-weight: 600;
+}
+.nav-brand { font-size: 1.3rem; }
+.page-title { letter-spacing: -0.02em; }
+
+/* ── Buttons — clay primary, soft corners ────────────────────────────────── */
+.btn { border-radius: 8px; }
+.btn-primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn-primary:hover { background: #B4573A; border-color: #B4573A; }
+
+/* ── Surfaces + focus ────────────────────────────────────────────────────── */
+.card, .settings-section, .radio-card { border-radius: var(--radius); }
+.radio-card.active { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-light); }
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px var(--blue-light);
+}
+a { color: var(--blue); }
+
+/* ── "How to get a key" help block ───────────────────────────────────────── */
+.key-help {
+    background: var(--blue-light);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 0.95rem 1.15rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text);
+}
+.key-help strong { color: var(--text-heading); }
+.key-help ol { margin: 0.5rem 0 0.25rem 1.2rem; padding: 0; }
+.key-help li { margin: 0.3rem 0; }
+.key-help a { font-weight: 600; text-decoration: underline; }
+.key-help .key-note {
+    display: block;
+    margin-top: 0.65rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+.key-help .key-cta {
+    display: inline-block;
+    margin-top: 0.6rem;
+    background: var(--blue);
+    color: #fff;
+    padding: 0.4rem 0.85rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.key-help .key-cta:hover { background: #B4573A; color: #fff; }
+
+/* ── Audit fixes: off-palette leaks + a11y ──────────────────────────────── */
+
+/* Disabled primary buttons leaked default blue (#93c5fd) on the first screen. */
+.btn-primary:disabled,
+.btn-primary[disabled] {
+    background: #E0B6A6;        /* muted clay tint */
+    border-color: #E0B6A6;
+    color: #fff;
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+/* Star ratings used a saturated amber off the warm palette. */
+.star.active, .star:hover, .fb-rating { color: var(--orange); }
+
+/* Touch targets: teachers open this on a phone via the Mac app's QR/LAN. */
+@media (max-width: 768px) {
+    .btn-sm, .ask-chip, .revise-chip, .quick-action, .chip {
+        min-height: 44px;
+    }
+    .ask-chip { padding: 0.5rem 1rem; }
+
+    /* On phones, stack the lesson into one column and float the sidebar
+       (Rate This Lesson / Ask About This Lesson) above the long lesson body so
+       those actions aren't buried at the bottom of a scroll. Flex column (not
+       block/grid) so `order` actually reorders the children. */
+    .lesson-grid { display: flex; flex-direction: column; }
+    .lesson-sidebar { order: -1; margin-bottom: 1.5rem; }
+    .lesson-main { order: 0; }
+}
+
+/* ============================================================================
+   Live generation progress — the hero "watch it build" moment on /generate.
+   Calm, premium, teacher-friendly. Cream stage, clay accent, serif heading.
+   Driven by the SSE `progress`/`done`/`error` events from /stream/{unit,lesson}.
+   ========================================================================== */
+.gen-live {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.6rem 1.6rem 1.4rem;
+    box-shadow: var(--shadow-md);
+    margin: 0.25rem 0 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+/* Soft clay wash along the top edge — a quiet sign of "live". */
+.gen-live::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--chart-bar-alt, #E0A685));
+    opacity: 0.9;
+}
+
+.gen-live-head {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.2rem;
+}
+.gen-live-title {
+    font-family: var(--font-serif);
+    font-size: 1.32rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-heading);
+    line-height: 1.2;
+}
+/* Breathing clay dot — signals "working" without a noisy spinner. */
+.gen-live-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--blue);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.5);
+    animation: genPulse 1.8s ease-out infinite;
+}
+@keyframes genPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.45); }
+    70%  { box-shadow: 0 0 0 9px rgba(201, 100, 66, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(201, 100, 66, 0); }
+}
+.gen-live.is-done .gen-live-dot { background: var(--green); animation: none; }
+.gen-live.is-error .gen-live-dot { background: var(--red); animation: none; }
+
+.gen-live-sub {
+    margin: 0.15rem 0 1.15rem;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    min-height: 1.4em;
+    transition: color 0.2s ease;
+}
+.gen-live.is-error .gen-live-sub { color: var(--red); }
+
+/* Progress bar — taller, rounded, with a subtle moving sheen while active. */
+.gen-live-track {
+    width: 100%;
+    height: 10px;
+    background: var(--bg-surface);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 0.35rem;
+}
+.gen-live-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--blue), var(--chart-bar-alt, #E0A685));
+    transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    overflow: hidden;
+}
+.gen-live-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: translateX(-100%);
+    animation: genSheen 1.7s linear infinite;
+}
+.gen-live.is-done .gen-live-fill { background: var(--green); }
+.gen-live.is-done .gen-live-fill::after,
+.gen-live.is-error .gen-live-fill::after { animation: none; opacity: 0; }
+.gen-live.is-error .gen-live-fill { background: var(--red); }
+@keyframes genSheen {
+    to { transform: translateX(100%); }
+}
+.gen-live-pct {
+    text-align: right;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 1.15rem;
+}
+
+/* Phase checklist — the calm "table of contents" of the build. */
+.gen-phases {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+.gen-phase {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.15rem 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.45;
+    transition: color 0.25s ease;
+}
+.gen-phase-ic {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    background: var(--card-bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.05rem;
+    position: relative;
+    transition: border-color 0.25s ease, background 0.25s ease;
+}
+/* Pending: hollow ring. Active: clay ring with a spinning arc. Done: filled check. */
+.gen-phase.pending .gen-phase-label { color: var(--text-secondary); opacity: 0.72; }
+.gen-phase.active { color: var(--text-heading); font-weight: 600; }
+.gen-phase.active .gen-phase-ic {
+    border-color: var(--blue);
+    border-top-color: transparent;
+    animation: genSpin 0.85s linear infinite;
+}
+.gen-phase.done { color: var(--text-heading); }
+.gen-phase.done .gen-phase-ic {
+    border-color: var(--green);
+    background: var(--green);
+    animation: none;
+}
+.gen-phase.done .gen-phase-ic::after {
+    content: "";
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-0.5px, -1px);
+}
+@keyframes genSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .gen-live-dot, .gen-live-fill::after, .gen-phase.active .gen-phase-ic { animation: none; }
+}
+
+/* Mobile (≤768px): tighten padding, keep the hierarchy legible. */
+@media (max-width: 768px) {
+    .gen-live { padding: 1.15rem 1.1rem 1.1rem; border-radius: 14px; }
+    .gen-live-title { font-size: 1.18rem; }
+    .gen-live-sub { font-size: 0.88rem; }
+    .gen-phase { font-size: 0.9rem; }
+}
+
+/* ============================================================================
+   Connect your AI — first-run wizard step 2.
+   The make-or-break moment: a teacher auto-detects or picks a provider, pastes
+   a key, and is connected. Calm cream surfaces, clay accent, serif headings.
+   ========================================================================== */
+/* The [hidden] attribute is how the wizard JS toggles these blocks. A bare
+   `display:flex/grid` on an element beats the UA `[hidden]{display:none}` rule,
+   so re-assert it for everything in this step. */
+#step-connect [hidden] { display: none !important; }
+
+.connect-head { text-align: center; margin-bottom: 1.5rem; }
+.connect-head h2 { color: var(--text-heading); margin-bottom: 0.4rem; }
+.connect-head .wizard-desc { max-width: 46ch; margin: 0 auto; }
+
+/* Detecting shimmer line */
+.connect-detecting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.6rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+.connect-spinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--blue);
+    animation: connectSpin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes connectSpin { to { transform: rotate(360deg); } }
+
+/* The "magic" detected card */
+.connect-magic-card {
+    position: relative;
+    background: var(--card-bg);
+    border: 1.5px solid var(--blue);
+    border-radius: 16px;
+    padding: 1.6rem 1.5rem 1.4rem;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    overflow: hidden;
+}
+.connect-magic-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--chart-bar-alt, #E0A685));
+}
+.connect-magic-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--blue-light);
+    color: var(--blue);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+}
+.connect-magic-badge .ui-icon { color: var(--blue); }
+.connect-magic-card h3 {
+    font-family: var(--font-serif);
+    color: var(--text-heading);
+    font-size: 1.3rem;
+    margin-bottom: 0.4rem;
+}
+.connect-magic-note {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin: 0 auto 1.25rem;
+    max-width: 42ch;
+}
+.connect-magic-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+.connect-magic-actions .btn-lg { width: auto; min-width: 240px; }
+.connect-other-btn {
+    background: transparent;
+    border: none;
+    color: var(--blue);
+    font-weight: 600;
+    text-decoration: underline;
+    padding: 0.3rem;
+    cursor: pointer;
+}
+.connect-other-btn:hover { color: #B4573A; }
+
+/* Provider chooser */
+.connect-chooser-label {
+    font-weight: 600;
+    color: var(--text-heading);
+    margin-bottom: 0.75rem;
+}
+.connect-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+.connect-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.35rem;
+    padding: 0.95rem 1.05rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+}
+.connect-card:hover { border-color: var(--blue); box-shadow: var(--shadow-md); }
+.connect-card.active { border-color: var(--blue); background: var(--blue-light); }
+.connect-card-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.connect-card-top strong { color: var(--text-heading); font-size: 1rem; }
+.connect-card-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-strong);
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+}
+.connect-tag-free { color: var(--green); background: rgba(62, 124, 85, 0.10); border-color: rgba(62, 124, 85, 0.35); }
+.connect-tag-local { color: var(--blue); background: var(--blue-light); border-color: rgba(201, 100, 66, 0.35); }
+.connect-card-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; }
+
+/* Per-provider connect form */
+.connect-form-wrap {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    margin-top: 0.25rem;
+}
+.connect-form .form-group { margin-top: 1rem; }
+.connect-form-actions { margin-top: 1.25rem; }
+.connect-form-actions .btn-lg { width: auto; min-width: 200px; }
+
+/* Success state */
+.connect-success {
+    text-align: center;
+    background: var(--card-bg);
+    border: 1.5px solid var(--green);
+    border-radius: 16px;
+    padding: 1.8rem 1.5rem;
+    box-shadow: var(--shadow-md);
+}
+.connect-success-check {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(62, 124, 85, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.6rem;
+}
+.connect-success-check .ui-icon { color: var(--green); }
+.connect-success h3 {
+    font-family: var(--font-serif);
+    color: var(--text-heading);
+    font-size: 1.35rem;
+    margin-bottom: 0.4rem;
+}
+.connect-success-note {
+    color: var(--text-secondary);
+    font-size: 0.93rem;
+    line-height: 1.55;
+    max-width: 44ch;
+    margin: 0 auto 1.3rem;
+}
+.connect-success .btn-lg { width: auto; min-width: 200px; }
+.connect-reconnect-btn {
+    display: block;
+    margin: 0.7rem auto 0;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.connect-reconnect-btn:hover { color: var(--blue); }
+
+/* Inline status inside the magic card */
+#connect-detected-status.status-inline { margin-top: 0.9rem; text-align: left; }
+
+@media (max-width: 768px) {
+    .connect-cards { grid-template-columns: 1fr; }
+    .connect-magic-actions .btn-lg,
+    .connect-form-actions .btn-lg,
+    .connect-success .btn-lg { width: 100%; min-width: 0; }
+}

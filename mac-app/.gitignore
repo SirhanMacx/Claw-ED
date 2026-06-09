@@ -1,0 +1,10 @@
+# SwiftPM build products
+.build/
+.swiftpm/
+*.xcodeproj/xcuserdata/
+DerivedData/
+
+# Built bundles / distribution artifacts
+*.app/
+*.dmg
+*.zip

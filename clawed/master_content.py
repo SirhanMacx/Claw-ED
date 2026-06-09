@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from clawed.models import DifferentiationNotes  # reuse — do not duplicate
 
@@ -19,6 +19,41 @@ if TYPE_CHECKING:
     from clawed.models import DailyLesson
 
 logger = logging.getLogger(__name__)
+
+
+def _pick(data: dict[str, Any], *keys: str) -> str:
+    """Return the first present, non-empty value among ``keys`` as a string.
+
+    The drift normalizers below use this to map whichever field name a given
+    model chose onto the canonical one the schema expects (e.g. a section body
+    emitted under ``content`` when the schema wants ``teacher_script``). Only
+    used to *fill* a missing/empty canonical field — never to overwrite one the
+    model populated correctly.
+    """
+    for key in keys:
+        val = data.get(key)
+        if isinstance(val, str):
+            if val.strip():
+                return val
+        elif val not in (None, [], {}):
+            return str(val)
+    return ""
+
+
+def _pick_list(data: dict[str, Any], *keys: str) -> list[str]:
+    """Return the first present list among ``keys``, coercing a lone string.
+
+    Mirrors :func:`_pick` for list-typed fields so a model that returns a
+    single string where a list is expected (or uses a synonym key) doesn't
+    crash validation.
+    """
+    for key in keys:
+        val = data.get(key)
+        if isinstance(val, list):
+            return [str(item) for item in val]
+        if isinstance(val, str) and val.strip():
+            return [val]
+    return []
 
 
 class Citation(BaseModel):
@@ -117,6 +152,19 @@ class VocabularyEntry(BaseModel):
     context_sentence: str
     image_spec: str = ""
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not _pick(d, "term"):
+            d["term"] = _pick(d, "word", "name", "vocabulary")
+        if not _pick(d, "definition"):
+            d["definition"] = _pick(d, "meaning", "def", "description")
+        d.setdefault("context_sentence", _pick(d, "example", "sentence", "usage"))
+        return d
+
 
 class PrimarySource(BaseModel):
     """A primary-source document used in instruction or station work."""
@@ -128,6 +176,28 @@ class PrimarySource(BaseModel):
     attribution: str
     image_spec: str = ""
     scaffolding_questions: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not _pick(d, "id"):
+            d["id"] = _pick(d, "document_label", "label", "doc_id") or "src"
+        if not _pick(d, "title"):
+            d["title"] = _pick(d, "name", "heading") or "Primary Source"
+        d.setdefault("source_type", _pick(d, "type", "stimulus_type") or "text_excerpt")
+        if not _pick(d, "content_text"):
+            d["content_text"] = _pick(d, "text", "excerpt", "full_text", "content", "passage")
+        if not _pick(d, "attribution"):
+            d["attribution"] = _pick(d, "author", "source", "citation") or "Unknown"
+        sq = d.get("scaffolding_questions")
+        if isinstance(sq, str):
+            d["scaffolding_questions"] = [sq]
+        elif sq is None:
+            d["scaffolding_questions"] = _pick_list(d, "questions", "analysis_questions")
+        return d
 
     @field_validator("image_spec", mode="after")
     @classmethod
@@ -160,6 +230,34 @@ class InstructionSection(BaseModel):
     hook: str = ""          # Opening hook — analogy, story, provocative question, character intro
     transition: str = ""    # Scripted pivot phrase to next section
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize(cls, data: Any) -> Any:
+        """Repair the most common section-field drift across models.
+
+        Observed in the wild: minimax-m3 returned ``{heading, content}`` with
+        no ``teacher_script``, crashing the entire lesson. Models variously
+        name the narration ``script``/``narration``/``body``/``text``; we map
+        whichever they used onto the canonical fields rather than fail.
+        """
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not _pick(d, "heading"):
+            d["heading"] = _pick(d, "title", "section", "name") or "Instruction"
+        if not _pick(d, "teacher_script"):
+            d["teacher_script"] = _pick(
+                d, "script", "narration", "body", "text", "content", "explanation"
+            )
+        if not _pick(d, "content"):
+            d["content"] = _pick(
+                d, "summary", "text", "body", "teacher_script", "explanation"
+            )
+        kp = d.get("key_points")
+        if isinstance(kp, str):
+            d["key_points"] = [kp]
+        return d
+
     @field_validator("image_spec", mode="after")
     @classmethod
     def warn_empty_image_spec(cls, v: str) -> str:
@@ -174,6 +272,19 @@ class GuidedNote(BaseModel):
     prompt: str
     answer: str
     section_ref: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not _pick(d, "prompt"):
+            d["prompt"] = _pick(d, "question", "text", "blank", "statement")
+        if not _pick(d, "answer"):
+            d["answer"] = _pick(d, "response", "a", "fill")
+        d.setdefault("section_ref", _pick(d, "section", "ref", "heading"))
+        return d
 
 
 class StationDocument(BaseModel):
@@ -205,6 +316,35 @@ class StimulusQuestion(BaseModel):
     sentence_starters: list[str] = Field(default_factory=list)  # ["According to the source, ___"]
     response_framework: str = ""  # "TEA", "RACE", "CER"
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize(cls, data: Any) -> Any:
+        """Map question/answer/stimulus *synonym* drift onto canonical keys.
+
+        Deliberately does NOT inject a stimulus when none was supplied: the
+        ``_require_stimulus`` field guard (below) must still reject a truly
+        empty stimulus so direct construction stays strict. Lesson-level
+        survival (filling a stimulus from the question, or dropping a single
+        malformed item rather than crashing the whole lesson) is handled in
+        ``MasterContent._normalize_model_drift`` instead.
+        """
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not _pick(d, "question"):
+            d["question"] = _pick(d, "prompt", "q", "task")
+        if not _pick(d, "answer"):
+            d["answer"] = _pick(d, "expected_response", "sample_answer", "a", "model_answer")
+        if not _pick(d, "stimulus"):
+            syn = _pick(d, "passage", "text", "source", "scenario", "excerpt", "context")
+            if syn:
+                d["stimulus"] = syn
+        d.setdefault("stimulus_type", _pick(d, "type") or "text_excerpt")
+        ss = d.get("sentence_starters")
+        if isinstance(ss, str):
+            d["sentence_starters"] = [ss]
+        return d
+
     @field_validator("stimulus", mode="before")
     @classmethod
     def _require_stimulus(cls, v: object) -> object:
@@ -223,6 +363,29 @@ class DoNow(BaseModel):
     questions: list[str]
     answers: list[str]
     hook_type: str = ""  # "analogy", "provocative_question", "real_world_scenario", "mystery", "image_analysis"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not _pick(d, "stimulus"):
+            d["stimulus"] = _pick(
+                d, "prompt", "text", "scenario", "question", "passage"
+            ) or "Reflect on what you already know about today's topic."
+        d.setdefault("stimulus_type", _pick(d, "type") or "text_excerpt")
+        q = d.get("questions")
+        if isinstance(q, str):
+            d["questions"] = [q]
+        elif q is None:
+            d["questions"] = _pick_list(d, "question", "prompts")
+        a = d.get("answers")
+        if isinstance(a, str):
+            d["answers"] = [a]
+        elif a is None:
+            d["answers"] = _pick_list(d, "answer", "responses")
+        return d
 
 
 class IndependentWork(BaseModel):
@@ -337,6 +500,99 @@ class MasterContent(BaseModel):
         description="Skills students should have before this lesson",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_model_drift(cls, data: Any) -> Any:
+        """Repair common cross-model output drift before strict validation.
+
+        Smaller / free / non-Anthropic models routinely return lesson JSON that
+        is semantically correct but structurally off: a section under a synonym
+        key, a single object where a list is expected, or a trailing section
+        dropped when the response runs long. Failing the *entire* lesson over
+        recoverable drift leaves the teacher with nothing — the opposite of a
+        dependable daily tool. We repair the unambiguous cases so a model that
+        returns most of a lesson yields most of a lesson. Completeness is still
+        driven by generous token budgets + the reviewer agent; this is the
+        safety net, not the quality bar. Inputs that are already a correct dict
+        (or model instances, from direct construction) pass through untouched.
+        """
+        if not isinstance(data, dict):
+            return data
+        d: dict[str, Any] = dict(data)
+
+        # 1. Whole-section name drift -> canonical key (only when canonical empty).
+        section_aliases = {
+            "direct_instruction": ("instruction", "instruction_sequence", "mini_lesson", "lesson_body"),
+            "guided_notes": ("guided_practice", "guided_note", "notes"),
+            "exit_ticket": ("exit_tickets", "closure", "exit", "assessment"),
+            "primary_sources": ("sources", "documents", "primary_source"),
+            "vocabulary": ("vocab", "key_terms", "terms"),
+        }
+        for canonical, alts in section_aliases.items():
+            if d.get(canonical) in (None, "", [], {}):
+                for alt in alts:
+                    if d.get(alt) not in (None, "", [], {}):
+                        d[canonical] = d[alt]
+                        break
+
+        # 2. Single object (or instance) where a list is expected -> wrap.
+        for key in (
+            "direct_instruction", "guided_notes", "exit_ticket",
+            "vocabulary", "primary_sources", "stations",
+        ):
+            val = d.get(key)
+            if val is not None and not isinstance(val, list):
+                d[key] = [val]
+
+        # 2b. Exit-ticket survival: StimulusQuestion requires a non-empty
+        # stimulus (a real quality rule). Rather than let one malformed item
+        # crash the whole lesson, anchor a missing stimulus to the item's
+        # question, and drop only items that have neither.
+        et = d.get("exit_ticket")
+        if isinstance(et, list):
+            salvaged: list[Any] = []
+            for item in et:
+                if not isinstance(item, dict):
+                    salvaged.append(item)
+                    continue
+                has_stim = bool(
+                    _pick(item, "stimulus", "passage", "text", "source", "scenario", "excerpt", "context")
+                )
+                if not has_stim:
+                    anchor = _pick(item, "question", "prompt", "q", "task")
+                    if anchor:
+                        item = {**item, "stimulus": anchor}
+                    else:
+                        continue  # nothing usable — drop this one item, keep the lesson
+                salvaged.append(item)
+            d["exit_ticket"] = salvaged
+
+        # 3. Required containers: degrade to safe empties rather than crash.
+        for key in ("direct_instruction", "guided_notes", "exit_ticket"):
+            if d.get(key) is None:
+                d[key] = []
+        # do_now / differentiation are required sub-objects with no default.
+        # Leave dicts and already-built model instances alone; only backfill a
+        # missing/None/malformed value with an empty dict (their own
+        # before-validators fill the rest).
+        dn = d.get("do_now")
+        if not isinstance(dn, (dict, DoNow)):
+            d["do_now"] = {}
+        diff = d.get("differentiation")
+        if not isinstance(diff, (dict, DifferentiationNotes)):
+            d["differentiation"] = {}
+
+        # 4. Core scalars: backfill from synonyms so an omission never 500s.
+        if not _pick(d, "title"):
+            d["title"] = _pick(d, "lesson_title", "topic") or "Lesson"
+        if not _pick(d, "topic"):
+            d["topic"] = _pick(d, "title", "subject") or d.get("title", "Lesson")
+        if not _pick(d, "objective"):
+            d["objective"] = _pick(d, "learning_objective", "aim", "goal", "swbat")
+        d.setdefault("subject", _pick(d, "subject_area", "course"))
+        d.setdefault("grade_level", _pick(d, "grade", "grade_levels"))
+        return d
+
     # ── backwards-compat bridge ────────────────────────────────────────────
 
     def to_daily_lesson(self) -> DailyLesson:
@@ -346,7 +602,12 @@ class MasterContent(BaseModel):
         working without modification while the rest of the codebase migrates to
         the Master Content Track.
         """
-        from clawed.models import DailyLesson, ExitTicketQuestion
+        from clawed.models import (
+            DailyLesson,
+            ExitTicketQuestion,
+            PrimarySourceDocument,
+            VocabularyTerm,
+        )
 
         do_now_text = self.do_now.stimulus
         if self.do_now.questions:
@@ -370,6 +631,33 @@ class MasterContent(BaseModel):
             for q in self.exit_ticket
         ]
 
+        # Carry the enrichment Phase 1 produced. MasterContent and DailyLesson
+        # use different sub-models for vocabulary / primary sources, so map them
+        # field-by-field. The previous converter omitted these entirely, which
+        # left EVERY generated lesson with empty vocabulary + primary sources —
+        # regardless of model or provider — even when the model returned them.
+        vocab_terms = [
+            VocabularyTerm(
+                term=v.term,
+                definition=(
+                    f"{v.definition} — e.g., {v.context_sentence}"
+                    if getattr(v, "context_sentence", "")
+                    else v.definition
+                ),
+            )
+            for v in self.vocabulary
+        ]
+        source_docs = [
+            PrimarySourceDocument(
+                document_label=getattr(ps, "id", "") or "",
+                title=ps.title,
+                author=ps.attribution,
+                full_text=ps.content_text,
+                analysis_questions=list(ps.scaffolding_questions),
+            )
+            for ps in self.primary_sources
+        ]
+
         return DailyLesson(
             title=self.title,
             lesson_number=1,
@@ -383,4 +671,6 @@ class MasterContent(BaseModel):
             homework=self.homework or "",
             differentiation=self.differentiation,
             materials_needed=self.materials_needed,
+            vocabulary=vocab_terms,
+            primary_sources=source_docs,
         )

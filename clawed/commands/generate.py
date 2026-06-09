@@ -13,7 +13,6 @@ Split modules (imported at bottom):
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -321,8 +320,14 @@ def lesson(
             raise typer.Exit(1) from e
         progress.update(task, description="Lesson plan complete!")
 
-    # Voice scoring (non-blocking)
+    # Voice scoring (non-blocking) — rate how well the lesson matches the
+    # teacher's learned voice using the configured model. score_voice_match
+    # REQUIRES an LLM client: without one it returns a constant neutral 3.0,
+    # so every teacher would see the same meaningless "Voice match: 3.0/5.0".
+    # Runs after the lesson is already saved, so any failure here must be
+    # swallowed — a voice-score hiccup must never lose a generated lesson.
     try:
+        from clawed.llm import LLMClient
         from clawed.persona import load_persona as _load_p
         from clawed.quality import score_voice_match
         _pp = _output_dir() / "persona.json"
@@ -332,12 +337,15 @@ def lesson(
                 str(daily.objective) + " " + str(daily.do_now)
                 + " " + str(getattr(daily, "direct_instruction", ""))
             )
-            _voice_score = _run_async(score_voice_match(_lesson_text, _persona.to_prompt_context()))
+            _vclient = LLMClient(AppConfig.load())
+            _voice_score = _run_async(
+                score_voice_match(_lesson_text, _persona.to_prompt_context(), _vclient)
+            )
             if _voice_score and _voice_score > 0:
                 _color = "green" if _voice_score >= 3.5 else "yellow" if _voice_score >= 2.5 else "red"
                 console.print(f"  Voice match: [{_color}]{_voice_score:.1f}/5.0[/{_color}]")
-    except (FileNotFoundError, OSError, json.JSONDecodeError):
-        pass
+    except Exception:
+        logger.debug("voice scoring skipped (non-blocking)", exc_info=True)
 
     # Export
     out_dir = _output_dir()

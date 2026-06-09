@@ -1,16 +1,18 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}Settings — Claw-ED{% endblock %}
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
     <div class="container">
-        <a href="/">Home</a> &rsaquo; <span>Settings</span>
+        <a href="/">Home</a><span class="sep">/</span><span>Settings</span>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <h1 class="page-title">Settings</h1>
+<p class="muted settings-intro">Connect an AI provider so Claw-ED can write in your voice. Your API key stays on this computer &mdash; pick a provider below, paste a key, and Save. It takes about 2 minutes.</p>
 
 {# ── LLM Provider ───────────────────────────────────────────── #}
 <section class="settings-section">
@@ -33,16 +35,36 @@
                     <strong>Ollama</strong>
                     <span class="radio-desc">Local &mdash; Free</span>
                 </label>
+                <label class="radio-card{% if config.provider.value == 'openrouter' %} active{% endif %}">
+                    <input type="radio" name="provider" value="openrouter" {% if config.provider.value == 'openrouter' %}checked{% endif %}>
+                    <strong>OpenRouter</strong>
+                    <span class="radio-desc">Any model &mdash; incl. open &amp; Chinese models</span>
+                </label>
+                <label class="radio-card{% if config.provider.value == 'google' %} active{% endif %}">
+                    <input type="radio" name="provider" value="google" {% if config.provider.value == 'google' %}checked{% endif %}>
+                    <strong>Google (Gemini)</strong>
+                    <span class="radio-desc">Gemini &mdash; fast &amp; low-cost</span>
+                </label>
             </div>
         </div>
 
         {# Anthropic settings #}
         <div class="provider-settings" id="anthropic-settings" {% if config.provider.value != 'anthropic' %}hidden{% endif %}>
             <div class="form-group">
-                <label for="anthropic-key">API Key</label>
+                <label for="anthropic-key">API Key {% if has_anthropic_key %}<span style="color:var(--green);font-weight:600">&#10003; saved</span>{% endif %}</label>
                 <div class="key-input-row">
                     <input type="password" id="anthropic-key" name="anthropic_key" placeholder="{% if anthropic_key_masked %}{{ anthropic_key_masked }}{% else %}sk-ant-...{% endif %}">
                     <button type="button" class="btn btn-sm" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show</button>
+                </div>
+                <div class="key-help">
+                    <strong>Don&rsquo;t have a key yet? Here&rsquo;s how &mdash; about 2 minutes:</strong>
+                    <ol>
+                        <li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign in (or make a free account).</li>
+                        <li>Click <strong>Create Key</strong>, name it &ldquo;Claw-ED,&rdquo; and copy it.</li>
+                        <li>Paste it in the box above and click <strong>Save Settings</strong>. (It starts with <code>sk-ant-</code>.)</li>
+                    </ol>
+                    <a class="key-cta" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get an Anthropic key &rarr;</a>
+                    <span class="key-note">{{ icon('lock', 14) }}Your key is stored only on this computer and is sent only to Anthropic to write your lessons &mdash; never to us. Anthropic is pay-as-you-go; a typical lesson costs only a few cents.</span>
                 </div>
             </div>
             <div class="form-group">
@@ -58,10 +80,20 @@
         {# OpenAI settings #}
         <div class="provider-settings" id="openai-settings" {% if config.provider.value != 'openai' %}hidden{% endif %}>
             <div class="form-group">
-                <label for="openai-key">API Key</label>
+                <label for="openai-key">API Key {% if has_openai_key %}<span style="color:var(--green);font-weight:600">&#10003; saved</span>{% endif %}</label>
                 <div class="key-input-row">
                     <input type="password" id="openai-key" name="openai_key" placeholder="{% if openai_key_masked %}{{ openai_key_masked }}{% else %}sk-...{% endif %}">
                     <button type="button" class="btn btn-sm" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show</button>
+                </div>
+                <div class="key-help">
+                    <strong>How to get an OpenAI key:</strong>
+                    <ol>
+                        <li>Open <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> and sign in.</li>
+                        <li>Click <strong>Create new secret key</strong> and copy it.</li>
+                        <li>Paste it above and click <strong>Save Settings</strong>. (It starts with <code>sk-</code>.)</li>
+                    </ol>
+                    <a class="key-cta" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key &rarr;</a>
+                    <span class="key-note">{{ icon('lock', 14) }}Stored only on this computer; sent only to OpenAI.</span>
                 </div>
             </div>
             <div class="form-group">
@@ -82,6 +114,61 @@
             <div class="form-group">
                 <label for="ollama-model">Model Name</label>
                 <input type="text" id="ollama-model" name="ollama_model" value="{{ config.ollama_model }}">
+            </div>
+        </div>
+
+        {# OpenRouter settings #}
+        <div class="provider-settings" id="openrouter-settings" {% if config.provider.value != 'openrouter' %}hidden{% endif %}>
+            <div class="form-group">
+                <label for="openrouter-key">API Key {% if has_openrouter_key %}<span style="color:var(--green);font-weight:600">&#10003; saved</span>{% endif %}</label>
+                <div class="key-input-row">
+                    <input type="password" id="openrouter-key" name="openrouter_key" placeholder="{% if openrouter_key_masked %}{{ openrouter_key_masked }}{% else %}sk-or-...{% endif %}">
+                    <button type="button" class="btn btn-sm" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show</button>
+                </div>
+                <div class="key-help">
+                    <strong>One key, hundreds of models &mdash; including open-source &amp; Chinese models:</strong>
+                    <ol>
+                        <li>Open <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> and sign in (or make a free account).</li>
+                        <li>Click <strong>Create Key</strong>, name it &ldquo;Claw-ED,&rdquo; and copy it.</li>
+                        <li>Paste it above, type a model slug in the box below, and click <strong>Save Settings</strong>. (It starts with <code>sk-or-</code>.)</li>
+                    </ol>
+                    <a class="key-cta" href="https://openrouter.ai/keys" target="_blank" rel="noopener">Get an OpenRouter key &rarr;</a>
+                    <span class="key-note">{{ icon('lock', 14) }}Your key is stored only on this computer and is sent only to OpenRouter to write your lessons &mdash; never to us. OpenRouter routes to any model you name, so you can run open or Chinese models (e.g. DeepSeek, MiniMax, Qwen) at their pay-as-you-go rates.</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="openrouter-model">Model</label>
+                <input type="text" id="openrouter-model" name="openrouter_model" value="{{ config.openrouter_model }}" placeholder="e.g. deepseek/deepseek-chat or minimaxai/minimax-m1">
+                <span class="key-note">Type any OpenRouter model slug &mdash; browse the full list at <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a>. Examples: <code>anthropic/claude-sonnet-4</code>, <code>deepseek/deepseek-chat</code>, <code>minimaxai/minimax-m1</code>, <code>qwen/qwen-2.5-72b-instruct</code>.</span>
+            </div>
+        </div>
+
+        {# Google (Gemini) settings #}
+        <div class="provider-settings" id="google-settings" {% if config.provider.value != 'google' %}hidden{% endif %}>
+            <div class="form-group">
+                <label for="google-key">API Key {% if has_google_key %}<span style="color:var(--green);font-weight:600">&#10003; saved</span>{% endif %}</label>
+                <div class="key-input-row">
+                    <input type="password" id="google-key" name="google_key" placeholder="{% if google_key_masked %}{{ google_key_masked }}{% else %}AIza...{% endif %}">
+                    <button type="button" class="btn btn-sm" onclick="this.previousElementSibling.type = this.previousElementSibling.type === 'password' ? 'text' : 'password'">Show</button>
+                </div>
+                <div class="key-help">
+                    <strong>How to get a Google Gemini key &mdash; about 2 minutes:</strong>
+                    <ol>
+                        <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with your Google account.</li>
+                        <li>Click <strong>Create API key</strong> and copy it.</li>
+                        <li>Paste it above and click <strong>Save Settings</strong>. (It starts with <code>AIza</code>.)</li>
+                    </ol>
+                    <a class="key-cta" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a Google Gemini key &rarr;</a>
+                    <span class="key-note">{{ icon('lock', 14) }}Your key is stored only on this computer and is sent only to Google to write your lessons &mdash; never to us. Gemini offers a generous free tier plus low pay-as-you-go pricing.</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="google-model">Model</label>
+                <select id="google-model" name="google_model">
+                    <option value="gemini-2.5-flash" {% if config.google_model == 'gemini-2.5-flash' %}selected{% endif %}>gemini-2.5-flash</option>
+                    <option value="gemini-2.5-pro" {% if config.google_model == 'gemini-2.5-pro' %}selected{% endif %}>gemini-2.5-pro</option>
+                    <option value="gemini-2.0-flash" {% if config.google_model == 'gemini-2.0-flash' %}selected{% endif %}>gemini-2.0-flash</option>
+                </select>
             </div>
         </div>
 
@@ -180,7 +267,9 @@
         </div>
 
         <div id="settings-save-status" class="status-box" hidden></div>
-        <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
+        <div class="settings-save-bar">
+            <button type="submit" class="btn btn-primary btn-lg">Save Settings</button>
+        </div>
     </form>
 </section>
 
@@ -230,4 +319,103 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+{# OpenRouter + Google (Gemini) wiring. app.js only knows the original three
+   providers, so this block (a) toggles the two new provider-settings panels
+   on radio change and (b) intercepts the save in the capture phase to send the
+   new key + model fields for all five providers, stopping app.js's bubble-phase
+   handler so the form is posted exactly once. #}
+<script>
+(function () {
+    var form = document.getElementById('settings-form');
+    if (!form) return;
+
+    var PANELS = {
+        anthropic: 'anthropic-settings',
+        openai: 'openai-settings',
+        ollama: 'ollama-settings',
+        openrouter: 'openrouter-settings',
+        google: 'google-settings'
+    };
+
+    function currentProvider() {
+        var checked = form.querySelector('input[name="provider"]:checked');
+        return checked ? checked.value : 'anthropic';
+    }
+
+    function syncPanels() {
+        var provider = currentProvider();
+        Object.keys(PANELS).forEach(function (key) {
+            var el = document.getElementById(PANELS[key]);
+            if (el) el.hidden = key !== provider;
+        });
+    }
+
+    form.querySelectorAll('input[name="provider"]').forEach(function (radio) {
+        radio.addEventListener('change', syncPanels);
+    });
+    syncPanels();
+
+    function val(id) {
+        var el = document.getElementById(id);
+        return el ? el.value : '';
+    }
+
+    function keyFor(provider) {
+        var ids = {
+            anthropic: 'anthropic-key',
+            openai: 'openai-key',
+            openrouter: 'openrouter-key',
+            google: 'google-key'
+        };
+        return ids[provider] ? val(ids[provider]) : '';
+    }
+
+    function setStatus(msg, type) {
+        var el = document.getElementById('settings-save-status');
+        if (!el) return;
+        el.hidden = false;
+        el.textContent = msg;
+        el.className = 'status-box ' + type;
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        var provider = currentProvider();
+        var apiKey = keyFor(provider);
+
+        var body = {
+            provider: provider,
+            api_key: apiKey || null,
+            anthropic_model: val('anthropic-model'),
+            openai_model: val('openai-model'),
+            ollama_model: val('ollama-model'),
+            ollama_base_url: val('ollama-url'),
+            openrouter_model: val('openrouter-model'),
+            google_model: val('google-model'),
+            include_homework: document.getElementById('include-homework').checked,
+            export_format: val('export-format')
+        };
+
+        setStatus('Saving...', 'loading');
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data.status === 'saved') {
+                setStatus('Settings saved!', 'success');
+            } else {
+                setStatus(data.error || 'Failed to save', 'error');
+            }
+        }).catch(function (err) {
+            setStatus('Save failed: ' + err, 'error');
+        });
+    }, true);
+})();
+</script>
 {% endblock %}

@@ -23,6 +23,16 @@ logger = logging.getLogger(__name__)
 
 _BLANK = "_____________"
 
+# Findings from the most recent answer-key leakage scan, keyed by output path.
+# Lets callers read leakage metadata without changing compile_student_view's
+# Path return type. Default posture is WARN (logged), never a hard block.
+_LAST_LEAKAGE_FINDINGS: dict[str, list[dict[str, Any]]] = {}
+
+
+def get_last_leakage_findings(path: str | Path) -> list[dict[str, Any]]:
+    """Return leakage findings recorded for *path* by the last compile, if any."""
+    return _LAST_LEAKAGE_FINDINGS.get(str(path), [])
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Reading level estimation (public utility)
@@ -541,4 +551,31 @@ async def compile_student_view(
     out_path = output_dir / f"{safe}_student.docx"
     doc.save(str(out_path))
     logger.info("Student view saved to %s", out_path)
+
+    # Answer-key leakage gate: enforce the hard rule "never put the teacher
+    # answer key on the student handout." WARN-only (do not block delivery) to
+    # avoid false-positive blocking; findings are recorded for callers.
+    try:
+        from clawed.quality_render import scan_student_leakage
+
+        findings = scan_student_leakage(out_path)
+        _LAST_LEAKAGE_FINDINGS[str(out_path)] = findings
+        if findings:
+            logger.warning(
+                "Answer-key leakage gate flagged %d issue(s) in student doc %s "
+                "(WARN only, not blocked):",
+                len(findings),
+                out_path.name,
+            )
+            for f in findings:
+                logger.warning(
+                    "  [%s] %s — %s",
+                    f.get("severity", "?"),
+                    f.get("pattern", "?"),
+                    f.get("snippet", ""),
+                )
+    except Exception as exc:
+        # Never let the leakage gate break document delivery.
+        logger.debug("Leakage scan skipped: %s", exc)
+
     return out_path

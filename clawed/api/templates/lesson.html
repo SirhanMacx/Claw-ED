@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}{{ lesson_data.get('title', 'Lesson') }} — Claw-ED{% endblock %}
 {% block content %}
 <div class="lesson-header">
@@ -7,7 +8,10 @@
         {% if lesson_data.get('standards') %}
         <span class="meta-tag">{{ lesson_data['standards']|join(', ') }}</span>
         {% endif %}
-        <span class="meta-tag">Share: <a href="{{ share_url }}">{{ share_url }}</a></span>
+        {% if not is_shared|default(false) %}
+        <button type="button" class="btn btn-sm btn-icon" id="copy-student-link"
+                data-url="{{ share_url }}">{{ icon('link', 16) }} Copy student link</button>
+        {% endif %}
     </div>
 </div>
 
@@ -64,10 +68,10 @@
         </div>
         {% endif %}
 
-        {% if lesson_data.get('differentiation') %}
+        {% set diff = lesson_data.get('differentiation') or {} %}
+        {% if diff.get('struggling') or diff.get('advanced') or diff.get('ell') %}
         <div class="lesson-section">
             <h3>Differentiation</h3>
-            {% set diff = lesson_data['differentiation'] %}
             {% if diff.get('struggling') %}
             <p><strong>Struggling:</strong> {{ diff['struggling']|join('; ') }}</p>
             {% endif %}
@@ -81,6 +85,27 @@
         {% endif %}
 
         {% if not is_shared|default(false) %}
+        <!-- Revise in plain English -->
+        <div class="lesson-section" id="revise-section">
+            <h3>Revise in Plain English</h3>
+            <p class="revise-hint">Type a change and we'll apply it to this lesson — no full regeneration.</p>
+            <div class="revise-chips">
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Make this lesson shorter and tighter without losing the key content.">Shorter</button>
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Add a relevant primary source document with 2-3 analysis questions.">Add a primary source</button>
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Lower the reading level to 9th grade. Simplify vocabulary and sentence structure.">Lower reading level</button>
+                <button type="button" class="btn btn-sm revise-chip" data-revise="Add 3 Regents-style multiple-choice questions aligned to the objective.">Add Regents-style questions</button>
+            </div>
+            <form id="revise-form">
+                <div class="chat-input-row">
+                    <input type="text" name="instruction" id="revise-input" autocomplete="off"
+                           placeholder="e.g. Make it shorter, add a primary source, lower to 9th-grade reading level">
+                    <button type="submit" class="btn btn-sm btn-primary" id="revise-btn">Apply</button>
+                </div>
+            </form>
+            <div id="revise-loading" hidden class="status-box loading">Applying your change...</div>
+            <div id="revise-status" hidden class="status-box"></div>
+        </div>
+
         <!-- Quality Scores -->
         <div class="lesson-section" id="quality-section">
             <h3>Quality Score</h3>
@@ -117,10 +142,10 @@
         <div class="lesson-actions">
             <h3>Export</h3>
             <div class="btn-group">
-                <a href="/api/export/{{ lesson.id }}?fmt=markdown" class="btn btn-sm">Markdown</a>
-                <a href="/api/export/{{ lesson.id }}?fmt=pdf" class="btn btn-sm">PDF</a>
-                <a href="/api/export/{{ lesson.id }}?fmt=docx" class="btn btn-sm">DOCX</a>
-                <button class="btn btn-sm" onclick="exportClassroom()">Google Classroom</button>
+                <a href="/api/export/{{ lesson.id }}?fmt=markdown" class="btn btn-sm btn-icon">{{ icon('copy', 16) }} Markdown</a>
+                <a href="/api/export/{{ lesson.id }}?fmt=pdf" class="btn btn-sm btn-icon">{{ icon('file-text', 16) }} PDF</a>
+                <a href="/api/export/{{ lesson.id }}?fmt=docx" class="btn btn-sm btn-icon">{{ icon('download', 16) }} DOCX</a>
+                <button class="btn btn-sm btn-icon" onclick="exportClassroom()">{{ icon('upload', 16) }} Google Classroom</button>
             </div>
             <div id="classroom-output" hidden class="classroom-json"></div>
         </div>
@@ -180,13 +205,28 @@
 <script>
 var lessonId = '{{ lesson.id }}';
 
+// Keep an action button visible but disabled with an inline spinner while its
+// request is in flight, then restore its original label. Teachers stay oriented
+// (the button doesn't vanish) and can't double-fire it.
+function setBtnBusy(btn, busy, busyLabel) {
+    if (!btn) return;
+    if (busy) {
+        if (btn.dataset.label === undefined) btn.dataset.label = btn.innerHTML;
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = '<span class="spinner"></span> ' + (busyLabel || 'Working…');
+    } else {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        if (btn.dataset.label !== undefined) { btn.innerHTML = btn.dataset.label; delete btn.dataset.label; }
+    }
+}
+
 function scoreLesson() {
     var btn = document.getElementById('score-btn');
-    var loading = document.getElementById('score-loading');
-    btn.hidden = true;
-    loading.hidden = false;
+    setBtnBusy(btn, true, 'Scoring…');
     fetch('/api/score/' + lessonId).then(function(r){return r.json();}).then(function(data) {
-        loading.hidden = true;
+        setBtnBusy(btn, false);
         if (data.scores) {
             var html = '<div class="score-grid">';
             var dims = ['objective_clarity','do_now_relevance','instruction_depth','differentiation_quality','exit_ticket_alignment','materials_completeness'];
@@ -206,18 +246,15 @@ function scoreLesson() {
             document.getElementById('quality-scores').innerHTML = html;
         }
     }).catch(function(e) {
-        loading.hidden = true;
-        btn.hidden = false;
+        setBtnBusy(btn, false);
     });
 }
 
 function suggestImprovements() {
     var btn = document.getElementById('suggest-btn');
-    var loading = document.getElementById('suggest-loading');
-    btn.hidden = true;
-    loading.hidden = false;
+    setBtnBusy(btn, true, 'Thinking…');
     fetch('/api/suggest/' + lessonId, {method:'POST'}).then(function(r){return r.json();}).then(function(data) {
-        loading.hidden = true;
+        setBtnBusy(btn, false);
         if (data.suggestions) {
             var html = '<ul class="suggestions-list">';
             data.suggestions.forEach(function(s) { html += '<li>' + s + '</li>'; });
@@ -225,9 +262,65 @@ function suggestImprovements() {
             document.getElementById('suggestions-list').innerHTML = html;
         }
     }).catch(function(e) {
-        loading.hidden = true;
-        btn.hidden = false;
+        setBtnBusy(btn, false);
     });
+}
+
+function submitRevision(instruction) {
+    instruction = (instruction || '').trim();
+    var status = document.getElementById('revise-status');
+    var loading = document.getElementById('revise-loading');
+    var btn = document.getElementById('revise-btn');
+    var input = document.getElementById('revise-input');
+    if (!instruction) {
+        status.hidden = false;
+        status.className = 'status-box error';
+        status.textContent = 'Type a change first, or tap one of the chips above.';
+        return;
+    }
+    status.hidden = true;
+    loading.hidden = false;
+    setBtnBusy(btn, true, 'Applying…');
+    fetch('/api/improve/' + lessonId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({instruction: instruction})
+    }).then(function(r){return r.json();}).then(function(data) {
+        loading.hidden = true;
+        if (data && data.ok) {
+            status.hidden = false;
+            status.className = 'status-box loading';
+            status.textContent = (data.summary || 'Change applied.') + ' Reloading...';
+            window.location.reload();
+        } else {
+            setBtnBusy(btn, false);
+            status.hidden = false;
+            status.className = 'status-box error';
+            status.textContent = (data && data.error) ? data.error : 'Could not apply that change.';
+        }
+    }).catch(function() {
+        loading.hidden = true;
+        setBtnBusy(btn, false);
+        status.hidden = false;
+        status.className = 'status-box error';
+        status.textContent = 'Network error. Please try again.';
+    });
+}
+
+var reviseForm = document.getElementById('revise-form');
+if (reviseForm) {
+    reviseForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitRevision(document.getElementById('revise-input').value);
+    });
+    var chips = document.querySelectorAll('.revise-chip');
+    for (var i = 0; i < chips.length; i++) {
+        chips[i].addEventListener('click', function() {
+            var instr = this.getAttribute('data-revise');
+            document.getElementById('revise-input').value = instr;
+            submitRevision(instr);
+        });
+    }
 }
 
 function exportClassroom() {
@@ -245,5 +338,26 @@ function exportClassroom() {
         }
     }).catch(function() {});
 }
+
+// Copy the student-facing share link (the shared URL is path-only on the server,
+// so prepend the current origin for a full, pasteable link).
+(function () {
+    var btn = document.getElementById('copy-student-link');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var url = window.location.origin + btn.getAttribute('data-url');
+        var done = function () {
+            var orig = btn.dataset.label || btn.innerHTML;
+            btn.dataset.label = orig;
+            btn.textContent = 'Copied!';
+            setTimeout(function () { btn.innerHTML = btn.dataset.label; delete btn.dataset.label; }, 1800);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt('Copy this student link:', url); });
+        } else {
+            window.prompt('Copy this student link:', url);
+        }
+    });
+})();
 </script>
 {% endblock %}

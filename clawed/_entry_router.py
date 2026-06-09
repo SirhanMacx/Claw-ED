@@ -477,7 +477,7 @@ def main() -> None:
         "course", "materials", "assess", "rubric", "score", "improve",
         "evaluate", "differentiate", "sub-packet", "parent-note",
         "gap-analyze", "export", "share", "import", "demo", "train",
-        "tui", "chat", "student-chat", "mcp-server", "serve", "bot",
+        "tui", "chat", "student-chat", "mcp-server", "serve", "app", "bot",
         "student-bot", "sub", "parent-comm", "stats", "status",
         "persona", "standards", "templates", "skills", "school",
         "class", "queue", "workspace", "kb", "schedule", "game",

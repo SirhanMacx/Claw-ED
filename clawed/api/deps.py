@@ -137,30 +137,67 @@ def get_api_token() -> str:
     return _get_or_create_token()
 
 
-async def require_auth(request: Request) -> None:
-    """FastAPI dependency: require Bearer token on sensitive routes.
+def _via_cloudflare_edge(request: Request) -> bool:
+    """True if the request arrived through Cloudflare (i.e. the public tunnel).
 
-    Localhost requests (127.0.0.1) bypass auth when
-    EDUAGENT_LOCAL_AUTH_BYPASS=1 is set.
-
-    v4.11.2026: uses secrets.compare_digest for timing-safe comparison.
+    Cloudflare stamps every request it proxies with a ``Cf-Ray`` header. Genuine
+    loopback traffic — the teacher's own browser or the menu-bar app hitting
+    127.0.0.1 directly — never has it. The agent binds loopback only, so the ONLY
+    way a request reaches it from off-machine is the named tunnel, which always
+    carries ``Cf-Ray``; an off-machine caller cannot strip it (Cloudflare adds it
+    at the edge, *after* they connect). So "no Cf-Ray" reliably means the request
+    is genuinely local.
     """
-    # Optional localhost bypass (also covers test clients)
-    if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") == "1":
-        client_ip = request.client.host if request.client else ""
-        if client_ip in ("127.0.0.1", "::1", "localhost", "testclient"):
-            return
+    return bool(request.headers.get("cf-ray"))
 
-    auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing auth token")
-    token = auth[7:]
+
+def local_bypass_ok(request: Request) -> bool:
+    """Whether the loopback auth bypass applies to this request.
+
+    True only when ``EDUAGENT_LOCAL_AUTH_BYPASS=1`` AND the request is genuinely
+    local: a loopback client that did NOT come through Cloudflare. This is what
+    stops the public tunnel from being an open door — tunnel traffic always
+    carries a ``Cf-Ray`` header, so it never bypasses and must present a token,
+    while the teacher's own on-Mac browser/menu-bar access stays password-free.
+    """
+    if os.environ.get("EDUAGENT_LOCAL_AUTH_BYPASS") != "1":
+        return False
+    if _via_cloudflare_edge(request):
+        return False  # came over the public tunnel — never bypass
+    client_ip = request.client.host if request.client else ""
+    return client_ip in ("127.0.0.1", "::1", "localhost", "testclient")
+
+
+async def require_auth(request: Request) -> None:
+    """FastAPI dependency: require a valid token on sensitive routes.
+
+    Accepted, in order: the genuinely-local bypass; the ``clawed_token`` session
+    cookie (set by POST /api/auth/bootstrap — ``SameSite=Lax`` so a cross-site
+    POST can't carry it: CSRF-safe); or a Bearer token. Tunnel traffic (Cf-Ray)
+    never bypasses, so the public ingress always needs the cookie or Bearer. This
+    mirrors ``_check_page_auth`` so the iOS WebView's same-origin ``/api`` fetches
+    — which carry the cookie automatically — authenticate over the tunnel with no
+    frontend changes.
+
+    v4.11.2026: timing-safe comparison via secrets.compare_digest.
+    """
+    if local_bypass_ok(request):
+        return
+
     expected = _get_or_create_token()
-    # Timing-safe: compare_digest avoids leaking the first-diverging byte
-    # via wall-clock differences on mismatch. Both operands must be str
-    # (bytes also work) and must be the same type.
-    if not secrets.compare_digest(token, expected):
-        raise HTTPException(status_code=401, detail="Invalid auth token")
+
+    # Session cookie — how the iOS app / a browser authenticate over the tunnel.
+    # compare_digest is timing-safe (avoids leaking the first-diverging byte).
+    cookie = request.cookies.get("clawed_token", "")
+    if cookie and secrets.compare_digest(cookie, expected):
+        return
+
+    # Bearer token — for API-style / extension callers.
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer ") and secrets.compare_digest(auth[7:], expected):
+        return
+
+    raise HTTPException(status_code=401, detail="Missing or invalid auth token")
 
 
 # ── Database ─────────────────────────────────────────────────────────

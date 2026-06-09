@@ -24,6 +24,7 @@ _ALLOWED_PACKAGES = frozenset({
     "plotly", "pillow", "requests", "beautifulsoup4",
     "openpyxl", "xlsxwriter", "tabulate", "rich",
     "sympy", "networkx", "wordcloud",
+    "edge-tts",  # free Microsoft neural TTS for narrated videos
 })
 
 

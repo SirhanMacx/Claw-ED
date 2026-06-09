@@ -10,7 +10,6 @@ Produces 384-dimensional dense vectors — compact, fast, high quality.
 """
 from __future__ import annotations
 
-import json
 import logging
 import math
 import os
@@ -313,20 +312,46 @@ def get_embedder() -> ONNXMiniLMEmbedder | OllamaEmbedder | TFIDFEmbedder:
     """Get the best available embedder.
 
     Priority: ONNX MiniLM > Ollama (local) > TF-IDF fallback.
+
+    Env overrides:
+      ``EDUAGENT_EMBEDDER=tfidf`` — force the dependency-free TF-IDF embedder
+          (deterministic and fully offline; this is what CI/tests use so the
+          suite never reaches out to HuggingFace).
+      ``EDUAGENT_OFFLINE=1`` — never attempt the network model download; pick
+          the best *local* embedder (Ollama if it's running, else TF-IDF).
+
+    Robustness: if the ONNX model cannot be obtained — not cached *and* the
+    download fails (offline, or a flaky network) — fall back to a working
+    embedder instead of returning an ONNX embedder that would raise
+    ``RuntimeError("ONNX model not available")`` on every ``embed()`` call.
     """
-    # 1. ONNX MiniLM — best quality, offline, 384-dim
-    try:
-        import numpy  # noqa: F401
-        import onnxruntime  # noqa: F401
-        import tokenizers  # noqa: F401
-        embedder = ONNXMiniLMEmbedder()
-        if embedder._ensure_model():
-            return embedder
-        logger.debug("ONNX MiniLM model not yet downloaded, will try on next use")
-        # Return it anyway — it'll download on first embed() call
-        return embedder
-    except ImportError:
-        pass
+    pref = os.environ.get("EDUAGENT_EMBEDDER", "").strip().lower()
+    if pref in {"tfidf", "tf-idf", "simple"}:
+        return TFIDFEmbedder()
+
+    offline = os.environ.get("EDUAGENT_OFFLINE", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+    # 1. ONNX MiniLM — best quality, offline once cached, 384-dim
+    if not offline:
+        try:
+            import numpy  # noqa: F401
+            import onnxruntime  # noqa: F401
+            import tokenizers  # noqa: F401
+            embedder = ONNXMiniLMEmbedder()
+            # Only commit to ONNX if the model is actually ready (already
+            # cached, or it downloads cleanly right now). If it can't be
+            # obtained, fall through — returning it unready makes every
+            # embed() call raise.
+            if embedder._ensure_model():
+                return embedder
+            logger.info(
+                "ONNX MiniLM model unavailable (offline or download failed); "
+                "falling back to a lighter embedder for now."
+            )
+        except ImportError:
+            pass
 
     # 2. Ollama (local server with embedding model)
     try:
@@ -338,10 +363,10 @@ def get_embedder() -> ONNXMiniLMEmbedder | OllamaEmbedder | TFIDFEmbedder:
             if embed_models:
                 logger.debug("Using Ollama embedder: %s", embed_models[0])
                 return OllamaEmbedder(model=embed_models[0])
-    except (json.JSONDecodeError, KeyError):
-        pass
+    except Exception as e:  # Ollama absent / bad response → fall through to TF-IDF
+        logger.debug("Ollama embedder probe failed (%s); using TF-IDF", e)
 
-    # 3. TF-IDF fallback
+    # 3. TF-IDF fallback — no dependencies, always works
     logger.debug(
         "Using TF-IDF embedder. Install onnxruntime + tokenizers "
         "for much better search quality."

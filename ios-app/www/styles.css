@@ -1,0 +1,363 @@
+/*
+ * Claw-ED iOS thin client — CONNECT screen styles.
+ *
+ * Calm "Claude" palette: cream paper, clay accent, a serif wordmark. No external
+ * fonts or assets — everything resolves to system fonts so the screen paints
+ * instantly with no network and no white flash.
+ */
+
+:root {
+  --cream: #faf9f5;
+  --cream-2: #f3f1ea;
+  --paper: #fffdf8;
+  --clay: #c96442;
+  --clay-press: #b4532f;
+  --ink: #2b2722;
+  --ink-soft: #6b645b;
+  --line: #e6e1d6;
+  --danger: #b3331d;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --shadow: 0 1px 2px rgba(43, 39, 34, 0.05), 0 8px 24px rgba(43, 39, 34, 0.06);
+
+  --serif: ui-serif, "Iowan Old Style", "Palatino", "Georgia", "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* The HTML `hidden` attribute must always win, even over a card's own
+   `display: flex` (otherwise a hidden interstitial keeps showing). */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background-color: var(--cream);
+  /* A whisper of warmth toward the top, fading to flat cream. */
+  background-image: radial-gradient(
+    120% 70% at 50% -10%,
+    var(--cream-2) 0%,
+    var(--cream) 55%
+  );
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+.connect {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  /* Respect the notch + home indicator. */
+  padding: calc(env(safe-area-inset-top) + 32px) 22px
+    calc(env(safe-area-inset-bottom) + 24px);
+}
+
+/* ---- brand ----------------------------------------------------------- */
+.brand {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, var(--clay) 0%, var(--clay-press) 100%);
+  color: #fff;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 38px;
+  line-height: 64px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  user-select: none;
+}
+
+.wordmark {
+  margin: 4px 0 0;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 30px;
+  letter-spacing: 0.2px;
+  color: var(--ink);
+}
+
+.tagline {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+/* ---- cards ----------------------------------------------------------- */
+.card {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.card-label {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.reconnect {
+  background: linear-gradient(180deg, var(--paper) 0%, var(--cream-2) 100%);
+}
+
+.reconnect-btn {
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.reconnect-btn .btn-line {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.reconnect-url {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 15px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+/* ---- form ------------------------------------------------------------ */
+.field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.field-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.field-input {
+  width: 100%;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 16px; /* 16px avoids iOS focus zoom */
+  color: var(--ink);
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 14px;
+  appearance: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field-input::placeholder {
+  color: #b6ad9f;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--clay);
+  box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.16);
+}
+
+.field-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.field-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--danger);
+}
+
+/* ---- buttons --------------------------------------------------------- */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.06s ease, background-color 0.15s ease,
+    opacity 0.15s ease;
+  touch-action: manipulation;
+}
+
+.btn:active {
+  transform: scale(0.985);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn-primary {
+  flex: 1 1 auto;
+  background: var(--clay);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 6px 16px rgba(201, 100, 66, 0.22);
+}
+
+.btn-primary:active {
+  background: var(--clay-press);
+}
+
+.btn-ghost {
+  flex: 0 0 auto;
+  background: var(--cream-2);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--clay);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 12px 6px 2px;
+  width: 100%;
+}
+
+.btn-line {
+  pointer-events: none;
+}
+
+/* A tiny pure-CSS QR glyph (no image asset) for the Scan button. */
+.qr-glyph {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background-image: linear-gradient(var(--ink) 0 0), linear-gradient(var(--ink) 0 0),
+    linear-gradient(var(--ink) 0 0), linear-gradient(var(--ink) 0 0);
+  background-repeat: no-repeat;
+  background-size: 6px 6px;
+  background-position: 0 0, 100% 0, 0 100%, 100% 100%;
+  position: relative;
+}
+
+.qr-glyph::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  background: var(--ink);
+}
+
+/* ---- footer ---------------------------------------------------------- */
+.foot {
+  width: 100%;
+  text-align: center;
+}
+
+.foot-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 34ch;
+  margin-inline: auto;
+}
+
+/* ---- auto-connect interstitial -------------------------------------- */
+.auto {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.auto .card-label {
+  margin: 0;
+}
+
+.auto .reconnect-url {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.auto-spinner {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--clay);
+  animation: clawed-spin 0.8s linear infinite;
+}
+
+@keyframes clawed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- busy state ------------------------------------------------------ */
+body.is-busy {
+  cursor: progress;
+}
+
+/* Respect reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+  .btn:active {
+    transform: none;
+  }
+  .auto-spinner {
+    animation-duration: 1.8s;
+  }
+}

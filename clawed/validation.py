@@ -37,6 +37,27 @@ def check_self_contained(text: str) -> list[str]:
     return violations
 
 
+def validate_student_leakage(source: str) -> list[str]:
+    """Labeled quality check 'student_answer_key_leakage'.
+
+    Scans a student-facing document (a .docx path or raw text) for accidentally
+    leaked answer keys / teacher-only content and returns human-readable issue
+    strings. WARN-level by design — callers append these to report warnings and
+    do not hard-block delivery. Delegates to ``clawed.quality_render`` and
+    degrades gracefully if that module is unavailable.
+    """
+    try:
+        from clawed.quality_render import scan_student_leakage
+    except Exception:
+        return []
+    findings = scan_student_leakage(source)
+    return [
+        f"[student_answer_key_leakage] Possible {f['severity']} leak "
+        f"({f['pattern']}): {f['snippet']}"
+        for f in findings
+    ]
+
+
 def validate_master_content(mc: MasterContent, topic: str) -> list[str]:
     """Validate a MasterContent object against NLAH Section 3 gates."""
     errors = []

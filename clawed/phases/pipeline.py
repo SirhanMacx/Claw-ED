@@ -32,8 +32,14 @@ _PhaseT = TypeVar("_PhaseT", bound=_PydanticBaseModel)
 logger = logging.getLogger(__name__)
 
 _PROMPT_DIR = Path(__file__).parent / "prompts"
-_PHASE_TIMEOUT_SEC = 240  # 4 minutes per phase (5x shorter than monolith)
+_PHASE_TIMEOUT_SEC = 900  # generous: large projects + full reasoning can run long
 _PHASE_MAX_RETRIES = 2
+# No artificial output cap. A reasoning model (e.g. minimax-m3) needs room for
+# BOTH its full chain-of-thought AND a complete, possibly large, lesson. The old
+# 4000 starved it — it spent the entire budget reasoning and returned empty
+# content (finish_reason=length). Give it real headroom so teachers with big
+# projects get full output and full reasoning.
+_PHASE_MAX_TOKENS = 32000
 
 # Ollama Cloud model fallback chain. When a phase fails repeatedly on the
 # configured model, we rotate through these alternatives automatically.
@@ -237,42 +243,66 @@ async def _run_phase(
     client: LLMClient,
     task_type: str,
 ) -> _PhaseT:
-    """Run a single phase with multi-model fallback.
+    """Run a single phase — provider-aware and rate-limit-aware.
 
-    Tries the configured model first. If it times out or returns empty,
-    automatically rotates through _FALLBACK_MODEL_CHAIN (or the
-    CLAWED_PHASE_MODELS env override). This handles Ollama Cloud
-    flakiness gracefully — when GLM 5.1 is down, minimax picks up.
+    Works on ANY provider/model (the plug-and-play requirement):
+    - Ollama (esp. Ollama Cloud, which can serve several models) rotates through
+      _FALLBACK_MODEL_CHAIN when one model is down.
+    - Single-model providers (OpenRouter / Anthropic / OpenAI / Google) keep the
+      teacher's configured model and retry it — with extra, longer backoff on
+      HTTP 429 so free / rate-limited tiers recover instead of failing the lesson.
+    Override the chain with the CLAWED_PHASE_MODELS env var (comma-separated).
     """
     import asyncio
     import os as _os
 
-    # Build the model chain: configured model first, then fallbacks
-    configured_model = getattr(client.config, "ollama_model", "") or ""
+    from clawed.models import LLMProvider
+
+    # The model lives in a provider-specific config field. Swapping the wrong
+    # field (the old code always used ollama_model) is a no-op on every
+    # non-Ollama provider — so "fallback" never actually happened off Ollama.
+    provider = client.config.provider
+    model_field = {
+        LLMProvider.ANTHROPIC: "anthropic_model",
+        LLMProvider.OPENAI: "openai_model",
+        LLMProvider.OLLAMA: "ollama_model",
+        LLMProvider.GOOGLE: "google_model",
+        LLMProvider.OPENROUTER: "openrouter_model",
+    }.get(provider, "ollama_model")
+    configured_model = getattr(client.config, model_field, "") or ""
+
     env_chain = _os.environ.get("CLAWED_PHASE_MODELS", "")
     if env_chain:
         chain = [m.strip() for m in env_chain.split(",") if m.strip()]
-    else:
+    elif provider == LLMProvider.OLLAMA:
         chain = list(_FALLBACK_MODEL_CHAIN)
-        # Move the configured model to the front if it's in the list,
-        # otherwise prepend it
         if configured_model in chain:
             chain.remove(configured_model)
         if configured_model:
             chain.insert(0, configured_model)
+    else:
+        # Single-model provider: retry the configured model (transient failures
+        # and rate limits are handled by the retry/backoff loop below).
+        chain = [configured_model] if configured_model else list(_FALLBACK_MODEL_CHAIN)
+
+    def _is_rate_limit(err: object) -> bool:
+        s = str(err).lower()
+        return any(
+            k in s for k in ("429", "too many", "rate limit", "rate-limit", "ratelimit")
+        )
 
     last_error = None
     for model_idx, model_name in enumerate(chain):
-        # Swap the client's model for this attempt
-        original_model = client.config.ollama_model
-        client.config.ollama_model = model_name
-
+        original_model = getattr(client.config, model_field)
+        setattr(client.config, model_field, model_name)
         try:
-            for attempt in range(_PHASE_MAX_RETRIES):
+            rate_retries = 0
+            normal_retries = 0
+            while True:
                 try:
                     logger.info(
-                        "Phase %s model=%s attempt %d/%d",
-                        phase_name, model_name, attempt + 1, _PHASE_MAX_RETRIES,
+                        "Phase %s model=%s (rate_retry=%d retry=%d)",
+                        phase_name, model_name, rate_retries, normal_retries,
                     )
                     result = await asyncio.wait_for(
                         client.safe_generate_json(
@@ -280,15 +310,12 @@ async def _run_phase(
                             model_class=model_class,
                             system=system,
                             temperature=0.6,
-                            max_tokens=4000,
+                            max_tokens=_PHASE_MAX_TOKENS,
                         ),
                         timeout=_PHASE_TIMEOUT_SEC,
                     )
-                    if model_idx > 0:
-                        logger.info(
-                            "Phase %s succeeded on fallback model %s",
-                            phase_name, model_name,
-                        )
+                    if model_idx > 0 or rate_retries or normal_retries:
+                        logger.info("Phase %s succeeded on %s", phase_name, model_name)
                     return result
                 except TimeoutError:
                     last_error = (
@@ -296,18 +323,29 @@ async def _run_phase(
                         f"after {_PHASE_TIMEOUT_SEC}s"
                     )
                     logger.warning(last_error)
-                    # On timeout, move to next model immediately (no retry)
-                    break
+                    break  # a timeout won't clear on retry — try the next model
                 except Exception as e:
                     last_error = (
                         f"Phase {phase_name} failed on {model_name}: "
                         f"{type(e).__name__}: {e}"
                     )
                     logger.warning(last_error)
-                    if attempt < _PHASE_MAX_RETRIES - 1:
-                        await asyncio.sleep(2 ** attempt)
+                    if _is_rate_limit(e) and rate_retries < 5:
+                        rate_retries += 1
+                        delay = min(30, 5 * rate_retries)
+                        logger.info(
+                            "Phase %s rate-limited — backing off %ds (free-tier)",
+                            phase_name, delay,
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+                    if not _is_rate_limit(e) and normal_retries < _PHASE_MAX_RETRIES - 1:
+                        normal_retries += 1
+                        await asyncio.sleep(2 ** normal_retries)
+                        continue
+                    break  # exhausted retries for this model
         finally:
-            client.config.ollama_model = original_model
+            setattr(client.config, model_field, original_model)
 
         if model_idx < len(chain) - 1:
             logger.info(

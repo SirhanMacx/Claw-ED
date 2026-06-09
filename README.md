@@ -45,14 +45,20 @@ $ clawed
   ✓ French_Revolution_slides.pptx
 ```
 
+**New — a no-terminal app.** Run `clawed app` and Claw-ED opens a clean local web app in your browser — warm, calm, teacher-first, in a Claude-style design — with a guided setup that walks you through getting an API key step by step. Same engine, your files stay on your machine, no command line required. From the **Create** screen you can ask your co-teacher a quick question or build a full artifact — a lesson, a unit, materials, a quiz, a differentiated version, or a review game. There's also a **Mac menu-bar app** (`mac-app/`) that starts and stops Claw-ED with one click and shows the LAN URL plus a QR code, so you can open it from your phone on the same Wi-Fi.
+
 It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to make something from your phone and the files show up in chat.
 
 ---
 
 ## Features
 
-- **51 agent tools** — lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation, project arcs, and more
+- **A deep agent toolbox** — lesson gen, assessments, games, simulations, **narrated videos** (slides + free neural voiceover → MP4, fully local), animations, curriculum maps, differentiation, project arcs, and more
+- **Create any artifact from the web app** — pick a card: full unit, single lesson, materials only, quiz / assessment, differentiated version, or review game. Lessons render in an inline preview you can read before you download.
 - **Quality gate with auto-retry** — 12 pedagogical checks (Bloom's progression, stimulus-based assessment, differentiation specificity, diversity audit) validate every lesson before delivery. Failures auto-retry with specific feedback.
+- **Revise in plain English** — after a lesson is made, just say "make it shorter," "add a primary source," or "lower it to 9th-grade reading level" and it updates that lesson — no regenerating from scratch.
+- **Ask your co-teacher (live)** — type a request in plain English — a hook, a do-now, three discussion questions, an IEP scaffold — and watch the answer stream in token-by-token, then Copy it or Download it as Markdown. Works on any provider, including OpenRouter (e.g. minimax-m3) or a fully local model.
+- **Student-safe handouts** — every student-facing document is auto-scanned for accidentally-leaked answer keys before it's delivered.
 - **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum). Vision model filters for quality.
 - **Writes like you** — AI-ism removal strips "delve", "utilize", "leverage" and 70+ other LLM tells so output reads like a teacher wrote it
 - **Structured jigsaws + creative activities** — generates timed rotation schedules, graphic organizers, role plays, debates, podcast scripts, gallery walks, mock trials
@@ -73,7 +79,7 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 - **Exit ticket auto-grading** — keyword analysis + formative feedback with sentence starter suggestions
 - **Classroom memory** — persistent profile (student count, ELL/IEP needs, tech available) injected into every generation
 - **Adaptive feedback loop** — exit ticket results feed into next lesson (reteach/extend recommendations + parent notifications)
-- Works with Ollama, Anthropic, OpenAI, Google, OpenRouter — interactive model switching
+- **Bring your own key** — Anthropic, OpenAI, Google (Gemini), and OpenRouter (any model it routes to, e.g. `minimax/minimax-m3`), each with guided in-app onboarding; or run a fully local Ollama model offline. Keys are stored only on your machine. Interactive model switching.
 - **Central approval policy** — every tool classified by risk level (read_only/write_local/network_call/package_install). Sensitive actions require teacher confirmation.
 - DOCX, PPTX, PDF, HTML, MP4, TSV, CSV, IMSCC, TXT export
 - MCP server for Claude Code / VS Code integration
@@ -148,7 +154,7 @@ clawed
 
 It walks you through picking a provider and an API key.
 
-**Recommended:** [Ollama Pro](https://ollama.com/pricing) ($20/mo) — unlimited access to good models, easiest setup. For best output quality, use an Anthropic or OpenAI API key (pay per use). OpenRouter lets you pick from any model. Google Gemini has a free tier. Local Ollama runs fully offline for free.
+**Pick whatever fits your budget:** for best output quality, use an Anthropic or OpenAI API key (pay per use). [OpenRouter](https://openrouter.ai/keys) lets you name any model it routes to — including open and low-cost ones like `minimax/minimax-m3`, DeepSeek, or Qwen — at pay-as-you-go rates. Google Gemini has a free tier. Local Ollama runs fully offline for free, and [Ollama Pro](https://ollama.com/pricing) ($20/mo) gives unlimited access to good cloud-hosted models with the easiest setup. The in-app setup walks you through getting a key for whichever you choose.
 
 ---
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 from typing import Any
 
@@ -22,6 +23,7 @@ from clawed.config import (
 from clawed.models import AppConfig, LLMProvider
 
 router = APIRouter(tags=["settings"])
+logger = logging.getLogger(__name__)
 
 
 class SaveSettingsRequest(BaseModel):
@@ -31,6 +33,8 @@ class SaveSettingsRequest(BaseModel):
     openai_model: str = "gpt-4o"
     ollama_model: str = "llama3.2"
     ollama_base_url: str = "http://localhost:11434"
+    openrouter_model: str | None = None
+    google_model: str | None = None
     default_grade: str = ""
     default_subject: str = ""
     include_homework: bool = True
@@ -52,10 +56,31 @@ class OnboardingStepRequest(BaseModel):
 
 @router.get("/health")
 async def health_check() -> dict[str, Any]:
-    """Lightweight liveness check — no DB or LLM calls."""
+    """Lightweight liveness + provider readiness (no DB or LLM network calls).
+
+    The status bar polls this, so it must stay fast: we report which provider
+    is configured, its model, and whether it's usable (a key is present, or it's
+    the local Ollama backend which needs none). No outbound LLM request is made.
+    """
+    provider = ""
+    model = ""
+    connected = False
+    try:
+        cfg = AppConfig.load()
+        provider = cfg.provider.value
+        model = getattr(cfg, f"{provider}_model", "") or ""
+        if cfg.provider == LLMProvider.OLLAMA:
+            connected = True  # local backend, no API key required
+        else:
+            connected = bool(get_api_key(provider))
+    except Exception:
+        logger.debug("health provider probe failed", exc_info=True)
     return {
         "status": "ok",
         "version": __version__,
+        "llm_provider": provider,
+        "llm_model": model,
+        "llm_connected": connected,
     }
 
 
@@ -88,6 +113,8 @@ async def get_settings() -> dict[str, Any]:
     cfg = AppConfig.load()
     anthropic_key = get_api_key("anthropic")
     openai_key = get_api_key("openai")
+    openrouter_key = get_api_key("openrouter")
+    google_key = get_api_key("google")
 
     return {
         "provider": cfg.provider.value,
@@ -95,10 +122,16 @@ async def get_settings() -> dict[str, Any]:
         "openai_model": cfg.openai_model,
         "ollama_model": cfg.ollama_model,
         "ollama_base_url": cfg.ollama_base_url,
+        "openrouter_model": cfg.openrouter_model,
+        "google_model": cfg.google_model,
         "anthropic_key_masked": mask_api_key(anthropic_key),
         "openai_key_masked": mask_api_key(openai_key),
+        "openrouter_key_masked": mask_api_key(openrouter_key),
+        "google_key_masked": mask_api_key(google_key),
         "has_anthropic_key": bool(anthropic_key),
         "has_openai_key": bool(openai_key),
+        "has_openrouter_key": bool(openrouter_key),
+        "has_google_key": bool(google_key),
         "include_homework": cfg.include_homework,
         "export_format": cfg.export_format,
     }
@@ -163,6 +196,10 @@ async def save_settings(req: SaveSettingsRequest) -> Any:
     cfg.anthropic_model = req.anthropic_model
     cfg.openai_model = req.openai_model
     cfg.ollama_model = req.ollama_model
+    if req.openrouter_model is not None:
+        cfg.openrouter_model = req.openrouter_model
+    if req.google_model is not None:
+        cfg.google_model = req.google_model
 
     # v4.11.2026 SSRF fix: validate and normalize ollama_base_url.
     normalized_url, err = _validate_ollama_url(req.ollama_base_url)
@@ -186,6 +223,71 @@ async def test_connection() -> dict[str, Any]:
     cfg = AppConfig.load()
     result = await test_llm_connection(cfg)
     return result
+
+
+@router.get("/onboarding/detect", dependencies=[Depends(require_auth)])
+async def detect_providers() -> dict[str, Any]:
+    """Auto-detect AI backends so first-run onboarding is near-zero-config.
+
+    Surfaces local Ollama (the plug-and-play dream — free, local, private, no
+    key needed) and any provider whose key is already present, so the teacher
+    can usually just click "Use it" instead of hunting for an API key.
+    """
+    import httpx
+
+    from clawed.config import get_api_key
+
+    labels = {
+        "anthropic": "Anthropic (Claude)",
+        "openai": "OpenAI",
+        "google": "Google Gemini",
+        "openrouter": "OpenRouter",
+    }
+    detected: list[dict[str, Any]] = []
+
+    # 1. Local Ollama — zero-config, fully local, free, private.
+    try:
+        r = httpx.get("http://localhost:11434/api/tags", timeout=2.5)
+        if r.status_code == 200:
+            models = [
+                m.get("name", "") for m in r.json().get("models", []) if m.get("name")
+            ]
+            detected.append({
+                "provider": "ollama",
+                "label": "Ollama — local, free, private",
+                "ready": bool(models),
+                "models": models[:12],
+                "note": (
+                    f"Running on your Mac with {len(models)} model(s) — no API key, "
+                    "nothing leaves your computer."
+                    if models
+                    else "Installed and running, but no model pulled yet. "
+                    "Run: ollama pull qwen3.5"
+                ),
+            })
+    except Exception:
+        logger.debug("Ollama probe failed (absence is normal)", exc_info=True)
+
+    # 2. Providers whose key is already configured (or in the environment).
+    for prov, env in (
+        ("anthropic", "ANTHROPIC_API_KEY"),
+        ("openai", "OPENAI_API_KEY"),
+        ("google", "GOOGLE_API_KEY"),
+        ("openrouter", "OPENROUTER_API_KEY"),
+    ):
+        try:
+            has_key = bool(get_api_key(prov)) or bool(os.environ.get(env))
+        except Exception:
+            has_key = bool(os.environ.get(env))
+        if has_key:
+            detected.append({
+                "provider": prov,
+                "label": labels[prov],
+                "ready": True,
+                "note": "API key already configured — ready to use.",
+            })
+
+    return {"detected": detected, "any": bool(detected)}
 
 
 @router.post("/settings/clear-content", dependencies=[Depends(require_auth)])

@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -46,6 +47,10 @@ class MaterialsRequest(BaseModel):
     lesson_id: str
 
 
+class ImproveRequest(BaseModel):
+    instruction: str = Field(..., min_length=1, max_length=1000)
+
+
 class FullRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=500)
     grade_level: str = Field("8", min_length=1, max_length=20)
@@ -64,6 +69,86 @@ class CourseRequest(BaseModel):
     weeks_per_topic: int = Field(2, ge=1, le=52)
 
 
+class QuizRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    grade_level: str = Field("8", min_length=1, max_length=20)
+    subject: str = Field("General", min_length=1, max_length=100)
+    num_questions: int = Field(10, ge=1, le=50)
+
+
+DifferentiationProfile = Literal["struggling", "advanced", "ell", "iep"]
+
+
+class DifferentiateRequest(BaseModel):
+    profile: DifferentiationProfile = "struggling"
+
+
+class GameRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    grade_level: str = Field("8", min_length=1, max_length=20)
+    subject: str = Field("General", min_length=1, max_length=100)
+    game_type: str = Field("", max_length=50)
+
+
+# Each profile maps to a synthetic IEPProfile that drives the existing
+# differentiation engine (clawed.differentiation). The keys mirror the
+# four profiles the Create UI offers.
+_DIFFERENTIATION_PROFILES: dict[str, dict[str, list[str]]] = {
+    "struggling": {
+        "accommodations": [
+            "Chunk instructions into one step at a time",
+            "Provide a word bank and sentence starters",
+            "Extend time and reduce the number of required items",
+        ],
+        "modifications": [
+            "Simplify reading level while keeping the same objective",
+            "Add a partially completed graphic organizer",
+        ],
+        "goals": ["Access grade-level content with scaffolds"],
+    },
+    "advanced": {
+        "accommodations": [
+            "Offer an open-ended extension that deepens analysis",
+            "Encourage independent inquiry and synthesis",
+        ],
+        "modifications": [
+            "Raise the rigor with higher-order, evaluative prompts",
+            "Add a challenge task that connects to a broader theme",
+        ],
+        "goals": ["Stretch beyond grade-level expectations"],
+    },
+    "ell": {
+        "accommodations": [
+            "Provide bilingual glossary and visual supports",
+            "Use sentence frames and pre-teach key vocabulary",
+            "Pair written text with images and simplified language",
+        ],
+        "modifications": [
+            "Reduce linguistic load while keeping the content goal",
+        ],
+        "goals": ["Build academic language alongside content"],
+    },
+    "iep": {
+        "accommodations": [
+            "Apply extended time and chunked tasks",
+            "Provide explicit step-by-step models and checklists",
+            "Offer alternative response formats",
+        ],
+        "modifications": [
+            "Adjust complexity to meet IEP goals while keeping the standard",
+        ],
+        "goals": ["Meet individualized learning goals with supports"],
+    },
+}
+
+_PROFILE_LABELS: dict[str, str] = {
+    "struggling": "Struggling Learners",
+    "advanced": "Advanced Learners",
+    "ell": "English Language Learners",
+    "iep": "IEP",
+}
+
+
 def _get_persona(db: Database) -> tuple[TeacherPersona | None, str | None]:
     """Load persona from the default teacher in the DB.
 
@@ -75,7 +160,13 @@ def _get_persona(db: Database) -> tuple[TeacherPersona | None, str | None]:
     teacher = db.get_default_teacher()
     if not teacher or not teacher.get("persona_json"):
         return None, None
-    persona = TeacherPersona.model_validate_json(teacher["persona_json"])
+    try:
+        persona = TeacherPersona.model_validate_json(teacher["persona_json"])
+    except Exception:
+        logger.error(
+            "Could not parse stored persona — treating as missing", exc_info=True
+        )
+        return None, None
     return persona, teacher["id"]
 
 
@@ -139,7 +230,18 @@ async def create_lesson(request: Request, req: LessonRequest) -> Any:
             {"error": "Unit not found."}, status_code=404
         )
 
-    unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    try:
+        unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    except Exception:
+        logger.error(
+            "Could not parse unit %s for lesson generation",
+            req.unit_id, exc_info=True,
+        )
+        return JSONResponse(
+            {"error": "This unit's data is incomplete or from an older format "
+             "and can't be used to generate a lesson. Try regenerating the unit."},
+            status_code=400,
+        )
 
     try:
         lesson = await generate_lesson(
@@ -182,7 +284,18 @@ async def create_materials(request: Request, req: MaterialsRequest) -> Any:
             {"error": "Lesson not found."}, status_code=404
         )
 
-    lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error(
+            "Could not parse lesson %s for materials generation",
+            req.lesson_id, exc_info=True,
+        )
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and can't be used to "
+             "generate materials."},
+            status_code=400,
+        )
 
     try:
         materials = await generate_all_materials(lesson, persona)
@@ -199,6 +312,202 @@ async def create_materials(request: Request, req: MaterialsRequest) -> Any:
         "lesson_id": req.lesson_id,
         "materials": materials.model_dump(),
     }
+
+
+@router.post("/quiz")
+@limiter.limit("10/minute")
+async def create_quiz(request: Request, req: QuizRequest) -> Any:
+    """Generate a standalone quiz/assessment on a topic.
+
+    Reuses ``clawed.assessment.AssessmentGenerator``. Assessments are not
+    persisted (no assessment table exists), so the full quiz is returned
+    inline for the UI to render and copy.
+    """
+    from clawed.assessment import AssessmentGenerator
+
+    db = get_db()
+    # Persona is optional for quizzes — generate_quiz defaults to a blank
+    # persona, so a missing persona is not a hard error here.
+    persona, _ = _get_persona(db)
+
+    try:
+        gen = AssessmentGenerator()
+        quiz = await gen.generate_quiz(
+            topic=req.topic,
+            question_count=req.num_questions,
+            grade=req.grade_level,
+            persona=persona,
+        )
+    except Exception:
+        logger.error("Quiz generation failed", exc_info=True)
+        return JSONResponse(
+            {"error": "Quiz generation failed. Please try again."},
+            status_code=500,
+        )
+
+    return {
+        "topic": quiz.topic,
+        "subject": req.subject,
+        "grade_level": quiz.grade_level,
+        "total_points": quiz.total_points,
+        "question_count": len(quiz.questions),
+        "quiz": quiz.model_dump(),
+    }
+
+
+@router.post("/differentiate/{lesson_id}")
+@limiter.limit("10/minute")
+async def differentiate_lesson_endpoint(
+    request: Request, lesson_id: str, req: DifferentiateRequest
+) -> Any:
+    """Produce a differentiated version of an existing lesson.
+
+    Reuses ``clawed.differentiation.generate_iep_lesson_modifications`` by
+    building a synthetic profile for the requested learner type. The result
+    is persisted as a new lesson under the same unit so it gets its own
+    viewable page and export links.
+    """
+    from clawed.differentiation import generate_iep_lesson_modifications
+    from clawed.models import IEPProfile
+
+    db = get_db()
+    lesson_row = db.get_lesson(lesson_id)
+    if not lesson_row:
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
+
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error(
+            "Could not parse lesson %s for differentiation", lesson_id, exc_info=True
+        )
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and cannot be differentiated."},
+            status_code=400,
+        )
+
+    spec = _DIFFERENTIATION_PROFILES[req.profile]
+    label = _PROFILE_LABELS[req.profile]
+    profile = IEPProfile(
+        student_name=label,
+        disability_type=label,
+        accommodations=spec["accommodations"],
+        modifications=spec["modifications"],
+        goals=spec["goals"],
+    )
+
+    try:
+        modified = await generate_iep_lesson_modifications(lesson, [profile])
+    except Exception:
+        logger.error("Differentiation failed for lesson %s", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "Differentiation failed. Please try again."},
+            status_code=500,
+        )
+
+    new_lesson = modified.get(label)
+    if new_lesson is None:
+        return JSONResponse(
+            {"error": "Differentiation produced no output. Please try again."},
+            status_code=502,
+        )
+
+    new_lesson.title = f"{lesson.title} ({label})"
+    new_id = db.insert_lesson(
+        unit_id=lesson_row["unit_id"],
+        lesson_number=lesson.lesson_number,
+        title=new_lesson.title,
+        lesson_json=new_lesson.model_dump_json(),
+    )
+
+    return {
+        "lesson_id": new_id,
+        "source_lesson_id": lesson_id,
+        "profile": req.profile,
+        "title": new_lesson.title,
+        "lesson": new_lesson.model_dump(),
+    }
+
+
+@router.post("/game")
+@limiter.limit("5/minute")
+async def create_game(request: Request, req: GameRequest) -> Any:
+    """Generate an interactive HTML review game.
+
+    Reuses ``clawed.compile_game.compile_game``. The generated single-file
+    HTML game is written to the output directory; we return a URL that
+    serves it via ``GET /api/game/file``.
+    """
+    from types import SimpleNamespace
+
+    from clawed.compile_game import compile_game
+
+    db = get_db()
+    persona, _ = _get_persona(db)
+
+    # compile_game reads a handful of lesson fields off ``master`` (title,
+    # objective, subject, grade_level, topic, vocabulary, plus a few optional
+    # getattr() ones). A full MasterContent has 10 required fields including a
+    # nested DoNow — overkill for a standalone game and brittle if that schema
+    # shifts — so pass a lightweight duck-typed stub exposing exactly what the
+    # compiler reads. (This is what the endpoint always intended.)
+    master = SimpleNamespace(
+        title=f"{req.topic} Review Game",
+        subject=req.subject,
+        grade_level=req.grade_level,
+        topic=req.topic,
+        objective=f"Review and reinforce {req.topic} concepts",
+        vocabulary=[],
+    )
+
+    try:
+        game_path = await compile_game(
+            master=master,
+            persona=persona,
+            output_dir=None,
+            game_style=req.game_type,
+        )
+    except Exception:
+        logger.error("Game generation failed", exc_info=True)
+        return JSONResponse(
+            {"error": "Game generation failed. Please try again."},
+            status_code=500,
+        )
+
+    from urllib.parse import quote
+
+    return {
+        "topic": req.topic,
+        "filename": game_path.name,
+        "game_url": f"/api/game/file?name={quote(game_path.name)}",
+    }
+
+
+@router.get("/game/file")
+@limiter.limit("60/minute")
+async def serve_game_file(request: Request, name: str) -> Any:
+    """Serve a generated game HTML file by name from the output directory.
+
+    Only plain ``.html`` filenames inside the output directory are served;
+    any path separators or traversal attempts are rejected.
+    """
+    from fastapi.responses import FileResponse
+
+    from clawed.io import output_dir as get_output_dir
+
+    # Reject anything that is not a bare filename to prevent path traversal.
+    if name != Path(name).name or "/" in name or "\\" in name:
+        return JSONResponse({"error": "Invalid file name."}, status_code=400)
+    if not name.endswith(".html"):
+        return JSONResponse({"error": "Invalid file type."}, status_code=400)
+
+    base = get_output_dir().resolve()
+    target = (base / name).resolve()
+    # Confine to the output directory and require the file to exist.
+    if base not in target.parents or not target.is_file():
+        return JSONResponse({"error": "Game not found."}, status_code=404)
+
+    return FileResponse(str(target), media_type="text/html")
 
 
 @router.post("/full")
@@ -430,7 +739,17 @@ async def stream_lesson(request: Request, unit_id: str, lesson_number: int = 1) 
             {"error": "Unit not found."}, status_code=404
         )
 
-    unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    try:
+        unit = UnitPlan.model_validate_json(unit_row["unit_json"])
+    except Exception:
+        logger.error(
+            "Could not parse unit %s for lesson stream", unit_id, exc_info=True
+        )
+        return JSONResponse(
+            {"error": "This unit's data is incomplete or from an older format "
+             "and can't be used to generate a lesson."},
+            status_code=400,
+        )
 
     async def event_stream() -> AsyncGenerator[dict[str, str], None]:
         yield _sse(
@@ -560,14 +879,28 @@ async def score_lesson(request: Request, lesson_id: str) -> Any:
             {"error": "Lesson not found."}, status_code=404
         )
 
-    lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error("Could not parse lesson %s for scoring", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and can't be scored."},
+            status_code=400,
+        )
     materials = None
     if lesson_row.get("materials_json"):
         from clawed.models import LessonMaterials
 
-        materials = LessonMaterials.model_validate_json(
-            lesson_row["materials_json"]
-        )
+        try:
+            materials = LessonMaterials.model_validate_json(
+                lesson_row["materials_json"]
+            )
+        except Exception:
+            logger.warning(
+                "Could not parse materials for lesson %s — scoring without them",
+                lesson_id,
+            )
+            materials = None
 
     scorer = LessonQualityScore()
     scores = await scorer.score(lesson, materials)
@@ -591,7 +924,15 @@ async def suggest_improvements_endpoint(request: Request, lesson_id: str) -> Any
             {"error": "Lesson not found."}, status_code=404
         )
 
-    lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error(
+            "Could not parse lesson %s for suggestions", lesson_id, exc_info=True
+        )
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted."}, status_code=400
+        )
 
     # Check for feedback notes
     feedback_list = db.get_feedback_for_lesson(lesson_id)
@@ -603,6 +944,114 @@ async def suggest_improvements_endpoint(request: Request, lesson_id: str) -> Any
         lesson, feedback_notes=notes
     )
     return {"lesson_id": lesson_id, "suggestions": suggestions}
+
+
+@router.post("/improve/{lesson_id}")
+@limiter.limit("10/minute")
+async def improve_lesson_endpoint(
+    request: Request, lesson_id: str, req: ImproveRequest
+) -> Any:
+    """Apply a plain-English revision to a lesson in place ("Revise in plain English").
+
+    The teacher types a natural-language change (e.g. "make it shorter",
+    "add a primary source", "lower the reading level to 9th grade",
+    "add Regents-style questions"). We load the existing lesson, ask the
+    LLM to apply ONLY that change and return the full revised lesson as
+    JSON, re-validate it against ``DailyLesson``, and persist it under the
+    same ``lesson_id`` (``update_lesson_json`` bumps ``edit_count``). No
+    full regeneration — unchanged sections are preserved verbatim.
+    """
+    from clawed.llm import LLMClient
+
+    instruction = req.instruction.strip()
+    if not instruction:
+        return JSONResponse(
+            {"error": "Please describe the change you want."}, status_code=400
+        )
+
+    db = get_db()
+    lesson_row = db.get_lesson(lesson_id)
+    if not lesson_row:
+        return JSONResponse({"error": "Lesson not found."}, status_code=404)
+
+    try:
+        lesson = DailyLesson.model_validate_json(lesson_row["lesson_json"])
+    except Exception:
+        logger.error("Could not parse lesson %s for revision", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "This lesson's data is corrupted and cannot be revised."},
+            status_code=400,
+        )
+
+    # Reuse the same persona-as-voice context the generation pipeline uses,
+    # so revisions stay in the teacher's voice and grade band.
+    persona, _ = _get_persona(db)
+    persona_context = ""
+    if persona is not None:
+        try:
+            persona_context = persona.to_prompt_context()
+        except Exception:
+            # Persona context is best-effort; revisions still work without it.
+            persona_context = ""
+
+    current_json = lesson.model_dump_json(indent=2)
+    prompt = (
+        "You are an expert curriculum editor. A teacher has an existing daily "
+        "lesson (given below as JSON) and wants ONE specific change applied.\n\n"
+        f"{persona_context}\n\n"
+        f"## Existing lesson (JSON)\n{current_json}\n\n"
+        f"## Teacher's requested change\n{instruction}\n\n"
+        "## Instructions\n"
+        "1. Apply ONLY the requested change. Leave every other section exactly "
+        "as it is — do not rewrite content that the change does not touch.\n"
+        "2. Keep the SAME JSON shape and keys as the input. Do not add, rename, "
+        "or drop keys. Preserve the 'lesson_number' value unchanged.\n"
+        "3. Keep the teacher's voice, formatting, and standards alignment.\n"
+        "4. 'exit_ticket' is a list of objects with 'question' and "
+        "'expected_response'. 'differentiation' has 'struggling', 'advanced', "
+        "and 'ell' string lists.\n\n"
+        "Return ONLY the complete revised lesson as a single JSON object — no "
+        "prose, no markdown fences."
+    )
+
+    try:
+        client = LLMClient()
+        raw = await client.generate_json(
+            prompt=prompt,
+            system=(
+                "You are a curriculum editor. Return only one JSON object: the "
+                "full revised lesson, same schema as the input."
+            ),
+            temperature=0.4,
+            max_tokens=8192,
+        )
+    except Exception:
+        logger.error("Revision LLM call failed for lesson %s", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "Could not apply that change right now. Please try again."},
+            status_code=502,
+        )
+
+    # generate_json returns a dict; force the lesson number to stay stable even
+    # if the model changed it. (Any schema problems are caught by validation below.)
+    raw["lesson_number"] = lesson.lesson_number
+
+    try:
+        revised = DailyLesson.model_validate(raw)
+    except Exception:
+        logger.warning("Revised lesson %s failed validation", lesson_id, exc_info=True)
+        return JSONResponse(
+            {"error": "The revision didn't pass validation. Try a simpler change."},
+            status_code=502,
+        )
+
+    db.update_lesson_json(lesson_id, revised.model_dump_json())
+
+    return {
+        "lesson_id": lesson_id,
+        "ok": True,
+        "summary": f"Applied: {instruction}",
+    }
 
 
 @router.get("/templates")
@@ -643,3 +1092,73 @@ async def list_lessons(request: Request, unit_id: str) -> dict[str, Any]:
     db = get_db()
     lessons = db.list_lessons(unit_id)
     return {"lessons": lessons}
+
+
+class AskRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=4000)
+    grade_level: str = Field("", max_length=20)
+    subject: str = Field("", max_length=100)
+
+
+@router.post("/ask/stream")
+@limiter.limit("30/minute")
+async def ask_stream(request: Request, req: AskRequest) -> EventSourceResponse:
+    """Stream a co-teacher answer token-by-token (live, like Claude Code).
+
+    Open-ended teaching help — lesson ideas, rewrites, examples,
+    differentiation. Uses the teacher's persona for voice when one exists,
+    but works without ingestion too. Streams via the configured provider
+    (e.g. OpenRouter / minimax-m3) so the answer appears as it's written.
+    """
+    from clawed.llm import LLMClient
+
+    db = get_db()
+    persona, _ = _get_persona(db)
+    style = ""
+    if persona is not None:
+        try:
+            style = persona.to_prompt_context()
+        except Exception:
+            style = ""
+
+    system = (
+        "You are Claw-ED, a warm, practical co-teacher for a K-12 teacher. "
+        "Give concrete, classroom-ready help: lesson ideas, rewrites, worked "
+        "examples, explanations, and differentiation. Be concise and useful, "
+        "and format with short paragraphs or lists a teacher can use as-is."
+    )
+    if style:
+        system += f"\n\nMatch this teacher's style where it fits:\n{style}"
+
+    qualifiers = ""
+    if req.subject:
+        qualifiers += f" Subject: {req.subject}."
+    if req.grade_level:
+        qualifiers += f" Grade level: {req.grade_level}."
+    user_prompt = req.question + (f"\n\n({qualifiers.strip()})" if qualifiers else "")
+
+    async def event_stream() -> AsyncGenerator[dict[str, str], None]:
+        client = LLMClient()
+        produced = False
+        try:
+            async for chunk in client.generate_stream(
+                user_prompt, system=system, temperature=0.7, max_tokens=1500
+            ):
+                produced = True
+                yield _sse("token", text=chunk)
+        except Exception:
+            logger.error("ask_stream failed", exc_info=True)
+            yield _sse(
+                "error",
+                error="Generation failed. Check your provider/API key in Settings.",
+            )
+            return
+        if not produced:
+            yield _sse(
+                "error",
+                error="No response. Check your provider/API key in Settings.",
+            )
+            return
+        yield _sse("done")
+
+    return EventSourceResponse(event_stream())

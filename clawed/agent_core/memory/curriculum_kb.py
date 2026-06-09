@@ -510,8 +510,14 @@ class CurriculumKB:
             vec = _parse_embedding(row["embedding"])
             embeddings.append(vec)
 
-        # Pad to same dimension if needed (mixed embedder compatibility)
-        max_dim = max(len(e) for e in embeddings)
+        # Pad to a common dimension (mixed-embedder compatibility). TF-IDF
+        # vectors vary in length because the vocabulary grows over time, so the
+        # query can be longer OR shorter than the stored chunks. Size the matrix
+        # to the max of both and zero-pad everything to it — otherwise `matrix @ q`
+        # raises a matmul dimension mismatch when the query is the longer one.
+        max_dim = max(max((len(e) for e in embeddings), default=0), len(q))
+        if max_dim == 0:
+            return []
         if len(q) < max_dim:
             q = np.pad(q, (0, max_dim - len(q)))
         matrix = np.zeros((len(embeddings), max_dim), dtype=np.float32)

@@ -383,6 +383,92 @@ def serve(
         )
 
 
+@bot_app.command(name="app")
+def app_launcher(
+    port: int = typer.Option(
+        8000, "--port", "-p", help="Port to listen on"
+    ),
+    no_open: bool = typer.Option(
+        False, "--no-open", help="Don't open the browser automatically"
+    ),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help=(
+            "Address to bind. Default 127.0.0.1 (this computer only). "
+            "Use 0.0.0.0 to also allow other devices on your Wi-Fi (e.g. open "
+            "it on your phone) — only do this on a network you trust."
+        ),
+    ),
+) -> None:
+    """Launch the Claw-ED app — opens the local web experience in your browser.
+
+    The friendly, no-terminal way to use Claw-ED. By default the server binds
+    to your own computer (127.0.0.1), trusts localhost so you skip the token
+    prompt, and opens the app in your default browser — nothing is exposed to
+    the network. Pass ``--host 0.0.0.0`` to also reach it from another device on
+    the same Wi-Fi (the Mac menu-bar app's "Share on Wi-Fi" toggle does this);
+    that is opt-in because it lets other devices on your network connect.
+    First-time users land on the API-key setup page.
+    """
+    import os as _os
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    # Trust same-machine requests so a teacher never hits a token wall. When the
+    # teacher opts into LAN sharing (a non-loopback host), we still trust the
+    # request origin — the gateway is the lesson tool, not a multi-tenant
+    # service — but we make the exposure explicit and loud below.
+    _os.environ["EDUAGENT_LOCAL_AUTH_BYPASS"] = "1"
+
+    is_lan = host not in ("127.0.0.1", "localhost", "::1")
+
+    cfg = AppConfig.load()
+    from clawed.config import get_api_key, has_config
+
+    needs_key = (not has_config()) or (
+        cfg.provider.value != "ollama"
+        and not get_api_key(cfg.provider.value)
+    )
+    landing = "/settings" if needs_key else "/"
+    # The browser always opens on this machine via loopback, even when also
+    # bound to the LAN, so the local experience is unchanged.
+    url = f"http://127.0.0.1:{port}{landing}"
+
+    intro = (
+        "[yellow]First time?[/yellow] Add your API key on the Settings page"
+        " — there are step-by-step instructions right there.\n\n"
+        if needs_key
+        else ""
+    )
+    reach = (
+        "[dim]Runs only on this computer. Press Ctrl+C to stop.[/dim]"
+        if not is_lan
+        else (
+            f"[yellow]Sharing on your Wi-Fi[/yellow] at [cyan]{host}:{port}[/cyan] — "
+            "anyone on this network can open Claw-ED while it's running.\n"
+            "[dim]Only do this on a network you trust. Press Ctrl+C to stop.[/dim]"
+        )
+    )
+    console.print(
+        Panel(
+            f"[bold]Claw-ED is starting[/bold]\n"
+            f"Opening [cyan]{url}[/cyan] in your browser…\n\n"
+            f"{intro}"
+            f"{reach}",
+            title="Claw-ED",
+            border_style="green" if not is_lan else "yellow",
+        )
+    )
+
+    if not no_open:
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+
+    uvicorn.run("clawed.api.server:app", host=host, port=port)
+
+
 def _serve_with_tui(
     token: str | None,
     host: str,

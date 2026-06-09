@@ -8,12 +8,17 @@ Non-secret config lives in ~/.eduagent/config.json via AppConfig.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import stat
+import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from clawed.models import AppConfig
+
+logger = logging.getLogger(__name__)
 
 # Legacy name: `EDUAGENT_DATA_DIR` is kept for backward compatibility with existing installations.
 _BASE_DIR = Path(os.environ.get("EDUAGENT_DATA_DIR", str(Path.home() / ".eduagent")))
@@ -44,31 +49,130 @@ def _save_secrets(secrets: dict[str, str]) -> None:
         pass
 
 
+# A macOS keychain call can BLOCK indefinitely in a Mach IPC to securityd when
+# there's no GUI session to service it (headless / SSH / launchd-at-login). The
+# broad `except` clauses below only catch *errors* — a hang never raises — so we
+# also cap each call in time and fall through to env / secrets.json on timeout.
+# This keeps a GUI-launched menu-bar app AND a daemon/SSH launch both robust.
+_KEYRING_TIMEOUT_S = 2.0
+
+# Once a keyring op fails or hangs (e.g. a headless launchd/SSH session with no
+# GUI keychain), skip the keyring for the rest of this process instead of paying
+# the timeout on EVERY call. A GUI session never trips this — its first call
+# succeeds, so the flag stays off. This keeps key reads — and /api/health, which
+# checks key presence and is polled by the app's connect probe — fast under the
+# always-on launchd agent (which otherwise paid ~2s per call).
+_keyring_disabled = False
+
+
+def _call_with_timeout(fn: Callable[[], Any], timeout: float) -> Any:
+    """Run ``fn()`` in a daemon thread; raise TimeoutError if it overruns.
+
+    Used to bound keychain calls that can hang in a headless session. The
+    abandoned daemon thread is harmless — daemon threads never block process
+    exit, and on a healthy GUI session the call returns in well under the cap.
+    """
+    result: list[Any] = [None]
+    error: list[Exception | None] = [None]
+
+    def _runner() -> None:
+        try:
+            result[0] = fn()
+        except Exception as exc:  # re-raised to the caller below
+            error[0] = exc
+
+    thread = threading.Thread(target=_runner, daemon=True)
+    thread.start()
+    thread.join(timeout)
+    if thread.is_alive():
+        raise TimeoutError(f"keyring call exceeded {timeout}s")
+    if error[0] is not None:
+        raise error[0]
+    return result[0]
+
+
 def _try_keyring_get(key: str) -> str | None:
-    try:
+    global _keyring_disabled
+    if _keyring_disabled:
+        return None
+
+    def _get() -> str | None:
         import keyring
+
         pw: str | None = keyring.get_password(_SERVICE_NAME, key)
         return pw
+
+    try:
+        value = _call_with_timeout(_get, _KEYRING_TIMEOUT_S)
+        return None if value is None else str(value)
+    except TimeoutError:
+        # Headless hang: no GUI keychain session, so the Mach call to securityd
+        # never returns. Disable the keyring for the rest of this process so we
+        # don't pay the 2s timeout on every call; fall through to env/secrets.
+        _keyring_disabled = True
+        logger.debug("keyring get timed out; disabling keyring for this process", exc_info=True)
+        return None
     except ImportError:
-        return None  # keyring is optional; silently fall through to env/file
+        _keyring_disabled = True  # keyring not installed — never retry
+        return None
+    except Exception:
+        # Other fast backend failure (locked keychain, -25291, etc.): fall
+        # through to env/secrets, but don't disable — it's not the per-call hang.
+        logger.debug("keyring get failed; falling through to env/secrets", exc_info=True)
+        return None
 
 
 def _try_keyring_set(key: str, value: str) -> bool:
-    try:
+    global _keyring_disabled
+    if _keyring_disabled:
+        return False
+
+    def _set() -> None:
         import keyring
+
         keyring.set_password(_SERVICE_NAME, key, value)
+
+    try:
+        _call_with_timeout(_set, _KEYRING_TIMEOUT_S)
         return True
+    except TimeoutError:
+        _keyring_disabled = True
+        logger.debug("keyring set timed out; disabling keyring for this process", exc_info=True)
+        return False
     except ImportError:
-        return False  # keyring is optional; caller checks return value
+        _keyring_disabled = True
+        return False
+    except Exception:
+        # Keychain write failed (locked / permissions). Fall back to secrets.json.
+        logger.debug("keyring set failed; falling back to secrets file", exc_info=True)
+        return False
 
 
 def _try_keyring_delete(key: str) -> bool:
-    try:
+    global _keyring_disabled
+    if _keyring_disabled:
+        return False
+
+    def _delete() -> None:
         import keyring
+
         keyring.delete_password(_SERVICE_NAME, key)
+
+    try:
+        _call_with_timeout(_delete, _KEYRING_TIMEOUT_S)
         return True
+    except TimeoutError:
+        _keyring_disabled = True
+        logger.debug("keyring delete timed out; disabling keyring for this process", exc_info=True)
+        return False
     except ImportError:
-        return False  # keyring is optional; caller checks return value
+        _keyring_disabled = True
+        return False
+    except Exception:
+        # Usually just "entry absent" — fall through (secrets.json cleanup runs);
+        # don't disable on this, the keyring itself is fine.
+        logger.debug("keyring delete failed; secrets-file cleanup still runs", exc_info=True)
+        return False
 
 
 def _resolve_claude_code_token() -> str | None:
@@ -375,6 +479,35 @@ async def test_llm_connection(config: AppConfig | None = None) -> dict[str, Any]
                 }
                 resp = await client.post(
                     "https://api.openai.com/v1/chat/completions",
+                    headers=headers, json=body,
+                )
+                if resp.status_code == 401:
+                    return _result(False, model, "API key invalid", is_err=True)
+                resp.raise_for_status()
+                return _result(True, model, f"{model} is ready")
+        except Exception as e:
+            return _result(False, model, str(e), is_err=True)
+
+    elif provider == "openrouter":
+        api_key = get_api_key("openrouter")
+        model = cfg.openrouter_model
+        if not api_key:
+            return _result(False, model, "No API key configured. Set OPENROUTER_API_KEY.", is_err=True)
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://clawed.macxlabs.app",
+                    "X-Title": "Claw-ED",
+                }
+                body = {
+                    "model": model, "max_tokens": 5,
+                    "messages": [{"role": "user", "content": "Hi"}],
+                }
+                resp = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
                     headers=headers, json=body,
                 )
                 if resp.status_code == 401:

@@ -87,9 +87,16 @@ def resolve_model(tier: ModelTier, config: AppConfig) -> str:
     teacher_tiers = config.tier_models or {}
     if teacher_tiers.get(tier.value):
         return teacher_tiers[tier.value]
-    # Use provider-specific defaults if available
+    # Use provider-specific tier defaults when we have them.
     provider_key = config.provider.value if hasattr(config.provider, "value") else str(config.provider)
-    provider_defaults = PROVIDER_TIER_MODELS.get(provider_key, DEFAULT_TIER_MODELS)
+    provider_defaults = PROVIDER_TIER_MODELS.get(provider_key)
+    if provider_defaults is None:
+        # Provider with no built-in tier map (e.g. OpenRouter — bring-your-own
+        # model). Respect the model the teacher configured for it rather than
+        # falling back to the Ollama-centric defaults, which aren't valid model
+        # IDs on other providers and 400 the request.
+        configured = getattr(config, f"{provider_key}_model", "") or ""
+        return str(configured) or DEFAULT_TIER_MODELS[tier.value]
     return provider_defaults.get(tier.value, DEFAULT_TIER_MODELS[tier.value])
 
 

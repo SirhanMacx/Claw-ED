@@ -1,8 +1,46 @@
 # Roadmap
 
-Current version: **v5.15.2026**
+Current released version: **v5.15.2026** · next: **v5.16.2026** (in progress on
+`claude/app-experience`)
 
 ## v5.16 — What's next
+
+### Near-term
+
+- [ ] **iOS TestFlight client (in progress)** — a thin Capacitor app that opens
+  the teacher's own Claw-ED server over the LAN (the URL/QR the Mac app already
+  shows). No Python on device. Tracked in
+  [`docs/product/TESTFLIGHT_READINESS.md`](docs/product/TESTFLIGHT_READINESS.md).
+- [ ] **Apple Developer signing + TestFlight upload** — the owner's step
+  (Apple Developer credentials); everything up to signing is built autonomously.
+- [ ] **All artifact endpoints verified end-to-end on OpenRouter / minimax-m3** —
+  co-teacher and lessons are verified; finish the unit/quiz/game/differentiate
+  sweep on that provider.
+
+### Built this push (v5.16, pending release)
+
+- [x] **No-terminal web app + Claude design layer** — `clawed app` opens a warm,
+  teacher-first local web app with guided API-key onboarding
+- [x] **Live "Ask your co-teacher"** — token-by-token streaming over SSE,
+  Markdown rendering, quick-start chips, Copy / Download .md; works on any
+  provider including OpenRouter (`minimax/minimax-m3`) and local Ollama
+- [x] **Create artifact types in the web app** — full unit, single lesson,
+  materials, quiz, differentiate, review game, with an inline lesson preview
+- [x] **OpenRouter + Google (Gemini) providers** with bring-your-own-key
+  onboarding, alongside Anthropic / OpenAI / local Ollama
+- [x] **Mac menu-bar app** (`mac-app/`) — one-click start/stop, health dot,
+  local + LAN URLs, and a QR code for phone access on the same Wi-Fi
+- [x] **Narrated educational videos** — slides + free neural-TTS voiceover → MP4,
+  fully local
+- [x] **Answer-key leakage gate** for student-facing documents
+- [x] **Local-model fix** — local Ollama now uses `/api/chat` (chat template,
+  no-think, capped context, JSON mode) so modern instruct models stop returning
+  empty completions
+- [x] **Model-routing fix** — routed artifact endpoints respect the configured
+  model for providers without a tier map (no more Ollama defaults sent to
+  OpenRouter), with OpenRouter error bodies surfaced
+- [x] **Teacher-first design pass** — resolved the design audit's P1 issues plus
+  key P2/P3 polish
 
 ### Recently shipped (v5.15)
 - [x] **Boundary-aware filesystem guards** — agent file tools now use `clawed.paths.path_is_within()` instead of string-prefix checks, closing prefix-sibling path escapes across workspace reads, self-modification, output organization, and material ingestion

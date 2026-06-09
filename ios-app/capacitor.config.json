@@ -1,0 +1,16 @@
+{
+  "appId": "com.macxlabs.clawed",
+  "appName": "Claw-ED",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#FAF9F5"
+  }
+}
