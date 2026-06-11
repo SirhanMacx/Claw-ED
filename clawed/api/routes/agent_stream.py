@@ -138,6 +138,45 @@ async def gateway_chat_stream(request: Request, req: StreamChatRequest) -> Strea
     )
 
 
+# ── Tool registry (Skills gallery) ───────────────────────────────────
+
+
+@router.get("/agent/tools", dependencies=[Depends(require_auth)])
+async def list_agent_tools(request: Request) -> dict[str, Any]:
+    """List the agent's real tool registry for the Skills gallery.
+
+    Read-only metadata: name, description (what the LLM sees), and the
+    declared risk level (so the UI can show which actions ask first).
+    """
+    gateway = _get_gateway()
+    registry = getattr(gateway, "_registry", None)
+    if registry is None:
+        # Legacy gateway has no registry — build a throwaway one from the
+        # same package the agent gateway discovers.
+        from pathlib import Path
+
+        import clawed.agent_core.tools as tools_pkg
+        from clawed.agent_core.tools.base import ToolRegistry
+
+        registry = ToolRegistry()
+        registry.discover(Path(tools_pkg.__file__).parent)
+
+    tools = []
+    for schema in registry.schemas():
+        fn = schema.get("function", {})
+        name = str(fn.get("name", "")).strip()
+        if not name:
+            continue
+        tool = registry.get(name)
+        tools.append({
+            "name": name,
+            "description": str(fn.get("description", "") or "").strip(),
+            "risk_level": getattr(tool, "risk_level", "write_local"),
+        })
+    tools.sort(key=lambda t: str(t["name"]))
+    return {"tools": tools}
+
+
 # ── Approvals ────────────────────────────────────────────────────────
 
 

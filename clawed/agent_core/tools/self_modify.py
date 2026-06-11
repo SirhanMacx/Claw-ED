@@ -109,9 +109,10 @@ class WriteFileTool:
         return {
             "type": "function",
             "function": {
-                "name": "write_file",
+                "name": "write_workspace_file",
                 "description": (
-                    "Write content to a file in Ed's workspace or output directory. "
+                    "Write content to a file in Ed's own workspace or output directory "
+                    "(NOT general Mac paths — use write_file for those). "
                     "Can create new files or overwrite existing ones. "
                     "Use for: updating soul.md, writing notes, creating templates, "
                     "saving research, generating custom documents."
@@ -224,9 +225,10 @@ class ReadFileTool:
         return {
             "type": "function",
             "function": {
-                "name": "read_file",
+                "name": "read_workspace_file",
                 "description": (
-                    "Read the contents of a file from Ed's workspace or output directory. "
+                    "Read a file from Ed's own workspace or output directory "
+                    "(NOT general Mac paths — use read_file for those). "
                     "Use for: reading soul.md, checking notes, reviewing generated content, "
                     "reading teacher's curriculum files."
                 ),

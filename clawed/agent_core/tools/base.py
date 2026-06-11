@@ -75,6 +75,13 @@ class ToolRegistry:
                 "Tool '%s' has no risk_level — defaults to write_local. "
                 "Add explicit risk_level attribute for clarity.", name,
             )
+        if name in self._tools:
+            # A silent collision shadows a tool (write_file was shadowed by
+            # a workspace-scoped duplicate for a while). Make it loud.
+            logger.warning(
+                "Tool name collision: '%s' (%s) replaces %s",
+                name, type(tool).__name__, type(self._tools[name]).__name__,
+            )
         self._tools[name] = tool
 
     def get(self, name: str) -> Tool | None:

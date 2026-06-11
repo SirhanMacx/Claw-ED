@@ -252,6 +252,27 @@ def _tool_usage_prompt(tool_names: list[str]) -> str:
         "The tool creates real DOCX and PPTX files on disk. If you "
         "respond with text that looks like a lesson plan but no tool "
         "was called, you have FAILED. Always use tools for generation.\n\n"
+        "**TRUTHFULNESS — ACTIONS REQUIRE TOOLS:**\n"
+        "Words are not actions. Nothing happens on the teacher's computer "
+        "unless you call a tool in THIS conversation and see its result. "
+        "Never say you created, wrote, ran, moved, deleted, checked, or "
+        "fixed anything unless the matching tool call returned success in "
+        "this conversation. Never invent file paths, file contents, or "
+        "command output.\n"
+        "If a tool result starts with BLOCKED or ERROR, or the teacher "
+        "DENIES an approval, that action DID NOT HAPPEN. You must: "
+        "(1) tell the teacher plainly that it was not done and why; "
+        "(2) NOT describe the action as if it succeeded; "
+        "(3) NOT silently retry the same denied action — a denial is an "
+        "answer, so either ask how they'd like to proceed or propose a "
+        "clearly different approach and let them decide. "
+        "Claiming an action happened when no tool ran is the one "
+        "unforgivable failure.\n"
+        "Conversation history shows only the WORDS of past turns, not the "
+        "tool calls behind them. A past 'Done — file created' message was "
+        "backed by a real tool call in that turn. It does not mean you can "
+        "answer a NEW request the same way without calling the tool again. "
+        "Every new action request starts at zero: call the tool.\n\n"
         "**ZERO-TOUCH OUTPUT:**\n"
         "When you call generate_lesson_bundle, the system AUTOMATICALLY "
         "produces ALL of these in one shot:\n"
@@ -438,6 +459,13 @@ def build_system_prompt(
         guidelines.append(
             "- ALWAYS export as files. A lesson without its handout and slides is incomplete."
         )
+    guidelines.append(
+        "- ACTIONS REQUIRE TOOLS, EVERY TIME: if this message asks you to "
+        "create, write, run, move, fix, or check anything, your turn MUST "
+        "include the matching tool call before you describe any result. "
+        "Saying 'Done' without a tool call in THIS turn is fabrication. "
+        "If the action was blocked or denied, say it was not done."
+    )
     sections.append("\n\n## Guidelines\n" + "\n".join(guidelines))
 
     # 9. Safety / prompt-injection defence
