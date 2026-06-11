@@ -1,4 +1,14 @@
-"""Tool: ingest_materials — wraps clawed.ingestor.ingest_path."""
+"""Tool: ingest_materials — learn the teacher's voice from their files.
+
+Policy (mirrors mac_files):
+- Home-bounded: only paths inside the teacher's home directory.
+- Secrets-denied: credential folders/files are refused even for reads.
+- ONE approval covers the whole folder tree (``approval_scope =
+  "per_params"`` keyed on the resolved folder path) — the teacher
+  approves "read my materials in <folder>" once, not per file.
+- Read-only on the teacher's files; everything written (style profile,
+  reading report, search index) stays in the agent's own data dir.
+"""
 from __future__ import annotations
 
 import logging
@@ -10,11 +20,39 @@ from clawed.paths import path_is_within
 
 logger = logging.getLogger(__name__)
 
+# Never readable, even with approval — secrets and credentials.
+# (Kept in sync with clawed.agent_core.tools.mac_files.)
+_DENY_NAMES = frozenset({
+    ".ssh", ".gnupg", ".credentials.json", "secrets.json", "api_token",
+    ".pypirc", ".netrc", ".npmrc", ".env", "id_rsa", "id_ed25519",
+})
+
+# Per-file cap: anything bigger is skipped (slide decks with embedded
+# video, scans). Keeps a junk-heavy folder from wedging the ingest.
+_MAX_FILE_BYTES = 25 * 1024 * 1024
+
 
 class IngestMaterialsTool:
     """Ingest teaching materials from a folder or file to learn the teacher's style."""
 
     risk_level = "write_local"
+    approval_scope = "per_params"
+
+    @staticmethod
+    def approval_signature(params: dict[str, Any]) -> str:
+        try:
+            resolved = Path(str(params.get("path", ""))).expanduser().resolve()
+            return f"ingest:{resolved}"
+        except (OSError, RuntimeError):
+            return f"ingest:{params.get('path', '')}"
+
+    @staticmethod
+    def approval_description(params: dict[str, Any]) -> str:
+        return (
+            f"Read your teaching materials in {params.get('path', '')} "
+            "(read-only, whole folder) and learn your style from them. "
+            "Everything stays on this Mac."
+        )
 
     def schema(self) -> dict[str, Any]:
         return {
@@ -23,7 +61,10 @@ class IngestMaterialsTool:
                 "name": "ingest_materials",
                 "description": (
                     "Ingest lesson plans and teaching materials from a folder "
-                    "or file path. Extracts text and learns the teacher's style."
+                    "or file path. Extracts text, learns the teacher's voice / "
+                    "lesson structure / assessment conventions, and saves a "
+                    "STYLE PROFILE that future lessons automatically match. "
+                    "One approval covers the whole folder tree."
                 ),
                 "parameters": {
                     "type": "object",
@@ -32,7 +73,15 @@ class IngestMaterialsTool:
                             "type": "string",
                             "description": (
                                 "Path to a folder or file to ingest "
-                                "(PDF, DOCX, PPTX, TXT, MD)"
+                                "(PDF, DOCX, PPTX, TXT, MD, HTML)"
+                            ),
+                        },
+                        "profile_name": {
+                            "type": "string",
+                            "description": (
+                                "Optional name for the style profile (e.g. "
+                                "'Global 10'). Defaults to the folder name. "
+                                "Use distinct names for distinct courses."
                             ),
                         },
                     },
@@ -43,20 +92,28 @@ class IngestMaterialsTool:
 
     MAX_INGEST_FILES = 500
 
+    @staticmethod
+    def _deny_reason(resolved: Path) -> str | None:
+        """Home-bound + secrets checks. Returns an error string or None."""
+        home = Path.home().resolve()
+        if not path_is_within(resolved, home):
+            return "Access denied: can only ingest files from your home directory."
+        for part in resolved.parts:
+            if part in _DENY_NAMES:
+                return f"Access denied: '{part}' holds credentials."
+        return None
+
     async def execute(
         self, params: dict[str, Any], context: AgentContext
     ) -> ToolResult:
-        from clawed.ingestor import ingest_path
+        from clawed.ingestor import ingest_path, scan_directory
 
         raw_path = params["path"]
         resolved = Path(raw_path).expanduser().resolve()
 
-        # Security: only allow ingesting files from the user's home directory
-        home = Path.home().resolve()
-        if not path_is_within(resolved, home):
-            return ToolResult(
-                text="Access denied: can only ingest files from your home directory."
-            )
+        deny = self._deny_reason(resolved)
+        if deny:
+            return ToolResult(text=deny)
 
         if not resolved.exists():
             return ToolResult(
@@ -64,7 +121,22 @@ class IngestMaterialsTool:
             )
 
         try:
+            # Pre-scan so we can cap oversized files and report skips.
+            skipped_oversize = 0
+            if resolved.is_dir():
+                all_files, _ = scan_directory(resolved)
+                for f in all_files:
+                    try:
+                        if f.stat().st_size > _MAX_FILE_BYTES:
+                            skipped_oversize += 1
+                    except OSError:
+                        continue
+
             docs = ingest_path(resolved, max_files=self.MAX_INGEST_FILES)
+            docs = [
+                d for d in docs
+                if not (d.source_path and self._too_big(Path(d.source_path)))
+            ]
             if not docs:
                 return ToolResult(
                     text=f"No supported files found in {raw_path}. "
@@ -77,13 +149,89 @@ class IngestMaterialsTool:
             self._update_soul_md(report)
             profile_update = self._build_profile_update(report)
 
+            # ── STYLE PROFILE: the voice/structure fingerprint ────────
+            style_note = ""
+            style_data: dict[str, Any] = {}
+            try:
+                style_note, style_data = await self._build_style_profile(
+                    docs, params, resolved, context,
+                    files_skipped=skipped_oversize,
+                )
+            except Exception as e:
+                logger.warning("Style profile build failed: %s", e)
+                style_note = (
+                    "\n\n(Style profile could not be built this pass — "
+                    "your files were still indexed for search.)"
+                )
+
+            if skipped_oversize:
+                summary += f"\nSkipped {skipped_oversize} oversized file(s) (>25 MB)."
+
             return ToolResult(
-                text=summary + profile_update,
-                data={"files_ingested": len(docs)},
+                text=summary + style_note + profile_update,
+                data={
+                    "files_ingested": len(docs),
+                    "files_skipped": skipped_oversize,
+                    **style_data,
+                },
                 side_effects=[f"Ingested {len(docs)} files from {raw_path}"],
             )
         except Exception as e:
             return ToolResult(text=f"Failed to ingest materials: {e}")
+
+    @staticmethod
+    def _too_big(path: Path) -> bool:
+        try:
+            return path.stat().st_size > _MAX_FILE_BYTES
+        except OSError:
+            return False
+
+    async def _build_style_profile(
+        self,
+        docs: list[Any],
+        params: dict[str, Any],
+        resolved: Path,
+        context: AgentContext,
+        files_skipped: int = 0,
+    ) -> tuple[str, dict[str, Any]]:
+        """Build + save + activate the style profile. Returns (note, data)."""
+        from clawed import style_profile as sp
+
+        name = str(params.get("profile_name") or "").strip() or resolved.stem or "My Materials"
+
+        llm = None
+        try:
+            from clawed.demo import is_demo_mode
+            from clawed.llm import LLMClient
+            if context.config is not None and not is_demo_mode(config=context.config):
+                llm = LLMClient(context.config)
+        except Exception:
+            llm = None
+
+        profile = await sp.build_profile(
+            docs,
+            name=name,
+            source_path=str(resolved),
+            llm=llm,
+            files_skipped=files_skipped,
+            progress_callback=context.notify_progress,
+        )
+        sp.save_profile(profile)
+        sp.set_active_profile(profile.profile_id)
+
+        note_lines = [
+            "",
+            f"**Style profile \"{profile.name}\" saved and active** — "
+            "new lessons and assessments will match your voice.",
+        ]
+        if profile.structure_summary:
+            note_lines.append(profile.structure_summary)
+        if profile.voice_description:
+            note_lines.append(profile.voice_description)
+        return "\n".join(note_lines), {
+            "style_profile_id": profile.profile_id,
+            "style_profile_name": profile.name,
+        }
 
     async def _extract_and_save_persona(self, docs: list[Any], context: AgentContext) -> Any:
         """Extract persona from docs, override name, save, track evolution."""

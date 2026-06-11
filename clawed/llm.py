@@ -532,6 +532,19 @@ class LLMClient:
             except ImportError:
                 pass  # Memory engine not available -- that's fine
 
+            # Inject the teacher's ACTIVE STYLE PROFILE (learned from their
+            # own files via ingest_materials) so every generation — lessons,
+            # assessments, sub packets — matches their real voice. Off-switch:
+            # set_active_profile(None) makes this a no-op.
+            try:
+                from clawed.style_profile import active_prompt_block
+
+                style_ctx = active_prompt_block()
+                if style_ctx:
+                    system = (system + "\n\n" + style_ctx) if system else style_ctx
+            except ImportError:
+                pass  # Style profiles not available -- that's fine
+
             return system
 
     def _detect_subject_from_prompt(self, prompt: str) -> str:

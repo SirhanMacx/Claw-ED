@@ -362,6 +362,7 @@ def build_system_prompt(
     is_new_user: bool = False,
     reading_report: str = "",
     soul_context: str = "",
+    style_profile_context: str = "",
 ) -> str:
     """Assemble the full system prompt from composable sections.
 
@@ -421,6 +422,10 @@ def build_system_prompt(
         )
     if reading_report:
         sections.append(f"\n## What I know about your teaching\n{reading_report}")
+    if style_profile_context:
+        # The learned voice/structure fingerprint from ingest_materials —
+        # already carries its own "## ACTIVE STYLE PROFILE" heading.
+        sections.append(f"\n{style_profile_context}")
     if identity_summary and not soul_context:
         sections.append(f"\n## Teacher profile\n{identity_summary}")
     if curriculum_summary:

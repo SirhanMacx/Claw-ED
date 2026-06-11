@@ -444,6 +444,13 @@ class Gateway:
         except Exception as e:
             logger.debug("Failed to load SOUL.md: %s", e)
 
+        style_profile_context = ""
+        try:
+            from clawed.style_profile import active_prompt_block
+            style_profile_context = active_prompt_block()
+        except Exception as e:
+            logger.debug("Failed to load style profile: %s", e)
+
         agent_name = self.config.agent_name
         is_new_user = teacher_name == "Teacher" and not memory_ctx.get("identity_summary")
         system = build_system_prompt(
@@ -460,6 +467,7 @@ class Gateway:
             is_new_user=is_new_user,
             reading_report=reading_report_context,
             soul_context=soul_context,
+            style_profile_context=style_profile_context,
         )
 
         # 2c. Detect un-ingested materials — kick off background ingest
