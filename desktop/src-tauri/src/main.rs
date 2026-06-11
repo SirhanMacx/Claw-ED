@@ -20,6 +20,7 @@ fn main() {
             sidecar::restart_sidecar,
             sidecar::agent_base_url,
             sidecar::open_path,
+            sidecar::reveal_path,
         ])
         .setup(move |app| {
             supervisor.spawn_loop(app.handle().clone());

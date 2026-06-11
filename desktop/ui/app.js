@@ -291,17 +291,7 @@ function addVoiceRow() {
       };
     },
     addArtifact(path) {
-      const name = path.split("/").pop();
-      const card = el("div", "card artifact");
-      card.appendChild(el("div", "doc"));
-      const meta = el("div", "meta");
-      meta.appendChild(el("b", "", name));
-      meta.appendChild(el("span", "", path));
-      card.appendChild(meta);
-      const open = el("button", "open", "Open");
-      open.onclick = () => invoke("open_path", { path }).catch(() => {});
-      card.appendChild(open);
-      msg.insertBefore(card, stream);
+      msg.insertBefore(buildArtifactCard(path), stream);
       addToWorkspace(path);
       scrollFeed();
     },
@@ -359,6 +349,65 @@ function approvalTitle(data) {
   return "Claw-ED wants to act on your Mac";
 }
 
+// ── Artifact cards (Direction C — generated work as inline objects) ──
+
+/** What kind of classroom artifact is this file? → label + accent. */
+function artifactKind(path) {
+  const name = path.split("/").pop().toLowerCase();
+  const ext = name.includes(".") ? name.split(".").pop() : "";
+  const n = name;
+  let kind = "File";
+  if (ext === "pptx" || ext === "key") kind = "Slides";
+  else if (n.includes("assessment") || n.includes("quiz") || n.includes("test") || n.includes("exam") || n.includes("crq")) kind = "Assessment";
+  else if (n.includes("handout") || n.includes("packet") || n.includes("worksheet")) kind = "Handout";
+  else if (n.includes("lesson") || n.includes("unit") || n.includes("plan")) kind = "Lesson";
+  else if (n.includes("game")) kind = "Game";
+  else if (ext === "docx" || ext === "doc" || ext === "rtf") kind = "Document";
+  else if (ext === "pdf") kind = "PDF";
+  else if (ext === "html" || ext === "htm") kind = "Interactive";
+  else if (ext === "md" || ext === "txt") kind = "Notes";
+  else if (ext === "csv" || ext === "xlsx") kind = "Data";
+  else if (["png", "jpg", "jpeg", "gif", "svg", "webp"].includes(ext)) kind = "Image";
+  else if (["mp4", "mov", "webm"].includes(ext)) kind = "Video";
+  const accents = {
+    Slides: "#C9893F", Assessment: "#8C6FB8", Lesson: "#C96442",
+    Handout: "#2F8F6B", Game: "#4A8FBF", PDF: "#B4493A",
+    Interactive: "#4A8FBF", Data: "#2F8F6B", Video: "#8C6FB8",
+  };
+  return { kind, ext: (ext || "file").slice(0, 5), accent: accents[kind] || "" };
+}
+
+/** One artifact card: doc glyph + name + kind chip + Open / Show in Finder. */
+function buildArtifactCard(path) {
+  const name = path.split("/").pop();
+  const { kind, ext, accent } = artifactKind(path);
+  const card = el("div", "card artifact");
+  const doc = el("div", "doc");
+  const extTag = el("span", "ext", ext);
+  if (accent) extTag.style.setProperty("--doc-accent", accent);
+  doc.appendChild(extTag);
+  card.appendChild(doc);
+  const meta = el("div", "meta");
+  meta.appendChild(el("b", "", name));
+  const sub = el("div");
+  sub.appendChild(el("span", "kind", kind));
+  const pathSpan = el("span", "path", path.replace(/^\/Users\/[^/]+/, "~"));
+  pathSpan.title = path;
+  sub.appendChild(pathSpan);
+  meta.appendChild(sub);
+  card.appendChild(meta);
+  const acts = el("div", "acts");
+  const open = el("button", "open", "Open");
+  open.title = "Open in the default app";
+  open.onclick = () => invoke("open_path", { path }).catch(() => {});
+  const reveal = el("button", "open quiet", "Finder");
+  reveal.title = "Show in Finder";
+  reveal.onclick = () => invoke("reveal_path", { path }).catch(() => {});
+  acts.append(open, reveal);
+  card.appendChild(acts);
+  return card;
+}
+
 // ── Workspace collection ──────────────────────────────────────────────
 
 const workspacePaths = new Set();
@@ -366,17 +415,7 @@ function addToWorkspace(path) {
   if (workspacePaths.has(path)) return;
   workspacePaths.add(path);
   $("workspaceEmpty").hidden = true;
-  const name = path.split("/").pop();
-  const card = el("div", "card artifact");
-  card.appendChild(el("div", "doc"));
-  const meta = el("div", "meta");
-  meta.appendChild(el("b", "", name));
-  meta.appendChild(el("span", "", path));
-  card.appendChild(meta);
-  const open = el("button", "open", "Open");
-  open.onclick = () => invoke("open_path", { path }).catch(() => {});
-  card.appendChild(open);
-  $("workspaceList").appendChild(card);
+  $("workspaceList").appendChild(buildArtifactCard(path));
 }
 
 // ── SSE chat plane ────────────────────────────────────────────────────
@@ -405,6 +444,13 @@ async function sendMessage(text) {
   const turn = addVoiceRow();
   const actionCards = [];      // open tool cards, newest last
   const approvalCards = new Map(); // approval_id → card api
+  const seenFiles = new Set(); // dedupe: tool_end + final both list files
+  const addArtifactOnce = (path) => {
+    if (!path || seenFiles.has(path)) return;
+    seenFiles.add(path);
+    turn.addArtifact(path);
+    record({ kind: "artifact", path });
+  };
 
   const handle = (event, data) => {
     if (event === "progress") {
@@ -431,7 +477,7 @@ async function sendMessage(text) {
           ok: !!data.ok, summary: (data.summary || "").slice(0, 200),
         });
       }
-      for (const f of data.files || []) turn.addArtifact(f);
+      for (const f of data.files || []) addArtifactOnce(f);
     } else if (event === "approval_required") {
       const card = turn.addApproval(data, (approved, always) => {
         resolveApproval(data.approval_id, approved, always);
@@ -443,10 +489,7 @@ async function sendMessage(text) {
     } else if (event === "final") {
       turn.finish(data.text || "");
       record({ kind: "voice", text: data.text || "" });
-      for (const f of data.files || []) {
-        turn.addArtifact(f);
-        record({ kind: "artifact", path: f });
-      }
+      for (const f of data.files || []) addArtifactOnce(f);
     } else if (event === "error") {
       turn.fail(data.message || "Something went wrong.");
     }
@@ -502,28 +545,243 @@ async function readSSE(body, handle) {
   }
 }
 
-// ── Skills gallery (curated — surfacing the agent's real tools) ──────
+// ── Skills gallery (the agent's REAL tool registry, grouped) ─────────
 
-const SKILLS = [
-  ["❯", "Act on this Mac", "Run commands, move files, organize folders — every action asks you first."],
-  ["✦", "Generate a lesson", "A full classroom-ready lesson on any topic, in your style."],
-  ["✎", "Build an assessment", "Quizzes, tests, and CRQs with answer keys."],
-  ["▤", "Curriculum map", "Plan a unit or a whole course, aligned to your standards."],
-  ["◆", "Differentiate", "Adapt any material for ENL, IEP, or advanced students."],
-  ["🔎", "Research", "Look something up on the web and bring back sources."],
-  ["▣", "Read your files", "Pull data from CSVs, docs, and folders anywhere in your home."],
-  ["✉", "Parent communication", "Draft professional parent emails in the right tone."],
-  ["📄", "Sub packet", "A complete substitute-teacher packet in one ask."],
-  ["▦", "Google Drive", "List, read, organize, and upload your Drive files."],
+/** Group + icon + try-it prompt rules, matched in order against tool names. */
+const SKILL_RULES = [
+  [/^run_command$/, "Your Mac", "❯", "Run a command for me: "],
+  [/^mac_files|^file_manager|^read_workspace/, "Your Mac", "▣", null],
+  [/^generate_lesson_bundle$/, "Create for class", "✦",
+    "Make me a complete lesson bundle on "],
+  [/^generate_(lesson|unit|materials)/, "Create for class", "✦", "Make me a lesson on "],
+  [/^generate_assessment|^sub_packet|^parent_comm/, "Create for class", "✎", null],
+  [/^generate_(game|simulation|animation|video)/, "Create for class", "▶", null],
+  [/^improve_lesson|^differentiate/, "Create for class", "◆", null],
+  [/^curriculum|^gap_analysis|^standards|^search_standards/, "Plan & align", "▤", null],
+  [/^search_lessons|^search_my_materials|^ingest_materials|^student_insights/, "Plan & align", "🔎", null],
+  [/^drive_/, "Google Drive", "▦", null],
+  [/^research$|^browser|^wiki/, "Research & web", "🔎", null],
+  [/^export_document/, "Create for class", "📄", null],
+  [/.*/, "Agent abilities", "◆", null],
 ];
-function paintSkills() {
-  const grid = $("skillGrid");
-  for (const [icon, title, desc] of SKILLS) {
-    const card = el("div", "skill");
-    card.appendChild(el("div", "s-ic", icon));
-    card.appendChild(el("b", "", title));
-    card.appendChild(el("p", "", desc));
-    grid.appendChild(card);
+
+const TRY_PROMPTS = {
+  run_command: "Run a command for me: list what's in my Downloads folder",
+  mac_files: "Look in my Desktop folder and tell me what's there",
+  generate_lesson: "Make me a lesson on ",
+  generate_lesson_bundle: "Make me a complete lesson bundle on ",
+  generate_assessment: "Build me a 10-question quiz with an answer key on ",
+  generate_unit: "Plan me a full unit on ",
+  generate_game: "Make a review game for my class on ",
+  differentiate: "Differentiate my last lesson for ENL students",
+  improve_lesson: "Improve my last lesson — tighten the timing and add a hook",
+  curriculum_map: "Map out my curriculum for the next month",
+  gap_analysis: "Run a gap analysis on my curriculum against the standards",
+  search_standards: "Which standards cover ",
+  research: "Research this and bring back sources: ",
+  parent_comm: "Draft a positive parent email about a student who ",
+  sub_packet: "Make me a sub packet for tomorrow",
+  drive_list: "List what's in my Google Drive",
+  search_my_materials: "Search my materials for ",
+  schedule_task: "Every weekday at 6am, prep a Do-Now for my first class",
+  switch_model: "Switch to a different AI model",
+};
+
+function skillMeta(name) {
+  for (const [re, group, icon] of SKILL_RULES) {
+    if (re.test(name)) return { group, icon };
+  }
+  return { group: "Agent abilities", icon: "◆" };
+}
+function prettySkillName(name) {
+  const words = name.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+function firstSentence(text, max = 140) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "One of the agent's abilities.";
+  const period = clean.indexOf(". ");
+  const cut = period > 20 && period < max ? clean.slice(0, period + 1) : clean;
+  return cut.length > max ? cut.slice(0, max - 1).trimEnd() + "…" : cut;
+}
+
+const GROUP_ORDER = [
+  "Your Mac", "Create for class", "Plan & align",
+  "Research & web", "Google Drive", "Agent abilities",
+];
+let skillsCache = []; // [{name, title, desc, group, icon, asks, try}]
+
+async function fetchSkills() {
+  try {
+    const res = await fetch(`${BASE}/api/agent/tools`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const { tools } = await res.json();
+    skillsCache = tools.map((t) => {
+      const { group, icon } = skillMeta(t.name);
+      return {
+        name: t.name,
+        title: prettySkillName(t.name),
+        desc: firstSentence(t.description),
+        group, icon,
+        asks: t.risk_level !== "read_only",
+        try: TRY_PROMPTS[t.name] || null,
+      };
+    });
+    paintSkills($("skillSearch").value);
+  } catch {
+    $("skillsEmpty").textContent =
+      "Couldn't load the tool registry — is the agent running? It will retry when you reopen this page.";
+  }
+}
+
+function paintSkills(filter) {
+  const root = $("skillGroups");
+  root.textContent = "";
+  const q = (filter || "").trim().toLowerCase();
+  const shown = skillsCache.filter((s) =>
+    !q || s.name.includes(q) || s.title.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q));
+  if (!shown.length) {
+    root.appendChild(el("p", "muted", skillsCache.length
+      ? "No skills match that filter."
+      : "Loading the agent’s tool registry…"));
+    return;
+  }
+  for (const group of GROUP_ORDER) {
+    const items = shown.filter((s) => s.group === group);
+    if (!items.length) continue;
+    const section = el("div", "skill-group");
+    const h = el("h3", "", group);
+    h.appendChild(el("span", "count", String(items.length)));
+    section.appendChild(h);
+    const grid = el("div", "skill-grid");
+    for (const s of items) grid.appendChild(buildSkillCard(s));
+    section.appendChild(grid);
+    root.appendChild(section);
+  }
+}
+
+function buildSkillCard(s) {
+  const card = el("div", "skill");
+  const top = el("div", "s-top");
+  top.appendChild(el("span", "s-ic", s.icon));
+  const title = el("b", "", s.title);
+  title.title = s.name;
+  top.appendChild(title);
+  top.appendChild(el("span", s.asks ? "risk asks" : "risk", s.asks ? "asks first" : "read-only"));
+  card.appendChild(top);
+  card.appendChild(el("p", "", s.desc));
+  const btn = el("button", "try", "Try it");
+  btn.onclick = () => trySkill(s);
+  card.appendChild(btn);
+  return card;
+}
+
+/** Insert the skill's starter prompt into the composer and focus it. */
+function trySkill(s) {
+  const text = s.try || `Use your ${s.title.toLowerCase()} ability to `;
+  showView("chat");
+  const input = $("input");
+  input.value = text;
+  input.dispatchEvent(new Event("input"));
+  input.focus();
+  input.setSelectionRange(text.length, text.length);
+}
+
+// ── Theme (Direction B — dark "Console" is a theme, not a fork) ──────
+
+const THEME_KEY = "clawed.theme.v1";
+function applyTheme(name) {
+  const theme = name === "console" ? "console" : "studio";
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem(THEME_KEY, theme); } catch { /* private mode */ }
+  for (const b of document.querySelectorAll("[data-theme-pick]")) {
+    b.classList.toggle("on", b.dataset.themePick === theme);
+  }
+}
+function currentTheme() {
+  return document.documentElement.dataset.theme === "console" ? "console" : "studio";
+}
+function toggleTheme() {
+  applyTheme(currentTheme() === "console" ? "studio" : "console");
+}
+
+// ── ⌘K command palette ───────────────────────────────────────────────
+
+let paletteSel = 0;
+
+function paletteItems(query) {
+  const q = query.trim().toLowerCase();
+  const items = [];
+  const cmd = (icon, label, run, kind = "command") => ({ icon, label, run, kind });
+
+  items.push(cmd("✚", "New chat", () => { newSession(); showView("chat"); }));
+  items.push(cmd("◑", currentTheme() === "console"
+    ? "Switch to Studio (light) theme" : "Switch to Console (dark) theme", toggleTheme));
+  items.push(cmd("✦", "Go to Chat", () => showView("chat")));
+  items.push(cmd("◆", "Go to Skills", () => showView("skills")));
+  items.push(cmd("▣", "Go to Workspace", () => showView("workspace")));
+  items.push(cmd("⚙", "Go to Settings", () => showView("settings")));
+  items.push(cmd("↻", "Restart agent", () => invoke("restart_sidecar").catch(() => {})));
+
+  for (const s of sessions.slice(0, 25)) {
+    items.push({
+      icon: "✉", label: s.title, kind: "session",
+      run: () => { openSession(s.id); showView("chat"); },
+    });
+  }
+  for (const s of skillsCache) {
+    items.push({
+      icon: s.icon, label: `${s.title} — ${s.desc}`, kind: "skill",
+      run: () => trySkill(s),
+    });
+  }
+  return q ? items.filter((i) => i.label.toLowerCase().includes(q)) : items.slice(0, 12);
+}
+
+function paintPalette() {
+  const list = $("paletteList");
+  const items = paletteItems($("paletteInput").value);
+  list.textContent = "";
+  if (!items.length) {
+    list.appendChild(el("div", "palette-none", "Nothing matches."));
+    return;
+  }
+  paletteSel = Math.max(0, Math.min(paletteSel, items.length - 1));
+  items.forEach((item, i) => {
+    const row = el("div", "palette-item" + (i === paletteSel ? " sel" : ""));
+    row.appendChild(el("span", "p-ic", item.icon));
+    row.appendChild(el("span", "p-label", item.label));
+    row.appendChild(el("span", "p-kind", item.kind));
+    row.onclick = () => { closePalette(); item.run(); };
+    row.onmousemove = () => {
+      if (paletteSel !== i) { paletteSel = i; paintPalette(); }
+    };
+    list.appendChild(row);
+  });
+  const sel = list.children[paletteSel];
+  if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: "nearest" });
+}
+
+function openPalette() {
+  paletteSel = 0;
+  $("paletteInput").value = "";
+  $("paletteVeil").hidden = false;
+  paintPalette();
+  $("paletteInput").focus();
+}
+function closePalette() {
+  $("paletteVeil").hidden = true;
+  if (!$("view-chat").hidden) $("input").focus();
+}
+function paletteKeydown(e) {
+  if (e.key === "Escape") { e.preventDefault(); closePalette(); }
+  else if (e.key === "ArrowDown") { e.preventDefault(); paletteSel += 1; paintPalette(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); paletteSel -= 1; paintPalette(); }
+  else if (e.key === "Enter") {
+    e.preventDefault();
+    const items = paletteItems($("paletteInput").value);
+    const item = items[Math.max(0, Math.min(paletteSel, items.length - 1))];
+    if (item) { closePalette(); item.run(); }
   }
 }
 
@@ -536,6 +794,7 @@ function showView(name) {
     a.classList.toggle("on", a.dataset.view === name);
   }
   if (name === "chat") $("input").focus();
+  if (name === "skills" && !skillsCache.length) fetchSkills();
 }
 
 function init() {
@@ -573,7 +832,31 @@ function init() {
 
   $("restartBtn").onclick = () => invoke("restart_sidecar").catch(() => {});
 
-  paintSkills();
+  // Theme (persisted; default Studio)
+  let savedTheme = "studio";
+  try { savedTheme = localStorage.getItem(THEME_KEY) || "studio"; } catch { /* default */ }
+  applyTheme(savedTheme);
+  for (const b of document.querySelectorAll("[data-theme-pick]")) {
+    b.onclick = () => applyTheme(b.dataset.themePick);
+  }
+
+  // Skills gallery
+  $("skillSearch").addEventListener("input", () => paintSkills($("skillSearch").value));
+
+  // ⌘K command palette
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if ($("paletteVeil").hidden) openPalette(); else closePalette();
+    } else if (e.key === "Escape" && !$("paletteVeil").hidden) {
+      e.preventDefault();
+      closePalette();
+    }
+  });
+  $("paletteInput").addEventListener("input", () => { paletteSel = 0; paintPalette(); });
+  $("paletteInput").addEventListener("keydown", paletteKeydown);
+  $("paletteVeil").onclick = (e) => { if (e.target === $("paletteVeil")) closePalette(); };
+
   loadSessions();
   paintSessionList();
 
@@ -592,6 +875,7 @@ function init() {
     }
     pollHealth();
     setInterval(pollHealth, 3000);
+    fetchSkills(); // after BASE is resolved — feeds the gallery + palette
   })();
 
   input.focus();

@@ -466,3 +466,19 @@ pub fn open_path(path: String) -> Result<(), String> {
         .map(|_| ())
         .map_err(|e| e.to_string())
 }
+
+/// Reveal a file in Finder (select it) — the artifact card's second action.
+/// Same constraints as `open_path`: existing local paths only, no URLs.
+#[tauri::command]
+pub fn reveal_path(path: String) -> Result<(), String> {
+    let p = expand_tilde(&path);
+    if !p.exists() {
+        return Err(format!("No such file: {}", p.display()));
+    }
+    std::process::Command::new("/usr/bin/open")
+        .arg("-R")
+        .arg(&p)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
