@@ -131,12 +131,18 @@ class ApprovalManager:
 
     def get_standing_approval(
         self, teacher_id: str, tool_name: str,
+        params_signature: str | None = None,
     ) -> PendingApproval | None:
         """Check for an existing approved record for this tool.
 
         A standing approval is any approval with status="approved" whose
         action_payload contains the tool_name. This enables the central
         policy layer to allow pre-approved tools through.
+
+        For per-params tools (``params_signature`` given), the record must
+        also match the exact signature — an "Always allow" on one shell
+        command never grants a different command. Records without a stored
+        signature (legacy / tool-wide grants) match any params.
         """
         for path in self._dir.glob("*.json"):
             pa = self.load(path.stem)
@@ -146,7 +152,13 @@ class ApprovalManager:
                 and pa.status == "approved"
                 and pa.action_payload.get("tool_name") == tool_name
             ):
-                return pa
+                stored_sig = pa.action_payload.get("params_signature", "*")
+                if (
+                    params_signature is None
+                    or stored_sig == "*"
+                    or stored_sig == params_signature
+                ):
+                    return pa
         return None
 
     def _update_status(self, approval_id: str, status: str) -> PendingApproval | None:

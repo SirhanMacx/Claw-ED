@@ -25,6 +25,10 @@ class AgentContext:
     agent_name: str = "Claw-ED"
     transport: str = "cli"
     progress_callback: Callable[[str], None] | None = None
+    # Live-transport event sink (SSE chat stream). When set, the loop emits
+    # tool_start / tool_end / approval_required events and blocked tools may
+    # pause for an interactive teacher decision instead of failing closed.
+    event_callback: Callable[[str, dict[str, Any]], None] | None = None
 
     def notify_progress(self, message: str) -> None:
         """Send a progress update to the user if a callback is registered."""
@@ -33,6 +37,17 @@ class AgentContext:
                 self.progress_callback(message)
             except Exception as e:
                 logger.debug("Progress notification failed: %s", e)
+
+    def emit_event(self, event_type: str, data: dict[str, Any]) -> None:
+        """Emit a structured live event to the UI if a sink is registered.
+
+        Never raises — a UI hiccup must not break the agent loop.
+        """
+        if self.event_callback:
+            try:
+                self.event_callback(event_type, data)
+            except Exception as e:
+                logger.debug("Event emit failed (%s): %s", event_type, e)
 
 
 @dataclass

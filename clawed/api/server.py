@@ -100,6 +100,11 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
             # this server, so it can fail gracefully (show a friendly retry)
             # instead of stranding the teacher on a dead browser error page.
             "capacitor://localhost",
+            # Mac desktop app (Claw-ED for Mac): the Tauri WKWebView's own
+            # origin. The desktop shell talks to this sidecar over loopback;
+            # its UI is served from the tauri:// custom scheme, so CORS must
+            # admit it. Loopback-only exposure is unchanged.
+            "tauri://localhost",
         ]
     app.add_middleware(
         CORSMiddleware,
@@ -126,6 +131,7 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
 
 def _register_api_routes(app: FastAPI) -> None:
     """Import and mount all REST API routers under ``/api``."""
+    from clawed.api.routes.agent_stream import router as agent_stream_router
     from clawed.api.routes.chat import router as chat_router
     from clawed.api.routes.chat import (
         student_chat_router as chat_student_router,
@@ -155,6 +161,7 @@ def _register_api_routes(app: FastAPI) -> None:
     app.include_router(lessons_router, prefix="/api")
     app.include_router(tools_router, prefix="/api")
     app.include_router(gateway_chat_router, prefix="/api")
+    app.include_router(agent_stream_router, prefix="/api")
     app.include_router(extension_router, prefix="/api")
     app.include_router(student_classroom_router, prefix="/api")  # No auth — class code is auth
 

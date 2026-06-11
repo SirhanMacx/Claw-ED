@@ -161,6 +161,7 @@ class Gateway:
         files: list[Path] | None = None,
         progress_callback: Any = None,
         transport: str = "cli",
+        event_callback: Any = None,
     ) -> GatewayResponse:
         """Process any message from any transport."""
         # Normalize teacher_id so CLI, Telegram, and MCP all share one brain
@@ -226,7 +227,11 @@ class Gateway:
                 return self._handle_models_command()
 
             # 5. Natural-language → agent loop
-            return await self._agent_loop(message, teacher_id, progress_callback=progress_callback)
+            return await self._agent_loop(
+                message, teacher_id,
+                progress_callback=progress_callback,
+                event_callback=event_callback,
+            )
 
         except Exception as e:
             logger.error("Agent error for teacher %s: %s", teacher_id, e, exc_info=True)
@@ -568,7 +573,10 @@ class Gateway:
         except Exception as e:
             logger.debug("Failed to compress sessions: %s", e)
 
-    async def _agent_loop(self, message: str, teacher_id: str, progress_callback: Any = None) -> GatewayResponse:
+    async def _agent_loop(
+        self, message: str, teacher_id: str,
+        progress_callback: Any = None, event_callback: Any = None,
+    ) -> GatewayResponse:
         """Load context, build prompt, and run the agent tool-use loop."""
         transport = getattr(self, "_last_transport", "cli")
 
@@ -596,6 +604,7 @@ class Gateway:
             improvement_context=memory_ctx["improvement_context"],
             agent_name=agent_name,
             progress_callback=progress_callback,
+            event_callback=event_callback,
         )
 
         # 4. Get or create LLM adapter

@@ -22,11 +22,13 @@ RISK_NETWORK_CALL = "network_call"       # External API calls — requires appro
 RISK_PACKAGE_INSTALL = "package_install" # pip install — ALWAYS requires confirmation
 RISK_EXTERNAL_PUBLISH = "external_publish"  # Posts to external services — ALWAYS requires confirmation
 RISK_DAEMON_CONTROL = "daemon_control"   # Starts/stops background processes
+RISK_COMMAND_EXEC = "command_exec"       # Arbitrary shell commands — ALWAYS requires confirmation
 
 # Levels that ALWAYS require explicit teacher confirmation regardless of config
 _ALWAYS_REQUIRE_APPROVAL = frozenset({
     RISK_PACKAGE_INSTALL,
     RISK_EXTERNAL_PUBLISH,
+    RISK_COMMAND_EXEC,
 })
 
 # Levels that require approval unless teacher has opted into auto-approve
@@ -35,6 +37,15 @@ _REQUIRE_APPROVAL_BY_DEFAULT = frozenset({
     RISK_NETWORK_CALL,
     RISK_DAEMON_CONTROL,
 })
+
+
+def _preview_params(params: dict[str, Any], limit: int = 400) -> dict[str, Any]:
+    """Truncated, display-safe copy of tool params for approval cards."""
+    preview: dict[str, Any] = {}
+    for key, value in params.items():
+        text = value if isinstance(value, str) else repr(value)
+        preview[key] = text if len(text) <= limit else text[:limit] + "…"
+    return preview
 
 
 @runtime_checkable
@@ -139,15 +150,26 @@ class ToolRegistry:
         """Check if the teacher has approved this action.
 
         Returns True if approved, False if blocked.
-        Currently checks the approval DB for a standing approval
-        for this tool. Future: interactive approval via Telegram.
+
+        Resolution order:
+        1. A *standing* approval ("Always allow") for this tool — scoped to
+           the exact params signature for ``approval_scope = "per_params"``
+           tools (e.g. run_command keys on the exact command string).
+        2. If the teacher is live (``context.event_callback`` set), pause
+           the loop, surface an approval card, and await their decision —
+           Allow once / Always allow / Deny — like Claude Code / Codex.
+        3. Otherwise fail closed (blocked).
         """
+        tool = self._tools.get(tool_name)
+        signature = self._params_signature(tool, params)
+        teacher_id = getattr(context, "teacher_id", "default")
+
         try:
             from clawed.agent_core.approvals import ApprovalManager
             mgr = ApprovalManager()
-            # Check for standing approval for this tool
-            teacher_id = getattr(context, "teacher_id", "default")
-            existing = mgr.get_standing_approval(teacher_id, tool_name)
+            existing = mgr.get_standing_approval(
+                teacher_id, tool_name, params_signature=signature,
+            )
             if existing:
                 logger.info(
                     "Tool '%s' (risk=%s) approved via standing approval",
@@ -157,11 +179,111 @@ class ToolRegistry:
         except Exception as exc:
             logger.debug("Approval check failed: %s", exc)
 
+        # ── Interactive path — teacher is live on a chat stream ─────────
+        if context.event_callback is not None:
+            decision = await self._request_interactive_approval(
+                tool_name, risk_level, params, signature, context,
+            )
+            if decision is not None:
+                return decision
+
         logger.warning(
             "Tool '%s' BLOCKED (risk=%s) — no approval found",
             tool_name, risk_level,
         )
         return False
+
+    @staticmethod
+    def _params_signature(tool: Tool | None, params: dict[str, Any]) -> str | None:
+        """Stable signature for per-params approval scoping.
+
+        Tools that declare ``approval_scope = "per_params"`` get an
+        "Always allow" scoped to these exact parameters (e.g. the exact
+        shell command) instead of a blanket tool-wide grant.
+        """
+        if tool is None or getattr(tool, "approval_scope", "tool") != "per_params":
+            return None
+        custom = getattr(tool, "approval_signature", None)
+        if callable(custom):
+            try:
+                return str(custom(params))
+            except Exception:
+                pass
+        import json as _json
+        try:
+            return _json.dumps(params, sort_keys=True, default=str)
+        except Exception:
+            return str(sorted(params.items()))
+
+    async def _request_interactive_approval(
+        self, tool_name: str, risk_level: str, params: dict[str, Any],
+        signature: str | None, context: AgentContext,
+    ) -> bool | None:
+        """Pause for a live teacher decision. None means 'no decision' (fail closed)."""
+        try:
+            from clawed.agent_core.approval_broker import ApprovalBroker
+            from clawed.agent_core.approvals import ApprovalManager
+
+            tool = self._tools.get(tool_name)
+            describe = getattr(tool, "approval_description", None)
+            if callable(describe):
+                try:
+                    description = str(describe(params))
+                except Exception:
+                    description = f"Run tool '{tool_name}'"
+            else:
+                description = f"Run tool '{tool_name}'"
+
+            mgr = ApprovalManager()
+            pa = mgr.create(
+                teacher_id=context.teacher_id,
+                action_description=description,
+                action_payload={
+                    "tool_name": tool_name,
+                    "params_signature": signature or "*",
+                    "risk_level": risk_level,
+                },
+                agent_state={},
+                transport=context.transport,
+            )
+
+            broker = ApprovalBroker.instance()
+            broker.register(pa.id)
+            context.emit_event("approval_required", {
+                "approval_id": pa.id,
+                "tool_name": tool_name,
+                "description": description,
+                "params": _preview_params(params),
+                "risk_level": risk_level,
+            })
+
+            decision = await broker.wait(pa.id)
+            if decision is None:
+                mgr._update_status(pa.id, "expired")
+                context.emit_event("approval_resolved", {
+                    "approval_id": pa.id, "approved": False, "reason": "timeout",
+                })
+                return False
+
+            if decision.approved and decision.always:
+                # Leave status "approved" → acts as a standing approval,
+                # scoped by params_signature for per_params tools.
+                mgr.approve(pa.id)
+            elif decision.approved:
+                # One-time grant — must NOT become standing.
+                mgr._update_status(pa.id, "consumed")
+            else:
+                mgr.reject(pa.id)
+
+            context.emit_event("approval_resolved", {
+                "approval_id": pa.id,
+                "approved": decision.approved,
+                "always": decision.always,
+            })
+            return decision.approved
+        except Exception as exc:
+            logger.warning("Interactive approval failed for %s: %s", tool_name, exc)
+            return None
 
     def discover_custom(self, dir_path: Path) -> None:
         """Load custom YAML prompt-template tools from a directory."""

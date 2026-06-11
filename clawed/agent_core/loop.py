@@ -82,10 +82,26 @@ async def run_agent_loop(
                 args = tc.get("arguments", {})
                 logger.info("Agent calling tool: %s(%s)", name, args)
 
+                context.emit_event("tool_start", {
+                    "tool_name": name,
+                    "params": {
+                        k: (v if isinstance(v, str) and len(v) <= 400
+                            else (v[:400] + "…" if isinstance(v, str) else repr(v)[:400]))
+                        for k, v in args.items()
+                    },
+                })
+
                 result: ToolResult = await registry.execute(name, args, context)
 
                 all_files.extend(result.files)
                 all_side_effects.extend(result.side_effects)
+
+                context.emit_event("tool_end", {
+                    "tool_name": name,
+                    "ok": not result.text.startswith(("ERROR:", "BLOCKED:")),
+                    "summary": (result.text or "")[:600],
+                    "files": [str(f) for f in result.files],
+                })
 
                 # Convert ToolResult content to string for the message
                 content = result.text
