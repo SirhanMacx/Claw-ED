@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claw-ED</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top bar — native overlay traffic lights sit over the left inset -->
+  <header class="topbar" data-tauri-drag-region>
+    <div class="lights-inset" data-tauri-drag-region></div>
+    <div class="brand" data-tauri-drag-region>
+      <span class="mark">c</span><b>Claw-ED</b>
+    </div>
+    <div class="top-right">
+      <span class="pill model" id="modelPill" title="Configured provider model">…</span>
+      <span class="pill status" id="statusPill">
+        <span class="dot" id="statusDot"></span><span id="statusText">Checking…</span>
+      </span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <!-- Left rail -->
+    <aside class="rail">
+      <nav class="nav" id="mainNav">
+        <a href="#" class="on" data-view="chat"><span class="ic">&#10022;</span> Chat</a>
+        <a href="#" data-view="skills"><span class="ic">&#9670;</span> Skills</a>
+        <a href="#" data-view="workspace"><span class="ic">&#9635;</span> Workspace</a>
+      </nav>
+      <div class="lbl-row">
+        <span class="lbl">Recent</span>
+        <button class="newchat" id="newChatBtn" title="New chat">+</button>
+      </div>
+      <div class="sess" id="sessionList"></div>
+      <div class="foot">
+        <nav class="nav">
+          <a href="#" data-view="pair"><span class="ic">&#9634;</span> Pair iPhone</a>
+          <a href="#" data-view="settings"><span class="ic">&#9881;</span> Settings</a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Chat view -->
+    <main class="view chat-view" id="view-chat">
+      <div class="ctx" id="ctxBar">&#10022;&nbsp; New conversation &nbsp;&middot;&nbsp; full Mac access &middot; approvals on</div>
+      <div class="feed" id="feed">
+        <div class="empty" id="emptyState">
+          <h2 class="empty-title">What should we get done?</h2>
+          <p class="empty-sub">I can act on this Mac — files, folders, commands — and I know your classroom work. Everything risky asks you first.</p>
+          <div class="suggest">
+            <button class="chip" data-suggest="Make a folder called clawed-test on my Desktop and put a hello.txt inside it">Make a test folder on my Desktop</button>
+            <button class="chip" data-suggest="List what's on my Desktop and suggest how to tidy it">Tidy my Desktop</button>
+            <button class="chip" data-suggest="Draft a Do-Now warm-up question for tomorrow's Global 9 lesson on the Renaissance">Draft tomorrow's Do-Now</button>
+          </div>
+        </div>
+      </div>
+      <div class="composer">
+        <div class="inwrap">
+          <textarea id="input" rows="1" placeholder="Message Claw-ED — ask it to do anything on your Mac…"></textarea>
+          <button class="send" id="sendBtn" title="Send">&#8593;</button>
+        </div>
+        <div class="hint">
+          <span><span class="kbd">&#8629;</span> Send</span>
+          <span><span class="kbd">&#8679;&#8629;</span> New line</span>
+          <span class="hint-right">Approvals on &middot; nothing runs without you</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Skills view -->
+    <main class="view alt-view" id="view-skills" hidden>
+      <div class="alt-head"><h2>Skills</h2><p>What your co-teacher knows how to do. Ask for any of these in plain language in Chat.</p></div>
+      <div class="skill-grid" id="skillGrid"></div>
+    </main>
+
+    <!-- Workspace view -->
+    <main class="view alt-view" id="view-workspace" hidden>
+      <div class="alt-head"><h2>Workspace</h2><p>Files the agent has produced this session.</p></div>
+      <div class="artifact-list" id="workspaceList">
+        <p class="muted" id="workspaceEmpty">Nothing yet — generated lessons, docs and files will collect here as you work.</p>
+      </div>
+    </main>
+
+    <!-- Pair view -->
+    <main class="view alt-view" id="view-pair" hidden>
+      <div class="alt-head"><h2>Pair iPhone</h2><p>Drive this Mac's agent from your phone.</p></div>
+      <div class="card pad"><p class="muted">The iPhone remote pairs over your secure tunnel with a QR code. It arrives in a later milestone — the Mac app comes first.</p></div>
+    </main>
+
+    <!-- Settings view -->
+    <main class="view alt-view" id="view-settings" hidden>
+      <div class="alt-head"><h2>Settings</h2><p>The agent runs locally on this Mac. The window talks to it over loopback only.</p></div>
+      <div class="card pad settings-card">
+        <div class="kv"><span>Agent</span><code id="setUrl">http://127.0.0.1:8000</code></div>
+        <div class="kv"><span>Status</span><span id="setStatus">…</span></div>
+        <div class="kv"><span>Provider</span><span id="setProvider">…</span></div>
+        <div class="kv"><span>Supervision</span><span id="setSupervision">…</span></div>
+        <div class="btns" style="margin-top:14px">
+          <button class="btn" id="restartBtn">Restart agent</button>
+        </div>
+      </div>
+      <div class="card pad" style="margin-top:14px">
+        <p class="muted">Approvals are always on: shell commands and file writes pause and ask you first. &ldquo;Always allow&rdquo; is scoped to the exact command or file — anything different asks again.</p>
+      </div>
+    </main>
+  </div>
+
+<script src="app.js"></script>
+</body>
+</html>
