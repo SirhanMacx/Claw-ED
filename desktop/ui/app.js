@@ -559,6 +559,7 @@ const SKILL_RULES = [
   [/^improve_lesson|^differentiate/, "Create for class", "◆", null],
   [/^curriculum|^gap_analysis|^standards|^search_standards/, "Plan & align", "▤", null],
   [/^search_lessons|^search_my_materials|^ingest_materials|^student_insights/, "Plan & align", "🔎", null],
+  [/style_profile|^set_active_profile/, "Plan & align", "☰", null],
   [/^drive_/, "Google Drive", "▦", null],
   [/^research$|^browser|^wiki/, "Research & web", "🔎", null],
   [/^export_document/, "Create for class", "📄", null],
@@ -583,6 +584,9 @@ const TRY_PROMPTS = {
   sub_packet: "Make me a sub packet for tomorrow",
   drive_list: "List what's in my Google Drive",
   search_my_materials: "Search my materials for ",
+  ingest_materials: "Learn my style from the lesson files in ",
+  get_style_profile: "Show me what you've learned about my teaching style",
+  set_active_profile: "Switch my style profile",
   schedule_task: "Every weekday at 6am, prep a Do-Now for my first class",
   switch_model: "Switch to a different AI model",
 };
@@ -687,6 +691,206 @@ function trySkill(s) {
   input.setSelectionRange(text.length, text.length);
 }
 
+// ── Your Materials (style profiles — the INGEST surface) ─────────────
+
+let ingestPolling = null;
+let activeProfileName = null;
+
+function paintStyleChip() {
+  const chip = $("styleChip");
+  if (activeProfileName) {
+    chip.textContent = `Style: ${activeProfileName}`;
+    chip.classList.add("on");
+  } else {
+    chip.textContent = "Default style";
+    chip.classList.remove("on");
+  }
+}
+
+async function fetchProfiles() {
+  try {
+    const res = await fetch(`${BASE}/api/style/profiles`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const { active, profiles } = await res.json();
+    const activeProfile = profiles.find((p) => p.profile_id === active);
+    activeProfileName = activeProfile ? activeProfile.name : null;
+    paintStyleChip();
+    paintProfiles(profiles, active);
+  } catch {
+    const empty = $("profilesEmpty");
+    if (empty) empty.textContent =
+      "Couldn't load style profiles — is the agent running?";
+  }
+}
+
+function paintProfiles(profiles, activeId) {
+  const root = $("profileList");
+  root.textContent = "";
+  if (!profiles.length) {
+    root.appendChild(el("p", "muted",
+      "No style profiles yet — choose a folder of your lesson files above and Claw-ED will learn how you write."));
+    return;
+  }
+  for (const p of profiles) root.appendChild(buildProfileCard(p, p.profile_id === activeId));
+  if (activeId) {
+    const off = el("button", "btn ghost mat-off", "Use default MacxLabs style (turn profile off)");
+    off.onclick = async () => {
+      await fetch(`${BASE}/api/style/deactivate`, { method: "POST" }).catch(() => {});
+      fetchProfiles();
+    };
+    root.appendChild(off);
+  }
+}
+
+/** The STYLE PROFILE CARD: human-readable summary + structure diagram. */
+function buildProfileCard(p, isActive) {
+  const card = el("div", "card pad profile-card" + (isActive ? " active" : ""));
+
+  const top = el("div", "p-top");
+  top.appendChild(el("b", "", p.name));
+  top.appendChild(el("span", isActive ? "p-state on" : "p-state", isActive ? "Active" : "Saved"));
+  card.appendChild(top);
+
+  const meta = el("div", "p-meta",
+    `Learned from ${p.files_analyzed} file${p.files_analyzed === 1 ? "" : "s"}` +
+    (p.files_skipped ? ` (${p.files_skipped} skipped)` : "") +
+    ` · ${(p.source_path || "").replace(/^\/Users\/[^/]+/, "~")}`);
+  card.appendChild(meta);
+
+  if (p.voice_description) card.appendChild(el("p", "p-voice", p.voice_description));
+  if (p.structure_summary) card.appendChild(el("p", "p-structure", p.structure_summary));
+
+  // Structure diagram: the lesson flow as connected chips with frequency.
+  const common = (p.lesson_structure || []).filter((s) => s.frequency >= 0.2 && s.name !== "Answer Key");
+  if (common.length) {
+    const flow = el("div", "p-flow");
+    common.slice(0, 7).forEach((s, i) => {
+      if (i) flow.appendChild(el("span", "p-arrow", "→"));
+      const chipEl = el("span", "p-sec", s.name);
+      chipEl.title = `${Math.round(s.frequency * 100)}% of your lessons`;
+      chipEl.appendChild(el("i", "", ` ${Math.round(s.frequency * 100)}%`));
+      flow.appendChild(chipEl);
+    });
+    card.appendChild(flow);
+  }
+
+  const facts = [];
+  if ((p.question_types || []).length) facts.push(["Assessments", p.question_types.slice(0, 4).join(", ")]);
+  if (p.answer_key_style) facts.push(["Answer keys", p.answer_key_style]);
+  if (p.mc_letter_note) facts.push(["MC balance", p.mc_letter_note]);
+  if ((p.scaffolds || []).length) facts.push(["Scaffolds", p.scaffolds.slice(0, 5).join(", ")]);
+  if ((p.point_values || []).length) facts.push(["Point values", p.point_values.join(", ")]);
+  for (const [k, v] of facts) {
+    const rowEl = el("div", "p-fact");
+    rowEl.appendChild(el("span", "p-k", k));
+    rowEl.appendChild(el("span", "p-v", v));
+    card.appendChild(rowEl);
+  }
+
+  if ((p.exemplars || []).length) {
+    const ex = p.exemplars[0];
+    const q = el("div", "p-exemplar", `“${ex.snippet.slice(0, 200)}”`);
+    q.title = `From ${ex.source}`;
+    card.appendChild(q);
+  }
+
+  const btns = el("div", "btns p-btns");
+  if (!isActive) {
+    const use = el("button", "btn primary", "Use this style");
+    use.onclick = async () => {
+      await fetch(`${BASE}/api/style/profiles/${encodeURIComponent(p.profile_id)}/activate`,
+        { method: "POST" }).catch(() => {});
+      fetchProfiles();
+    };
+    btns.appendChild(use);
+  }
+  const re = el("button", "btn", "Re-ingest");
+  re.title = "Re-read the folder — only new or changed files are analyzed";
+  re.onclick = () => startIngest(p.source_path, p.name);
+  btns.appendChild(re);
+  const rm = el("button", "btn stop", "Remove");
+  rm.onclick = async () => {
+    await fetch(`${BASE}/api/style/profiles/${encodeURIComponent(p.profile_id)}`,
+      { method: "DELETE" }).catch(() => {});
+    fetchProfiles();
+  };
+  btns.appendChild(rm);
+  card.appendChild(btns);
+  return card;
+}
+
+async function pickFolder() {
+  try {
+    const path = await invoke("pick_folder");
+    if (path) {
+      $("ingestPath").value = path;
+      if (!$("ingestName").value) {
+        const base = path.replace(/\/+$/, "").split("/").pop();
+        $("ingestName").value = base || "";
+      }
+    }
+  } catch { /* user cancelled, or not in the Tauri shell */ }
+}
+
+async function startIngest(path, name) {
+  path = (path || "").trim();
+  if (!path) { $("ingestPath").focus(); return; }
+  $("ingestResult").hidden = true;
+  $("ingestProgress").hidden = false;
+  $("ingestProgressText").textContent = "Scanning folder…";
+  $("ingestBtn").disabled = true;
+  try {
+    const res = await fetch(`${BASE}/api/style/ingest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path, profile_name: (name || "").trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Agent answered ${res.status}`);
+    if (!ingestPolling) ingestPolling = setInterval(pollIngest, 1200);
+  } catch (err) {
+    $("ingestProgress").hidden = true;
+    $("ingestBtn").disabled = false;
+    const r = $("ingestResult");
+    r.hidden = false;
+    r.className = "mat-result err";
+    r.textContent = err.message;
+  }
+}
+
+async function pollIngest() {
+  let job = null;
+  try {
+    const res = await fetch(`${BASE}/api/style/ingest/status`, { signal: AbortSignal.timeout(5000) });
+    job = res.ok ? await res.json() : null;
+  } catch { /* transient — keep polling */ }
+  if (!job) return;
+  if (job.status === "running") {
+    $("ingestProgress").hidden = false;
+    $("ingestProgressText").textContent = job.progress || "Reading your files…";
+    return;
+  }
+  clearInterval(ingestPolling);
+  ingestPolling = null;
+  $("ingestProgress").hidden = true;
+  $("ingestBtn").disabled = false;
+  if (job.status === "done") {
+    const r = $("ingestResult");
+    r.hidden = false;
+    r.className = "mat-result ok";
+    r.textContent =
+      `Done — learned from ${job.files_ingested} file(s)` +
+      (job.files_skipped ? `, skipped ${job.files_skipped}` : "") +
+      ". Your new lessons will match this style.";
+    fetchProfiles();
+  } else if (job.status === "error") {
+    const r = $("ingestResult");
+    r.hidden = false;
+    r.className = "mat-result err";
+    r.textContent = job.result_text || "Ingest failed.";
+  }
+}
+
 // ── Theme (Direction B — dark "Console" is a theme, not a fork) ──────
 
 const THEME_KEY = "clawed.theme.v1";
@@ -719,6 +923,7 @@ function paletteItems(query) {
     ? "Switch to Studio (light) theme" : "Switch to Console (dark) theme", toggleTheme));
   items.push(cmd("✦", "Go to Chat", () => showView("chat")));
   items.push(cmd("◆", "Go to Skills", () => showView("skills")));
+  items.push(cmd("☰", "Go to Your Materials (style profiles)", () => showView("materials")));
   items.push(cmd("▣", "Go to Workspace", () => showView("workspace")));
   items.push(cmd("⚙", "Go to Settings", () => showView("settings")));
   items.push(cmd("↻", "Restart agent", () => invoke("restart_sidecar").catch(() => {})));
@@ -795,6 +1000,7 @@ function showView(name) {
   }
   if (name === "chat") $("input").focus();
   if (name === "skills" && !skillsCache.length) fetchSkills();
+  if (name === "materials") fetchProfiles();
 }
 
 function init() {
@@ -826,9 +1032,18 @@ function init() {
     autosize();
     sendMessage(text);
   };
-  for (const chip of document.querySelectorAll(".chip")) {
+  for (const chip of document.querySelectorAll(".chip[data-suggest]")) {
     chip.onclick = () => sendMessage(chip.dataset.suggest);
   }
+  $("teachChip").onclick = () => showView("materials");
+
+  // Your Materials (ingest + profiles)
+  $("pickFolderBtn").onclick = pickFolder;
+  $("ingestBtn").onclick = () => startIngest($("ingestPath").value, $("ingestName").value);
+  $("ingestPath").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") startIngest($("ingestPath").value, $("ingestName").value);
+  });
+  $("styleChip").onclick = () => showView("materials");
 
   $("restartBtn").onclick = () => invoke("restart_sidecar").catch(() => {});
 
@@ -876,6 +1091,13 @@ function init() {
     pollHealth();
     setInterval(pollHealth, 3000);
     fetchSkills(); // after BASE is resolved — feeds the gallery + palette
+    fetchProfiles(); // drives the composer style chip
+    // Resume polling if an ingest was already running when the app opened.
+    pollIngest().then(() => {
+      if (!ingestPolling && !$("ingestProgress").hidden) {
+        ingestPolling = setInterval(pollIngest, 1200);
+      }
+    }).catch(() => {});
   })();
 
   input.focus();

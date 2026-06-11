@@ -496,6 +496,25 @@ pub fn open_path(path: String) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Native folder picker for "Your Materials" — runs AppleScript's
+/// `choose folder` so we need no extra plugin crate. Returns the POSIX
+/// path, or an empty string when the teacher cancels.
+#[tauri::command]
+pub async fn pick_folder() -> Result<String, String> {
+    let output = std::process::Command::new("/usr/bin/osascript")
+        .args([
+            "-e",
+            "POSIX path of (choose folder with prompt \"Choose the folder with your teaching materials\")",
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        // User cancelled (osascript exits non-zero) — not an error.
+        return Ok(String::new());
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 /// Reveal a file in Finder (select it) — the artifact card's second action.
 /// Same constraints as `open_path`: existing local paths only, no URLs.
 #[tauri::command]

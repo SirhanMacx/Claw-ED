@@ -28,6 +28,7 @@
       <nav class="nav" id="mainNav">
         <a href="#" class="on" data-view="chat"><span class="ic">&#10022;</span> Chat</a>
         <a href="#" data-view="skills"><span class="ic">&#9670;</span> Skills</a>
+        <a href="#" data-view="materials"><span class="ic">&#9776;</span> Your Materials</a>
         <a href="#" data-view="workspace"><span class="ic">&#9635;</span> Workspace</a>
       </nav>
       <div class="lbl-row">
@@ -51,6 +52,7 @@
           <h2 class="empty-title">What should we get done?</h2>
           <p class="empty-sub">I can act on this Mac — files, folders, commands — and I know your classroom work. Everything risky asks you first.</p>
           <div class="suggest">
+            <button class="chip chip-teach" id="teachChip">&#9776;&nbsp; Teach Claw-ED your materials</button>
             <button class="chip" data-suggest="Make a folder called clawed-test on my Desktop and put a hello.txt inside it">Make a test folder on my Desktop</button>
             <button class="chip" data-suggest="List what's on my Desktop and suggest how to tidy it">Tidy my Desktop</button>
             <button class="chip" data-suggest="Draft a Do-Now warm-up question for tomorrow's Global 9 lesson on the Renaissance">Draft tomorrow's Do-Now</button>
@@ -66,6 +68,7 @@
           <span><span class="kbd">&#8629;</span> Send</span>
           <span><span class="kbd">&#8679;&#8629;</span> New line</span>
           <span><span class="kbd">&#8984;K</span> Commands</span>
+          <button class="style-chip" id="styleChip" title="Which writing style conditions generated lessons — click to manage">Default style</button>
           <span class="hint-right">Approvals on &middot; nothing runs without you</span>
         </div>
       </div>
@@ -76,6 +79,36 @@
       <div class="alt-head"><h2>Skills</h2><p>Everything your co-teacher can actually do — read live from the agent's tool registry. Ask in plain language, or press <span class="kbd">Try it</span> to start a prompt.</p></div>
       <input class="skill-search" id="skillSearch" type="search" placeholder="Filter skills…" spellcheck="false">
       <div id="skillGroups"><p class="muted" id="skillsEmpty">Loading the agent&rsquo;s tool registry&hellip;</p></div>
+    </main>
+
+    <!-- Your Materials view (style profiles) -->
+    <main class="view alt-view" id="view-materials" hidden>
+      <div class="alt-head"><h2>Your Materials</h2>
+        <p>Point Claw-ED at a folder of your real lesson files and it learns your voice,
+        lesson structure, and conventions — then everything it writes matches <i>you</i>.</p>
+      </div>
+
+      <div class="card pad mat-ingest">
+        <h3 class="mat-h">Teach Claw-ED your style</h3>
+        <div class="mat-pick">
+          <button class="btn primary" id="pickFolderBtn">Choose folder&hellip;</button>
+          <input class="mat-path" id="ingestPath" type="text" placeholder="&hellip;or type a folder path, e.g. ~/Documents/Global 10" spellcheck="false">
+        </div>
+        <div class="mat-pick">
+          <input class="mat-name" id="ingestName" type="text" placeholder="Profile name (optional — e.g. Global 10)" spellcheck="false">
+          <button class="btn primary" id="ingestBtn">Learn my style</button>
+        </div>
+        <div class="mat-progress" id="ingestProgress" hidden>
+          <span class="spin"></span>
+          <span id="ingestProgressText">Scanning folder&hellip;</span>
+        </div>
+        <div class="mat-result" id="ingestResult" hidden></div>
+        <p class="muted mat-privacy">Private by design: your files are read on this Mac and never uploaded.
+        The profile lives on this Mac. During analysis, only short excerpts are sent to the AI provider
+        you configured — nothing else, nowhere else.</p>
+      </div>
+
+      <div id="profileList"><p class="muted" id="profilesEmpty">Loading your style profiles&hellip;</p></div>
     </main>
 
     <!-- Workspace view -->

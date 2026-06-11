@@ -21,6 +21,7 @@ fn main() {
             sidecar::agent_base_url,
             sidecar::open_path,
             sidecar::reveal_path,
+            sidecar::pick_folder,
         ])
         .setup(move |app| {
             supervisor.spawn_loop(app.handle().clone());
