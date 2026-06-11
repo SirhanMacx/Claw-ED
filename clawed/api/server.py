@@ -147,6 +147,7 @@ def _register_api_routes(app: FastAPI) -> None:
     from clawed.api.routes.lessons import router as lessons_router
     from clawed.api.routes.school import router as school_router
     from clawed.api.routes.settings import router as settings_router
+    from clawed.api.routes.style import router as style_router
     from clawed.api.routes.tools import router as tools_router
 
     app.include_router(ingest_router, prefix="/api")
@@ -160,6 +161,7 @@ def _register_api_routes(app: FastAPI) -> None:
     app.include_router(school_router, prefix="/api")
     app.include_router(lessons_router, prefix="/api")
     app.include_router(tools_router, prefix="/api")
+    app.include_router(style_router, prefix="/api")
     app.include_router(gateway_chat_router, prefix="/api")
     app.include_router(agent_stream_router, prefix="/api")
     app.include_router(extension_router, prefix="/api")
