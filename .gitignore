@@ -19,6 +19,12 @@ build/
 !eduagent/demo/*.json
 !clawed/demo/*.json
 !cli/**/*.json
+# Tauri desktop app config is code, not runtime data (but never its
+# node_modules or generated bundles)
+!desktop/package.json
+!desktop/package-lock.json
+!desktop/src-tauri/tauri.conf.json
+!desktop/src-tauri/capabilities/*.json
 eduagent_output/
 clawed_output/
 eduagent_data/
@@ -86,3 +92,5 @@ update_jon_persona.py
 output/
 daemon/node_modules/
 .gstack/
+desktop/node_modules/
+desktop/src-tauri/gen/

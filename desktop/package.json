@@ -1,0 +1,14 @@
+{
+  "name": "clawed-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Claw-ED for Mac — Tauri shell + Calm Studio agent UI",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

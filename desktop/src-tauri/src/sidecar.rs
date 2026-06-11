@@ -280,9 +280,11 @@ struct LaunchPlan {
 }
 
 /// Resolve the one fixed way we start the agent (mirror of LaunchPlan.swift):
-///   1. `$CLAWED_LAUNCHER` — explicit `clawed` binary or python interpreter;
-///   2. `clawed` on the augmented PATH (pip/pipx install);
-///   3. `python3` module fallback (`clawed serve` via clawed._entry_router),
+///   1. `$CLAWED_LAUNCHER` — explicit override (`clawed` binary or python);
+///   2. the PyInstaller agent BUNDLED inside this .app (M3 — the shipped
+///      app needs no system Python at all);
+///   3. `clawed` on the augmented PATH (pip/pipx install);
+///   4. `python3` module fallback (`clawed serve` via clawed._entry_router),
 ///      run from the dev repo checkout when one exists (`$CLAWED_REPO`,
 ///      default `~/Projects/Claw-ED`) so `import clawed` resolves in dev.
 /// Arguments are constructed HERE, never from user input.
@@ -305,6 +307,10 @@ fn resolve_launch_plan(port: u16) -> Result<LaunchPlan, String> {
         return Ok(clawed_plan(path, port));
     }
 
+    if let Some(bundled) = bundled_agent_path() {
+        return Ok(clawed_plan(bundled, port));
+    }
+
     if let Some(clawed) = which("clawed") {
         return Ok(clawed_plan(clawed, port));
     }
@@ -316,6 +322,21 @@ fn resolve_launch_plan(port: u16) -> Result<LaunchPlan, String> {
     Err("Couldn't find Claw-ED. Install it with `pip install clawed`, or set \
          CLAWED_LAUNCHER to your `clawed` command or `python3`."
         .to_string())
+}
+
+/// The PyInstaller sidecar shipped inside the .app:
+/// `Claw-ED.app/Contents/Resources/agent/clawed-agent/clawed-agent`
+/// (bundled from `desktop/src-tauri/agent/` — see desktop/agent-bundle/).
+/// Returns None in dev builds (no Resources dir) → fallbacks apply.
+fn bundled_agent_path() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let contents = exe.parent()?.parent()?; // MacOS/ → Contents/
+    let candidate = contents
+        .join("Resources")
+        .join("agent")
+        .join("clawed-agent")
+        .join("clawed-agent");
+    is_executable(&candidate).then_some(candidate)
 }
 
 fn clawed_plan(executable: PathBuf, port: u16) -> LaunchPlan {
@@ -380,8 +401,16 @@ fn spawn_plan(plan: &LaunchPlan) -> std::io::Result<Child> {
             "keyring.backends.null.Keyring",
         )
         .env("PATH", augmented_path());
-    if let Some(cwd) = &plan.cwd {
-        cmd.current_dir(cwd);
+    match &plan.cwd {
+        Some(cwd) => {
+            cmd.current_dir(cwd);
+        }
+        None => {
+            // GUI children inherit cwd=/ — give them a writable home so
+            // any relative-path fallback (e.g. ./clawed_data) can't crash
+            // the agent on startup.
+            cmd.current_dir(home_dir());
+        }
     }
     cmd.spawn()
 }
