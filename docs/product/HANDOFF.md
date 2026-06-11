@@ -9,6 +9,37 @@ _Last updated: 2026-06-08 · branch `claude/app-experience` · tip `f132f66`._
 
 ---
 
+## Mac app status (M2+M3, 2026-06-11)
+
+- **M2 SHIPPED** on `claude/app-experience` (commits `effe977`, `a6f0aab`):
+  artifact cards (Open + Show-in-Finder), Skills gallery fed by the new
+  `GET /api/agent/tools` (real ~57-tool registry, grouped + risk badges +
+  Try-it), dark "Console" theme toggle (Settings, persisted), ⌘K command
+  palette, and tool-discipline system-prompt hardening (TRUTHFULNESS block;
+  caught minimax-m3 claiming a file write with zero tool calls — fixed and
+  re-verified live). Also fixed: self_modify's `write_file`/`read_file`
+  silently SHADOWED the general mac_files tools (renamed to
+  `write_workspace_file`/`read_workspace_file`; registry warns on collisions).
+- **M3 PACKAGED** (commit `f2e2cb4`): PyInstaller self-contained agent
+  (`desktop/agent-bundle/build.sh` → `desktop/src-tauri/agent/clawed-agent/`,
+  smoke-tested with `env -i` from `cwd=/`), embedded as a macOS resource;
+  sidecar prefers it (launch order: `CLAWED_LAUNCHER` → bundled → PATH →
+  python dev fallback). The shipped .app needs no system Python.
+- **M3 SIGNING BLOCKED (Jon-gated):** Developer ID Application certs can
+  only be minted by the **Account Holder** — the ASC API returns 403 for
+  both team keys (verified 2026-06-11). CSR + private key are ready at
+  `~/.appstoreconnect/devid/` (never print the key). Once Jon mints the
+  cert in the portal (or creates an Account-Holder API key), run
+  `desktop/scripts/sign_and_notarize.sh <cer>` — it does /tmp-keychain
+  signing (hardened runtime + `desktop/src-tauri/entitlements.plist`),
+  notarytool, staple, DMG, Gatekeeper verify, and delivery to
+  `~/Documents/MacxLabs/web/downloads/Claw-ED.dmg`. An ad-hoc-signed DMG
+  + blocker note are already at that path — **do not publish it**.
+- Gotcha for cliclick-driven UI verification: synthetic special keys
+  (`kp:return`, `kp:esc`, arrows) never reach the Tauri WKWebView — typed
+  text and clicks do. Verify keyboard UX in a real browser against
+  `desktop/ui/` instead (handlers proven good there).
+
 ## TL;DR — current state
 
 - **Backend is production-complete and LIVE.** Always-on agent + Cloudflare named

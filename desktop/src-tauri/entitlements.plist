@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- Hardened-runtime entitlements for Claw-ED + its embedded PyInstaller
+     agent sidecar. The Python runtime needs executable memory for ctypes/
+     cffi trampolines; library validation stays relaxed so the frozen
+     interpreter can dlopen its own (same-signed) extension modules without
+     ordering issues. No sandbox: the whole product is "an agent with real
+     Mac access" (notarized direct download, not Mac App Store). -->
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
