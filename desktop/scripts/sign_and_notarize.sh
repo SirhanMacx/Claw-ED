@@ -34,13 +34,16 @@ OUT_DMG="$HOME/Documents/MacxLabs/web/downloads/Claw-ED.dmg"
 echo "── 1/7 throwaway keychain (login keychain untouched)"
 security delete-keychain "$KC" 2>/dev/null || true
 security create-keychain -p "$KC_PASS" "$KC"
-security set-keychain-settings -lut 7200 "$KC"
+# No -l (lock-on-sleep): a sleep during the long notarytool wait locked the
+# keychain and step 5 died with errSecInternalComponent. Timeout-only, 4h.
+security set-keychain-settings -ut 14400 "$KC"
 security unlock-keychain -p "$KC_PASS" "$KC"
 
 # Identity = minted cert + our private key, as a fresh p12
 P12=/tmp/clawed-devid.p12
 P12_PASS="p12-$(date +%s)"
-openssl pkcs12 -export -inkey "$DEVID_KEY" \
+# -legacy: OpenSSL 3.x default p12 (AES/SHA256 MAC) fails `security import`
+openssl pkcs12 -export -legacy -inkey "$DEVID_KEY" \
   -in <(openssl x509 -inform DER -in "$CER" 2>/dev/null || cat "$CER") \
   -out "$P12" -passout "pass:$P12_PASS" -name "Claw-ED Developer ID"
 security import "$P12" -k "$KC" -P "$P12_PASS" -T /usr/bin/codesign
@@ -56,9 +59,13 @@ for url in \
 done
 
 security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PASS" "$KC" >/dev/null
-# Search list: our keychain ONLY for this resolution (restore is automatic —
-# we never modify the user's keychain search list; -keychain flags below
-# address the /tmp keychain explicitly).
+# codesign ignores --keychain for identity LOOKUP — the keychain must be in
+# the user search list. Append ours, restore the exact prior list on exit.
+# (Login keychain itself is never unlocked or modified.)
+ORIG_KEYCHAINS=$(security list-keychains -d user | sed 's/[" ]//g')
+restore_keychains() { security list-keychains -d user -s $ORIG_KEYCHAINS || true; }
+trap restore_keychains EXIT
+security list-keychains -d user -s "$KC" $ORIG_KEYCHAINS
 IDENTITY="$(security find-identity -v -p codesigning "$KC" | awk '/Developer ID Application/{print $2; exit}')"
 [ -n "$IDENTITY" ] || { echo "No Developer ID identity in $KC"; exit 1; }
 echo "identity: $IDENTITY"
@@ -99,6 +106,7 @@ rm -f "$DMG"
 hdiutil create -volname "Claw-ED" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
 
 echo "── 5/7 sign + notarize + staple the DMG"
+security unlock-keychain -p "$KC_PASS" "$KC"  # notarytool wait may outlast the lock
 codesign --force --timestamp --keychain "$KC" -s "$IDENTITY" "$DMG"
 xcrun notarytool submit "$DMG" \
   --key "$ASC_KEY_PATH" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER" --wait
