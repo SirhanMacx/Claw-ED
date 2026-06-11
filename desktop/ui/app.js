@@ -413,6 +413,7 @@ async function sendMessage(text) {
       const label = actionLabel(data.tool_name, data.params);
       const card = turn.addAction(data.tool_name, label);
       card.toolName = data.tool_name;
+      card.label = label;
       actionCards.push(card);
     } else if (event === "command_output") {
       const open = [...actionCards].reverse().find((c) => !c.finished);
@@ -426,7 +427,7 @@ async function sendMessage(text) {
         card.finish(!!data.ok, data.summary || "");
         record({
           kind: "action", tool: data.tool_name,
-          label: actionLabel(data.tool_name, {}) === data.tool_name ? data.tool_name : data.tool_name,
+          label: card.label || data.tool_name,
           ok: !!data.ok, summary: (data.summary || "").slice(0, 200),
         });
       }
