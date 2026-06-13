@@ -436,8 +436,38 @@ body.remote-on .connect {
   font-size: 16.5px;
   line-height: 1.58;
   color: #34302a;
-  white-space: pre-wrap;
   overflow-wrap: break-word;
+}
+
+.voice .v-p {
+  margin: 0 0 9px;
+}
+
+.voice .v-p:last-child,
+.voice .v-list:last-child {
+  margin-bottom: 0;
+}
+
+.voice .v-list {
+  margin: 2px 0 9px;
+  padding-left: 20px;
+}
+
+.voice .v-list li {
+  margin: 3px 0;
+}
+
+.voice strong {
+  font-weight: 700;
+}
+
+.voice code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.86em;
+  background: var(--cream-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0 4px;
 }
 
 /* ── tool / action card ────────────────────────────────────────────── */

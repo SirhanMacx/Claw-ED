@@ -359,10 +359,86 @@
     'command-output': 'cmd-out',
   };
 
+  // Minimal, XSS-SAFE markdown for agent replies: **bold**, `code`, bullets,
+  // and paragraphs. Built entirely from text/element nodes — never innerHTML,
+  // so untrusted agent output cannot inject markup.
+  function renderInline(parent, text) {
+    var re = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    var last = 0;
+    var m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) {
+        parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+      }
+      var tok = m[0];
+      if (tok.slice(0, 2) === '**') {
+        var b = document.createElement('strong');
+        b.textContent = tok.slice(2, -2);
+        parent.appendChild(b);
+      } else {
+        var c = document.createElement('code');
+        c.textContent = tok.slice(1, -1);
+        parent.appendChild(c);
+      }
+      last = m.index + tok.length;
+    }
+    if (last < text.length) {
+      parent.appendChild(document.createTextNode(text.slice(last)));
+    }
+  }
+
+  function isBullet(line) {
+    return /^\s*[-*]\s+/.test(line);
+  }
+
+  function renderVoice(container, text) {
+    var blocks = String(text).replace(/\r/g, '').split(/\n{2,}/);
+    blocks.forEach(function (block) {
+      var lines = block.split('\n');
+      var i = 0;
+      while (i < lines.length) {
+        if (isBullet(lines[i])) {
+          // a run of consecutive bullets → one list
+          var ul = document.createElement('ul');
+          ul.className = 'v-list';
+          while (i < lines.length && isBullet(lines[i])) {
+            var li = document.createElement('li');
+            renderInline(li, lines[i].replace(/^\s*[-*]\s+/, ''));
+            ul.appendChild(li);
+            i += 1;
+          }
+          container.appendChild(ul);
+        } else {
+          // a run of non-bullet lines → one paragraph
+          var p = document.createElement('div');
+          p.className = 'v-p';
+          var wrote = false;
+          while (i < lines.length && !isBullet(lines[i])) {
+            if (lines[i].trim() !== '') {
+              if (wrote) {
+                p.appendChild(document.createElement('br'));
+              }
+              renderInline(p, lines[i]);
+              wrote = true;
+            }
+            i += 1;
+          }
+          if (wrote) {
+            container.appendChild(p);
+          }
+        }
+      }
+    });
+  }
+
   function remoteAppend(kind, text) {
     var node = document.createElement('div');
     node.className = KIND_CLASS[kind] || 'note';
-    node.textContent = text;
+    if (kind === 'agent') {
+      renderVoice(node, text);
+    } else {
+      node.textContent = text;
+    }
     return appendCard(node);
   }
 
@@ -664,7 +740,13 @@
     } else if (event === 'final') {
       turnGotFinal = true;
       if (data.text) {
-        remoteAppend('agent', data.text);
+        // The server appends an "Authoritative approval log for this turn:"
+        // footer for transparency, but the chat already shows that status on
+        // each approval card — strip the technical footer from the reply.
+        var clean = String(data.text).split(/\n+Authoritative approval log for this turn:/)[0].trimEnd();
+        if (clean) {
+          remoteAppend('agent', clean);
+        }
       }
       (data.files || []).forEach(appendArtifact);
     } else if (event === 'error') {
@@ -719,10 +801,9 @@
         remoteAppend('error', friendlyStreamError(err));
       })
       .then(function () {
+        // Don't auto-focus the composer — on a phone that pops the keyboard
+        // over the agent's reply. The teacher taps the field when ready.
         setRemoteBusy(false);
-        if (els.remoteInput) {
-          els.remoteInput.focus();
-        }
       });
   }
 
