@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from clawed.api.deps import limiter, require_auth
+from clawed.api.deps import _via_cloudflare_edge, limiter, require_auth
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,9 @@ async def gateway_chat(request: Request, req: GatewayChatRequest) -> Any:
 
     try:
         result = await gateway.handle(
-            req.message, teacher_id, transport="web",
+            req.message, teacher_id,
+            transport="remote" if _via_cloudflare_edge(request) else "web",
+            is_remote=_via_cloudflare_edge(request),
         )
     except Exception:
         logger.error("Gateway chat failed", exc_info=True)

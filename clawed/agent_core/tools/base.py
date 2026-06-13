@@ -127,9 +127,16 @@ class ToolRegistry:
             )
 
         elif risk in _REQUIRE_APPROVAL_BY_DEFAULT:
-            # Check if auto-approve is enabled
+            # Check if auto-approve is enabled. The local auto-approve
+            # convenience NEVER applies to a remote (tunnel) turn — a phone
+            # driving this Mac over the public ingress must confirm every
+            # write/network action, even if the teacher opted into
+            # auto-approve on the Mac itself.
             import os
-            auto_approve = os.environ.get("CLAWED_AUTO_APPROVE", "").lower() in ("1", "true", "yes")
+            auto_approve = (
+                os.environ.get("CLAWED_AUTO_APPROVE", "").lower() in ("1", "true", "yes")
+                and not getattr(context, "is_remote", False)
+            )
             if not auto_approve:
                 approved = await self._check_approval(name, risk, params, context)
                 if not approved:
@@ -195,21 +202,27 @@ class ToolRegistry:
         tool = self._tools.get(tool_name)
         signature = self._params_signature(tool, params)
         teacher_id = getattr(context, "teacher_id", "default")
+        is_remote = getattr(context, "is_remote", False)
 
-        try:
-            from clawed.agent_core.approvals import ApprovalManager
-            mgr = ApprovalManager()
-            existing = mgr.get_standing_approval(
-                teacher_id, tool_name, params_signature=signature,
-            )
-            if existing:
-                logger.info(
-                    "Tool '%s' (risk=%s) approved via standing approval",
-                    tool_name, risk_level,
+        # Standing "Always allow" grants are a LOCAL-only convenience. Over the
+        # tunnel we never honor them — a remote turn must be confirmed fresh on
+        # the device every time, so a leaked token can't ride a prior grant into
+        # blanket access. (Read-only tools never reach this gate.)
+        if not is_remote:
+            try:
+                from clawed.agent_core.approvals import ApprovalManager
+                mgr = ApprovalManager()
+                existing = mgr.get_standing_approval(
+                    teacher_id, tool_name, params_signature=signature,
                 )
-                return True
-        except Exception as exc:
-            logger.debug("Approval check failed: %s", exc)
+                if existing:
+                    logger.info(
+                        "Tool '%s' (risk=%s) approved via standing approval",
+                        tool_name, risk_level,
+                    )
+                    return True
+            except Exception as exc:
+                logger.debug("Approval check failed: %s", exc)
 
         # ── Interactive path — teacher is live on a chat stream ─────────
         if context.event_callback is not None:
@@ -256,6 +269,7 @@ class ToolRegistry:
             from clawed.agent_core.approval_broker import ApprovalBroker
             from clawed.agent_core.approvals import ApprovalManager
 
+            is_remote = getattr(context, "is_remote", False)
             tool = self._tools.get(tool_name)
             describe = getattr(tool, "approval_description", None)
             if callable(describe):
@@ -297,7 +311,12 @@ class ToolRegistry:
                 })
                 return False
 
-            if decision.approved and decision.always:
+            # A remote (tunnel) turn can never establish a standing grant —
+            # "Always allow" is downgraded to one-time so future turns still
+            # confirm. Standing grants only come from the trusted local Mac.
+            grant_standing = decision.approved and decision.always and not is_remote
+
+            if grant_standing:
                 # Leave status "approved" → acts as a standing approval,
                 # scoped by params_signature for per_params tools.
                 mgr.approve(pa.id)
@@ -310,7 +329,9 @@ class ToolRegistry:
             context.emit_event("approval_resolved", {
                 "approval_id": pa.id,
                 "approved": decision.approved,
-                "always": decision.always,
+                # Report the EFFECTIVE policy, not the raw request — a remote
+                # "always" did not create a standing grant, so say so.
+                "always": grant_standing,
             })
             return decision.approved
         except Exception as exc:

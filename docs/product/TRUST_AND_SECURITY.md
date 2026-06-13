@@ -59,6 +59,28 @@ what remains configurable, and what still depends on district policy.
   agent can do.
 - `run_command` must remain classified as `command_exec`.
 
+### Local vs. remote approval policy (defense against a leaked token)
+
+The public tunnel's only barrier is the device token, so a turn that arrives
+over it (Cloudflare stamps a `Cf-Ray` header — see `deps._via_cloudflare_edge`)
+is held to a **strictly tighter** approval policy than a local turn on the Mac:
+
+- A remote turn **never honors a standing "Always allow"** — every risky action
+  is confirmed fresh on the device, so a leaked token can't ride a prior grant
+  into blanket shell/file access.
+- A remote "Always allow" tap **cannot create** a standing grant; it is
+  downgraded to one-time (enforced both in the live approval path via
+  `context.is_remote` and at the resolve endpoint via the resolving request's
+  own `Cf-Ray`).
+- `CLAWED_AUTO_APPROVE` (a local convenience) **never applies to a remote turn**.
+
+Standing grants and auto-approve are therefore a *local-Mac-only* convenience.
+This is a pure tightening: it can only add confirmation friction for the remote
+path, never remove it. Covered by `tests/test_desktop_agent_tools.py`
+(`test_remote_turn_ignores_standing_approval`,
+`test_remote_always_does_not_create_standing_grant`,
+`test_remote_turn_disables_auto_approve`).
+
 ## Keychain And Secrets
 
 - The sidecar sets `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`.

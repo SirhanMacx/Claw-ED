@@ -162,6 +162,7 @@ class Gateway:
         progress_callback: Any = None,
         transport: str = "cli",
         event_callback: Any = None,
+        is_remote: bool = False,
     ) -> GatewayResponse:
         """Process any message from any transport."""
         # Normalize teacher_id so CLI, Telegram, and MCP all share one brain
@@ -231,6 +232,7 @@ class Gateway:
                 message, teacher_id,
                 progress_callback=progress_callback,
                 event_callback=event_callback,
+                is_remote=is_remote,
             )
 
         except Exception as e:
@@ -584,6 +586,7 @@ class Gateway:
     async def _agent_loop(
         self, message: str, teacher_id: str,
         progress_callback: Any = None, event_callback: Any = None,
+        is_remote: bool = False,
     ) -> GatewayResponse:
         """Load context, build prompt, and run the agent tool-use loop."""
         transport = getattr(self, "_last_transport", "cli")
@@ -613,6 +616,7 @@ class Gateway:
             agent_name=agent_name,
             progress_callback=progress_callback,
             event_callback=event_callback,
+            is_remote=is_remote,
         )
 
         # 4. Get or create LLM adapter

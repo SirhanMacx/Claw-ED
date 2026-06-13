@@ -24,6 +24,13 @@ class AgentContext:
     improvement_context: str
     agent_name: str = "Claw-ED"
     transport: str = "cli"
+    # True when this turn arrived over the public tunnel (the iPhone remote),
+    # as opposed to genuine loopback (the Mac app / CLI on this machine).
+    # Remote turns are held to a stricter approval policy: no standing
+    # "Always allow" grants are honored or created, and auto-approve never
+    # applies — every risky action is confirmed fresh on the device. This
+    # means a leaked device token cannot yield blanket shell/file access.
+    is_remote: bool = False
     progress_callback: Callable[[str], None] | None = None
     # Live-transport event sink (SSE chat stream). When set, the loop emits
     # tool_start / tool_end / approval_required events and blocked tools may

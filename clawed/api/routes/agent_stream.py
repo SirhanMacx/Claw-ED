@@ -29,7 +29,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from clawed.api.deps import limiter, require_auth
+from clawed.api.deps import _via_cloudflare_edge, limiter, require_auth
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,10 @@ async def gateway_chat_stream(request: Request, req: StreamChatRequest) -> Strea
     from clawed.agent_core.identity import get_teacher_id
     teacher_id = get_teacher_id()
 
+    # A turn that arrived over the public tunnel (Cf-Ray) is held to the
+    # stricter remote approval policy — no standing grants, no auto-approve.
+    is_remote = _via_cloudflare_edge(request)
+
     queue: asyncio.Queue[tuple[str, dict[str, Any]]] = asyncio.Queue(maxsize=1000)
     approval_log: dict[str, dict[str, Any]] = {}
 
@@ -132,8 +136,9 @@ async def gateway_chat_stream(request: Request, req: StreamChatRequest) -> Strea
         gateway.handle(
             req.message, teacher_id,
             progress_callback=progress_cb,
-            transport="app",
+            transport="remote" if is_remote else "app",
             event_callback=event_cb,
+            is_remote=is_remote,
         ),
     )
 
@@ -285,17 +290,24 @@ async def resolve_approval(
     if pa.status != "pending":
         return {"ok": False, "error": f"Already {pa.status}."}
 
+    # Defense in depth: a device tapping "Always" over the tunnel cannot create
+    # a standing grant — only the trusted local Mac can. Downgrade always→once
+    # when the resolving request itself arrived over Cloudflare. (The live-turn
+    # path enforces the same rule via context.is_remote; this covers a remote
+    # tap landing on a turn that started locally, or with no live waiter.)
+    effective_always = req.always and not _via_cloudflare_edge(request)
+
     broker = ApprovalBroker.instance()
     woke = broker.resolve(
-        approval_id, ApprovalDecision(approved=req.approved, always=req.always),
+        approval_id, ApprovalDecision(approved=req.approved, always=effective_always),
     )
     if not woke:
         # No live waiter (loop gone / different process) — persist the
         # decision so it acts as a standing record next time.
-        if req.approved and req.always:
+        if req.approved and effective_always:
             mgr.approve(approval_id)
         elif req.approved:
             mgr._update_status(approval_id, "consumed")
         else:
             mgr.reject(approval_id)
-    return {"ok": True, "live": woke}
+    return {"ok": True, "live": woke, "standing": effective_always and req.approved}

@@ -183,3 +183,95 @@ async def test_file_tools_deny_secrets(tmp_path: Path, monkeypatch: pytest.Monke
     result = await ReadAnyFileTool().execute({"path": str(secret)}, _context())
 
     assert result.text.startswith("ERROR: access denied")
+
+
+# ── remote (tunnel) approval hardening ───────────────────────────────
+
+
+async def test_remote_turn_ignores_standing_approval(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """A standing 'Always allow' must NOT let a remote turn through — even the
+    exact same command must be confirmed fresh on the device."""
+    mgr = ApprovalManager(base_dir=tmp_path)
+    mgr.create(
+        teacher_id="t-test",
+        action_description="Run approved command",
+        action_payload={
+            "tool_name": "run_command",
+            "params_signature": RunCommandTool.approval_signature({"command": "echo allowed"}),
+        },
+        agent_state={},
+        transport="app",
+    )
+    approval = next(iter(tmp_path.glob("*.json"))).stem
+    mgr.approve(approval)
+    monkeypatch.setattr("clawed.agent_core.approvals.ApprovalManager", lambda: mgr)
+
+    registry = _registry_with(RunCommandTool())
+    # Local turn with the standing grant → allowed.
+    local = await registry.execute("run_command", {"command": "echo allowed"}, _context())
+    # Remote turn, same command, same standing grant, NO live channel → blocked.
+    remote = await registry.execute(
+        "run_command", {"command": "echo allowed"}, _context(is_remote=True),
+    )
+    assert "allowed" in local.text
+    assert remote.text.startswith("BLOCKED")
+
+
+async def test_remote_always_does_not_create_standing_grant(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """A remote 'Always allow' is downgraded to one-time: it must not persist
+    as a standing grant, and the resolved event reports always=False."""
+    mgr = ApprovalManager(base_dir=tmp_path)
+    monkeypatch.setattr("clawed.agent_core.approvals.ApprovalManager", lambda: mgr)
+    registry = _registry_with(RunCommandTool())
+
+    events: list[tuple[str, dict[str, Any]]] = []
+
+    async def resolve_when_requested() -> None:
+        while not any(e == "approval_required" for e, _ in events):
+            await asyncio.sleep(0.01)
+        aid = next(d["approval_id"] for e, d in events if e == "approval_required")
+        ApprovalBroker.instance().resolve(aid, ApprovalDecision(approved=True, always=True))
+
+    task = asyncio.create_task(resolve_when_requested())
+    result = await registry.execute(
+        "run_command", {"command": "echo remote-once"},
+        _context(is_remote=True, event_callback=lambda t, d: events.append((t, d))),
+    )
+    await task
+
+    assert "remote-once" in result.text
+    resolved = next(d for e, d in events if e == "approval_resolved")
+    assert resolved["always"] is False  # downgraded — no standing grant
+    # No standing 'approved' record persisted for this command.
+    sig = RunCommandTool.approval_signature({"command": "echo remote-once"})
+    assert mgr.get_standing_approval("t-test", "run_command", params_signature=sig) is None
+
+
+async def test_remote_turn_disables_auto_approve(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """CLAWED_AUTO_APPROVE never applies to a remote write — it must still ask."""
+    monkeypatch.setenv("CLAWED_AUTO_APPROVE", "1")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(
+        "clawed.agent_core.approvals.ApprovalManager",
+        lambda: ApprovalManager(base_dir=tmp_path / "appr"),
+    )
+    registry = _registry_with(WriteAnyFileTool())
+    target = tmp_path / "Documents" / "remote.txt"
+
+    # Local + auto-approve → write goes through.
+    local = await registry.execute(
+        "write_file", {"path": str(target), "content": "x"}, _context(),
+    )
+    assert "Wrote" in local.text
+    # Remote + auto-approve, no live channel → blocked (must confirm on device).
+    remote = await registry.execute(
+        "write_file", {"path": str(tmp_path / "Documents" / "r2.txt"), "content": "y"},
+        _context(is_remote=True),
+    )
+    assert remote.text.startswith("BLOCKED")
