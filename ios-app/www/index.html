@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- ───────── Connect / pairing flow (shown until paired) ───────── -->
     <main class="connect" role="main">
       <header class="brand">
         <div class="mark" aria-hidden="true">C</div>
@@ -19,8 +20,7 @@
         <p class="tagline">Connect to your classroom server.</p>
       </header>
 
-      <!-- Auto-connect interstitial: shown on launch while we open the saved
-           server, so the teacher never sees a connect screen once paired. -->
+      <!-- Auto-connect interstitial -->
       <section id="auto-card" class="card auto" hidden aria-live="polite">
         <div class="auto-spinner" aria-hidden="true"></div>
         <p class="card-label">Opening your classroom</p>
@@ -30,13 +30,8 @@
         </button>
       </section>
 
-      <!-- Reconnect card: shown only when a previous URL is remembered. -->
-      <section
-        id="reconnect-card"
-        class="card reconnect"
-        hidden
-        aria-labelledby="reconnect-label"
-      >
+      <!-- Reconnect card -->
+      <section id="reconnect-card" class="card reconnect" hidden aria-labelledby="reconnect-label">
         <p id="reconnect-label" class="card-label">Welcome back</p>
         <button id="reconnect-btn" class="btn btn-primary reconnect-btn" type="button">
           <span class="btn-line">Reconnect to</span>
@@ -47,79 +42,13 @@
         </button>
       </section>
 
-      <!-- Remote control: shown after pairing/connection. The Mac still does
-           all agent work; the phone only sends commands and resolves approvals. -->
-      <section
-        id="remote-card"
-        class="card remote"
-        hidden
-        aria-labelledby="remote-label"
-      >
-        <div class="remote-top">
-          <div>
-            <p id="remote-label" class="card-label">Mac mini remote</p>
-            <p id="remote-server" class="remote-server">—</p>
-          </div>
-          <button id="remote-switch" class="btn btn-text" type="button">
-            Switch
-          </button>
-        </div>
-
-        <div class="quick-grid" aria-label="Quick actions">
-          <button class="quick" type="button" data-prompt="Check my curriculum index status, then tell me what lesson materials you can already search">
-            Index
-          </button>
-          <button class="quick" type="button" data-prompt="Make me a complete lesson bundle for tomorrow from my indexed materials. Ask for the topic if you need it.">
-            Bundle
-          </button>
-          <button class="quick" type="button" data-prompt="Draft a Do-Now warm-up question for tomorrow's first class using my style and indexed materials">
-            Do Now
-          </button>
-          <button class="quick" type="button" data-prompt="Run a dry-run dream cycle and summarize what the teaching brain would improve overnight">
-            Dream
-          </button>
-          <button class="quick" type="button" data-prompt="Analyze my past outputs and improve your teaching rules">
-            Improve
-          </button>
-          <button class="quick" type="button" data-prompt="Search my teaching brain for recent student needs and lesson patterns">
-            Brain
-          </button>
-          <button class="quick" type="button" data-prompt="Build an advertising-safe sample portfolio from the bundled sample curriculum">
-            Portfolio
-          </button>
-        </div>
-
-        <div id="remote-feed" class="remote-feed" aria-live="polite">
-          <p class="remote-empty">
-            Send a task to the Mac. Approvals appear here before anything risky runs.
-          </p>
-        </div>
-
-        <form id="remote-form" class="remote-form">
-          <label class="sr-only" for="remote-input">Task</label>
-          <textarea
-            id="remote-input"
-            rows="2"
-            placeholder="Tell the Mac mini what to build..."
-            autocomplete="off"
-            autocapitalize="sentences"
-          ></textarea>
-          <button id="remote-send" class="btn btn-primary" type="submit">
-            Send
-          </button>
-        </form>
-      </section>
-
-      <!-- Manual connect form (hidden until JS decides this is the right card). -->
+      <!-- Manual connect form -->
       <section id="connect-card" class="card" hidden aria-labelledby="connect-label">
         <form id="connect-form" novalidate>
-          <label id="connect-label" class="field-label" for="server-url">
-            Server address
-          </label>
+          <label id="connect-label" class="field-label" for="server-url">Server address</label>
           <p class="field-hint">
-            On your Mac, open the Claw-ED menu-bar app and scan its QR code with
-            the iPhone Camera — or type the address it shows here. You only do
-            this once; after that Claw-ED opens straight to your classroom.
+            On your Mac, open Claw-ED and scan its pairing QR with the iPhone
+            Camera — or type the address it shows. You only do this once.
           </p>
           <input
             id="server-url"
@@ -134,14 +63,10 @@
             aria-describedby="connect-error"
           />
           <p id="connect-error" class="field-error" role="alert" hidden></p>
-
           <div class="actions">
-            <button id="connect-btn" class="btn btn-primary" type="submit">
-              Connect
-            </button>
+            <button id="connect-btn" class="btn btn-primary" type="submit">Connect</button>
             <button id="scan-btn" class="btn btn-ghost" type="button">
-              <span class="qr-glyph" aria-hidden="true"></span>
-              Scan QR
+              <span class="qr-glyph" aria-hidden="true"></span> Scan QR
             </button>
           </div>
         </form>
@@ -149,11 +74,60 @@
 
       <footer class="foot">
         <p class="foot-note">
-          The agent runs on your Mac. If you use a cloud model, tunnel, Ollama
-          cloud, or OpenRouter, task data goes through that provider.
+          The agent runs on your Mac. If you use a cloud model, tunnel, or
+          OpenRouter, task data goes through that provider.
         </p>
       </footer>
     </main>
+
+    <!-- ───────── Chat (full-screen agent surface; shown once paired) ───────── -->
+    <section id="remote-card" class="chat" hidden aria-label="Claw-ED agent">
+      <header class="chat-top">
+        <div class="chat-id">
+          <span class="mark sm" aria-hidden="true">C</span>
+          <div class="chat-id-text">
+            <b>Claw-ED</b>
+            <span id="remote-server" class="chat-host">—</span>
+          </div>
+        </div>
+        <div class="chat-actions">
+          <button id="remote-new" class="icon-btn" type="button" title="New conversation" aria-label="New conversation">+</button>
+          <button id="remote-switch" class="icon-btn" type="button" title="Switch Mac" aria-label="Switch Mac">&#8644;</button>
+        </div>
+      </header>
+
+      <div id="remote-feed" class="feed" aria-live="polite">
+        <div class="empty remote-empty" id="chat-empty">
+          <h2 class="empty-title">What should we get done?</h2>
+          <p class="empty-sub">
+            I’m driving your Mac — your files, your curriculum, full agent tools.
+            Anything risky asks you first.
+          </p>
+          <div class="suggest">
+            <button class="chip" type="button" data-prompt="Create a complete, classroom-ready lesson for tomorrow's class from my indexed materials and export it as a DOCX. Ask me for the topic and grade if you need them.">Build tomorrow’s lesson</button>
+            <button class="chip" type="button" data-prompt="Draft a Do-Now warm-up question for tomorrow's first class using my style and indexed materials">Draft a Do-Now</button>
+            <button class="chip" type="button" data-prompt="Check my curriculum index status and tell me what lesson materials you can already search">What can you search?</button>
+            <button class="chip" type="button" data-prompt="Search my teaching brain for recent student needs and lesson patterns">Search my teaching brain</button>
+            <button class="chip" type="button" data-prompt="List what's on my Desktop and suggest how to tidy it">Tidy my Desktop</button>
+          </div>
+        </div>
+      </div>
+
+      <form id="remote-form" class="composer">
+        <div class="inwrap">
+          <label class="sr-only" for="remote-input">Message</label>
+          <textarea
+            id="remote-input"
+            rows="1"
+            placeholder="Message Claw-ED — ask it to build anything…"
+            autocomplete="off"
+            autocapitalize="sentences"
+          ></textarea>
+          <button id="remote-send" class="send" type="submit" title="Send" aria-label="Send">&#8593;</button>
+        </div>
+        <p class="composer-hint">Approvals on · nothing risky runs without you</p>
+      </form>
+    </section>
 
     <script src="connect.js"></script>
   </body>

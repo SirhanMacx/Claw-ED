@@ -271,223 +271,491 @@ body {
   pointer-events: none;
 }
 
-/* ---- phone remote ---------------------------------------------------- */
+/* ════════════ Chat (full-screen agent surface, Calm Studio) ════════════ */
 body.remote-on .connect {
-  justify-content: flex-start;
-  gap: 16px;
-  max-width: 520px;
+  display: none;
 }
 
-body.remote-on .brand {
+.chat {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--cream);
+  background-image: radial-gradient(120% 60% at 72% -8%, #fbede6 0%, var(--cream) 52%);
+}
+
+.chat-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 8px) 14px 8px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(var(--cream-2), var(--cream));
+}
+
+.chat-id {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.mark.sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: linear-gradient(150deg, var(--clay), #d8794f);
+  color: #fff;
+  font-family: var(--serif);
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.chat-id-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.chat-id-text b {
+  font-size: 15px;
+}
+
+.chat-host {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 58vw;
+}
+
+.chat-actions {
+  margin-left: auto;
+  display: flex;
   gap: 6px;
+  flex: none;
 }
 
-body.remote-on .mark {
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  font-size: 26px;
-  line-height: 44px;
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: grid;
+  place-items: center;
 }
 
-body.remote-on .wordmark {
-  font-size: 24px;
+.icon-btn:active {
+  transform: scale(0.96);
 }
 
-body.remote-on .tagline {
-  font-size: 13px;
-}
-
-.remote {
+/* ── feed ──────────────────────────────────────────────────────────── */
+.feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px;
+  padding: 16px 14px 10px;
 }
 
-.remote-top {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+/* ── empty state ───────────────────────────────────────────────────── */
+.empty {
+  margin: auto 0;
+  max-width: 30rem;
+  text-align: center;
+  padding: 3vh 4px 0;
 }
 
-.remote-top .card-label {
-  margin-bottom: 3px;
+.empty-title {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 25px;
+  margin: 0 0 10px;
+  color: #34302a;
 }
 
-.remote-top .btn-text {
-  width: auto;
-  margin-left: auto;
-  padding: 2px 0 0;
-}
-
-.remote-server {
-  margin: 0;
+.empty-sub {
   color: var(--ink-soft);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12px;
-  word-break: break-all;
+  font-size: 14.5px;
+  line-height: 1.5;
+  margin: 0 0 22px;
 }
 
-.quick-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.suggest {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.quick {
-  min-height: 48px;
+.chip {
   border: 1px solid var(--line);
-  background: var(--cream-2);
+  background: var(--paper);
   color: var(--ink);
   border-radius: 13px;
+  padding: 12px 14px;
   font: inherit;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14.5px;
+  text-align: left;
   cursor: pointer;
   touch-action: manipulation;
 }
 
-.quick:active {
-  transform: scale(0.985);
+.chip:active {
+  transform: scale(0.99);
+  border-color: var(--clay);
 }
 
-.remote-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  /* The feed is the flexible region: it grows to fill space but can SHRINK so
-     the composer + dashboard button stay on-screen on short phones (iPhone SE).
-     dvh (not vh) so iOS computes it against the visible viewport, not the
-     URL-bar-hidden large viewport. */
-  flex: 1 1 auto;
-  min-height: 96px;
-  max-height: 38dvh;
-  overflow: auto;
-  border: 1px solid var(--line);
-  background: var(--cream);
-  border-radius: 14px;
-  padding: 12px;
-}
-
-.remote-empty {
-  margin: auto;
-  color: var(--ink-soft);
-  text-align: center;
-  font-size: 13px;
-  line-height: 1.45;
-  max-width: 28ch;
-}
-
-.remote-msg {
-  border: 1px solid var(--line);
-  background: var(--paper);
-  border-radius: 13px;
-  padding: 10px 11px;
-  font-size: 13px;
-  line-height: 1.42;
+/* ── messages ──────────────────────────────────────────────────────── */
+.bubble {
+  max-width: 86%;
+  align-self: flex-start;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: break-word;
   white-space: pre-wrap;
 }
 
-.remote-msg.user {
-  margin-left: 20px;
-  border-color: rgba(201, 100, 66, 0.3);
-  background: #fff7f2;
+.bubble.me {
+  align-self: flex-end;
+  background: var(--clay);
+  color: #fff;
+  border-radius: 16px 16px 5px 16px;
+  padding: 10px 13px;
 }
 
-.remote-msg.agent {
-  margin-right: 14px;
+.voice {
+  align-self: flex-start;
+  max-width: 92%;
+  font-family: var(--serif);
+  font-size: 16.5px;
+  line-height: 1.58;
+  color: #34302a;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
-.remote-msg.progress {
+/* ── tool / action card ────────────────────────────────────────────── */
+.act {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13.5px;
   color: var(--ink-soft);
-  background: transparent;
-  border-style: dashed;
 }
 
-.remote-msg.error {
+.act .run {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.act .tick {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.act .tick.ok {
+  color: #2f8f6b;
+}
+
+.act .tick.err {
   color: var(--danger);
-  border-color: rgba(179, 51, 29, 0.25);
-  background: #fff4ef;
 }
 
-/* Streamed shell output from run_command — a dark monospace block. */
-.remote-msg.command-output {
+.spin {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--clay);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── streamed shell output ─────────────────────────────────────────── */
+.cmd-out {
+  align-self: stretch;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
   background: #1e1b16;
   color: #e9e2d4;
-  border-color: #2c2722;
+  border: 1px solid #2c2722;
+  border-radius: 12px;
+  padding: 11px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+/* ── progress + error notes ────────────────────────────────────────── */
+.note {
+  align-self: flex-start;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.note.error {
+  color: var(--danger);
+  align-self: stretch;
+  border: 1px solid rgba(179, 51, 29, 0.25);
+  background: #fff4ef;
+  border-radius: 11px;
+  padding: 9px 11px;
+}
+
+/* ── approval card ─────────────────────────────────────────────────── */
+.approve {
+  align-self: stretch;
+  border: 1px solid rgba(201, 100, 66, 0.4);
+  background: #fff8f4;
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+.approve .top {
+  padding: 11px 13px 4px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--clay-press);
+}
+
+.approve .what {
+  margin: 6px 13px 8px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 10px;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-/* Short phones (iPhone SE, 667pt): let the feed shrink further so the composer
-   and the "Open full Mac dashboard" button never start below the fold. */
-@media (max-height: 720px) {
-  .remote-feed {
-    min-height: 72px;
-    max-height: 28dvh;
-  }
-  .quick {
-    min-height: 44px;
-  }
-}
-
-.approval {
-  border-color: rgba(201, 100, 66, 0.35);
-  background: #fff7f2;
-}
-
-.approval b {
-  display: block;
-  margin-bottom: 5px;
-}
-
-.approval-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 9px;
-}
-
-.approval-actions .btn {
+.approve .risk {
+  margin: 0 13px 9px;
   font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.approve-actions {
+  display: flex;
+  gap: 7px;
+  padding: 0 13px 12px;
+}
+
+.approve-actions button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  border: 1px solid var(--line);
+}
+
+.approve-actions .allow {
+  background: var(--clay);
+  color: #fff;
+  border-color: var(--clay);
+}
+
+.approve-actions .always {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.approve-actions .deny {
+  background: transparent;
+  color: var(--danger);
+  border-color: rgba(179, 51, 29, 0.3);
+}
+
+.approve .resolved {
+  padding: 0 13px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.approve .resolved.ok {
+  color: #2f8f6b;
+}
+
+.approve .resolved.no {
+  color: var(--danger);
+}
+
+/* ── artifact card (a produced file: lesson / doc / deck) ──────────── */
+.artifact {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 13px;
+  padding: 12px 13px;
+}
+
+.artifact .ic {
+  width: 38px;
+  height: 38px;
   border-radius: 10px;
-  padding: 8px 10px;
-}
-
-.remote-form {
+  flex: none;
+  background: #f0d9cf;
+  color: var(--clay-press);
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: end;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.remote-form textarea {
-  width: 100%;
-  min-height: 54px;
-  max-height: 120px;
+.artifact .meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.artifact .meta b {
+  font-size: 14px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifact .meta .path {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  word-break: break-all;
+}
+
+.artifact .open {
+  flex: none;
+  border: 1px solid var(--clay);
+  background: var(--clay);
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ── composer ──────────────────────────────────────────────────────── */
+.composer {
+  flex: none;
+  border-top: 1px solid var(--line);
+  background: var(--cream);
+  padding: 10px 12px calc(env(safe-area-inset-bottom) + 10px);
+}
+
+.inwrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  border-radius: 18px;
+  padding: 6px 6px 6px 14px;
+}
+
+.inwrap:focus-within {
+  border-color: var(--clay);
+  box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.14);
+}
+
+.inwrap textarea {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
   resize: none;
+  background: transparent;
   font: inherit;
   font-size: 16px;
   color: var(--ink);
-  background: var(--cream);
-  border: 1.5px solid var(--line);
-  border-radius: 14px;
-  padding: 11px 12px;
+  line-height: 1.4;
+  max-height: 38vh;
+  padding: 7px 0;
 }
 
-.remote-form textarea:focus {
-  outline: none;
-  border-color: var(--clay);
-  box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.16);
+.inwrap textarea::placeholder {
+  color: var(--ink-soft);
 }
 
-.remote-form .btn {
+.send {
   flex: none;
-  min-height: 54px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--clay);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: grid;
+  place-items: center;
+}
+
+.send:active {
+  background: var(--clay-press);
+}
+
+.send:disabled {
+  background: var(--line);
+  color: var(--ink-soft);
+  cursor: default;
+}
+
+.composer-hint {
+  margin: 7px 4px 0;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  text-align: center;
 }
 
 .sr-only {

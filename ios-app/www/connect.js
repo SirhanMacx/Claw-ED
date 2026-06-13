@@ -50,7 +50,13 @@
     remoteForm: $('remote-form'),
     remoteInput: $('remote-input'),
     remoteSend: $('remote-send'),
+    remoteNew: $('remote-new'),
   };
+
+  // Chat render state (reset per turn / per conversation).
+  var actNode = null; // the current tool's action card
+  var approvalNodes = {}; // approval_id -> card element, so approval_resolved finds it
+  var emptyHtml = ''; // captured empty-state markup, re-injected on new conversation
 
   // ---- storage (guarded; private mode / disabled storage must not crash) -
   function loadSavedUrl() {
@@ -315,27 +321,87 @@
     return headers;
   }
 
-  function clearRemoteFeed() {
-    if (!els.remoteFeed) {
-      return;
+  function feedScroll() {
+    if (els.remoteFeed) {
+      els.remoteFeed.scrollTop = els.remoteFeed.scrollHeight;
     }
-    els.remoteFeed.textContent = '';
   }
 
-  function remoteAppend(kind, text) {
+  // Drop the empty state (chips) the first time a real message lands.
+  function dropEmptyState() {
     if (!els.remoteFeed) {
-      return null;
+      return;
     }
     var empty = els.remoteFeed.querySelector('.remote-empty');
     if (empty) {
       empty.remove();
     }
-    var node = document.createElement('div');
-    node.className = 'remote-msg ' + kind;
-    node.textContent = text;
+  }
+
+  function appendCard(node) {
+    if (!els.remoteFeed || !node) {
+      return null;
+    }
+    dropEmptyState();
     els.remoteFeed.appendChild(node);
-    els.remoteFeed.scrollTop = els.remoteFeed.scrollHeight;
+    feedScroll();
     return node;
+  }
+
+  // kind → chat component class. 'user'=clay bubble, 'agent'=serif voice,
+  // 'progress'=quiet note, 'error'=red note, 'command-output'=mono block.
+  var KIND_CLASS = {
+    user: 'bubble me',
+    agent: 'voice',
+    progress: 'note',
+    error: 'note error',
+    'command-output': 'cmd-out',
+  };
+
+  function remoteAppend(kind, text) {
+    var node = document.createElement('div');
+    node.className = KIND_CLASS[kind] || 'note';
+    node.textContent = text;
+    return appendCard(node);
+  }
+
+  // An artifact (a file the agent produced on the Mac). On the phone we can't
+  // open a Mac file, so this is informational — name + path, no open action.
+  function appendArtifact(path) {
+    var name = String(path).split('/').pop() || String(path);
+    var ext = (name.split('.').pop() || 'file').toUpperCase().slice(0, 4);
+    var card = document.createElement('div');
+    card.className = 'artifact';
+    var ic = document.createElement('div');
+    ic.className = 'ic';
+    ic.textContent = ext;
+    var meta = document.createElement('div');
+    meta.className = 'meta';
+    var b = document.createElement('b');
+    b.textContent = name;
+    var p = document.createElement('div');
+    p.className = 'path';
+    p.textContent = path + ' · on your Mac';
+    meta.appendChild(b);
+    meta.appendChild(p);
+    card.appendChild(ic);
+    card.appendChild(meta);
+    return appendCard(card);
+  }
+
+  // Restore the greeting + suggestion chips (new conversation / fresh connect).
+  function resetFeedToEmpty() {
+    if (!els.remoteFeed) {
+      return;
+    }
+    actNode = null;
+    cmdOutNode = null;
+    approvalNodes = {};
+    if (emptyHtml) {
+      els.remoteFeed.innerHTML = emptyHtml;
+    } else {
+      els.remoteFeed.textContent = '';
+    }
   }
 
   function setRemoteBusy(isBusy) {
@@ -345,19 +411,33 @@
     if (els.remoteInput) {
       els.remoteInput.disabled = isBusy;
     }
-    var buttons = document.querySelectorAll('.quick');
+    var buttons = document.querySelectorAll('.chip');
     for (var i = 0; i < buttons.length; i += 1) {
       buttons[i].disabled = isBusy;
     }
   }
 
-  function resolveApproval(baseUrl, approvalId, approved, alwaysFlag, node) {
-    function status(message) {
-      if (node) {
-        node.textContent = message;
-      }
+  function setResolved(card, cls, text) {
+    if (!card) {
+      return;
     }
-    status(approved ? 'Sending approval…' : 'Sending…');
+    var actions = card.querySelector('.approve-actions');
+    if (actions) {
+      actions.remove();
+    }
+    var line = card.querySelector('.resolved');
+    if (!line) {
+      line = document.createElement('div');
+      line.className = 'resolved';
+      card.appendChild(line);
+    }
+    line.className = 'resolved ' + (cls || '');
+    line.textContent = text;
+    feedScroll();
+  }
+
+  function resolveApproval(baseUrl, approvalId, approved, alwaysFlag, card) {
+    setResolved(card, '', approved ? 'Sending approval…' : 'Sending…');
     return fetch(baseUrl + '/api/approvals/' + encodeURIComponent(approvalId) + '/resolve', {
       method: 'POST',
       headers: authHeaders(true),
@@ -365,7 +445,7 @@
     })
       .then(function (res) {
         if (res.status === 401) {
-          status('Not authenticated. Scan the Mac QR code again.');
+          setResolved(card, 'no', 'Not authenticated. Re-pair with the Mac QR code.');
           return;
         }
         // The server returns HTTP 200 with {ok:false,error} for real failures
@@ -375,55 +455,133 @@
           .catch(function () { return {}; })
           .then(function (body) {
             if (body && body.ok === false) {
-              status(body.error ? 'Couldn’t apply: ' + body.error
+              setResolved(card, 'no', body.error ? 'Couldn’t apply: ' + body.error
                 : 'The Mac couldn’t apply that decision.');
             }
-            // On ok:true the authoritative `approval_resolved` SSE event renders
-            // the truthful outcome (allowed once / always / denied), so leave it.
+            // On ok:true the authoritative `approval_resolved` SSE event sets the
+            // truthful resolved line (allowed once / always / denied).
           });
       })
       .catch(function () {
-        status('Could not send approval. Reconnect and try again.');
+        setResolved(card, 'no', 'Could not send approval. Reconnect and try again.');
       });
   }
 
   function appendApproval(baseUrl, data) {
-    var node = remoteAppend('approval', '');
-    if (!node) {
-      return;
-    }
-    var title = document.createElement('b');
-    title.textContent = data.description || ('Run ' + (data.tool_name || 'tool'));
-    node.appendChild(title);
-    var risk = document.createElement('span');
-    risk.textContent = 'Risk: ' + (data.risk_level || 'unknown');
-    node.appendChild(risk);
+    var card = document.createElement('div');
+    card.className = 'approve';
+
+    var top = document.createElement('div');
+    top.className = 'top';
+    top.textContent = 'Approve this action?';
+    card.appendChild(top);
+
+    var what = document.createElement('div');
+    what.className = 'what';
+    what.textContent = data.description || ('Run ' + (data.tool_name || 'tool'));
+    card.appendChild(what);
+
+    var risk = document.createElement('div');
+    risk.className = 'risk';
+    risk.textContent = 'Risk: ' + (data.risk_level || 'unknown') + ' · runs on your Mac';
+    card.appendChild(risk);
+
     var actions = document.createElement('div');
-    actions.className = 'approval-actions';
-    var once = document.createElement('button');
-    once.className = 'btn btn-primary';
-    once.type = 'button';
-    once.textContent = 'Allow once';
+    actions.className = 'approve-actions';
+    var allow = document.createElement('button');
+    allow.className = 'allow';
+    allow.type = 'button';
+    allow.textContent = 'Allow once';
     var always = document.createElement('button');
-    always.className = 'btn btn-ghost';
+    always.className = 'always';
     always.type = 'button';
     always.textContent = 'Always';
     var deny = document.createElement('button');
-    deny.className = 'btn btn-text';
+    deny.className = 'deny';
     deny.type = 'button';
     deny.textContent = 'Deny';
-    actions.appendChild(once);
+    actions.appendChild(allow);
     actions.appendChild(always);
     actions.appendChild(deny);
-    node.appendChild(actions);
+    card.appendChild(actions);
+
+    appendCard(card);
+    if (data.approval_id) {
+      approvalNodes[data.approval_id] = card;
+    }
 
     function finish(approved, alwaysFlag) {
-      once.disabled = always.disabled = deny.disabled = true;
-      resolveApproval(baseUrl, data.approval_id, approved, alwaysFlag, node);
+      allow.disabled = always.disabled = deny.disabled = true;
+      resolveApproval(baseUrl, data.approval_id, approved, alwaysFlag, card);
     }
-    once.addEventListener('click', function () { finish(true, false); });
+    allow.addEventListener('click', function () { finish(true, false); });
     always.addEventListener('click', function () { finish(true, true); });
     deny.addEventListener('click', function () { finish(false, false); });
+  }
+
+  function markApprovalResolved(id, approved, alwaysFlag) {
+    var card = approvalNodes[id];
+    if (!card) {
+      return;
+    }
+    if (!approved) {
+      setResolved(card, 'no', 'Denied. Not running that action.');
+    } else if (alwaysFlag) {
+      setResolved(card, 'ok', 'Always allowed — won’t ask again for this exact action.');
+    } else {
+      setResolved(card, 'ok', 'Allowed once. Continuing…');
+    }
+  }
+
+  // Tool name → a friendly "what it's doing" label for the action card.
+  var TOOL_LABEL = {
+    run_command: 'Running a command',
+    read_file: 'Reading a file',
+    write_file: 'Writing a file',
+    edit_file: 'Editing a file',
+    list_directory: 'Listing a folder',
+    generate_lesson: 'Generating a lesson',
+    generate_lesson_bundle: 'Building a lesson bundle',
+    generate_assessment: 'Building an assessment',
+    generate_materials: 'Generating materials',
+    export_document: 'Exporting a document',
+    research: 'Researching',
+    search_lessons: 'Searching your lessons',
+    search_my_materials: 'Searching your materials',
+    brain_search: 'Searching the teaching brain',
+    brain_stats: 'Reading the teaching brain',
+    curriculum_map: 'Mapping the curriculum',
+  };
+
+  function makeActCard(toolName) {
+    var card = document.createElement('div');
+    card.className = 'act';
+    var spin = document.createElement('span');
+    spin.className = 'spin';
+    var run = document.createElement('span');
+    run.className = 'run';
+    run.textContent = TOOL_LABEL[toolName] || ('Using ' + (toolName || 'a tool'));
+    card.appendChild(spin);
+    card.appendChild(run);
+    return appendCard(card);
+  }
+
+  function finishActCard(card, data) {
+    if (!card) {
+      return;
+    }
+    var spin = card.querySelector('.spin');
+    if (spin) {
+      spin.remove();
+    }
+    var tick = document.createElement('span');
+    var ok = !!data.ok;
+    tick.className = 'tick ' + (ok ? 'ok' : 'err');
+    tick.textContent = ok ? 'done' : 'failed';
+    card.appendChild(tick);
+    if (!ok && data.summary) {
+      remoteAppend('error', data.summary);
+    }
   }
 
   function parseSSEBlock(block) {
@@ -474,55 +632,39 @@
 
   function handleRemoteEvent(baseUrl, event, data) {
     if (event === 'progress') {
-      remoteAppend('progress', data.message || 'Working...');
+      remoteAppend('progress', data.message || 'Working…');
     } else if (event === 'tool_start') {
       cmdOutNode = null; // start a fresh output block for this tool run
-      remoteAppend('progress', 'Using ' + (data.tool_name || 'tool') + '...');
+      actNode = makeActCard(data.tool_name);
     } else if (event === 'command_output') {
-      // Live shell output streamed in chunks by run_command — append into a
-      // single growing monospace block so the teacher sees it as it runs
-      // (parity with the Mac desktop UI; dropping it left the remote blank).
+      // Live shell output, streamed in chunks by run_command — append into a
+      // single growing monospace block so the teacher sees it as it runs.
       if (data.chunk) {
         if (!cmdOutNode) {
           cmdOutNode = remoteAppend('command-output', '');
         }
         if (cmdOutNode) {
           cmdOutNode.textContent += data.chunk;
-          if (els.remoteFeed) {
-            els.remoteFeed.scrollTop = els.remoteFeed.scrollHeight;
-          }
+          feedScroll();
         }
       }
     } else if (event === 'tool_end') {
       cmdOutNode = null;
-      if (data.summary) {
-        remoteAppend(data.ok ? 'progress' : 'error', data.summary);
-      }
-      if (data.files && data.files.length) {
-        remoteAppend('agent', 'Produced:\n' + data.files.join('\n'));
-      }
+      finishActCard(actNode, data);
+      actNode = null;
+      (data.files || []).forEach(appendArtifact);
     } else if (event === 'approval_required') {
       appendApproval(baseUrl, data);
     } else if (event === 'approval_resolved') {
-      // Report the EFFECTIVE policy the server applied, not what was tapped.
-      // Over the tunnel a remote "Always" is downgraded to once (the server
-      // never grants a standing approval to a remote turn), so data.always is
-      // the truth — mirror the desktop UI and never imply a standing grant
-      // that wasn't created.
-      var msg;
-      if (!data.approved) {
-        msg = 'Denied. Not running that action.';
-      } else if (data.always) {
-        msg = 'Always allowed — this exact action won’t ask again.';
-      } else {
-        msg = 'Allowed once. Continuing…';
-      }
-      remoteAppend('progress', msg);
+      // Report the EFFECTIVE policy the server applied (data.always is the
+      // truth — a remote "Always" is downgraded to once server-side), updating
+      // the approval card in place rather than appending a separate line.
+      markApprovalResolved(data.approval_id, data.approved, data.always);
     } else if (event === 'final') {
-      remoteAppend('agent', data.text || 'Done.');
-      if (data.files && data.files.length) {
-        remoteAppend('agent', 'Files:\n' + data.files.join('\n'));
+      if (data.text) {
+        remoteAppend('agent', data.text);
       }
+      (data.files || []).forEach(appendArtifact);
     } else if (event === 'error') {
       remoteAppend('error', data.message || 'Something went wrong.');
     }
@@ -567,13 +709,13 @@
     activeServerUrl = url;
     document.body.classList.add('remote-on');
     if (els.remoteServer) {
-      els.remoteServer.textContent = url;
+      els.remoteServer.textContent = (url || '').replace(/^https?:\/\//, '');
     }
     if (els.remoteCard) {
       els.remoteCard.hidden = false;
     }
-    clearRemoteFeed();
-    remoteAppend('agent', 'Connected to the Mac agent. Send a task or use a quick action.');
+    // Show the greeting + suggestion chips (a fresh conversation).
+    resetFeedToEmpty();
   }
 
   // ---- card visibility --------------------------------------------------
@@ -867,6 +1009,12 @@
   function init() {
     wireWarmDeepLink();
 
+    // Capture the greeting + suggestion-chip markup so a new conversation can
+    // restore it (resetFeedToEmpty re-injects this exact HTML).
+    if (els.remoteFeed) {
+      emptyHtml = els.remoteFeed.innerHTML;
+    }
+
     if (els.form) {
       els.form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -922,15 +1070,36 @@
         var text = els.remoteInput ? els.remoteInput.value : '';
         if (els.remoteInput) {
           els.remoteInput.value = '';
+          els.remoteInput.style.height = '';
         }
         sendRemoteTask(text);
       });
     }
 
-    var quicks = document.querySelectorAll('.quick[data-prompt]');
-    for (var i = 0; i < quicks.length; i += 1) {
-      quicks[i].addEventListener('click', function (event) {
-        sendRemoteTask(event.currentTarget.getAttribute('data-prompt'));
+    // Auto-grow the composer textarea up to its max-height.
+    if (els.remoteInput) {
+      els.remoteInput.addEventListener('input', function () {
+        els.remoteInput.style.height = 'auto';
+        els.remoteInput.style.height = Math.min(els.remoteInput.scrollHeight, 220) + 'px';
+      });
+    }
+
+    // Suggestion chips live inside the feed and are re-injected on a new
+    // conversation, so wire them by delegation rather than per-node listeners.
+    if (els.remoteFeed) {
+      els.remoteFeed.addEventListener('click', function (event) {
+        var chip = event.target && event.target.closest ? event.target.closest('[data-prompt]') : null;
+        if (chip) {
+          sendRemoteTask(chip.getAttribute('data-prompt'));
+        }
+      });
+    }
+
+    // New conversation — clear the feed back to the greeting.
+    if (els.remoteNew) {
+      els.remoteNew.addEventListener('click', function () {
+        setRemoteBusy(false);
+        resetFeedToEmpty();
       });
     }
 
