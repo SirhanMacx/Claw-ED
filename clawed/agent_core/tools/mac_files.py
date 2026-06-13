@@ -23,9 +23,24 @@ _MAX_READ_CHARS = 50_000
 _MAX_LIST_ENTRIES = 500
 
 # Never readable or writable, even with approval — secrets and credentials.
+# Any path that contains one of these as a path segment (file OR directory)
+# is refused, so a whole credential store like ~/.aws is off-limits, not just
+# its individual files. Keep this list conservative-but-broad: the cost of a
+# false positive (the teacher must use a different path) is far lower than the
+# cost of the agent silently reading a cloud or git token into the model.
 _DENY_NAMES = frozenset({
-    ".ssh", ".gnupg", ".credentials.json", "secrets.json", "api_token",
-    ".pypirc", ".netrc", ".npmrc", ".env", "id_rsa", "id_ed25519",
+    # SSH / GPG key material
+    ".ssh", ".gnupg", "id_rsa", "id_ed25519", "id_ecdsa", "id_dsa",
+    # Claw-ED's own secrets + the device token
+    ".credentials.json", "secrets.json", "api_token",
+    # Package / language ecosystem credentials
+    ".pypirc", ".netrc", ".npmrc",
+    # Environment files (commonly hold API keys)
+    ".env",
+    # Cloud / container / orchestration credential stores
+    ".aws", ".azure", ".gcloud", "gcloud", ".kube", ".docker", ".dockercfg",
+    # VCS / database / object-store credentials
+    ".git-credentials", ".pgpass", ".my.cnf", ".s3cfg", ".boto",
 })
 _DENY_SUFFIXES = (".p8", ".p12", ".pem", ".key", ".keychain", ".keychain-db")
 

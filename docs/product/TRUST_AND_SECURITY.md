@@ -83,6 +83,14 @@ path, never remove it. Covered by `tests/test_desktop_agent_tools.py`
 
 ## Keychain And Secrets
 
+- The general file tools (`read_file`/`write_file`/`edit_file`/`list_directory`)
+  are bounded to the teacher's home directory (a `..` traversal or absolute path
+  that resolves outside home is refused), and a **credential denylist** refuses
+  any path segment that names a secret store — `.ssh`, `.gnupg`, `.aws`,
+  `.azure`, `.gcloud`, `.kube`, `.docker`, `.git-credentials`, `.env`, `.netrc`,
+  `.npmrc`, `.pgpass`, key files, `*.pem/.p8/.p12/.key`, etc. — for reads as
+  well as writes, so the agent can't exfiltrate or clobber them. See
+  `clawed/agent_core/tools/mac_files.py::_resolve` and the denylist tests.
 - The sidecar sets `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`.
 - The agent should not touch the login keychain.
 - The iPhone pairing token lives in `~/.eduagent/api_token`.

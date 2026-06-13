@@ -275,3 +275,50 @@ async def test_remote_turn_disables_auto_approve(
         _context(is_remote=True),
     )
     assert remote.text.startswith("BLOCKED")
+
+
+# ── secret denylist + path-escape hardening ──────────────────────────
+
+
+@pytest.mark.parametrize("rel", [
+    ".aws/credentials", ".kube/config", ".docker/config.json",
+    ".git-credentials", ".config/gcloud/access_tokens.db", ".pgpass",
+    ".azure/accessTokens.json", ".ssh/id_rsa", ".npmrc",
+])
+async def test_file_tools_deny_credential_stores(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rel: str,
+) -> None:
+    """Reads and writes to known credential stores are refused even with
+    approval — they must never reach the model or be clobbered."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    target = tmp_path / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("SECRET=value", encoding="utf-8")
+
+    read = await ReadAnyFileTool().execute({"path": str(target)}, _context())
+    write = await WriteAnyFileTool().execute(
+        {"path": str(target), "content": "x"}, _context(),
+    )
+    assert read.text.startswith("ERROR: access denied"), rel
+    assert write.text.startswith("ERROR: access denied"), rel
+    # The write must NOT have modified the real secret.
+    assert target.read_text(encoding="utf-8") == "SECRET=value"
+
+
+async def test_file_tools_deny_path_escape_outside_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A path that resolves outside the teacher's home is refused, including
+    a ../ traversal."""
+    home = tmp_path / "home"
+    home.mkdir()
+    outside = tmp_path / "etc-passwd"
+    outside.write_text("root:x:0:0", encoding="utf-8")
+    monkeypatch.setattr(Path, "home", lambda: home)
+
+    escape = await ReadAnyFileTool().execute(
+        {"path": str(home / ".." / "etc-passwd")}, _context(),
+    )
+    absolute = await ReadAnyFileTool().execute({"path": "/etc/hosts"}, _context())
+    assert escape.text.startswith("ERROR: access denied")
+    assert absolute.text.startswith("ERROR: access denied")
