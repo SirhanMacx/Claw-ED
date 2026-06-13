@@ -356,8 +356,13 @@ body.remote-on .tagline {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 180px;
-  max-height: 42vh;
+  /* The feed is the flexible region: it grows to fill space but can SHRINK so
+     the composer + dashboard button stay on-screen on short phones (iPhone SE).
+     dvh (not vh) so iOS computes it against the visible viewport, not the
+     URL-bar-hidden large viewport. */
+  flex: 1 1 auto;
+  min-height: 96px;
+  max-height: 38dvh;
   overflow: auto;
   border: 1px solid var(--line);
   background: var(--cream);
@@ -404,6 +409,30 @@ body.remote-on .tagline {
   color: var(--danger);
   border-color: rgba(179, 51, 29, 0.25);
   background: #fff4ef;
+}
+
+/* Streamed shell output from run_command — a dark monospace block. */
+.remote-msg.command-output {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  background: #1e1b16;
+  color: #e9e2d4;
+  border-color: #2c2722;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Short phones (iPhone SE, 667pt): let the feed shrink further so the composer
+   and the "Open full Mac dashboard" button never start below the fold. */
+@media (max-height: 720px) {
+  .remote-feed {
+    min-height: 72px;
+    max-height: 28dvh;
+  }
+  .quick {
+    min-height: 44px;
+  }
 }
 
 .approval {

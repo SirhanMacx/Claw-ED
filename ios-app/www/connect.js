@@ -13,6 +13,7 @@
 
   var STORAGE_KEY = 'clawed.serverUrl';
   var TOKEN_KEY = 'clawed.serverToken'; // device token for the paired server (remote/tunnel)
+  var TOKEN_ORIGIN_KEY = 'clawed.serverTokenOrigin'; // origin the token is bound to
   var DEFAULT_PORT = '8000'; // matches `clawed app` / mac-app AppEnvironment.swift
 
   // Once true, we're connecting to or controlling a server. Every entry point
@@ -21,6 +22,7 @@
   var committed = false;
   var autoController = null; // AbortController for the in-flight launch probe
   var activeServerUrl = '';
+  var cmdOutNode = null; // growing node for the current tool's streamed output
 
   // ---- tiny DOM helpers -------------------------------------------------
   function $(id) {
@@ -78,9 +80,17 @@
   }
 
   // ---- device token (for a remote/tunnel server that requires auth) -------
-  // Paired once via the Mac's QR (clawed://connect?url=…&token=…). Stays on this
-  // device; delivered to the server as an HttpOnly cookie at connect time (see
-  // navigateToServer). A local/LAN server needs none.
+  // Paired once via the Mac's QR (clawed://connect?url=…&token=…). The token is
+  // the Mac's device token; it is JS-resident in this WebView (localStorage) and
+  // sent two ways: as `Authorization: Bearer` on the remote-control /api fetches,
+  // and once via a top-level POST to /api/auth/bootstrap (the "Open full Mac
+  // dashboard" path) so the server can set its first-party cookie. A local/LAN
+  // server needs none.
+  //
+  // SECURITY — the token is ORIGIN-PINNED: it is released ONLY to the exact
+  // origin it was paired with (tokenForOrigin), so a deep link / QR that points
+  // the app at a different host can never make us hand the real token to that
+  // host. See connectTo (binds) and navigateToServer / authHeaders (release).
   function loadToken() {
     try {
       return window.localStorage.getItem(TOKEN_KEY) || '';
@@ -89,9 +99,40 @@
     }
   }
 
-  function saveToken(token) {
+  function originOf(url) {
+    try {
+      return new URL(normalizeUrl(url) || url).origin;
+    } catch (err) {
+      return '';
+    }
+  }
+
+  // Release the saved token ONLY to the origin it was paired with. A legacy
+  // token saved before pinning (no bound origin) is honored only for the
+  // currently-saved server's origin.
+  function tokenForOrigin(targetOrigin) {
+    var token = loadToken();
+    if (!token || !targetOrigin) {
+      return '';
+    }
+    var bound = '';
+    try {
+      bound = window.localStorage.getItem(TOKEN_ORIGIN_KEY) || '';
+    } catch (err) {
+      /* no-op */
+    }
+    if (bound) {
+      return bound === targetOrigin ? token : '';
+    }
+    return targetOrigin === originOf(loadSavedUrl()) ? token : '';
+  }
+
+  function saveToken(token, origin) {
     try {
       window.localStorage.setItem(TOKEN_KEY, token);
+      if (origin) {
+        window.localStorage.setItem(TOKEN_ORIGIN_KEY, origin);
+      }
     } catch (err) {
       console.warn('[clawed] token write failed:', err);
     }
@@ -100,6 +141,7 @@
   function clearToken() {
     try {
       window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(TOKEN_ORIGIN_KEY);
     } catch (err) {
       /* no-op */
     }
@@ -236,7 +278,7 @@
     // (manual entry, typically a local server) clears any stale token; an
     // omitted token (undefined: reconnect / auto-connect) keeps the saved one.
     if (token) {
-      saveToken(token);
+      saveToken(token, originOf(normalized));
     } else if (token === null) {
       clearToken();
     }
@@ -264,13 +306,36 @@
     return true;
   }
 
+  // A URL from a scanned QR / deep link is UNTRUSTED input. If it points at a
+  // host we haven't already paired with, make the teacher confirm before we
+  // connect or hand over any token — a malicious QR must not be able to silently
+  // re-point the app at an attacker's server.
+  function connectFromScannedCode(url, token) {
+    var target = originOf(url);
+    var saved = originOf(loadSavedUrl());
+    if (target && !(saved && target === saved)) {
+      var ok = true;
+      try {
+        ok = window.confirm(
+          'Connect Claw-ED to:\n\n' + target + '\n\nOnly continue if this is your own Mac.'
+        );
+      } catch (err) {
+        ok = true; // no dialog support → fall back to old behavior
+      }
+      if (!ok) {
+        return false;
+      }
+    }
+    return connectTo(url, token);
+  }
+
   // ---- remote-control surface -------------------------------------------
   function authHeaders(json) {
     var headers = {};
     if (json) {
       headers['Content-Type'] = 'application/json';
     }
-    var token = loadToken();
+    var token = tokenForOrigin(originOf(activeServerUrl));
     if (token) {
       headers.Authorization = 'Bearer ' + token;
     }
@@ -314,18 +379,39 @@
   }
 
   function resolveApproval(baseUrl, approvalId, approved, alwaysFlag, node) {
-    if (node) {
-      node.textContent = approved ? 'Approval sent...' : 'Denied...';
+    function status(message) {
+      if (node) {
+        node.textContent = message;
+      }
     }
+    status(approved ? 'Sending approval…' : 'Sending…');
     return fetch(baseUrl + '/api/approvals/' + encodeURIComponent(approvalId) + '/resolve', {
       method: 'POST',
       headers: authHeaders(true),
       body: JSON.stringify({ approved: !!approved, always: !!alwaysFlag }),
-    }).catch(function () {
-      if (node) {
-        node.textContent = 'Could not send approval. Reconnect and try again.';
-      }
-    });
+    })
+      .then(function (res) {
+        if (res.status === 401) {
+          status('Not authenticated. Scan the Mac QR code again.');
+          return;
+        }
+        // The server returns HTTP 200 with {ok:false,error} for real failures
+        // (approval not found / already resolved). Don't treat that as success.
+        return res
+          .json()
+          .catch(function () { return {}; })
+          .then(function (body) {
+            if (body && body.ok === false) {
+              status(body.error ? 'Couldn’t apply: ' + body.error
+                : 'The Mac couldn’t apply that decision.');
+            }
+            // On ok:true the authoritative `approval_resolved` SSE event renders
+            // the truthful outcome (allowed once / always / denied), so leave it.
+          });
+      })
+      .catch(function () {
+        status('Could not send approval. Reconnect and try again.');
+      });
   }
 
   function appendApproval(baseUrl, data) {
@@ -417,8 +503,25 @@
     if (event === 'progress') {
       remoteAppend('progress', data.message || 'Working...');
     } else if (event === 'tool_start') {
+      cmdOutNode = null; // start a fresh output block for this tool run
       remoteAppend('progress', 'Using ' + (data.tool_name || 'tool') + '...');
+    } else if (event === 'command_output') {
+      // Live shell output streamed in chunks by run_command — append into a
+      // single growing monospace block so the teacher sees it as it runs
+      // (parity with the Mac desktop UI; dropping it left the remote blank).
+      if (data.chunk) {
+        if (!cmdOutNode) {
+          cmdOutNode = remoteAppend('command-output', '');
+        }
+        if (cmdOutNode) {
+          cmdOutNode.textContent += data.chunk;
+          if (els.remoteFeed) {
+            els.remoteFeed.scrollTop = els.remoteFeed.scrollHeight;
+          }
+        }
+      }
     } else if (event === 'tool_end') {
+      cmdOutNode = null;
       if (data.summary) {
         remoteAppend(data.ok ? 'progress' : 'error', data.summary);
       }
@@ -428,7 +531,20 @@
     } else if (event === 'approval_required') {
       appendApproval(baseUrl, data);
     } else if (event === 'approval_resolved') {
-      remoteAppend('progress', data.approved ? 'Approved. Continuing...' : 'Denied. Not running that action.');
+      // Report the EFFECTIVE policy the server applied, not what was tapped.
+      // Over the tunnel a remote "Always" is downgraded to once (the server
+      // never grants a standing approval to a remote turn), so data.always is
+      // the truth — mirror the desktop UI and never imply a standing grant
+      // that wasn't created.
+      var msg;
+      if (!data.approved) {
+        msg = 'Denied. Not running that action.';
+      } else if (data.always) {
+        msg = 'Always allowed — this exact action won’t ask again.';
+      } else {
+        msg = 'Allowed once. Continuing…';
+      }
+      remoteAppend('progress', msg);
     } else if (event === 'final') {
       remoteAppend('agent', data.text || 'Done.');
       if (data.files && data.files.length) {
@@ -577,14 +693,14 @@
         if (/^clawed:/i.test(value)) {
           var paired = serverFromDeepLink(value);
           if (paired) {
-            connectTo(paired.url, paired.token);
+            connectFromScannedCode(paired.url, paired.token);
             return;
           }
         }
         if (els.input) {
           els.input.value = value;
         }
-        connectTo(value, null);
+        connectFromScannedCode(value, null);
       })
       .catch(function (err) {
         setBusy(false);
@@ -658,7 +774,7 @@
       if (s) {
         committed = false;
         activeServerUrl = '';
-        connectTo(s.url, s.token);
+        connectFromScannedCode(s.url, s.token);
       }
     });
   }
@@ -750,7 +866,7 @@
         .then(function (res) {
           var s = res && res.url ? serverFromDeepLink(res.url) : null;
           if (s) {
-            connectTo(s.url, s.token);
+            connectFromScannedCode(s.url, s.token);
             return;
           }
           autoOrForm();
@@ -848,7 +964,9 @@
     if (els.openDashboard) {
       els.openDashboard.addEventListener('click', function () {
         if (activeServerUrl) {
-          navigateToServer(activeServerUrl, loadToken());
+          // Origin-pinned: the token is only POSTed to the host it was paired
+          // with, never to a host a deep link/QR may have switched us to.
+          navigateToServer(activeServerUrl, tokenForOrigin(originOf(activeServerUrl)));
         }
       });
     }
