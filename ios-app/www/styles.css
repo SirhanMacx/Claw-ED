@@ -85,13 +85,7 @@ body {
   width: 64px;
   height: 64px;
   border-radius: 18px;
-  background: linear-gradient(160deg, var(--clay) 0%, var(--clay-press) 100%);
-  color: #fff;
-  font-family: var(--serif);
-  font-weight: 600;
-  font-size: 38px;
-  line-height: 64px;
-  text-align: center;
+  object-fit: cover;
   box-shadow: var(--shadow);
   user-select: none;
 }
@@ -303,18 +297,11 @@ body.remote-on .connect {
 }
 
 .mark.sm {
-  width: 30px;
-  height: 30px;
+  width: 31px;
+  height: 31px;
   border-radius: 9px;
   flex: none;
-  background: linear-gradient(150deg, var(--clay), #d8794f);
-  color: #fff;
-  font-family: var(--serif);
-  font-weight: 600;
-  display: grid;
-  place-items: center;
-  font-size: 17px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  object-fit: cover;
 }
 
 .chat-id-text {

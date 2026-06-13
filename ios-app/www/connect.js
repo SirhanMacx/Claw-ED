@@ -57,6 +57,7 @@
   var actNode = null; // the current tool's action card
   var approvalNodes = {}; // approval_id -> card element, so approval_resolved finds it
   var emptyHtml = ''; // captured empty-state markup, re-injected on new conversation
+  var turnGotFinal = false; // did this turn reach a terminal event (final/error/done)?
 
   // ---- storage (guarded; private mode / disabled storage must not crash) -
   function loadSavedUrl() {
@@ -661,13 +662,28 @@
       // the approval card in place rather than appending a separate line.
       markApprovalResolved(data.approval_id, data.approved, data.always);
     } else if (event === 'final') {
+      turnGotFinal = true;
       if (data.text) {
         remoteAppend('agent', data.text);
       }
       (data.files || []).forEach(appendArtifact);
     } else if (event === 'error') {
+      turnGotFinal = true;
       remoteAppend('error', data.message || 'Something went wrong.');
+    } else if (event === 'done') {
+      turnGotFinal = true;
     }
+  }
+
+  // A dropped fetch/stream throws a raw engine message — WebKit says "Load
+  // failed", Chromium "Failed to fetch". Never show that verbatim; explain it.
+  function friendlyStreamError(err) {
+    var m = (err && err.message) || '';
+    if (/load failed|failed to fetch|networkerror|network connection was lost|the request timed out/i.test(m)) {
+      return 'Lost the connection to your Mac. A long task can outrun the tunnel — ' +
+        'the work may still be finishing on the Mac. Give it a moment, then send it again.';
+    }
+    return m || 'Could not reach the Mac agent.';
   }
 
   function sendRemoteTask(message) {
@@ -675,6 +691,7 @@
     if (!text || !activeServerUrl) {
       return;
     }
+    turnGotFinal = false;
     remoteAppend('user', text);
     setRemoteBusy(true);
     fetch(activeServerUrl + '/api/gateway/chat/stream', {
@@ -685,7 +702,7 @@
       .then(function (res) {
         if (!res.ok || !res.body) {
           if (res.status === 401) {
-            throw new Error('This phone is not authenticated. Scan the Mac QR code again.');
+            throw new Error('This phone is not authenticated. Re-pair with the Mac QR code.');
           }
           throw new Error('The Mac agent answered ' + res.status + '.');
         }
@@ -694,7 +711,12 @@
         });
       })
       .catch(function (err) {
-        remoteAppend('error', err && err.message ? err.message : 'Could not reach the Mac agent.');
+        // If the turn already produced its result (final/error/done), a stream
+        // close that rejects afterward is benign — don't alarm the teacher.
+        if (turnGotFinal) {
+          return;
+        }
+        remoteAppend('error', friendlyStreamError(err));
       })
       .then(function () {
         setRemoteBusy(false);
