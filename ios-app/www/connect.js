@@ -1174,6 +1174,8 @@
         if (els.remoteInput) {
           els.remoteInput.value = '';
           els.remoteInput.style.height = '';
+          // Dismiss the keyboard so the streaming reply isn't hidden behind it.
+          els.remoteInput.blur();
         }
         sendRemoteTask(text);
       });
