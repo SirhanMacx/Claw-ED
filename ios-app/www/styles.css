@@ -7,6 +7,7 @@
  */
 
 :root {
+  color-scheme: light dark;
   --cream: #faf9f5;
   --cream-2: #f3f1ea;
   --paper: #fffdf8;
@@ -875,5 +876,61 @@ body.is-busy {
   }
   .auto-spinner {
     animation-duration: 1.8s;
+  }
+}
+
+/* ════════════ Dark mode (auto-follows the system) ════════════════════ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cream: #1f1b17;
+    --cream-2: #2a241f;
+    --paper: #2a241f;
+    --clay: #d8794f;
+    --clay-press: #c0623a;
+    --ink: #ece6dc;
+    --ink-soft: #a79e92;
+    --line: #3a332c;
+    --danger: #ea8a73;
+  }
+
+  body {
+    background-image: radial-gradient(120% 70% at 50% -10%, #2a2018 0%, var(--cream) 55%);
+  }
+
+  .chat {
+    background-image: radial-gradient(120% 60% at 72% -8%, #2a2018 0%, var(--cream) 52%);
+  }
+
+  .chat-top {
+    background: linear-gradient(#241e19, var(--cream));
+  }
+
+  /* hardcoded light values → warm-dark equivalents */
+  .voice,
+  .empty-title {
+    color: #ece6dc;
+  }
+
+  .note.error {
+    background: #2c1a16;
+    border-color: rgba(234, 138, 115, 0.3);
+  }
+
+  .approve {
+    background: #2c211a;
+    border-color: #5a3d2c;
+  }
+
+  .approve .what {
+    background: #181410;
+  }
+
+  .artifact .ic {
+    background: #4a3528;
+    color: #f0d9cf;
+  }
+
+  .bubble.me {
+    color: #fff;
   }
 }
