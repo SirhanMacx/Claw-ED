@@ -420,6 +420,30 @@ html[data-theme="console"] .mat-result.err{background:#382723;border-color:#5A3A
 html[data-theme="console"] .p-state.on{background:#23332B;border-color:#2F4A3D}
 html[data-theme="console"] .p-voice{color:#E6DED2}
 
+/* ── Pair iPhone ─────────────────────────────────────────────────── */
+.pair-layout{display:flex;gap:18px;align-items:flex-start;max-width:720px}
+.pair-card{width:100%}
+.pair-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.pair-label{
+  margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.7px;color:var(--ink-faint);
+}
+.pair-top code{
+  display:block;max-width:390px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);
+}
+.pair-qr-wrap{
+  width:220px;height:220px;border:1px solid var(--line);border-radius:8px;
+  background:#fff;display:grid;place-items:center;margin:0 auto 13px;
+}
+.pair-qr{width:196px;height:196px;display:grid;place-items:center}
+.pair-qr svg{display:block;width:196px;height:196px}
+.pair-status{font-size:13.5px;font-weight:600;color:var(--ink);margin:0 0 5px;text-align:center}
+.pair-status.warn{color:var(--warn)}
+.pair-status.err{color:var(--stop)}
+.pair-help{margin:0;text-align:center}
+html[data-theme="console"] .pair-qr-wrap{background:#fff;border-color:#55483E}
+
 /* ── Settings ───────────────────────────────────────────────────── */
 .settings-card .kv{display:flex;gap:14px;padding:7px 0;font-size:13.5px;border-bottom:1px solid var(--line-soft)}
 .settings-card .kv:last-of-type{border-bottom:0}

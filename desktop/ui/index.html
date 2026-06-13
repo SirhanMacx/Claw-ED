@@ -53,6 +53,8 @@
           <p class="empty-sub">I can act on this Mac — files, folders, commands — and I know your classroom work. Everything risky asks you first.</p>
           <div class="suggest">
             <button class="chip chip-teach" id="teachChip">&#9776;&nbsp; Teach Claw-ED your materials</button>
+            <button class="chip" data-suggest="Check my curriculum index status, then tell me what lesson materials you can already search">Check indexed materials</button>
+            <button class="chip" data-suggest="Run a dry-run dream cycle and tell me what the teaching brain would improve overnight">Preview dream cycle</button>
             <button class="chip" data-suggest="Make a folder called clawed-test on my Desktop and put a hello.txt inside it">Make a test folder on my Desktop</button>
             <button class="chip" data-suggest="List what's on my Desktop and suggest how to tidy it">Tidy my Desktop</button>
             <button class="chip" data-suggest="Draft a Do-Now warm-up question for tomorrow's Global 9 lesson on the Renaissance">Draft tomorrow's Do-Now</button>
@@ -122,7 +124,22 @@
     <!-- Pair view -->
     <main class="view alt-view" id="view-pair" hidden>
       <div class="alt-head"><h2>Pair iPhone</h2><p>Drive this Mac's agent from your phone.</p></div>
-      <div class="card pad"><p class="muted">The iPhone remote pairs over your secure tunnel with a QR code. It arrives in a later milestone — the Mac app comes first.</p></div>
+      <div class="pair-layout">
+        <div class="card pad pair-card">
+          <div class="pair-top">
+            <div>
+              <p class="pair-label">Remote address</p>
+              <code id="pairUrl">https://clawed.macxlabs.app</code>
+            </div>
+            <button class="btn ghost" id="refreshPairBtn">Refresh</button>
+          </div>
+          <div class="pair-qr-wrap" id="pairQrWrap" hidden>
+            <div class="pair-qr" id="pairQr" aria-label="Pairing QR code"></div>
+          </div>
+          <p class="pair-status" id="pairStatus">Checking pairing token...</p>
+          <p class="muted pair-help" id="pairHelp">Scan with the iPhone Camera. The device token stays hidden inside the QR.</p>
+        </div>
+      </div>
     </main>
 
     <!-- Settings view -->
@@ -141,7 +158,9 @@
         </div>
         <div class="btns" style="margin-top:14px">
           <button class="btn" id="restartBtn">Restart agent</button>
+          <button class="btn primary" id="readinessBtn">Export readiness report</button>
         </div>
+        <div class="mat-result" id="readinessResult" hidden></div>
       </div>
       <div class="card pad" style="margin-top:14px">
         <p class="muted">Approvals are always on: shell commands and file writes pause and ask you first. &ldquo;Always allow&rdquo; is scoped to the exact command or file — anything different asks again.</p>

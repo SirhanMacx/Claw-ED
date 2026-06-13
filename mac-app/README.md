@@ -14,8 +14,8 @@ What it does:
 - **Health dot** — polls `http://127.0.0.1:8000/api/health` and shows green
   when the app is up.
 - **Open Claw-ED** — opens `http://127.0.0.1:8000` in your default browser.
-- Shows the **local URL** and **LAN URL**, plus a **QR code** of the LAN URL so
-  a teacher can open Claw-ED on their phone (same Wi‑Fi).
+- Shows the **local URL**, the remote tunnel URL, and the opt-in **LAN URL**,
+  with pairing QR codes for the phone companion.
 - **Stop** — terminates the server; also stops cleanly when you Quit.
 
 Design principles: warm and trustworthy, **no telemetry**, **localhost‑only by
@@ -104,20 +104,27 @@ on their own machine never hits a token wall.
   command or a `python3`. The window shows what was auto‑detected.
 - **Port** — defaults to `8000`.
 - **Open my browser when Claw-ED is ready** — on by default.
+- **Share on my Wi-Fi** — off by default. When enabled, the launcher starts
+  `clawed app` with `--host 0.0.0.0` so phones on the same trusted Wi-Fi can
+  open the LAN QR code. Restart Claw-ED after changing this setting.
 
 ---
 
-## Notes on the LAN URL + QR code
+## Notes on phone pairing
 
-The QR code encodes the **LAN URL** (e.g. `http://192.168.1.42:8000`) so a phone
-on the same Wi‑Fi can scan and open Claw-ED.
+The menu has two phone paths:
+
+- **Anywhere:** `https://clawed.macxlabs.app`, encoded as a `clawed://` pairing
+  link with the local device token. The token is read from `~/.eduagent/api_token`
+  and only leaves by being scanned from the teacher's screen.
+- **Same Wi-Fi:** the LAN URL (e.g. `http://192.168.1.42:8000`), also encoded as
+  a `clawed://` pairing link when LAN sharing is enabled.
 
 Important: by default `clawed app` binds to **`127.0.0.1`** (localhost only), so
-the LAN URL won't actually connect until LAN sharing is enabled on the server
-side. The app shows the LAN URL/QR for convenience and states this caveat in the
-panel. Wiring an explicit, clearly‑labeled "Allow phones on my Wi‑Fi" opt‑in
-(which would launch the server bound to `0.0.0.0` with a visible warning) is a
-planned follow‑up — see `docs/product/CLAWED_DESKTOP_PLAN.md`.
+the LAN URL won't connect from a phone until **Share on my Wi-Fi** is enabled in
+Settings and the server is restarted. That opt-in launches the server bound to
+`0.0.0.0` and the UI shows a visible warning because anyone on that Wi-Fi can
+try to open it.
 
 ---
 
@@ -130,7 +137,7 @@ mac-app/
 └── Sources/ClawEDMenuBar/
     ├── ClawEDMenuBarApp.swift    # @main App + MenuBarExtra + AppDelegate
     ├── MenuBarContentView.swift  # the popover panel (status, URLs, QR)
-    ├── SettingsView.swift        # ⌘, settings (launcher path, port)
+    ├── SettingsView.swift        # ⌘, settings (launcher path, port, LAN sharing)
     ├── ServerController.swift    # Process management + health polling
     ├── LaunchPlan.swift          # resolves the fixed `clawed app` invocation
     ├── QRCode.swift              # CoreImage CIQRCodeGenerator helper
@@ -182,27 +189,17 @@ The **`Info.plist`** must include:
 ### 2. Prerequisites for signing
 
 - An **Apple Developer Program** membership.
-- A **Developer ID Application** certificate in your login keychain
-  (`security find-identity -p codesigning -v` to list).
-- A notarization credential profile saved once:
+- A **Developer ID Application** certificate from the Account Holder.
+- A notarization credential profile saved once.
 
-  ```bash
-  xcrun notarytool store-credentials "CLAWED_NOTARY" \
-    --apple-id "you@example.com" \
-    --team-id  "YOURTEAMID" \
-    --password "app-specific-password"
-  ```
+On Jon's machine, read `docs/product/HANDOFF.md` before any signing work. Do not
+run exploratory `security`, `codesign`, or archive commands against the login
+keychain; the locked keychain has produced repeated GUI prompts. The current
+direct-download Mac packaging path lives under `desktop/` and is driven by
+`desktop/scripts/sign_and_notarize.sh` after the Account Holder provides the
+Developer ID certificate.
 
 ### 3. Codesign (hardened runtime)
-
-```bash
-codesign --deep --force --options runtime --timestamp \
-  --sign "Developer ID Application: Your Name (TEAMID)" \
-  "ClawED Menu Bar.app"
-
-# verify
-codesign --verify --deep --strict --verbose=2 "ClawED Menu Bar.app"
-```
 
 This app uses no special entitlements (no sandbox, no camera/mic). It does spawn
 a child process and make local network requests; standard Developer ID signing
@@ -210,6 +207,10 @@ with the hardened runtime is sufficient. If you later **sandbox** the app, you'l
 need `com.apple.security.network.client` and to rethink launching an external
 interpreter (sandbox restricts spawning arbitrary executables) — see the plan
 doc.
+
+Use the scripted signing/notarization flow from the current desktop packaging
+lane once the Developer ID certificate is available. Avoid ad hoc local command
+experiments on the locked-keychain machine.
 
 ### 4. Notarize & staple
 

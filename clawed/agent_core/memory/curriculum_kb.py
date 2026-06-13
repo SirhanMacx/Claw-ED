@@ -16,6 +16,8 @@ import json
 import logging
 import sqlite3
 import struct
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -61,8 +63,20 @@ class CurriculumKB:
         self._embedder = get_embedder()
         self._init_db()
 
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        conn = sqlite3.connect(self._db_path)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             # WAL mode allows concurrent reads during writes (ingest + search)
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("""
@@ -229,7 +243,7 @@ class CurriculumKB:
         for batch_start in range(0, len(chunks), self._INDEX_BATCH):
             batch = chunks[batch_start: batch_start + self._INDEX_BATCH]
 
-            with sqlite3.connect(self._db_path) as conn:
+            with self._connect() as conn:
                 for chunk in batch:
                     chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:32]
                     existing = conn.execute(
@@ -426,7 +440,7 @@ class CurriculumKB:
         """
         query_embedding = self._embedder.embed(query)
 
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
 
             # Stage 1: Try FTS5 keyword pre-filter (fast, searches ALL chunks)
@@ -556,7 +570,7 @@ class CurriculumKB:
 
     def stats(self, teacher_id: str) -> dict[str, Any]:
         """Return stats about the teacher's curriculum knowledge base."""
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             doc_count = conn.execute(
                 "SELECT COUNT(DISTINCT doc_title) FROM chunks "
                 "WHERE teacher_id=?",

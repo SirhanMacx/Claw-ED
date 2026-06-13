@@ -407,7 +407,15 @@ def _build_bundle_response(
 class GenerateLessonBundleTool:
     """Generate a COMPLETE teaching package: lesson plan + student handout + slideshow."""
 
-    risk_level = "read_only"
+    risk_level = "write_local"
+
+    @staticmethod
+    def approval_description(params: dict[str, Any]) -> str:
+        topic = str(params.get("topic") or "lesson bundle").strip()
+        return (
+            "Generate and write a complete local teaching package for "
+            f"{topic}: lesson plan, student handout, and slideshow."
+        )
 
     def schema(self) -> dict[str, Any]:
         return {

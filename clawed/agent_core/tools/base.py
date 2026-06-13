@@ -111,6 +111,7 @@ class ToolRegistry:
 
         # ── Policy enforcement ────────────────────────────────────────
         risk = getattr(tool, "risk_level", RISK_WRITE_LOCAL)
+        approval_note = ""
 
         if risk in _ALWAYS_REQUIRE_APPROVAL:
             # NEVER auto-approve package installs or external publishing
@@ -121,6 +122,9 @@ class ToolRegistry:
                          f"(risk level: {risk}). Ask the teacher to confirm "
                          f"before proceeding."
                 )
+            approval_note = (
+                f"Approval was required and granted before this {risk} action ran."
+            )
 
         elif risk in _REQUIRE_APPROVAL_BY_DEFAULT:
             # Check if auto-approve is enabled
@@ -135,11 +139,32 @@ class ToolRegistry:
                              f"auto-approve with CLAWED_AUTO_APPROVE=1 for "
                              f"low-risk write operations."
                     )
+                approval_note = (
+                    f"Approval was required and granted before this {risk} action ran."
+                )
+            else:
+                approval_note = (
+                    f"This {risk} action ran under the local auto-approve policy."
+                )
 
         # risk == RISK_READ_ONLY → always allowed, no check needed
 
         try:
-            return await tool.execute(params, context)
+            result = await tool.execute(params, context)
+            if approval_note:
+                result.text = (
+                    f"{result.text}\n\n[Policy: {approval_note}]"
+                    if result.text else f"[Policy: {approval_note}]"
+                )
+                result.data = {
+                    **result.data,
+                    "approval_policy": {
+                        "required": not approval_note.startswith("This "),
+                        "note": approval_note,
+                        "risk_level": risk,
+                    },
+                }
+            return result
         except Exception as e:
             logger.error("Tool %s failed: %s", name, e)
             return ToolResult(

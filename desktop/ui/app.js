@@ -98,6 +98,108 @@ async function pollHealth() {
   paintStatus();
 }
 
+// ── iPhone pairing ───────────────────────────────────────────────────
+
+async function fetchPairing() {
+  const status = $("pairStatus");
+  const qr = $("pairQr");
+  const wrap = $("pairQrWrap");
+  const url = $("pairUrl");
+  const help = $("pairHelp");
+  if (!status || !qr || !wrap || !url || !help) return;
+
+  status.className = "pair-status";
+  status.textContent = "Checking pairing token...";
+  help.textContent = "Scan with the iPhone Camera. The device token stays hidden inside the QR.";
+  wrap.hidden = true;
+  qr.textContent = "";
+
+  if (!TAURI) {
+    status.classList.add("warn");
+    status.textContent = "Pairing QR is available in the Mac app.";
+    help.textContent = "Open the packaged Claw-ED app to pair an iPhone.";
+    return;
+  }
+
+  try {
+    const info = await invoke("pairing_info");
+    url.textContent = info.remote_url || "https://clawed.macxlabs.app";
+    if (info.token_ready && info.qr_svg) {
+      qr.innerHTML = info.qr_svg;
+      const svg = qr.querySelector("svg");
+      if (svg) {
+        svg.setAttribute("role", "img");
+        svg.setAttribute("aria-label", "Pairing QR code");
+      }
+      wrap.hidden = false;
+      status.textContent = info.detail || "Ready to pair.";
+      return;
+    }
+    status.classList.add("warn");
+    status.textContent = info.detail || "Pairing token is not ready yet.";
+    help.textContent = "Restart the agent, then refresh this page.";
+  } catch {
+    status.classList.add("err");
+    status.textContent = "Could not load pairing information.";
+    help.textContent = "Restart Claw-ED and try again.";
+  }
+}
+
+// ── District/admin readiness report ──────────────────────────────────
+
+async function currentToolFacts() {
+  let toolCount = skillsCache.length;
+  let runCommandRisk = "unknown";
+  try {
+    const res = await fetch(`${BASE}/api/agent/tools`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const data = await res.json();
+    const tools = Array.isArray(data.tools) ? data.tools : [];
+    toolCount = tools.length;
+    const runCommand = tools.find((t) => t.name === "run_command");
+    runCommandRisk = runCommand && runCommand.risk_level
+      ? runCommand.risk_level
+      : runCommandRisk;
+  } catch {
+    // Keep the report export useful even when the registry call is transiently down.
+  }
+  return { toolCount, runCommandRisk };
+}
+
+async function exportReadinessReport() {
+  const result = $("readinessResult");
+  result.hidden = false;
+  result.className = "mat-result";
+  result.textContent = "Collecting live agent facts...";
+
+  if (!TAURI) {
+    result.className = "mat-result err";
+    result.textContent = "Readiness export is available in the packaged Mac app.";
+    return;
+  }
+
+  $("readinessBtn").disabled = true;
+  try {
+    await pollHealth();
+    const facts = await currentToolFacts();
+    const path = await invoke("export_readiness_report", {
+      provider: lastHealth && lastHealth.llm_provider ? String(lastHealth.llm_provider) : "unknown",
+      model: lastHealth && lastHealth.llm_model ? String(lastHealth.llm_model) : "unknown",
+      llmConnected: !!(lastHealth && lastHealth.llm_connected),
+      toolCount: facts.toolCount,
+      runCommandRisk: facts.runCommandRisk,
+    });
+    addToWorkspace(path);
+    result.className = "mat-result ok";
+    result.textContent = `Saved ${path.replace(/^\/Users\/[^/]+/, "~")} and added it to Workspace.`;
+  } catch (err) {
+    result.className = "mat-result err";
+    result.textContent = err && err.message ? err.message : "Could not export readiness report.";
+  } finally {
+    $("readinessBtn").disabled = false;
+  }
+}
+
 // ── Sessions (local, lightweight) ─────────────────────────────────────
 
 const SESS_KEY = "clawed.sessions.v1";
@@ -316,6 +418,9 @@ function iconFor(tool) {
   if (tool === "run_command") return "❯";
   if (tool === "read_file" || tool === "list_directory") return "▣";
   if (tool === "write_file" || tool === "edit_file") return "✎";
+  if (tool && tool.startsWith("brain_")) return "◑";
+  if (tool === "curriculum_index" || tool === "search_my_materials") return "⌕";
+  if (tool && tool.startsWith("self_")) return "◇";
   if (tool && tool.startsWith("generate")) return "✦";
   if (tool && tool.startsWith("drive")) return "▤";
   return "◆";
@@ -328,8 +433,11 @@ function actionVerb(tool) {
     write_file: "Writing",
     edit_file: "Editing",
     research: "Researching",
+    curriculum_index: "Searching",
   };
   if (verbs[tool]) return verbs[tool];
+  if (tool && tool.startsWith("brain_")) return "Updating";
+  if (tool && tool.startsWith("self_")) return "Improving";
   if (tool && tool.startsWith("generate")) return "Generating";
   return "Using";
 }
@@ -345,6 +453,9 @@ function approvalTitle(data) {
   if (data.tool_name === "run_command") return "Claw-ED wants to run a command on your Mac";
   if (data.tool_name === "write_file" || data.tool_name === "edit_file") {
     return "Claw-ED wants to change a file";
+  }
+  if (data.tool_name === "brain_capture" || data.tool_name === "brain_dream" || data.tool_name === "self_distill") {
+    return "Claw-ED wants to update its local teaching brain";
   }
   return "Claw-ED wants to act on your Mac";
 }
@@ -551,18 +662,21 @@ async function readSSE(body, handle) {
 const SKILL_RULES = [
   [/^run_command$/, "Your Mac", "❯", "Run a command for me: "],
   [/^mac_files|^file_manager|^read_workspace/, "Your Mac", "▣", null],
+  [/^brain_|^self_|^update_soul|^schedule_task/, "Memory & growth", "◑", null],
+  [/^curriculum_index|^search_my_materials|^ingest_materials/, "Indexed materials", "⌕", null],
   [/^generate_lesson_bundle$/, "Create for class", "✦",
     "Make me a complete lesson bundle on "],
   [/^generate_(lesson|unit|materials)/, "Create for class", "✦", "Make me a lesson on "],
   [/^generate_assessment|^sub_packet|^parent_comm/, "Create for class", "✎", null],
   [/^generate_(game|simulation|animation|video)/, "Create for class", "▶", null],
+  [/^portfolio_build$/, "Create for class", "▣", null],
   [/^improve_lesson|^differentiate/, "Create for class", "◆", null],
   [/^curriculum|^gap_analysis|^standards|^search_standards/, "Plan & align", "▤", null],
-  [/^search_lessons|^search_my_materials|^ingest_materials|^student_insights/, "Plan & align", "🔎", null],
+  [/^search_lessons|^student_insights/, "Plan & align", "⌕", null],
   [/style_profile|^set_active_profile/, "Plan & align", "☰", null],
   [/^drive_/, "Google Drive", "▦", null],
-  [/^research$|^browser|^wiki/, "Research & web", "🔎", null],
-  [/^export_document/, "Create for class", "📄", null],
+  [/^research$|^browser|^wiki/, "Research & web", "⌕", null],
+  [/^export_document/, "Create for class", "▣", null],
   [/.*/, "Agent abilities", "◆", null],
 ];
 
@@ -587,6 +701,16 @@ const TRY_PROMPTS = {
   ingest_materials: "Learn my style from the lesson files in ",
   get_style_profile: "Show me what you've learned about my teaching style",
   set_active_profile: "Switch my style profile",
+  brain_stats: "Show me the teaching brain stats",
+  brain_search: "Search the teaching brain for ",
+  brain_read: "Read this brain page: ",
+  brain_capture: "Capture this as a durable teaching insight: ",
+  brain_dream: "Run a dry-run dream cycle and summarize the gaps",
+  curriculum_index: "Check my curriculum index status",
+  portfolio_build: "Build an advertising-safe sample portfolio from the bundled sample curriculum",
+  self_distill: "Analyze my past outputs and improve your teaching rules",
+  install_package: "Install a package needed for this task: ",
+  create_custom_tool: "Create a custom teacher-assistant skill for ",
   schedule_task: "Every weekday at 6am, prep a Do-Now for my first class",
   switch_model: "Switch to a different AI model",
 };
@@ -610,7 +734,7 @@ function firstSentence(text, max = 140) {
 }
 
 const GROUP_ORDER = [
-  "Your Mac", "Create for class", "Plan & align",
+  "Your Mac", "Indexed materials", "Memory & growth", "Create for class", "Plan & align",
   "Research & web", "Google Drive", "Agent abilities",
 ];
 let skillsCache = []; // [{name, title, desc, group, icon, asks, try}]
@@ -925,8 +1049,10 @@ function paletteItems(query) {
   items.push(cmd("◆", "Go to Skills", () => showView("skills")));
   items.push(cmd("☰", "Go to Your Materials (style profiles)", () => showView("materials")));
   items.push(cmd("▣", "Go to Workspace", () => showView("workspace")));
+  items.push(cmd("▢", "Go to Pair iPhone", () => showView("pair")));
   items.push(cmd("⚙", "Go to Settings", () => showView("settings")));
   items.push(cmd("↻", "Restart agent", () => invoke("restart_sidecar").catch(() => {})));
+  items.push(cmd("✓", "Export district readiness report", exportReadinessReport));
 
   for (const s of sessions.slice(0, 25)) {
     items.push({
@@ -1001,6 +1127,7 @@ function showView(name) {
   if (name === "chat") $("input").focus();
   if (name === "skills" && !skillsCache.length) fetchSkills();
   if (name === "materials") fetchProfiles();
+  if (name === "pair") fetchPairing();
 }
 
 function init() {
@@ -1045,7 +1172,10 @@ function init() {
   });
   $("styleChip").onclick = () => showView("materials");
 
+  $("refreshPairBtn").onclick = fetchPairing;
+
   $("restartBtn").onclick = () => invoke("restart_sidecar").catch(() => {});
+  $("readinessBtn").onclick = exportReadinessReport;
 
   // Theme (persisted; default Studio)
   let savedTheme = "studio";

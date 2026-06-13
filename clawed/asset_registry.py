@@ -13,6 +13,8 @@ import json
 import logging
 import re
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -218,8 +220,20 @@ class AssetRegistry:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        conn = sqlite3.connect(self._db_path)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS assets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -323,7 +337,7 @@ class AssetRegistry:
         topic_tags = _extract_topic_tags(filename, text, source_path=source_path)
 
         try:
-            with sqlite3.connect(self._db_path) as conn:
+            with self._connect() as conn:
                 cursor = conn.execute(
                     "INSERT OR IGNORE INTO assets "
                     "(teacher_id, source_path, filename, doc_type, material_type, title, "
@@ -399,7 +413,7 @@ class AssetRegistry:
         if not keywords:
             return []
 
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             if teacher_id:
                 rows = conn.execute(
@@ -484,7 +498,7 @@ class AssetRegistry:
 
     def stats(self, teacher_id: str) -> dict[str, int]:
         """Return asset counts."""
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             total = conn.execute(
                 "SELECT COUNT(*) FROM assets WHERE teacher_id = ?", (teacher_id,),
             ).fetchone()[0]
@@ -517,7 +531,7 @@ class AssetRegistry:
             List of dicts with: path, source, content_type, context, asset_id,
             image_format, width, height, slide_number.
         """
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             if asset_id is not None:
                 rows = conn.execute(
@@ -647,7 +661,7 @@ class AssetRegistry:
 
     def _get_teacher_image_rows(self, teacher_id: str) -> list[Any]:
         """Load all image rows for a teacher from the database."""
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             return conn.execute(
                 "SELECT ai.*, a.filename, a.title, a.source_path, a.topic_tags "

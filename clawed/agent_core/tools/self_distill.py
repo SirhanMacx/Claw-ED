@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SelfDistillTool:
     """Analyze past outputs and distill improvement rules into soul.md."""
 
-    risk_level = "read_only"
+    risk_level = "write_local"
 
     def schema(self) -> dict[str, Any]:
         return {

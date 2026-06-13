@@ -94,3 +94,4 @@ daemon/node_modules/
 .gstack/
 desktop/node_modules/
 desktop/src-tauri/gen/
+.codex/

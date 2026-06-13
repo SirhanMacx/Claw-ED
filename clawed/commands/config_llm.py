@@ -6,6 +6,7 @@ from typing import Any
 
 import typer
 from rich.panel import Panel
+from rich.prompt import Prompt
 
 from clawed._json_output import run_json_command
 from clawed.commands._helpers import console
@@ -42,12 +43,18 @@ def config_set_model(
             cfg.openai_model = model
         elif llm_provider == LLMProvider.OLLAMA:
             cfg.ollama_model = model
+        elif llm_provider == LLMProvider.GOOGLE:
+            cfg.google_model = model
+        elif llm_provider == LLMProvider.OPENROUTER:
+            cfg.openrouter_model = model
 
     cfg.save()
     model_name = model or {
         LLMProvider.ANTHROPIC: cfg.anthropic_model,
         LLMProvider.OPENAI: cfg.openai_model,
         LLMProvider.OLLAMA: cfg.ollama_model,
+        LLMProvider.GOOGLE: cfg.google_model,
+        LLMProvider.OPENROUTER: cfg.openrouter_model,
     }[llm_provider]
 
     console.print(
@@ -93,7 +100,7 @@ def config_set_model(
                 resp = _httpx.get(f"{base}/api/version", timeout=5)
                 version = resp.json().get("version", "unknown")
                 console.print(f"[green]Connected to Ollama v{version}[/green]")
-            except (json.JSONDecodeError, KeyError):
+            except (_httpx.HTTPError, json.JSONDecodeError, KeyError, OSError):
                 console.print(
                     "[yellow]Warning: Can't reach Ollama at "
                     f"{cfg.ollama_base_url}. Is it running?[/yellow]"
@@ -126,6 +133,93 @@ def config_set_model(
                 "[yellow]Warning: No OpenAI API key found. "
                 "Set OPENAI_API_KEY or run: clawed config set-key openai YOUR_KEY[/yellow]"
             )
+    elif llm_provider == LLMProvider.OPENROUTER:
+        from clawed.config import get_api_key as _get_key
+        openrouter_key: str | None = _get_key("openrouter")
+        if openrouter_key:
+            console.print("[green]OpenRouter API key found.[/green]")
+        else:
+            console.print(
+                "[yellow]Warning: No OpenRouter API key found. "
+                "Create one at https://openrouter.ai/keys, then run: "
+                "clawed config set-key openrouter YOUR_KEY[/yellow]"
+            )
+    elif llm_provider == LLMProvider.GOOGLE:
+        from clawed.config import get_api_key as _get_key
+        google_key: str | None = _get_key("google")
+        if google_key:
+            console.print("[green]Google Gemini API key found.[/green]")
+        else:
+            console.print(
+                "[yellow]Warning: No Google API key found. "
+                "Run: clawed config set-key google YOUR_KEY[/yellow]"
+            )
+
+
+@config_app.command("set-key")
+def config_set_key(
+    provider: str = typer.Argument(
+        ..., help="Provider: anthropic, openai, ollama, google, or openrouter"
+    ),
+    api_key: str | None = typer.Argument(
+        None, help="API key. Omit to paste it into a hidden prompt."
+    ),
+) -> None:
+    """Save an AI provider API key on this Mac.
+
+    Claw-ED tries the OS keychain first and falls back to
+    ~/.eduagent/secrets.json with 0600 file permissions.
+    """
+    provider = provider.lower().strip()
+    allowed = {"anthropic", "openai", "ollama", "google", "openrouter"}
+    if provider not in allowed:
+        console.print(
+            "[red]Unknown provider.[/red] Use: anthropic, openai, ollama, google, openrouter"
+        )
+        raise typer.Exit(1)
+
+    if not api_key:
+        api_key = Prompt.ask(
+            f"Paste your {provider} API key",
+            password=True,
+        ).strip()
+    if not api_key:
+        console.print("[red]No key entered.[/red]")
+        raise typer.Exit(1)
+
+    from clawed.config import mask_api_key, set_api_key
+
+    set_api_key(provider, api_key)
+    console.print(
+        Panel(
+            f"[bold]Provider:[/bold] {provider}\n"
+            f"[bold]Saved key:[/bold] {mask_api_key(api_key)}\n\n"
+            "Next: run [cyan]clawed config set-model "
+            f"{provider} --model MODEL_NAME[/cyan] if you want a different model.",
+            title="API Key Saved",
+        )
+    )
+
+
+@config_app.command("delete-key")
+def config_delete_key(
+    provider: str = typer.Argument(
+        ..., help="Provider: anthropic, openai, ollama, google, or openrouter"
+    ),
+) -> None:
+    """Delete a saved AI provider API key from this Mac."""
+    provider = provider.lower().strip()
+    allowed = {"anthropic", "openai", "ollama", "google", "openrouter"}
+    if provider not in allowed:
+        console.print(
+            "[red]Unknown provider.[/red] Use: anthropic, openai, ollama, google, openrouter"
+        )
+        raise typer.Exit(1)
+
+    from clawed.config import delete_api_key
+
+    delete_api_key(provider)
+    console.print(f"[green]Deleted saved {provider} API key.[/green]")
 
 
 @config_app.command("set-token")

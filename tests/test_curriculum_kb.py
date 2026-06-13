@@ -1,8 +1,11 @@
 """Tests for the Curriculum Knowledge Base."""
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
+
+import pytest
 
 from clawed.agent_core.memory.curriculum_kb import CurriculumKB
 
@@ -69,3 +72,45 @@ class TestCurriculumKB:
         added = self.kb.index("t1", "Empty", "/e.docx", "")
         assert added == 0
         assert self.kb.stats("t1")["chunk_count"] == 0
+
+    def test_sqlite_handles_close_after_repeated_operations(self):
+        self.kb.index(
+            "t1",
+            "Open Handles",
+            "/handles.txt",
+            " ".join(["Renaissance trade routes and city states"] * 120),
+        )
+        for _ in range(25):
+            self.kb.stats("t1")
+            self.kb.search("t1", "Renaissance trade routes", top_k=3)
+
+        open_fds = _count_open_fds(self.db_path)
+        if open_fds is None:
+            pytest.skip("File descriptor inspection is not available here.")
+        assert open_fds == 0
+
+
+def _count_open_fds(path: Path) -> int | None:
+    fd_root = Path("/proc/self/fd")
+    if not fd_root.exists():
+        fd_root = Path("/dev/fd")
+    if not fd_root.exists():
+        return None
+
+    targets = {
+        str(path),
+        str(path) + "-wal",
+        str(path) + "-shm",
+    }
+    count = 0
+    try:
+        entries = list(fd_root.iterdir())
+    except OSError:
+        return None
+    for fd in entries:
+        try:
+            if os.readlink(fd) in targets:
+                count += 1
+        except OSError:
+            continue
+    return count

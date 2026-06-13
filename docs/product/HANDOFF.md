@@ -5,7 +5,7 @@ This doc is the *operational* map: where things live, how to run + verify, the
 one remaining blocker, and the hard rules that keep you from breaking Jon's
 machine. PROTOTYPE.md has the milestone narrative; don't duplicate it here.
 
-_Last updated: 2026-06-08 · branch `claude/app-experience` · tip `f132f66`._
+_Last verified: 2026-06-11 · branch `claude/app-experience` · tip `386fc00`._
 
 ---
 
@@ -45,11 +45,30 @@ _Last updated: 2026-06-08 · branch `claude/app-experience` · tip `f132f66`._
 - **Backend is production-complete and LIVE.** Always-on agent + Cloudflare named
   tunnel run as launchd services; device-token auth; full phone-login validated
   end-to-end over the real `https://clawed.macxlabs.app` tunnel in the iOS
-  Simulator's WKWebView. CI green on `claude/app-experience`.
-- **iOS build 3 is SHIPPED to TestFlight (2026-06-08)** — the codesign/keychain
-  block was solved autonomously via an App Store Connect API cert-mint (no login
-  keychain touched). See [§ iOS signing — SOLVED](#the-one-blocker--ios-signing-jon-gated).
-  The whole prototype is now real end-to-end.
+  Simulator's WKWebView. Live health verified 2026-06-11:
+  `{"status":"ok","version":"5.15.2026","llm_provider":"openrouter","llm_model":"minimax/minimax-m3","llm_connected":true}`.
+- **iOS build 5 is the current valid App Store Connect build.** Verified
+  2026-06-11 with `node ios-app/scripts/asc.mjs verify-build --version 5`:
+  build id `780f5f3a-46ab-4d18-93ba-eea12297b74f`, uploaded 2026-06-10
+  18:55:19-07:00, `processingState=VALID`, `expired=false`,
+  `usesNonExemptEncryption=false`.
+- **Build 5 is routed to internal TestFlight.** Verified 2026-06-11 with
+  `node ios-app/scripts/asc.mjs verify-beta --version 5`:
+  `internalBuildState=IN_BETA_TESTING`, `externalBuildState=READY_FOR_BETA_SUBMISSION`,
+  `autoNotifyEnabled=true`.
+- **App Store version 1.0 is not in review right now.** Verified 2026-06-11 with
+  `node ios-app/scripts/asc.mjs verify-version`: app-store version state
+  `DEVELOPER_REJECTED`, release type `AFTER_APPROVAL`, selected build 5, latest
+  review submission `COMPLETE` at `2026-06-11T03:15:35.219Z`.
+- **Screenshots and privacy URL are good.** The App Store screenshot sets under
+  `ios-app/app-store/screenshots/iphone-6.9/` and `ios-app/app-store/screenshots/ipad-12.9/`
+  verify at 1290x2796 and 2048x2732; `https://macxlabs.app/privacy/` returns
+  HTTP 200.
+- **Public App Store submission is blocked only by portal-only ASC fields:**
+  set primary category **Education**, secondary category **Productivity**, and
+  App Privacy **Data Not Collected** in the App Store Connect web UI, then
+  resubmit version 1.0. API category updates were rejected with 403 and privacy
+  API paths returned 404.
 - **Do NOT run `codesign` / `xcodebuild archive` / any `security` command to
   "check" or "try" anything.** That is what spammed Jon with keychain password
   prompts. See [§ The keychain rule](#-the-keychain--codesign-rule-most-important).
@@ -76,7 +95,7 @@ Phone → tunnel → Mac agent. The phone is a remote control; the Mac does the 
 
 ---
 
-## iOS signing — SOLVED (2026-06-08), build 3 on TestFlight
+## iOS signing — solved history; build 5 is current
 
 The original block: `codesign` couldn't use the signing key in this headless
 context — the **login keychain is locked**, so *using* the key needed a GUI
@@ -93,9 +112,11 @@ you own. Full tooling saved in `/tmp/asc/` (re-create if `/tmp` was cleared):
 5. `build_ipa.sh` — archive **unsigned** (`CODE_SIGNING_ALLOWED=NO`) then **`-exportArchive`** with `ExportOptions-manual.plist` (manual; `signingCertificate` + `provisioningProfiles`). Unsigned-then-export is what avoids the *"Capacitor frameworks don't support provisioning profiles"* error you get if you pass `PROVISIONING_PROFILE_SPECIFIER` globally to `xcodebuild archive`.
 6. `xcrun altool --upload-app -f …App.ipa -t ios --apiKey K5RKF383QT --apiIssuer …` → TestFlight. **Never print the `.p8` or enter an Apple password.**
 
-Result: build 3 signed `Apple Distribution: JON ANTHONY MACCARELLO (Y8MX8Q77B2)`
-→ WWDR → Apple Root, **UPLOAD SUCCEEDED** (Delivery UUID `92116b15…`). Restore the
-keychain search list to login-only afterward (hygiene).
+Historical result: build 3 signed `Apple Distribution: JON ANTHONY MACCARELLO
+(Y8MX8Q77B2)` → WWDR → Apple Root, **UPLOAD SUCCEEDED** (Delivery UUID
+`92116b15…`). Restore the keychain search list to login-only afterward (hygiene).
+The current valid ASC build is build 5; do not regress docs or review notes to
+build 3.
 
 **For the *next* iOS build:** the cert (`65R855S7DZ`) + profile (`ClawED App Store api`)
 already exist — reuse them; just rebuild the `/tmp` signing keychain (steps 3+5+6)
@@ -111,6 +132,25 @@ and added the account holder `sirhanmacx@icloud.com` as an internal tester →
 build flipped to `IN_BETA_TESTING`. Internal testing needs no Apple review.
 The tester's phone TestFlight must be signed into **that same Apple ID**. The group
 has all-builds access, so future builds appear automatically — no per-build assign.
+
+### Current iOS/App Store verification commands
+
+These are safe read-only checks; they do not touch the login keychain:
+
+```bash
+cd ios-app
+node --check www/connect.js
+npm run screenshots:verify
+node scripts/asc.mjs check-app
+node scripts/asc.mjs verify-build --version 5
+node scripts/asc.mjs verify-beta --version 5
+node scripts/asc.mjs verify-version
+```
+
+Known current output: app record `6777690676`, bundle id `J6MYZ2VRS9`,
+bundle `com.macxlabs.clawed`, SKU `CLAWED001`, build 5 `VALID` and
+`IN_BETA_TESTING` for internal TestFlight; App Store version 1.0 is
+`DEVELOPER_REJECTED` with build 5 selected.
 
 ---
 

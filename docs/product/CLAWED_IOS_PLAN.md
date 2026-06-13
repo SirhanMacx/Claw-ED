@@ -6,9 +6,10 @@
 > mobile sibling of the menu-bar Mac app (`mac-app/`) and follows the same
 > guardrails as `docs/product/CLAWED_DESKTOP_PLAN.md`.
 
-This is intentionally the smallest thing that's useful: scan or type a LAN URL,
-remember it, and render the teacher's running Claw-ED. No cloud, no account, no
-Python on device.
+This is intentionally the smallest thing that's useful: scan the Mac QR with
+the iPhone Camera, open the `clawed://` pairing link, remember the server, and
+render the teacher's running Claw-ED. Manual URL entry remains available. No
+Python runs on device.
 
 ---
 
@@ -26,24 +27,24 @@ Python on device.
 ```
 
 - **Native shell:** [Capacitor](https://capacitorjs.com) (`@capacitor/ios`),
-  `appId` `app.macxlabs.clawed`, `appName` "Claw-ED", `webDir` `www`.
+  `appId` `com.macxlabs.clawed`, `appName` "Claw-ED", `webDir` `www`.
 - **Bundled web content:** exactly one screen — the **CONNECT** screen
   (`ios-app/www/`). It is dependency-free vanilla HTML/CSS/JS. It does **not**
   bundle the Claw-ED web app.
-- **Hand-off:** once the teacher provides a valid base URL, the WebView does a
-  `location.replace(url)` to the server. From that point the app shows the
-  teacher's real Claw-ED, served by their Mac. The CONNECT screen is only ever
-  seen on first launch or after "Use a different server."
+- **Hand-off:** once the teacher provides a valid base URL, the WebView either
+  posts a paired device token to `/api/auth/bootstrap` or does a direct
+  `location.replace(url)` to the local server. From that point the app shows the
+  teacher's real Claw-ED. The CONNECT screen is only seen on first launch, after
+  "Use a different server," or when the saved server cannot be reached.
 - **Server contract:** matches the rest of the repo — default
   `http://<host>:8000`, health probe `GET /api/health` (no auth, no DB/LLM —
   `clawed/api/routes/settings.py`). If the port/host/health route change in
   `clawed/`, update this app's default (`DEFAULT_PORT` in
   `ios-app/www/connect.js`) and the Mac app's `AppEnvironment.swift` together.
-- **Discovery:** the Mac menu-bar app already renders a **QR code of the LAN
-  URL** (`mac-app/Sources/ClawEDMenuBar/QRCode.swift`). The iOS app's **Scan QR**
-  affordance is the natural consumer of that QR. Today it is a graceful stub (see
-  Toolchain status); enabling it is `npm i @capacitor/barcode-scanner` +
-  `NSCameraUsageDescription`.
+- **Discovery:** the Mac menu-bar app renders QR codes for phone pairing. The
+  preferred pairing path is the normal iPhone Camera opening a `clawed://` deep
+  link handled by the app. The in-app **Scan QR** button remains an optional
+  direct-scanner fallback.
 
 ### Why a thin client (not a port of the engine)
 
@@ -65,12 +66,12 @@ desktop guardrails:
   server on the local network. There is no Claw-ED cloud, no account system, and
   no MacxLabs backend. The shell sends nothing to MacxLabs.
 - **No telemetry / no analytics SDKs.** None bundled, none planned.
-- **The only stored value** is the last-good server URL in `localStorage`
-  (`clawed.serverUrl`), so a relaunch can offer "Reconnect to …". It is cleared
-  by "Use a different server." No tokens, credentials, or student data are stored
-  by the shell — those live on the Mac.
+- **Stored values** are the last-good server URL (`clawed.serverUrl`) and, when
+  pairing with a remote/tunnel server, the device token (`clawed.serverToken`).
+  The token is posted once to `/api/auth/bootstrap`; the server sets its own
+  first-party cookie. "Use a different server" clears both values.
 - **Cleartext on the LAN is expected and scoped.** Teacher servers are plain
-  `http://` on the local network (no public TLS). `capacitor.config.ts` enables
+  `http://` on the local network (no public TLS). `capacitor.config.json` enables
   `cleartext` so the WebView can load those LAN origins. This is a deliberate
   local-network allowance, not an open door to the public internet:
   - The CONNECT screen only accepts `http`/`https` URLs and defaults a bare host
@@ -112,43 +113,38 @@ Captured on the build host while scaffolding:
 | `xcodebuild`  | Xcode 26.3 (17C529)| iOS toolchain present.                           |
 | CocoaPods     | not verified here  | Capacitor needs it for `cap sync`; `sudo gem install cocoapods` if missing. |
 
-What is scaffolded and what is deferred:
+What is built and what is deferred:
 
-- ✅ **Scaffolded now:** `package.json`, `capacitor.config.ts`, the full CONNECT
-  screen (`www/index.html` + `connect.js` + `styles.css`), a 1024×1024 placeholder
-  icon, and docs. `node --check` passes on the JS and the config/manifest parse.
-- ⏳ **Deferred (standard Capacitor steps, run on a Mac with the toolchain):**
-  `npm i`, `npx cap add ios` (generates the native `ios/` Xcode project, which is
-  not committed in this scaffold), `npx cap sync ios`, `npx cap open ios`.
-- ⏳ **Follow-ups:** real camera-based QR scanning
-  (`@capacitor/barcode-scanner` + `NSCameraUsageDescription`); the full icon set
-  via `@capacitor/assets`; the final brand icon (Ed mascot / MacxLabs) to replace
-  the placeholder; the ATS `Info.plist` scoping noted above.
+- ✅ **Built now:** `package.json`, `capacitor.config.json`, native
+  `ios/App/App.xcworkspace`, the CONNECT screen (`www/index.html` +
+  `connect.js` + `styles.css`), `clawed://` deep-link handling via
+  `@capacitor/app`, token bootstrap, a 1024×1024 placeholder icon, and docs.
+- ✅ **Verified locally:** `npm run doctor`, `npm run sync:ios`, and native iOS
+  build/archive steps have run on the build host during the release pass.
+- ⏳ **Follow-ups:** optional direct in-app barcode scanner
+  (`@capacitor/barcode-scanner`); the full icon set via `@capacitor/assets`;
+  the final brand icon (Ed mascot / MacxLabs) to replace the placeholder.
 
 ---
 
-## Apple signing & TestFlight — owner's handoff
+## Apple signing & TestFlight
 
-**This is intentionally not automated and is the repo owner's (Jon's) step.** The
-scaffold stops at "opens in Xcode and runs." No certificates, provisioning
-profiles, App Store Connect API keys, or `ExportOptions.plist` live in this repo,
-and none should — they belong to the owner's Apple Developer account.
+The native app is ready to archive when signing credentials are present on the
+build host. No private certificates, provisioning profiles, or App Store Connect
+API keys should be committed to the repo.
 
-Handoff checklist for the owner:
+Release checklist:
 
-1. **Generate the native project** on a Mac: from `ios-app/`, `npm i` then
-   `npx cap add ios` and `npx cap sync ios`.
-2. **Open in Xcode** (`npx cap open ios`) → **App** target → **Signing &
+1. **Sync web assets:** from `ios-app/`, run `npm run sync:ios`.
+2. **Open in Xcode** (`npm run open:ios`) → **App** target → **Signing &
    Capabilities**:
-   - Set **Team** to the owner's Apple Developer team.
-   - Confirm/register the bundle identifier `app.macxlabs.clawed`.
+   - Confirm **Team** is `Y8MX8Q77B2`.
+   - Confirm/register the bundle identifier `com.macxlabs.clawed`.
    - Automatic signing is fine for a first build.
-3. **Scope ATS** in the iOS app's `Info.plist` for local networking (see Data &
-   security model) and add `NSCameraUsageDescription` if/when QR scanning ships.
-4. **Archive & upload:** Product → Archive → distribute to **App Store Connect**
-   for TestFlight. Version/build strings should align with the repo's date-based
-   scheme (mirroring the Mac app guidance in `CLAWED_DESKTOP_PLAN.md`).
-5. **App Store review framing:** the privacy answers are "no data collected"; the
+3. **Archive & upload:** Product → Archive → distribute to **App Store Connect**
+   for TestFlight, or run the equivalent `xcodebuild -archivePath ... archive`
+   plus export/upload flow.
+4. **App Store review framing:** the privacy answers are "no data collected"; the
    ATS/local-network and camera (if added) usage strings explain the LAN-client
    nature of the app.
 

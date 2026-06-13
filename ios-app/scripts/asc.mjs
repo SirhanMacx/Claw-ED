@@ -6,6 +6,8 @@
 //   check-app    — does an app record exist for com.macxlabs.clawed? does the bundleId exist?
 //   create-app   — attempt to register bundleId + create the app record (non-interactive)
 //   verify-build — poll builds for a given --version (CFBundleVersion) under the app
+//   verify-beta  — show TestFlight beta state for a given --version build
+//   verify-version — show App Store version state, selected build, and review submission state
 //
 // Env overrides: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH, ASC_BUNDLE_ID
 import { createSign } from 'node:crypto';
@@ -19,6 +21,7 @@ const ISSUER_ID = process.env.ASC_ISSUER_ID || '6a02d8d5-4d1e-4f92-9936-18d05e66
 const KEY_PATH = (process.env.ASC_KEY_PATH || `~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8`).replace(/^~\//, `${homedir()}/`);
 const PRIMARY_LOCALE = process.env.ASC_PRIMARY_LOCALE || 'en-US';
 const SKU = process.env.ASC_SKU || 'CLAWED001';
+const ASC_VERSION = process.env.ASC_VERSION || '1.0';
 
 function b64(value) { return Buffer.from(value).toString('base64url'); }
 
@@ -130,13 +133,78 @@ async function cmdVerifyBuild(version) {
   if (!match) process.exitCode = 1;
 }
 
+async function cmdVerifyBeta(version) {
+  const jwt = await token();
+  const app = await findApp(jwt);
+  if (!app) { console.log(JSON.stringify({ ok: false, reason: 'no app record', bundleId: BUNDLE_ID }, null, 2)); process.exitCode = 1; return; }
+
+  const buildsRes = await api(jwt, `/v1/builds?filter[app]=${app.id}&sort=-uploadedDate&limit=30&fields[builds]=version,uploadedDate,processingState,expired,usesNonExemptEncryption`);
+  if (!buildsRes.ok) throw new Error(`builds query ${buildsRes.status} ${JSON.stringify(buildsRes.body).slice(0, 600)}`);
+  const builds = buildsRes.body.data || [];
+  const match = version ? builds.find((b) => b.attributes?.version === String(version)) : builds[0];
+  if (!match) {
+    console.log(JSON.stringify({ ok: false, reason: 'build not found', requestedVersion: version || '(latest)' }, null, 2));
+    process.exitCode = 1;
+    return;
+  }
+
+  const betaRes = await api(jwt, `/v1/buildBetaDetails?filter[build]=${match.id}&fields[buildBetaDetails]=autoNotifyEnabled,externalBuildState,internalBuildState`);
+  if (!betaRes.ok) throw new Error(`buildBetaDetails query ${betaRes.status} ${JSON.stringify(betaRes.body).slice(0, 600)}`);
+  const detail = betaRes.body.data?.[0] || null;
+  console.log(JSON.stringify({
+    ok: !!detail,
+    bundleId: BUNDLE_ID,
+    app: { id: app.id, ...app.attributes },
+    requestedVersion: version || '(latest)',
+    build: { id: match.id, ...match.attributes },
+    beta: detail ? { id: detail.id, ...detail.attributes } : null,
+  }, null, 2));
+  if (!detail) process.exitCode = 1;
+}
+
+async function cmdVerifyVersion(versionString = ASC_VERSION) {
+  const jwt = await token();
+  const app = await findApp(jwt);
+  if (!app) { console.log(JSON.stringify({ ok: false, reason: 'no app record', bundleId: BUNDLE_ID }, null, 2)); process.exitCode = 1; return; }
+
+  const versionsRes = await api(jwt, `/v1/apps/${app.id}/appStoreVersions?filter[versionString]=${encodeURIComponent(versionString)}&fields[appStoreVersions]=versionString,appStoreState,platform,releaseType,usesIdfa`);
+  if (!versionsRes.ok) throw new Error(`appStoreVersions query ${versionsRes.status} ${JSON.stringify(versionsRes.body).slice(0, 600)}`);
+  const version = versionsRes.body.data?.[0] || null;
+  let selectedBuild = null;
+  if (version) {
+    const buildRes = await api(jwt, `/v1/appStoreVersions/${version.id}/build?fields[builds]=version,uploadedDate,processingState,expired,usesNonExemptEncryption`);
+    if (!buildRes.ok) throw new Error(`appStoreVersion build query ${buildRes.status} ${JSON.stringify(buildRes.body).slice(0, 600)}`);
+    selectedBuild = buildRes.body.data ? { id: buildRes.body.data.id, ...buildRes.body.data.attributes } : null;
+  }
+
+  const submissionsRes = await api(jwt, `/v1/reviewSubmissions?filter[app]=${app.id}&fields[reviewSubmissions]=platform,state,submittedDate`);
+  if (!submissionsRes.ok) throw new Error(`reviewSubmissions query ${submissionsRes.status} ${JSON.stringify(submissionsRes.body).slice(0, 600)}`);
+  const latestSubmission = (submissionsRes.body.data || [])
+    .map((s) => ({ id: s.id, ...s.attributes }))
+    .sort((a, b) => String(b.submittedDate || '').localeCompare(String(a.submittedDate || '')))[0] || null;
+
+  console.log(JSON.stringify({
+    ok: !!version,
+    bundleId: BUNDLE_ID,
+    app: { id: app.id, ...app.attributes },
+    requestedVersion: versionString,
+    appStoreVersion: version ? { id: version.id, ...version.attributes } : null,
+    selectedBuild,
+    latestReviewSubmission: latestSubmission,
+  }, null, 2));
+  if (!version) process.exitCode = 1;
+}
+
 const [cmd, ...rest] = process.argv.slice(2);
 const versionArg = (() => { const i = rest.indexOf('--version'); return i >= 0 ? rest[i + 1] : undefined; })();
+const storeVersionArg = (() => { const i = rest.indexOf('--store-version'); return i >= 0 ? rest[i + 1] : undefined; })();
 try {
   if (cmd === 'check-app') await cmdCheckApp();
   else if (cmd === 'create-app') await cmdCreateApp();
   else if (cmd === 'verify-build') await cmdVerifyBuild(versionArg);
-  else { console.error('usage: node scripts/asc.mjs <check-app|create-app|verify-build [--version N]>'); process.exit(2); }
+  else if (cmd === 'verify-beta') await cmdVerifyBeta(versionArg);
+  else if (cmd === 'verify-version') await cmdVerifyVersion(storeVersionArg);
+  else { console.error('usage: node scripts/asc.mjs <check-app|create-app|verify-build|verify-beta [--version N]|verify-version [--store-version X.Y]>'); process.exit(2); }
 } catch (e) {
   console.error(JSON.stringify({ ok: false, error: e.message }, null, 2));
   process.exit(1);

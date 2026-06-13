@@ -19,6 +19,8 @@ fn main() {
             sidecar::sidecar_state,
             sidecar::restart_sidecar,
             sidecar::agent_base_url,
+            sidecar::pairing_info,
+            sidecar::export_readiness_report,
             sidecar::open_path,
             sidecar::reveal_path,
             sidecar::pick_folder,

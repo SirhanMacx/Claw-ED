@@ -73,6 +73,25 @@ def test_set_api_key_falls_back_to_file_on_keyring_error(monkeypatch):
     assert saved.get("openrouter_api_key") == "sk-written"
 
 
+def test_set_api_key_falls_back_when_keyring_write_is_not_readable(monkeypatch):
+    """A no-op keyring backend must not make set-key look successful."""
+    monkeypatch.setitem(
+        sys.modules,
+        "keyring",
+        _fake_keyring(
+            set_=lambda *_args, **_kwargs: None,
+            get=lambda *_args, **_kwargs: None,
+        ),
+    )
+    saved: dict[str, str] = {}
+    monkeypatch.setattr(cfg, "_load_secrets", lambda: dict(saved))
+    monkeypatch.setattr(cfg, "_save_secrets", lambda s: saved.update(s))
+
+    cfg.set_api_key("openrouter", "sk-readable-next-process")
+
+    assert saved.get("openrouter_api_key") == "sk-readable-next-process"
+
+
 def test_delete_api_key_survives_keyring_error(monkeypatch):
     """A keychain DELETE failure must not crash; the file cleanup still runs."""
     monkeypatch.setitem(sys.modules, "keyring", _fake_keyring(delete=_raise_keychain_error))

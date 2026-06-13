@@ -12,7 +12,9 @@
     "open": "cap open ios",
     "open:ios": "cap open ios",
     "copy": "cap copy ios",
-    "doctor": "cap doctor"
+    "doctor": "cap doctor",
+    "screenshots:app-store": "node scripts/export-app-store-screenshots.mjs && node scripts/export-app-store-ipad-screenshots.mjs",
+    "screenshots:verify": "node scripts/verify-app-store-screenshots.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^7.1.2",
@@ -20,6 +22,7 @@
     "@capacitor/ios": "^7.0.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.0.0"
+    "@capacitor/cli": "^7.0.0",
+    "playwright": "^1.53.0"
   }
 }

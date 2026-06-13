@@ -3,34 +3,33 @@
 > A calm Capacitor wrapper that connects to a teacher's **own** Claw-ED server
 > over the local network. **No Python runs on the phone.** The engine stays on
 > the teacher's Mac; this app is just a friendly front door to it from an iPad or
-> iPhone on the same Wi-Fi.
+> iPhone on the same Wi-Fi, or to the teacher's paired remote/tunnel URL.
 
 ## What this is (and isn't)
 
 - **Is:** a native shell whose only bundled screen is a **CONNECT** screen. The
-  teacher types or scans the LAN URL their Mac shows (e.g.
-  `http://192.168.1.42:8000`), and the WebView navigates to that running server.
-  Everything after that is the teacher's real Claw-ED web app, served from their
-  Mac.
+  teacher scans the Mac QR code with the iPhone Camera, follows a `clawed://`
+  pairing link, or types the URL their Mac shows (e.g.
+  `http://192.168.1.42:8000`). The WebView navigates to that running server.
+  Everything after that is the teacher's real Claw-ED web app.
 - **Isn't:** a reimplementation of Claw-ED, a cloud client, or anything that
   phones home. It bundles no curriculum engine and no Python. Consistent with
   `docs/PRIVACY_MODEL.md` — no telemetry.
 
 This mirrors the desktop story in `docs/product/CLAWED_DESKTOP_PLAN.md`: the Mac
-menu-bar app (`mac-app/`) already shows a **LAN URL + QR code** for exactly this
-purpose. The phone reaching that URL requires the Mac side to opt into LAN
-sharing ("Allow phones on my Wi-Fi to connect"); until then the server binds to
-`127.0.0.1` and the CONNECT screen explains the caveat.
+menu-bar app (`mac-app/`) shows local, LAN, and remote/tunnel pairing options.
+LAN sharing is explicit and off by default; the Mac launcher only binds
+`0.0.0.0` after the teacher turns on "Share on my Wi-Fi."
 
 ## Layout
 
 ```
 ios-app/
 ├── package.json            # clawed-ios; @capacitor/core + ios + cli
-├── capacitor.config.ts     # appId app.macxlabs.clawed, appName Claw-ED, webDir www
+├── capacitor.config.json   # appId com.macxlabs.clawed, appName Claw-ED, webDir www
 ├── www/                    # the ONLY bundled web content (the CONNECT screen)
 │   ├── index.html
-│   ├── connect.js          # dependency-free vanilla JS: validate, remember, navigate
+│   ├── connect.js          # validate, remember, deep-link pair, bootstrap token, navigate
 │   └── styles.css          # calm Claude palette (cream #FAF9F5, clay #C96442, serif)
 ├── resources/
 │   ├── icon.png            # 1024×1024 placeholder (clay square, serif "C")
@@ -71,11 +70,16 @@ npx capacitor-assets generate --ios \
 
 See `resources/README.md`.
 
-## QR scanning
+## QR pairing
 
-The **Scan QR** button is wired as a graceful stub. If the camera plugin is
-added to the native project, the button uses it; otherwise it falls back to a
-clear "type the URL" message. To enable real scanning:
+The primary path is the normal iPhone/iPad **Camera** app: scan the QR code in
+the Mac menu-bar app, tap the `clawed://connect?...` prompt, and Claw-ED opens
+with the server URL and optional device token already filled in. The app also
+handles warm links while already open and cold links from a fresh launch.
+
+The in-app **Scan QR** button remains a graceful fallback. If a native barcode
+plugin is added, the button can scan directly; otherwise it tells the teacher to
+use the Camera app or type the Mac address. To enable direct in-app scanning:
 
 ```bash
 npm i @capacitor/barcode-scanner
@@ -86,20 +90,17 @@ Then add a camera-usage string to the iOS app's `Info.plist`
 (`NSCameraUsageDescription` — e.g. "Scan the QR code shown by Claw-ED on your
 Mac to connect.").
 
-## Signing & TestFlight — the owner's (Jon's) step
+## Signing & TestFlight
 
-**Apple Developer signing and any TestFlight / App Store upload are the repo
-owner's responsibility and are intentionally not automated here.** This scaffold
-deliberately stops at "opens in Xcode and runs." Shipping requires the owner's
-Apple Developer account and credentials:
+The native Xcode project is committed and configured for the MacxLabs team and
+bundle identifier. Shipping still requires valid Apple signing credentials on
+the build host, but it does not require recreating the project by hand:
 
-1. In Xcode → the **App** target → **Signing & Capabilities**, set the **Team**
-   to the owner's Apple Developer team and confirm the bundle identifier
-   `app.macxlabs.clawed` is registered (or let Xcode register it).
-2. Pick a real signing identity / provisioning profile (automatic signing is
-   fine for a first TestFlight build).
-3. **Product → Archive**, then distribute via **App Store Connect** to upload a
-   TestFlight build.
+1. Confirm the **App** target is signed with team `Y8MX8Q77B2` and bundle
+   identifier `com.macxlabs.clawed`.
+2. Run `npm run sync:ios` after editing `www/`.
+3. Archive the `App` scheme from `ios/App/App.xcworkspace`.
+4. Export with `ios/ExportOptions.plist` and upload to App Store Connect.
 
-No signing certificates, provisioning profiles, API keys, or `ExportOptions`
-live in this repo, and none should — those belong to the owner's account.
+No private signing certificates or App Store Connect API keys should be
+committed to this repo.

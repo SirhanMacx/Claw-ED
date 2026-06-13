@@ -1,8 +1,16 @@
 # Claw-ED
 
-> Made by a teacher, for teachers.
+> An open-source AI-agent harness for teachers.
 
-An open-source CLI agent that generates complete lesson bundles — plans, handouts, slides, differentiated versions, games, and more — in your teaching voice. Feed it your files. It learns how you teach. Then it does the work for you.
+Claw-ED runs an AI agent on your Mac, gives it safe tools, and loads it with
+prebuilt skills for agentic education work. Bring your own model key, teach it
+your materials, and it can plan, search, write, organize, and build classroom
+artifacts with approval gates around risky actions.
+
+It is not just a lesson generator. Lesson bundles are one skill. The larger
+idea is a local agent harness geared toward teacher-assistant work: files,
+folders, curriculum search, lesson creation, differentiation, review games,
+standards alignment, workflow loops, and Mac-side automation.
 
 **Sibling project:** [Claw-STU](https://sirhanmacx.github.io/Claw-STU/) — the student-facing personal learning agent. Ed builds the lessons; Stuart helps students understand them.
 
@@ -27,7 +35,7 @@ clawed
 
 ## What it does
 
-You point it at a folder of your old lessons. It reads them, figures out how you teach, and generates new ones that match your style. Teacher DOCX, student DOCX, slides PPTX — all at once.
+You point it at a folder of your old lessons. It reads them, figures out how you teach, and uses that context through a local agent. The agent can create teacher DOCX, student DOCX, slides PPTX, review games, differentiated supports, research notes, and local workspace files — all through tool calls the harness can inspect and permission.
 
 ```
 $ clawed
@@ -45,7 +53,7 @@ $ clawed
   ✓ French_Revolution_slides.pptx
 ```
 
-**New — a no-terminal app.** Run `clawed app` and Claw-ED opens a clean local web app in your browser — warm, calm, teacher-first, in a Claude-style design — with a guided setup that walks you through getting an API key step by step. Same engine, your files stay on your machine, no command line required. From the **Create** screen you can ask your co-teacher a quick question or build a full artifact — a lesson, a unit, materials, a quiz, a differentiated version, or a review game. There's also a **Mac menu-bar app** (`mac-app/`) that starts and stops Claw-ED with one click and shows the LAN URL plus a QR code, so you can open it from your phone on the same Wi-Fi.
+**New — a no-terminal app.** Run `clawed app` or use the native Mac app and Claw-ED opens a clean local UI with guided provider setup. Same engine, local harness. From the chat or Create screen you can ask your co-teacher a quick question or build a full artifact — a lesson, a unit, materials, a quiz, a differentiated version, or a review game. The Mac app also has a Skills gallery, Workspace artifacts, approval prompts, and iPhone pairing.
 
 It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to make something from your phone and the files show up in chat.
 
@@ -53,7 +61,10 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 
 ## Features
 
+- **Local AI-agent harness** — the app and agent run on your Mac; the model can be OpenRouter, Ollama, Anthropic, OpenAI, Google, or local Ollama
 - **A deep agent toolbox** — lesson gen, assessments, games, simulations, **narrated videos** (slides + free neural voiceover → MP4, fully local), animations, curriculum maps, differentiation, project arcs, and more
+- **Skills view** — the Mac app reads the live tool registry, groups the tools, and shows which actions ask before they run
+- **Permission prompts** — file writes, shell commands, network calls, package installs, and publishing actions are classified by risk; `run_command` always asks
 - **Create any artifact from the web app** — pick a card: full unit, single lesson, materials only, quiz / assessment, differentiated version, or review game. Lessons render in an inline preview you can read before you download.
 - **Quality gate with auto-retry** — 12 pedagogical checks (Bloom's progression, stimulus-based assessment, differentiation specificity, diversity audit) validate every lesson before delivery. Failures auto-retry with specific feedback.
 - **Revise in plain English** — after a lesson is made, just say "make it shorter," "add a primary source," or "lower it to 9th-grade reading level" and it updates that lesson — no regenerating from scratch.
@@ -79,7 +90,7 @@ It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to m
 - **Exit ticket auto-grading** — keyword analysis + formative feedback with sentence starter suggestions
 - **Classroom memory** — persistent profile (student count, ELL/IEP needs, tech available) injected into every generation
 - **Adaptive feedback loop** — exit ticket results feed into next lesson (reteach/extend recommendations + parent notifications)
-- **Bring your own key** — Anthropic, OpenAI, Google (Gemini), and OpenRouter (any model it routes to, e.g. `minimax/minimax-m3`), each with guided in-app onboarding; or run a fully local Ollama model offline. Keys are stored only on your machine. Interactive model switching.
+- **Bring your own key** — OpenRouter is the easiest recommendation for most teachers; Ollama local is the privacy/cost path for technical users; Ollama Cloud, Anthropic, OpenAI, and Google are supported too. Keys are stored on your Mac. Interactive model switching.
 - **Central approval policy** — every tool classified by risk level (read_only/write_local/network_call/package_install). Sensitive actions require teacher confirmation.
 - DOCX, PPTX, PDF, HTML, MP4, TSV, CSV, IMSCC, TXT export
 - MCP server for Claude Code / VS Code integration
@@ -97,7 +108,9 @@ Other tools give you a first draft you have to edit. Claw-ED has a **12-check qu
 
 ### Trust model
 
-Claw-ED is a **local-first tool** designed for a teacher's own machine. It reads your files, calls LLM APIs you configure, and writes to `~/.eduagent/`. The web API (if you run `clawed serve`) requires a bearer token and binds to localhost by default. Self-equipping installs packages in `--user` scope only. The Telegram bot runs as a background process on your machine. Nothing is sent anywhere except the LLM provider you choose.
+Claw-ED is a **local-first harness** designed for a teacher's own machine. The Mac app talks to a local agent over `127.0.0.1`, reads local files, and writes to `~/.eduagent/` or paths you approve. The web API (if you run `clawed serve`) requires a bearer token and binds to localhost by default. Self-equipping installs packages in `--user` scope only.
+
+Model privacy depends on the provider you choose. If you use local Ollama, prompts stay on your Mac. If you use OpenRouter, Ollama Cloud, Anthropic, OpenAI, Google, or any other cloud model, Claw-ED sends the prompt and relevant context to that provider, and that provider's terms and data policy apply. See [docs/product/AGENT_HARNESS.md](docs/product/AGENT_HARNESS.md).
 
 ### Feature Maturity
 
@@ -154,7 +167,21 @@ clawed
 
 It walks you through picking a provider and an API key.
 
-**Pick whatever fits your budget:** for best output quality, use an Anthropic or OpenAI API key (pay per use). [OpenRouter](https://openrouter.ai/keys) lets you name any model it routes to — including open and low-cost ones like `minimax/minimax-m3`, DeepSeek, or Qwen — at pay-as-you-go rates. Google Gemini has a free tier. Local Ollama runs fully offline for free, and [Ollama Pro](https://ollama.com/pricing) ($20/mo) gives unlimited access to good cloud-hosted models with the easiest setup. The in-app setup walks you through getting a key for whichever you choose.
+Recommended:
+
+```bash
+clawed config set-key openrouter YOUR_OPENROUTER_KEY
+clawed config set-model openrouter --model minimax/minimax-m3
+```
+
+Local/private path:
+
+```bash
+ollama pull llama3.2
+clawed config set-model ollama --model llama3.2
+```
+
+**Pick whatever fits your budget and privacy needs:** [OpenRouter](https://openrouter.ai/keys) gives one key for many hosted models. Local [Ollama](https://ollama.com/download/mac) can run models on your Mac without a cloud provider. Ollama Cloud, Anthropic, OpenAI, and Google are supported too. If you use a cloud model, the prompt/context is shared with that provider.
 
 ---
 

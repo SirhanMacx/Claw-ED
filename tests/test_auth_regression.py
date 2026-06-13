@@ -204,7 +204,9 @@ class TestStandingApprovalPath:
         ):
             result = await reg.execute("approved_write", {}, _ctx())
 
-        assert result.text == "executed"
+        assert "executed" in result.text
+        assert "Approval was required and granted" in result.text
+        assert result.data["approval_policy"]["risk_level"] == RISK_WRITE_LOCAL
 
 
 # ── Fix 7: Page auth bootstrap tests ─────────────────────────────────

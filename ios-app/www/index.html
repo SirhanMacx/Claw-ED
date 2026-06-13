@@ -47,6 +47,73 @@
         </button>
       </section>
 
+      <!-- Remote control: shown after pairing/connection. The Mac still does
+           all agent work; the phone only sends commands and resolves approvals. -->
+      <section
+        id="remote-card"
+        class="card remote"
+        hidden
+        aria-labelledby="remote-label"
+      >
+        <div class="remote-top">
+          <div>
+            <p id="remote-label" class="card-label">Mac mini remote</p>
+            <p id="remote-server" class="remote-server">—</p>
+          </div>
+          <button id="remote-switch" class="btn btn-text" type="button">
+            Switch
+          </button>
+        </div>
+
+        <div class="quick-grid" aria-label="Quick actions">
+          <button class="quick" type="button" data-prompt="Check my curriculum index status, then tell me what lesson materials you can already search">
+            Index
+          </button>
+          <button class="quick" type="button" data-prompt="Make me a complete lesson bundle for tomorrow from my indexed materials. Ask for the topic if you need it.">
+            Bundle
+          </button>
+          <button class="quick" type="button" data-prompt="Draft a Do-Now warm-up question for tomorrow's first class using my style and indexed materials">
+            Do Now
+          </button>
+          <button class="quick" type="button" data-prompt="Run a dry-run dream cycle and summarize what the teaching brain would improve overnight">
+            Dream
+          </button>
+          <button class="quick" type="button" data-prompt="Analyze my past outputs and improve your teaching rules">
+            Improve
+          </button>
+          <button class="quick" type="button" data-prompt="Search my teaching brain for recent student needs and lesson patterns">
+            Brain
+          </button>
+          <button class="quick" type="button" data-prompt="Build an advertising-safe sample portfolio from the bundled sample curriculum">
+            Portfolio
+          </button>
+        </div>
+
+        <div id="remote-feed" class="remote-feed" aria-live="polite">
+          <p class="remote-empty">
+            Send a task to the Mac. Approvals appear here before anything risky runs.
+          </p>
+        </div>
+
+        <form id="remote-form" class="remote-form">
+          <label class="sr-only" for="remote-input">Task</label>
+          <textarea
+            id="remote-input"
+            rows="2"
+            placeholder="Tell the Mac mini what to build..."
+            autocomplete="off"
+            autocapitalize="sentences"
+          ></textarea>
+          <button id="remote-send" class="btn btn-primary" type="submit">
+            Send
+          </button>
+        </form>
+
+        <button id="open-dashboard" class="btn btn-ghost full-dashboard" type="button">
+          Open full Mac dashboard
+        </button>
+      </section>
+
       <!-- Manual connect form (hidden until JS decides this is the right card). -->
       <section id="connect-card" class="card" hidden aria-labelledby="connect-label">
         <form id="connect-form" novalidate>
@@ -54,9 +121,9 @@
             Server address
           </label>
           <p class="field-hint">
-            On your Mac, open the Claw-ED menu-bar app and scan its QR code — or
-            type the address it shows here. You only do this once; after that
-            Claw-ED opens straight to your classroom.
+            On your Mac, open the Claw-ED menu-bar app and scan its QR code with
+            the iPhone Camera — or type the address it shows here. You only do
+            this once; after that Claw-ED opens straight to your classroom.
           </p>
           <input
             id="server-url"
@@ -86,8 +153,8 @@
 
       <footer class="foot">
         <p class="foot-note">
-          Works on Wi-Fi or cellular. Your data stays between this device and
-          your Mac — nothing is sent to MacxLabs.
+          The agent runs on your Mac. If you use a cloud model, tunnel, Ollama
+          cloud, or OpenRouter, task data goes through that provider.
         </p>
       </footer>
     </main>

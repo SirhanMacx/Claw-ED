@@ -17,28 +17,39 @@ to his physical devices.
 
 ---
 
-## What already exists (audited 2026-06-07)
+## What already exists (verified 2026-06-11)
 - ✅ **iOS thin client** (`ios-app/`, Capacitor): a polished CONNECT screen
-  (`www/connect.js` + `index.html`) — type or QR-scan the Mac's URL, it points
-  the WebView at that server, and the phone becomes the full agent web app.
+  (`www/connect.js` + `index.html`) — scan the Mac's `clawed://` QR, type a
+  server URL, or auto-open the remembered server; the phone becomes the full
+  agent web app.
 - ✅ **Mac menu-bar app** (`mac-app/`, SwiftPM): finds + launches the engine,
-  health-polls, opens the browser, shows the LAN URL **and a QR code**.
+  health-polls, opens the browser, shows the remote tunnel and LAN URLs, and
+  renders pairing QR codes.
 - ✅ **LAN bind toggle** (shipped today, 9ad1787): "Share on my Wi-Fi" →
   `clawed app --host 0.0.0.0` so a phone on the same Wi-Fi can reach the Mac.
+- ✅ **Remote bridge**: the named Cloudflare tunnel at
+  `https://clawed.macxlabs.app` is live behind device-token auth; launchd keeps
+  the agent and tunnel running.
 - ✅ **The agent itself**: FastAPI web app + ~40 `agent_core` tools (files, web
   search, web read, config edit, Drive, scheduling) behind a risk-classified
   approval gate. Runs on the Mac.
-- ✅ iOS app already on TestFlight (`com.macxlabs.clawed`) — but as the connect
-  shell; needs the verify + QR + rebuild below.
+- ✅ iOS build 5 is valid and in internal TestFlight
+  (`internalBuildState=IN_BETA_TESTING`) for `com.macxlabs.clawed`; build 5,
+  screenshots, metadata, and privacy URL are ready for public submission once
+  the portal-only category/App Privacy fields are set.
 
 ## Gaps
 - ⚠️ **QR-scanner plugin not installed** — connect screen falls back to manual
-  URL entry. One-scan pairing needs `@capacitor/barcode-scanner` (or similar).
-- ❌ **Remote bridge** — the LAN path only works on the same Wi-Fi. "On the go"
-  (cellular) needs a secure tunnel/relay. Not built.
+  URL entry for the in-app Scan QR button. One-scan pairing already works via
+  the normal iPhone Camera opening the `clawed://` link; a direct in-app scanner
+  remains optional.
+- ⚠️ **Public App Store submission** — blocked in the web portal only: set
+  primary category **Education**, secondary category **Productivity**, and App
+  Privacy **Data Not Collected**, then resubmit version 1.0. Current version
+  state is `DEVELOPER_REJECTED`, not waiting for Apple review.
 - ❌ **Notarized downloadable Mac `.app`** with the Python engine bundled (so a
-  teacher needs no `pip`). For distribution; NOT needed for Jon's own test (he
-  can run the menu-bar app / `clawed app` directly).
+  teacher needs no `pip`). The Tauri 2 app and bundled agent exist; Developer ID
+  signing/notarization is blocked on the Account Holder certificate.
 
 ---
 
@@ -55,11 +66,9 @@ The shortest path to something Jon can actually use phone↔Mac-mini.
       encodes `NetworkInfo.lanURL`) **only when Share-on-Wi-Fi is on**; with
       sharing off it nudges the teacher to enable it instead of showing a QR
       that can't connect. `swift build` clean. ✅
-- [x] A4. **Already done — no rebuild needed.** ASC shows TestFlight build **1
-      (VALID, not expired)** for `com.macxlabs.clawed`, uploaded 2026-06-07 after
-      the connect shell was committed; the iOS app has had **zero changes since**,
-      and the local archive that produced it contains `connect.js`. So the
-      current connect-shell app is already installable from TestFlight. ✅
+- [x] A4. **Superseded by build 5.** ASC shows build **5** for
+      `com.macxlabs.clawed` as `VALID`, not expired, and selected on App Store
+      version 1.0; beta state is `IN_BETA_TESTING` for internal TestFlight. ✅
 - [x] A5. Test steps written (below). ✅
 - **Jon tests A:** Mac mini + iPhone on the same Wi-Fi.
 
@@ -118,10 +127,9 @@ the Mac agent over the network* — is verified end-to-end, not just reasoned.
    - *Simplest alt (no menu bar):* `clawed app --host 0.0.0.0 --port 8000`, then
      get the Mac's IP from System Settings → Wi-Fi (e.g. `192.168.1.42`).
 **On the iPhone (same Wi-Fi):**
-4. Open **TestFlight** → install/open **Claw-ED** (build 1). On the "Connect to
-   your classroom server" screen, type the Mac's LAN URL (e.g.
-   `http://192.168.1.42:8000`) and tap **Connect**. (One-scan QR comes in a
-   follow-up build.)
+4. Open **TestFlight** → install/open **Claw-ED** (current build 5). Scan the Mac
+   pairing QR with the iPhone Camera, or type the LAN URL (e.g.
+   `http://192.168.1.42:8000`) and tap **Connect**.
 5. The phone loads the full Claw-ED agent — chat, generate a lesson, etc., all
    running on the Mac mini with your files. **That's the prototype.**
 
@@ -218,16 +226,17 @@ clean answer is an **https domain**, which is ATS-clean *and* App-Store-safe:
      IPA signed `Apple Distribution: JON ANTHONY MACCARELLO (Y8MX8Q77B2)` → WWDR
      → Apple Root. Tooling: `/tmp/asc/` (`asc_api.py`, `make_cert.py`,
      `make_profile.py`, `setup_keychain.sh`, `build_ipa.sh`, `ExportOptions-manual.plist`).
-- ✅ **(d)** Jon notified: install build 3 from TestFlight, scan the Mac pairing QR,
-  open straight into the classroom agent from anywhere.
+- ✅ **(d) Current build state:** build 5 is valid in App Store Connect and is the
+  current build to install/test; build 3 remains the historical signing fix.
 
-### Production status (2026-06-08) — SHIPPED end-to-end
+### Production status (verified 2026-06-11) — SHIPPED end-to-end for testing
 Backend production-ready (secure always-on tunnel + agent via launchd, device-token
-auth, phone-login validated over the real https tunnel) **AND iOS build 3 is on
-TestFlight** (signed via the autonomous ASC API cert-mint — see (c); build processes
-on Apple's side ~5–15 min post-upload). Jon installs from TestFlight, scans the Mac
-QR, and opens straight into his classroom agent from anywhere. The prototype is real,
-end-to-end — phone → tunnel → Mac agent.
+auth, phone-login validated over the real https tunnel) **AND iOS build 5 is valid
+and in internal TestFlight**. Jon installs the current TestFlight build, scans
+the Mac QR, and opens straight into his classroom agent from anywhere. The
+prototype is real, end-to-end — phone → tunnel → Mac agent. Public App Store
+submission still needs the portal-only category and App Privacy fields, then a
+fresh resubmission of version 1.0.
 
 ### Robustness: keychain-hang on headless launch — FIXED
 On a **headless / SSH / launchd-at-login** launch with no GUI session,

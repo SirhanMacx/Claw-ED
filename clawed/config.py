@@ -305,10 +305,15 @@ def set_api_key(provider: str, api_key: str) -> None:
     """Store an API key securely. Tries keyring first, falls back to file."""
     key_name = f"{provider}_api_key"
 
-    if not _try_keyring_set(key_name, api_key):
-        secrets = _load_secrets()
-        secrets[key_name] = api_key
-        _save_secrets(secrets)
+    if _try_keyring_set(key_name, api_key) and _try_keyring_get(key_name) == api_key:
+        return
+
+    # Some backends, including null/no-op test or headless keyring backends,
+    # can accept a set call without making the value retrievable. Treat that as
+    # unavailable so the next process can still read the key from secrets.json.
+    secrets = _load_secrets()
+    secrets[key_name] = api_key
+    _save_secrets(secrets)
 
 
 def delete_api_key(provider: str) -> None:

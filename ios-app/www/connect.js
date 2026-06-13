@@ -15,11 +15,12 @@
   var TOKEN_KEY = 'clawed.serverToken'; // device token for the paired server (remote/tunnel)
   var DEFAULT_PORT = '8000'; // matches `clawed app` / mac-app AppEnvironment.swift
 
-  // Once true, we've committed the WebView to a server (navigation scheduled).
-  // Every entry point checks this so a late health-check or warm deep-link can
-  // never double-navigate or yank the teacher back to the connect screen.
+  // Once true, we're connecting to or controlling a server. Every entry point
+  // checks this so a late health-check or warm deep-link can never yank the
+  // teacher back to the connect screen.
   var committed = false;
   var autoController = null; // AbortController for the in-flight launch probe
+  var activeServerUrl = '';
 
   // ---- tiny DOM helpers -------------------------------------------------
   function $(id) {
@@ -40,6 +41,14 @@
     autoCard: $('auto-card'),
     autoTarget: $('auto-target'),
     autoCancelBtn: $('auto-cancel'),
+    remoteCard: $('remote-card'),
+    remoteServer: $('remote-server'),
+    remoteSwitch: $('remote-switch'),
+    remoteFeed: $('remote-feed'),
+    remoteForm: $('remote-form'),
+    remoteInput: $('remote-input'),
+    remoteSend: $('remote-send'),
+    openDashboard: $('open-dashboard'),
   };
 
   // ---- storage (guarded; private mode / disabled storage must not crash) -
@@ -208,13 +217,12 @@
     }
   }
 
-  // ---- navigation -------------------------------------------------------
-  // Hand the WebView over to the teacher's server. We save first so a relaunch
-  // can offer "Reconnect", then replace the current document so the back gesture
-  // doesn't bounce between the server and this CONNECT screen.
+  // ---- connection -------------------------------------------------------
+  // Pair the phone with the teacher's server and switch into the remote-control
+  // surface. The full Mac dashboard remains available as an explicit button.
   function connectTo(url, token) {
     if (committed) {
-      return true; // already handing off to a server — ignore late callers
+      return true; // already connected or connecting — ignore late callers
     }
     var normalized = normalizeUrl(url);
     if (!normalized) {
@@ -235,35 +243,255 @@
     committed = true;
     setBusy(true);
     showConnectingTo(normalized);
-    // Defer the actual navigation a tick so the interstitial paints first.
-    window.setTimeout(function () {
-      navigateToServer(normalized, loadToken());
-    }, 60);
-    // Watchdog against the "endless spinner": a SUCCESSFUL navigation destroys
-    // this document, so this timer never fires on success. If it DOES fire, the
-    // hand-off stalled (server unreachable, navigation blocked, POST hung) — so
-    // recover to a clear, retryable error instead of spinning forever.
-    window.setTimeout(function () {
+
+    healthCheck(normalized, 8000).then(function (ok) {
       if (!committed) {
-        return; // navigated away, or a later action already reset us
+        return;
       }
-      committed = false; // allow another attempt
       setBusy(false);
+      if (ok) {
+        showRemote(normalized);
+        return;
+      }
+      committed = false;
       revealConnectScreen();
       renderReconnect(normalized);
       showError(
-        'Couldn’t reach ' + normalized + ' — it didn’t respond in time. Make ' +
-        'sure Claw-ED is running on your Mac (the menu-bar app), then tap Reconnect.'
+        'Couldn’t reach ' + normalized + '. Make sure Claw-ED is running on ' +
+        'your Mac and that your phone is paired with the QR code.'
       );
-    }, 15000);
+    });
     return true;
+  }
+
+  // ---- remote-control surface -------------------------------------------
+  function authHeaders(json) {
+    var headers = {};
+    if (json) {
+      headers['Content-Type'] = 'application/json';
+    }
+    var token = loadToken();
+    if (token) {
+      headers.Authorization = 'Bearer ' + token;
+    }
+    return headers;
+  }
+
+  function clearRemoteFeed() {
+    if (!els.remoteFeed) {
+      return;
+    }
+    els.remoteFeed.textContent = '';
+  }
+
+  function remoteAppend(kind, text) {
+    if (!els.remoteFeed) {
+      return null;
+    }
+    var empty = els.remoteFeed.querySelector('.remote-empty');
+    if (empty) {
+      empty.remove();
+    }
+    var node = document.createElement('div');
+    node.className = 'remote-msg ' + kind;
+    node.textContent = text;
+    els.remoteFeed.appendChild(node);
+    els.remoteFeed.scrollTop = els.remoteFeed.scrollHeight;
+    return node;
+  }
+
+  function setRemoteBusy(isBusy) {
+    if (els.remoteSend) {
+      els.remoteSend.disabled = isBusy;
+    }
+    if (els.remoteInput) {
+      els.remoteInput.disabled = isBusy;
+    }
+    var buttons = document.querySelectorAll('.quick');
+    for (var i = 0; i < buttons.length; i += 1) {
+      buttons[i].disabled = isBusy;
+    }
+  }
+
+  function resolveApproval(baseUrl, approvalId, approved, alwaysFlag, node) {
+    if (node) {
+      node.textContent = approved ? 'Approval sent...' : 'Denied...';
+    }
+    return fetch(baseUrl + '/api/approvals/' + encodeURIComponent(approvalId) + '/resolve', {
+      method: 'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify({ approved: !!approved, always: !!alwaysFlag }),
+    }).catch(function () {
+      if (node) {
+        node.textContent = 'Could not send approval. Reconnect and try again.';
+      }
+    });
+  }
+
+  function appendApproval(baseUrl, data) {
+    var node = remoteAppend('approval', '');
+    if (!node) {
+      return;
+    }
+    var title = document.createElement('b');
+    title.textContent = data.description || ('Run ' + (data.tool_name || 'tool'));
+    node.appendChild(title);
+    var risk = document.createElement('span');
+    risk.textContent = 'Risk: ' + (data.risk_level || 'unknown');
+    node.appendChild(risk);
+    var actions = document.createElement('div');
+    actions.className = 'approval-actions';
+    var once = document.createElement('button');
+    once.className = 'btn btn-primary';
+    once.type = 'button';
+    once.textContent = 'Allow once';
+    var always = document.createElement('button');
+    always.className = 'btn btn-ghost';
+    always.type = 'button';
+    always.textContent = 'Always';
+    var deny = document.createElement('button');
+    deny.className = 'btn btn-text';
+    deny.type = 'button';
+    deny.textContent = 'Deny';
+    actions.appendChild(once);
+    actions.appendChild(always);
+    actions.appendChild(deny);
+    node.appendChild(actions);
+
+    function finish(approved, alwaysFlag) {
+      once.disabled = always.disabled = deny.disabled = true;
+      resolveApproval(baseUrl, data.approval_id, approved, alwaysFlag, node);
+    }
+    once.addEventListener('click', function () { finish(true, false); });
+    always.addEventListener('click', function () { finish(true, true); });
+    deny.addEventListener('click', function () { finish(false, false); });
+  }
+
+  function parseSSEBlock(block) {
+    var event = 'message';
+    var data = '';
+    block.split('\n').forEach(function (line) {
+      if (line.indexOf('event:') === 0) {
+        event = line.slice(6).trim();
+      } else if (line.indexOf('data:') === 0) {
+        data += line.slice(5).trim();
+      }
+    });
+    if (!data) {
+      return null;
+    }
+    try {
+      return { event: event, data: JSON.parse(data) };
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function readEventStream(body, onEvent) {
+    var reader = body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    function pump() {
+      return reader.read().then(function (chunk) {
+        if (chunk.done) {
+          return;
+        }
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var idx = buffer.indexOf('\n\n');
+        while (idx !== -1) {
+          var block = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          var parsed = parseSSEBlock(block);
+          if (parsed) {
+            onEvent(parsed.event, parsed.data);
+          }
+          idx = buffer.indexOf('\n\n');
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }
+
+  function handleRemoteEvent(baseUrl, event, data) {
+    if (event === 'progress') {
+      remoteAppend('progress', data.message || 'Working...');
+    } else if (event === 'tool_start') {
+      remoteAppend('progress', 'Using ' + (data.tool_name || 'tool') + '...');
+    } else if (event === 'tool_end') {
+      if (data.summary) {
+        remoteAppend(data.ok ? 'progress' : 'error', data.summary);
+      }
+      if (data.files && data.files.length) {
+        remoteAppend('agent', 'Produced:\n' + data.files.join('\n'));
+      }
+    } else if (event === 'approval_required') {
+      appendApproval(baseUrl, data);
+    } else if (event === 'approval_resolved') {
+      remoteAppend('progress', data.approved ? 'Approved. Continuing...' : 'Denied. Not running that action.');
+    } else if (event === 'final') {
+      remoteAppend('agent', data.text || 'Done.');
+      if (data.files && data.files.length) {
+        remoteAppend('agent', 'Files:\n' + data.files.join('\n'));
+      }
+    } else if (event === 'error') {
+      remoteAppend('error', data.message || 'Something went wrong.');
+    }
+  }
+
+  function sendRemoteTask(message) {
+    var text = String(message || '').trim();
+    if (!text || !activeServerUrl) {
+      return;
+    }
+    remoteAppend('user', text);
+    setRemoteBusy(true);
+    fetch(activeServerUrl + '/api/gateway/chat/stream', {
+      method: 'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify({ message: text }),
+    })
+      .then(function (res) {
+        if (!res.ok || !res.body) {
+          if (res.status === 401) {
+            throw new Error('This phone is not authenticated. Scan the Mac QR code again.');
+          }
+          throw new Error('The Mac agent answered ' + res.status + '.');
+        }
+        return readEventStream(res.body, function (event, data) {
+          handleRemoteEvent(activeServerUrl, event, data);
+        });
+      })
+      .catch(function (err) {
+        remoteAppend('error', err && err.message ? err.message : 'Could not reach the Mac agent.');
+      })
+      .then(function () {
+        setRemoteBusy(false);
+        if (els.remoteInput) {
+          els.remoteInput.focus();
+        }
+      });
+  }
+
+  function showRemote(url) {
+    hideAllCards();
+    activeServerUrl = url;
+    document.body.classList.add('remote-on');
+    if (els.remoteServer) {
+      els.remoteServer.textContent = url;
+    }
+    if (els.remoteCard) {
+      els.remoteCard.hidden = false;
+    }
+    clearRemoteFeed();
+    remoteAppend('agent', 'Connected to the Mac agent. Send a task or use a quick action.');
   }
 
   // ---- card visibility --------------------------------------------------
   // Exactly one of {auto, reconnect+connect} is shown at a time. The brand
   // header is always visible so the screen never looks blank while deciding.
   function hideAllCards() {
-    [els.autoCard, els.connectCard, els.reconnectCard].forEach(function (card) {
+    [els.autoCard, els.connectCard, els.reconnectCard, els.remoteCard].forEach(function (card) {
       if (card) {
         card.hidden = true;
       }
@@ -271,6 +499,7 @@
   }
 
   function showConnectingTo(url) {
+    document.body.classList.remove('remote-on');
     hideAllCards();
     if (els.autoTarget) {
       els.autoTarget.textContent = url;
@@ -284,8 +513,12 @@
   // remembered server can't be reached). renderReconnect() then decides whether
   // the "Welcome back" shortcut also appears above it.
   function revealConnectScreen() {
+    document.body.classList.remove('remote-on');
     if (els.autoCard) {
       els.autoCard.hidden = true;
+    }
+    if (els.remoteCard) {
+      els.remoteCard.hidden = true;
     }
     if (els.connectCard) {
       els.connectCard.hidden = false;
@@ -293,7 +526,7 @@
   }
 
   function setBusy(isBusy) {
-    [els.connectBtn, els.scanBtn, els.reconnectBtn].forEach(function (btn) {
+    [els.connectBtn, els.scanBtn, els.reconnectBtn, els.remoteSend].forEach(function (btn) {
       if (btn) {
         btn.disabled = isBusy;
       }
@@ -319,7 +552,7 @@
     var plugin = getBarcodePlugin();
     if (!plugin || typeof plugin.scanBarcode !== 'function') {
       showError(
-        'QR scanning needs the camera plugin (a follow-up). For now, type the LAN URL shown in the Mac menu-bar app.'
+        'Use the iPhone Camera to scan the Mac QR code, or type the address shown in the Mac menu-bar app.'
       );
       if (els.input) {
         els.input.focus();
@@ -397,7 +630,12 @@
         return null;
       }
       // The Mac QR may also carry the device token for a remote/tunnel server.
-      return { url: s, token: u.searchParams.get('token') || '' };
+      // If the link has no token, clear any stale token from a previous pairing
+      // instead of accidentally sending it to a different server.
+      return {
+        url: s,
+        token: u.searchParams.has('token') ? (u.searchParams.get('token') || null) : null,
+      };
     } catch (err) {
       return null;
     }
@@ -418,6 +656,8 @@
     app.addListener('appUrlOpen', function (data) {
       var s = data && data.url ? serverFromDeepLink(data.url) : null;
       if (s) {
+        committed = false;
+        activeServerUrl = '';
         connectTo(s.url, s.token);
       }
     });
@@ -575,6 +815,42 @@
 
     if (els.autoCancelBtn) {
       els.autoCancelBtn.addEventListener('click', cancelAutoConnect);
+    }
+
+    if (els.remoteSwitch) {
+      els.remoteSwitch.addEventListener('click', function () {
+        committed = false;
+        activeServerUrl = '';
+        setRemoteBusy(false);
+        revealConnectScreen();
+        renderReconnect(loadSavedUrl());
+      });
+    }
+
+    if (els.remoteForm) {
+      els.remoteForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var text = els.remoteInput ? els.remoteInput.value : '';
+        if (els.remoteInput) {
+          els.remoteInput.value = '';
+        }
+        sendRemoteTask(text);
+      });
+    }
+
+    var quicks = document.querySelectorAll('.quick[data-prompt]');
+    for (var i = 0; i < quicks.length; i += 1) {
+      quicks[i].addEventListener('click', function (event) {
+        sendRemoteTask(event.currentTarget.getAttribute('data-prompt'));
+      });
+    }
+
+    if (els.openDashboard) {
+      els.openDashboard.addEventListener('click', function () {
+        if (activeServerUrl) {
+          navigateToServer(activeServerUrl, loadToken());
+        }
+      });
     }
 
     // Decide the opening screen: pairing deep-link → auto-connect → form.

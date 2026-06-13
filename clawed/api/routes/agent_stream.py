@@ -39,6 +39,38 @@ _QUEUE_POLL_SECONDS = 0.25
 _HEARTBEAT_SECONDS = 15.0
 
 
+def _append_approval_footer(
+    text: str,
+    approvals: list[dict[str, Any]],
+) -> str:
+    """Append authoritative approval facts recorded by the SSE stream."""
+    if not approvals:
+        return text
+
+    lines = [
+        "Authoritative approval log for this turn:",
+    ]
+    for item in approvals:
+        tool = str(item.get("tool_name") or "unknown_tool")
+        risk = str(item.get("risk_level") or "unknown_risk")
+        approved = item.get("approved")
+        if approved is True:
+            status = "approved"
+        elif approved is False:
+            status = "denied"
+        else:
+            status = "pending"
+        always = " (standing approval)" if item.get("always") else ""
+        lines.append(f"- {tool}: {status}{always}; risk={risk}")
+    footer = "\n".join(lines)
+
+    if "Authoritative approval log for this turn:" in text:
+        return text
+    if text.strip():
+        return f"{text.rstrip()}\n\n{footer}"
+    return footer
+
+
 def _get_gateway() -> Any:
     from clawed.api.routes.gateway_chat import _get_gateway as _shared
     return _shared()
@@ -62,8 +94,32 @@ async def gateway_chat_stream(request: Request, req: StreamChatRequest) -> Strea
     teacher_id = get_teacher_id()
 
     queue: asyncio.Queue[tuple[str, dict[str, Any]]] = asyncio.Queue(maxsize=1000)
+    approval_log: dict[str, dict[str, Any]] = {}
 
     def event_cb(event_type: str, data: dict[str, Any]) -> None:
+        if event_type == "approval_required":
+            approval_id = str(data.get("approval_id") or "")
+            if approval_id:
+                approval_log[approval_id] = {
+                    "approval_id": approval_id,
+                    "tool_name": data.get("tool_name"),
+                    "risk_level": data.get("risk_level"),
+                    "approved": None,
+                    "always": False,
+                }
+        elif event_type == "approval_resolved":
+            approval_id = str(data.get("approval_id") or "")
+            if approval_id:
+                entry = approval_log.setdefault(
+                    approval_id,
+                    {
+                        "approval_id": approval_id,
+                        "tool_name": data.get("tool_name"),
+                        "risk_level": data.get("risk_level"),
+                    },
+                )
+                entry["approved"] = data.get("approved")
+                entry["always"] = bool(data.get("always", False))
         try:
             queue.put_nowait((event_type, data))
         except asyncio.QueueFull:
@@ -118,7 +174,9 @@ async def gateway_chat_stream(request: Request, req: StreamChatRequest) -> Strea
                     for row in rows for b in row
                 ]
             yield _sse("final", {
-                "text": result.text,
+                "text": _append_approval_footer(
+                    result.text, list(approval_log.values()),
+                ),
                 "files": [str(f) for f in result.files],
                 "buttons": buttons,
             })
@@ -150,9 +208,11 @@ async def list_agent_tools(request: Request) -> dict[str, Any]:
     """
     gateway = _get_gateway()
     registry = getattr(gateway, "_registry", None)
-    if registry is None:
+    schemas = list(registry.schemas()) if registry is not None else []
+    if not schemas:
         # Legacy gateway has no registry — build a throwaway one from the
-        # same package the agent gateway discovers.
+        # same package the agent gateway discovers. Also covers stale adopted
+        # agents that have an empty registry object during startup.
         from pathlib import Path
 
         import clawed.agent_core.tools as tools_pkg
@@ -160,9 +220,10 @@ async def list_agent_tools(request: Request) -> dict[str, Any]:
 
         registry = ToolRegistry()
         registry.discover(Path(tools_pkg.__file__).parent)
+        schemas = list(registry.schemas())
 
     tools = []
-    for schema in registry.schemas():
+    for schema in schemas:
         fn = schema.get("function", {})
         name = str(fn.get("name", "")).strip()
         if not name:

@@ -94,7 +94,9 @@ class TestApprovalPolicyEnforcement:
         reg = ToolRegistry()
         reg.register(_WriteTool())
         result = await reg.execute("write_tool", {}, _ctx())
-        assert result.text == "wrote something"
+        assert "wrote something" in result.text
+        assert "auto-approve policy" in result.text
+        assert result.data["approval_policy"]["risk_level"] == RISK_WRITE_LOCAL
 
 
 class TestInstallPackageAllowlist:

@@ -111,9 +111,29 @@ class TestAgentToolsEndpoint:
         run_command = next(t for t in tools if t["name"] == "run_command")
         assert run_command["risk_level"] == "command_exec"
 
+    def test_lesson_bundle_declares_local_write_risk(self, client: TestClient) -> None:
+        tools = client.get("/api/agent/tools").json()["tools"]
+        lesson_bundle = next(t for t in tools if t["name"] == "generate_lesson_bundle")
+        assert lesson_bundle["risk_level"] == "write_local"
+
     def test_sorted_by_name(self, client: TestClient) -> None:
         names = [t["name"] for t in client.get("/api/agent/tools").json()["tools"]]
         assert names == sorted(names)
+
+    def test_empty_gateway_registry_falls_back(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from clawed.agent_core.tools.base import ToolRegistry
+        from clawed.api.routes import agent_stream
+
+        class EmptyGateway:
+            _registry = ToolRegistry()
+
+        monkeypatch.setattr(agent_stream, "_get_gateway", lambda: EmptyGateway())
+        tools = client.get("/api/agent/tools").json()["tools"]
+        names = {t["name"] for t in tools}
+        assert "run_command" in names
+        assert len(tools) >= 30
 
 
 # ── Registry collision regression ────────────────────────────────────────

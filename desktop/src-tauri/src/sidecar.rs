@@ -17,6 +17,7 @@
 //!   (the login keychain is radioactive on this machine);
 //! - the launch invocation is FIXED — never assembled from user input.
 
+use qrcode::{render::svg, EcLevel, QrCode};
 use serde::Serialize;
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -24,7 +25,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
 /// Pid of the spawned sidecar child (0 = none). Mirrors `Inner.child` so the
@@ -45,14 +46,16 @@ extern "C" fn on_terminate(_sig: libc::c_int) {
 /// Install the terminate handlers (called once from main).
 pub fn install_signal_handlers() {
     unsafe {
-        libc::signal(libc::SIGTERM, on_terminate as libc::sighandler_t);
-        libc::signal(libc::SIGINT, on_terminate as libc::sighandler_t);
-        libc::signal(libc::SIGHUP, on_terminate as libc::sighandler_t);
+        let handler = on_terminate as *const () as libc::sighandler_t;
+        libc::signal(libc::SIGTERM, handler);
+        libc::signal(libc::SIGINT, handler);
+        libc::signal(libc::SIGHUP, handler);
     }
 }
 
 /// Default agent port (`clawed serve` default; launchd service uses it too).
 const DEFAULT_PORT: u16 = 8000;
+const REMOTE_PAIR_URL: &str = "https://clawed.macxlabs.app";
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
 /// Consecutive failed spawn attempts before we give up and show an error.
 const MAX_RESTARTS: u32 = 5;
@@ -66,6 +69,14 @@ pub struct SidecarStatus {
     pub adopted: bool,
     pub pid: Option<u32>,
     pub port: u16,
+    pub detail: String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct PairingInfo {
+    pub remote_url: String,
+    pub token_ready: bool,
+    pub qr_svg: Option<String>,
     pub detail: String,
 }
 
@@ -464,6 +475,39 @@ fn expand_tilde(path: &str) -> PathBuf {
     }
 }
 
+fn read_pairing_token() -> Option<String> {
+    let token_path = home_dir().join(".eduagent").join("api_token");
+    std::fs::read_to_string(token_path)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+fn yes_no(value: bool) -> &'static str {
+    if value {
+        "yes"
+    } else {
+        "no"
+    }
+}
+
+fn one_line(value: &str) -> String {
+    let cleaned = value.replace('\n', " ").replace('\r', " ");
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() {
+        "unknown".into()
+    } else {
+        trimmed.into()
+    }
+}
+
+fn unix_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
 // ── Tauri commands ───────────────────────────────────────────────────
 
 #[tauri::command]
@@ -479,6 +523,149 @@ pub fn restart_sidecar(app: AppHandle) {
 #[tauri::command]
 pub fn agent_base_url(app: AppHandle) -> String {
     format!("http://127.0.0.1:{}", app.state::<Supervisor>().port)
+}
+
+/// Pairing payload for the iPhone remote. The raw token is never returned to
+/// the UI as text; it is encoded inside the QR SVG, matching the legacy
+/// menu-bar pairing flow.
+#[tauri::command]
+pub fn pairing_info() -> PairingInfo {
+    let remote_url = REMOTE_PAIR_URL.to_string();
+    let token = read_pairing_token();
+
+    let Some(token) = token else {
+        return PairingInfo {
+            remote_url,
+            token_ready: false,
+            qr_svg: None,
+            detail: "Pairing token is not ready yet. Start or restart the agent, then refresh."
+                .into(),
+        };
+    };
+
+    let deep_link = format!(
+        "clawed://connect?url={}&token={}",
+        percent_encode(REMOTE_PAIR_URL),
+        percent_encode(&token),
+    );
+    match render_qr_svg(&deep_link) {
+        Ok(qr_svg) => PairingInfo {
+            remote_url,
+            token_ready: true,
+            qr_svg: Some(qr_svg),
+            detail: "Ready to pair.".into(),
+        },
+        Err(err) => PairingInfo {
+            remote_url,
+            token_ready: true,
+            qr_svg: None,
+            detail: format!("Could not render the pairing QR: {err}"),
+        },
+    }
+}
+
+/// Export a shareable district/admin readiness report. The UI passes live
+/// health/tool facts from the loopback agent; this command adds shell-side
+/// supervision, filesystem, and pairing facts without exposing secrets.
+#[tauri::command]
+pub fn export_readiness_report(
+    app: AppHandle,
+    provider: String,
+    model: String,
+    llm_connected: bool,
+    tool_count: u32,
+    run_command_risk: String,
+) -> Result<String, String> {
+    let status = app.state::<Supervisor>().status();
+    let data_root = home_dir().join(".eduagent");
+    let workspace = data_root.join("workspace");
+    std::fs::create_dir_all(&workspace).map_err(|e| e.to_string())?;
+
+    let report_path = workspace.join("clawed-readiness-report.md");
+    let exe_path = std::env::current_exe()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| "unknown".into());
+    let provider = one_line(&provider);
+    let model = one_line(&model);
+    let run_command_risk = one_line(&run_command_risk);
+    let token_ready = read_pairing_token().is_some();
+    let supervision = if status.adopted {
+        "adopted an already-running local agent".to_string()
+    } else if let Some(pid) = status.pid {
+        format!("supervised by this app, pid {pid}")
+    } else {
+        "supervised by this app".to_string()
+    };
+
+    let report = format!(
+        r#"# Claw-ED District Readiness Report
+
+Generated: {timestamp} Unix seconds
+App version: {version}
+
+## Runtime
+
+- Agent URL: http://127.0.0.1:{port}
+- Agent state: {state}
+- Sidecar detail: {detail}
+- Supervision: {supervision}
+- LLM provider: {provider}
+- LLM model: {model}
+- LLM connected: {llm_connected}
+- Tool registry count: {tool_count}
+- `run_command` risk classification: {run_command_risk}
+
+## Teacher And Student Data Boundary
+
+- The Mac app talks to the agent over loopback only.
+- Teacher files and generated work live on this Mac under `{workspace}` unless the teacher chooses another path.
+- Style learning reads local materials first; only short excerpts are sent to the configured AI provider during analysis.
+- The app never includes API keys, account tokens, or the iPhone pairing token in this report.
+
+## Control And Approval Model
+
+- Risky shell commands and file writes require teacher approval.
+- "Always allow" is scoped to the exact command or file action, so changed parameters ask again.
+- The agent process is launched with `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring` so it does not touch the login keychain.
+
+## Remote Pairing
+
+- Remote address: {remote_url}
+- Pairing token present: {token_ready}
+- The token is hidden inside the QR code and intentionally omitted here.
+
+## Deployment Notes
+
+- App executable: `{exe_path}`
+- Data root: `{data_root}`
+- Workspace: `{workspace}`
+- Broad district distribution should use a Developer ID signed and notarized DMG before installation outside this developer Mac.
+- For district fleets, deploy Mac minis through Apple School Manager or Apple Business Manager and enforce updates, permissions, and network policy through MDM.
+
+## Readiness Verdict
+
+This Mac is ready for a controlled teacher pilot when agent state is `running`, the LLM provider is connected, the tool count is nonzero, and risky tools still show approval-gated risk classifications.
+"#,
+        timestamp = unix_timestamp(),
+        version = env!("CARGO_PKG_VERSION"),
+        port = status.port,
+        state = one_line(&status.state),
+        detail = one_line(&status.detail),
+        supervision = supervision,
+        provider = provider,
+        model = model,
+        llm_connected = yes_no(llm_connected),
+        tool_count = tool_count,
+        run_command_risk = run_command_risk,
+        workspace = workspace.display(),
+        remote_url = REMOTE_PAIR_URL,
+        token_ready = yes_no(token_ready),
+        exe_path = exe_path,
+        data_root = data_root.display(),
+    );
+
+    std::fs::write(&report_path, report).map_err(|e| e.to_string())?;
+    Ok(report_path.display().to_string())
 }
 
 /// Open a file/folder the agent produced, in the default app (Finder etc.).
@@ -529,4 +716,28 @@ pub fn reveal_path(path: String) -> Result<(), String> {
         .spawn()
         .map(|_| ())
         .map_err(|e| e.to_string())
+}
+
+fn render_qr_svg(payload: &str) -> Result<String, String> {
+    let code = QrCode::with_error_correction_level(payload.as_bytes(), EcLevel::M)
+        .map_err(|e| e.to_string())?;
+    Ok(code
+        .render::<svg::Color>()
+        .min_dimensions(196, 196)
+        .dark_color(svg::Color("#2A2722"))
+        .light_color(svg::Color("#FFFFFF"))
+        .build())
+}
+
+fn percent_encode(input: &str) -> String {
+    let mut out = String::new();
+    for byte in input.bytes() {
+        let ch = byte as char;
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
 }

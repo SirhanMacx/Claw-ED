@@ -16,6 +16,8 @@ import json
 import logging
 import re
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -68,8 +70,20 @@ class CurriculumKG:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        conn = sqlite3.connect(self._db_path)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS kg_entities (
@@ -140,7 +154,7 @@ class CurriculumKG:
             except ImportError:
                 pass
 
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.execute(
                 "INSERT INTO kg_entities "
                 "(id, teacher_id, name, entity_type, properties, embedding, "
@@ -179,7 +193,7 @@ class CurriculumKG:
 
         # Auto-create entities (no embedding during bulk ingest — use batch_embed later)
         now = datetime.now().isoformat()
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO kg_entities "
                 "(id, teacher_id, name, entity_type, properties, created_at, updated_at) "
@@ -213,7 +227,7 @@ class CurriculumKG:
     def invalidate(self, teacher_id: str, triple_id: str) -> bool:
         """Mark a triple as expired by setting valid_to=now."""
         now = datetime.now().isoformat()[:10]
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             cur = conn.execute(
                 "UPDATE kg_triples SET valid_to = ? "
                 "WHERE id = ? AND teacher_id = ? AND valid_to IS NULL",
@@ -230,7 +244,7 @@ class CurriculumKG:
     ) -> dict[str, Any] | None:
         """Get an entity by name with relationship counts."""
         eid = _normalize_id(name)
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(
                 "SELECT * FROM kg_entities WHERE id = ? AND teacher_id = ?",
@@ -269,7 +283,7 @@ class CurriculumKG:
         eid = _normalize_id(entity_name)
         results: list[dict[str, Any]] = []
 
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             valid_clause = "" if include_expired else " AND t.valid_to IS NULL"
 
@@ -417,7 +431,7 @@ class CurriculumKG:
         embedder = get_embedder()
         query_vec = np.array(embedder.embed(query), dtype=np.float32)
 
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 "SELECT id, name, entity_type, embedding FROM kg_entities "
@@ -469,7 +483,7 @@ class CurriculumKG:
             return 0
 
         embedder = get_embedder()
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 "SELECT id, name FROM kg_entities "
@@ -481,7 +495,7 @@ class CurriculumKG:
             return 0
 
         count = 0
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             for r in rows:
                 try:
                     vec = embedder.embed(r["name"])
@@ -500,7 +514,7 @@ class CurriculumKG:
 
     def stats(self, teacher_id: str) -> dict[str, Any]:
         """Return knowledge graph statistics."""
-        with sqlite3.connect(self._db_path) as conn:
+        with self._connect() as conn:
             ent_count = conn.execute(
                 "SELECT COUNT(*) FROM kg_entities WHERE teacher_id = ?",
                 (teacher_id,),
