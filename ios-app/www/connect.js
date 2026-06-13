@@ -50,7 +50,6 @@
     remoteForm: $('remote-form'),
     remoteInput: $('remote-input'),
     remoteSend: $('remote-send'),
-    openDashboard: $('open-dashboard'),
   };
 
   // ---- storage (guarded; private mode / disabled storage must not crash) -
@@ -82,15 +81,13 @@
   // ---- device token (for a remote/tunnel server that requires auth) -------
   // Paired once via the Mac's QR (clawed://connect?url=…&token=…). The token is
   // the Mac's device token; it is JS-resident in this WebView (localStorage) and
-  // sent two ways: as `Authorization: Bearer` on the remote-control /api fetches,
-  // and once via a top-level POST to /api/auth/bootstrap (the "Open full Mac
-  // dashboard" path) so the server can set its first-party cookie. A local/LAN
-  // server needs none.
+  // sent as `Authorization: Bearer` on the remote-control /api fetches. A
+  // local/LAN server that doesn't require auth needs none.
   //
   // SECURITY — the token is ORIGIN-PINNED: it is released ONLY to the exact
   // origin it was paired with (tokenForOrigin), so a deep link / QR that points
   // the app at a different host can never make us hand the real token to that
-  // host. See connectTo (binds) and navigateToServer / authHeaders (release).
+  // host. See connectTo (binds) and authHeaders (release).
   function loadToken() {
     try {
       return window.localStorage.getItem(TOKEN_KEY) || '';
@@ -144,30 +141,6 @@
       window.localStorage.removeItem(TOKEN_ORIGIN_KEY);
     } catch (err) {
       /* no-op */
-    }
-  }
-
-  // ---- navigation into the server ---------------------------------------
-  // With a token (remote/tunnel server that requires auth): set the auth cookie
-  // via a top-level form POST to /api/auth/bootstrap — the token rides in the
-  // POST body (never the URL), the server sets a first-party HttpOnly cookie and
-  // 303-redirects into the app, and the WebView's same-origin /api calls then
-  // carry the cookie automatically. Without a token (local/LAN): just navigate.
-  function navigateToServer(url, token) {
-    if (token) {
-      var form = document.createElement('form');
-      form.method = 'POST';
-      form.action = url + '/api/auth/bootstrap';
-      form.style.display = 'none';
-      var field = document.createElement('input');
-      field.type = 'hidden';
-      field.name = 'token';
-      field.value = token;
-      form.appendChild(field);
-      document.body.appendChild(form);
-      form.submit();
-    } else {
-      window.location.replace(url);
     }
   }
 
@@ -958,16 +931,6 @@
     for (var i = 0; i < quicks.length; i += 1) {
       quicks[i].addEventListener('click', function (event) {
         sendRemoteTask(event.currentTarget.getAttribute('data-prompt'));
-      });
-    }
-
-    if (els.openDashboard) {
-      els.openDashboard.addEventListener('click', function () {
-        if (activeServerUrl) {
-          // Origin-pinned: the token is only POSTed to the host it was paired
-          // with, never to a host a deep link/QR may have switched us to.
-          navigateToServer(activeServerUrl, tokenForOrigin(originOf(activeServerUrl)));
-        }
       });
     }
 
