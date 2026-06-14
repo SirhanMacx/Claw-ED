@@ -1,6 +1,7 @@
 """Tool: generate_lesson_bundle — complete teaching package (lesson + handout + slides)."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -224,11 +225,10 @@ async def _run_auto_chain(
                 f"Title: {master.title}\nObjective: {master.objective}\n"
                 f"Topic: {getattr(master, 'topic', master.title)}"
             )
-            for diff_type, diff_label in [
-                ("iep_504", "IEP/504 Accommodations"),
-                ("ell", "ELL Scaffolding"),
-                ("advanced", "Gifted Extensions"),
-            ]:
+            # The three differentiation variants are independent — generate them
+            # concurrently instead of one-after-another (was ~3x the latency on a
+            # path the teacher is actively waiting on).
+            async def _make_diff(diff_type: str, diff_label: str) -> tuple[Any, str] | None:
                 try:
                     diff_prompt = (
                         f"Generate {diff_label} for this lesson:\n\n{lesson_summary}\n\n"
@@ -247,10 +247,22 @@ async def _run_auto_chain(
                             if line.strip():
                                 doc.add_paragraph(line.strip())
                         doc.save(str(diff_path))
-                        generated_files.append(diff_path)
-                        side_effects.append(f"{diff_label}: {diff_path.name}")
+                        return diff_path, f"{diff_label}: {diff_path.name}"
                 except Exception as e:
                     logger.debug("Diff %s failed: %s", diff_type, e)
+                return None
+
+            diff_results = await asyncio.gather(*[
+                _make_diff(dt, dl) for dt, dl in [
+                    ("iep_504", "IEP/504 Accommodations"),
+                    ("ell", "ELL Scaffolding"),
+                    ("advanced", "Gifted Extensions"),
+                ]
+            ])
+            for res in diff_results:
+                if res:
+                    generated_files.append(res[0])
+                    side_effects.append(res[1])
         except Exception as e:
             logger.debug("Auto-differentiation failed: %s", e)
 
@@ -540,6 +552,9 @@ class GenerateLessonBundleTool:
 
         # Validate + humanize
         _validate_and_humanize(master, topic, report)
+        # Narrate the phases — a full bundle takes a few minutes, so keep the
+        # teacher seeing real progress instead of a silent spinner.
+        context.notify_progress("Lesson content written — now adding images and primary sources…")
 
         # Fetch images
         images: dict[str, Path] = {}
@@ -554,6 +569,7 @@ class GenerateLessonBundleTool:
                 report.warnings.append(f"Image fetch failed: {e}")
 
         # Compile views
+        context.notify_progress("Building the teacher plan, student handout, and slides…")
         output_dir = Path("~/clawed_output").expanduser().resolve()
         if config and hasattr(config, "output_dir") and config.output_dir:
             output_dir = Path(config.output_dir).expanduser().resolve()
