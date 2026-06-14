@@ -38,6 +38,25 @@ router = APIRouter(tags=["agent"])
 _QUEUE_POLL_SECONDS = 0.25
 _HEARTBEAT_SECONDS = 15.0
 
+# Agent turns whose SSE client disconnected mid-task. We keep a strong reference
+# so the event loop doesn't garbage-collect them — they run to completion in the
+# background (writing the lesson to the Mac) rather than being cancelled.
+_BACKGROUND_TASKS: set[Any] = set()
+
+
+def _detach_to_background(task: Any) -> None:
+    """Let a still-running agent turn finish after the client goes away.
+
+    A teacher's phone can drop the SSE stream over the tunnel on a long task
+    (lesson generation). Cancelling here would lose the in-flight work and the
+    output it was about to save. Instead we let it finish server-side; a
+    reconnecting client can still resolve a pending approval (the broker is
+    process-wide) and the produced files land on the Mac regardless.
+    """
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+    logger.info("SSE client disconnected; agent turn continues in the background.")
+
 
 def _append_approval_footer(
     text: str,
@@ -187,8 +206,10 @@ async def gateway_chat_stream(request: Request, req: StreamChatRequest) -> Strea
             })
             yield _sse("done", {})
         finally:
+            # Never cancel an in-flight turn on disconnect — that loses the
+            # work + the lesson it's writing. Let it finish in the background.
             if not task.done():
-                task.cancel()
+                _detach_to_background(task)
 
     return StreamingResponse(
         generate(),
