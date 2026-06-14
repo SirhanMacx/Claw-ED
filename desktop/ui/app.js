@@ -588,6 +588,10 @@ async function sendMessage(text) {
     } else if (event === "command_output") {
       const open = [...actionCards].reverse().find((c) => !c.finished);
       if (open) open.appendOutput(data.chunk || "");
+    } else if (event === "artifact") {
+      // Core-first delivery: a finished file streamed mid-build. addArtifactOnce
+      // dedupes it against the file list in the turn's tool_end/final.
+      if (data.path) addArtifactOnce(data.path);
     } else if (event === "tool_end") {
       const card = [...actionCards].reverse()
         .find((c) => !c.finished && c.toolName === data.tool_name)

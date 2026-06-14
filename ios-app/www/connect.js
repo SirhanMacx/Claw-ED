@@ -68,6 +68,7 @@
   // Chat render state (reset per turn / per conversation).
   var actNode = null; // the current tool's action card
   var approvalNodes = {}; // approval_id -> card element, so approval_resolved finds it
+  var seenArtifacts = {}; // path -> true, so a file streamed early + listed in final shows once
   var emptyHtml = ''; // captured empty-state markup, re-injected on new conversation
   var turnGotFinal = false; // did this turn reach a terminal event (final/error/done)?
 
@@ -505,7 +506,15 @@
 
   // An artifact (a file the agent produced on the Mac). On the phone we can't
   // open a Mac file, so this is informational — name + path, no open action.
+  // Deduped per conversation: a file can arrive as an early `artifact` event
+  // (core-first delivery) AND again in the turn's tool_end/final list — show it
+  // once. The set is cleared on every conversation reset (resetFeedToEmpty).
   function appendArtifact(path) {
+    var key = String(path);
+    if (seenArtifacts[key]) {
+      return null;
+    }
+    seenArtifacts[key] = true;
     var name = String(path).split('/').pop() || String(path);
     var ext = (name.split('.').pop() || 'file').toUpperCase().slice(0, 4);
     var card = document.createElement('div');
@@ -535,6 +544,7 @@
     actNode = null;
     cmdOutNode = null;
     approvalNodes = {};
+    seenArtifacts = {};
     if (emptyHtml) {
       els.remoteFeed.innerHTML = emptyHtml;
     } else {
@@ -796,6 +806,12 @@
           cmdOutNode.textContent += data.chunk;
           feedScroll();
         }
+      }
+    } else if (event === 'artifact') {
+      // Core-first delivery: a finished file streamed mid-build (before the
+      // whole bundle is done). Deduped in appendArtifact against the final list.
+      if (data.path) {
+        appendArtifact(data.path);
       }
     } else if (event === 'tool_end') {
       cmdOutNode = null;

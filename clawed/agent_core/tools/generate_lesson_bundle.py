@@ -208,12 +208,12 @@ async def _compile_core_views(
     return generated_files, side_effects, errors
 
 
-async def _run_auto_chain(
-    master: Any, persona: Any, config: Any, output_dir: Any,
-    subject: str, grade: str, topic: str,
+async def _run_differentiation(
+    master: Any, config: Any, output_dir: Any,
     generated_files: list[Any], side_effects: list[str],
 ) -> None:
-    """Run zero-touch auto-chain: differentiation, game, journey, research, standards."""
+    """Generate the three differentiation variants — part of the CORE teaching
+    package, so it runs (and is delivered) before the bonus extras."""
     safe_title = master.title.replace(" ", "_")[:40]
 
     # Auto-differentiate (IEP/504 + ELL + Gifted)
@@ -265,6 +265,17 @@ async def _run_auto_chain(
                     side_effects.append(res[1])
         except Exception as e:
             logger.debug("Auto-differentiation failed: %s", e)
+
+
+async def _run_extras(
+    master: Any, persona: Any, config: Any, output_dir: Any,
+    subject: str, grade: str,
+    generated_files: list[Any], side_effects: list[str],
+) -> None:
+    """Generate the bonus extras (review game, learning journey, deep-research
+    report). These come AFTER the core lesson is delivered, so the teacher sees
+    a usable lesson fast and the extras stream in as they finish."""
+    safe_title = master.title.replace(" ", "_")[:40]
 
     # The review game, learning journey, and deep-research report are mutually
     # independent (each only reads `master` and writes its own file). Generate
@@ -587,6 +598,29 @@ class GenerateLessonBundleTool:
 
         generated_files, side_effects, errors = await _compile_core_views(master, images, output_dir, config)
 
+        # Core-first delivery: stream each finished file to the teacher as an
+        # `artifact` event the moment it's ready, rather than making them wait
+        # for the whole bundle (incl. the slower game/journey/research) before
+        # seeing anything. The clients dedupe these against the final tool_end.
+        _emitted: set[str] = set()
+
+        def _emit_new_artifacts() -> None:
+            for f in generated_files:
+                key = str(f)
+                if key not in _emitted:
+                    _emitted.add(key)
+                    try:
+                        context.emit_event("artifact", {"path": key, "name": Path(f).name})
+                    except Exception:
+                        pass
+
+        _emit_new_artifacts()  # teacher plan, student handout, slides
+
+        # Differentiation is part of the CORE package — generate + deliver it
+        # before the bonus extras.
+        await _run_differentiation(master, config, output_dir, generated_files, side_effects)
+        _emit_new_artifacts()  # + IEP/504, ELL, Gifted
+
         # Track generation
         if generated_files:
             try:
@@ -599,15 +633,21 @@ class GenerateLessonBundleTool:
             except Exception as e:
                 logger.debug("Lesson count tracking failed: %s", e)
 
-        # Quality review + voice scoring
+        # The usable lesson is now in the teacher's hands. The bonus extras
+        # (review game, learning journey, research report) stream in after.
+        context.notify_progress(
+            "Your core lesson is ready above. Adding a review game, learning "
+            "journey, and research report now…"
+        )
+        await _run_extras(
+            master, persona, config, output_dir, subject, grade,
+            generated_files, side_effects,
+        )
+        _emit_new_artifacts()  # + game, journey, research
+
+        # Quality review + voice scoring (no output files; runs after delivery).
         voice_score = await _run_quality_review(
             master, config, persona, standards_list, generated_files, report,
-        )
-
-        # Auto-chain
-        await _run_auto_chain(
-            master, persona, config, output_dir, subject, grade, topic,
-            generated_files, side_effects,
         )
 
         # Quality gate warning
