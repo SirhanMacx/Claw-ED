@@ -543,8 +543,21 @@ async function resolveApproval(approvalId, approved, always) {
   } catch { /* the stream's approval_resolved event is the source of truth */ }
 }
 
+// Matches StreamChatRequest.max_length on the server. Guard here so an
+// over-long message gets a clear explanation instead of a cryptic HTTP 422.
+const MAX_MESSAGE_CHARS = 10000;
+
 async function sendMessage(text) {
-  if (busy || !text.trim()) return;
+  const trimmed = (text || "").trim();
+  if (busy || !trimmed) return;
+  if (trimmed.length > MAX_MESSAGE_CHARS) {
+    addUserRow(trimmed.slice(0, 280) + "…");
+    addVoiceRow().addProgress(
+      `That message is ${trimmed.length.toLocaleString()} characters — the limit is ` +
+      `${MAX_MESSAGE_CHARS.toLocaleString()}. Please shorten it and send again.`,
+    );
+    return;
+  }
   busy = true;
   $("sendBtn").disabled = true;
 

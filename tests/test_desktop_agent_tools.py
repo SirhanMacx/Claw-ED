@@ -305,6 +305,27 @@ async def test_file_tools_deny_credential_stores(
     assert target.read_text(encoding="utf-8") == "SECRET=value"
 
 
+@pytest.mark.parametrize("rel", [
+    ".ENV", ".Env", ".AWS/credentials", ".SSH/id_rsa", ".Git-Credentials",
+    ".NPMRC",
+])
+async def test_file_tools_deny_is_case_insensitive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, rel: str,
+) -> None:
+    """macOS's default filesystem is case-insensitive, so ~/.ENV opens the real
+    ~/.env. The credential denylist must match regardless of typed case — a
+    case-sensitive check would let read_file('~/.AWS/credentials') slip through."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    target = tmp_path / rel
+
+    read = await ReadAnyFileTool().execute({"path": str(target)}, _context())
+    write = await WriteAnyFileTool().execute(
+        {"path": str(target), "content": "x"}, _context(),
+    )
+    assert read.text.startswith("ERROR: access denied"), rel
+    assert write.text.startswith("ERROR: access denied"), rel
+
+
 async def test_file_tools_deny_path_escape_outside_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

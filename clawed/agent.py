@@ -273,19 +273,43 @@ async def _openai_with_tools(
         resp.raise_for_status()
         data = resp.json()
 
-    choice = data["choices"][0]
-    msg = choice["message"]
+    # Defensive parsing: a provider can return an empty/short envelope (rate-limit
+    # body, transient hiccup, safety stop) or — rarely — a tool call whose
+    # `arguments` aren't valid JSON. Never let that crash the whole turn with a
+    # raw IndexError/JSONDecodeError; degrade to a clean, recoverable result.
+    choices = data.get("choices") or []
+    if not choices:
+        logger.warning("LLM returned no choices: %s", str(data)[:300])
+        return {
+            "type": "text",
+            "content": "I hit a snag reaching the model. Please try that again.",
+        }
+    msg = (choices[0] or {}).get("message") or {}
 
     if msg.get("tool_calls"):
-        # Collect ALL tool calls
         tool_calls = []
         for tc in msg["tool_calls"]:
+            fn = tc.get("function") or {}
+            name = fn.get("name")
+            if not name:
+                continue
+            raw_args = fn.get("arguments")
+            try:
+                args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+            except (json.JSONDecodeError, TypeError):
+                # Model emitted malformed argument JSON — skip this one call
+                # rather than crashing the turn; the loop continues / can retry.
+                logger.warning("Skipping tool call '%s' with unparseable arguments: %r", name, raw_args)
+                continue
             tool_calls.append({
-                "id": tc["id"],
-                "name": tc["function"]["name"],
-                "arguments": json.loads(tc["function"]["arguments"]),
+                "id": tc.get("id", name),
+                "name": name,
+                "arguments": args if isinstance(args, dict) else {},
             })
-        return {"type": "tool_calls", "tool_calls": tool_calls}
+        if tool_calls:
+            return {"type": "tool_calls", "tool_calls": tool_calls}
+        # Every tool call was malformed → fall through to any text content so the
+        # turn ends cleanly instead of looping on an empty action list.
 
     return {"type": "text", "content": msg.get("content", "")}
 

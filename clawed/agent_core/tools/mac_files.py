@@ -43,6 +43,11 @@ _DENY_NAMES = frozenset({
     ".git-credentials", ".pgpass", ".my.cnf", ".s3cfg", ".boto",
 })
 _DENY_SUFFIXES = (".p8", ".p12", ".pem", ".key", ".keychain", ".keychain-db")
+# Compared case-INSENSITIVELY: macOS's default filesystem is case-insensitive, so
+# ~/.ENV opens the real ~/.env. A case-sensitive denylist would let
+# read_file('~/.AWS') / write_file('~/.Env', …) walk right past it. Match on the
+# lowercased segment so the credential block holds regardless of typed case.
+_DENY_NAMES_LOWER = frozenset(n.lower() for n in _DENY_NAMES)
 
 
 def _resolve(path_str: str) -> tuple[Path | None, str]:
@@ -62,9 +67,9 @@ def _resolve(path_str: str) -> tuple[Path | None, str]:
         )
 
     for part in path.parts:
-        if part in _DENY_NAMES:
+        if part.lower() in _DENY_NAMES_LOWER:
             return None, f"ERROR: access denied — '{part}' holds credentials."
-    if path.name in _DENY_NAMES or path.suffix.lower() in _DENY_SUFFIXES:
+    if path.name.lower() in _DENY_NAMES_LOWER or path.suffix.lower() in _DENY_SUFFIXES:
         return None, f"ERROR: access denied — '{path.name}' looks like a secret."
     return path, ""
 
@@ -169,7 +174,7 @@ class ListDirectoryTool:
             return ToolResult(text=f"ERROR: could not list {path}: {exc}")
         lines: list[str] = []
         for entry in entries[:_MAX_LIST_ENTRIES]:
-            if entry.name.startswith(".") and entry.name in _DENY_NAMES:
+            if entry.name.startswith(".") and entry.name.lower() in _DENY_NAMES_LOWER:
                 continue
             try:
                 size = entry.stat().st_size if entry.is_file() else 0

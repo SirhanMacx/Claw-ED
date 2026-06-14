@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -119,13 +120,42 @@ class BrowserSearchTool:
 
 
 async def _fetch_page_text(url: str, timeout_ms: int = 15000) -> str:
-    """Fetch page text using Playwright headless browser."""
+    """Fetch a page's text, resiliently.
+
+    Tries Playwright (handles JS-heavy pages) but under a HARD OVERALL timeout,
+    then falls back to a plain httpx GET, then to an empty string. This is
+    deliberately bulletproof: Playwright's ``chromium.launch()`` has no per-call
+    timeout, so a missing/mismatched browser build would otherwise block the
+    coroutine — and the whole agent turn — FOREVER (observed live: a lesson
+    build wedged with the agent idle at 0.1% CPU because the browser never
+    launched). A teacher's "build me a lesson" must never hang on web research:
+    if the browser can't come up fast, we move on with what we have.
+    """
     try:
         from playwright.async_api import async_playwright
     except ImportError:
-        # Fallback to httpx for simple pages
         return await _fetch_with_httpx(url)
 
+    # Ceiling for the entire Playwright path (driver start + launch + nav +
+    # extract). page.goto already honors timeout_ms; this guards the launch.
+    overall_s = max(8.0, timeout_ms / 1000.0 + 8.0)
+    try:
+        return await asyncio.wait_for(
+            _fetch_with_playwright(url, timeout_ms, async_playwright),
+            timeout=overall_s,
+        )
+    except Exception as exc:  # TimeoutError, browser launch/driver errors, etc.
+        logger.warning(
+            "Playwright fetch of %s failed (%s); falling back to httpx.", url, exc,
+        )
+        try:
+            return await _fetch_with_httpx(url)
+        except Exception:
+            return ""
+
+
+async def _fetch_with_playwright(url: str, timeout_ms: int, async_playwright: Any) -> str:
+    """The Playwright fetch body, run under _fetch_page_text's wait_for ceiling."""
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         try:

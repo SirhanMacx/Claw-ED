@@ -133,7 +133,7 @@ class LLMClient:
         base_url = getattr(
             self.config, "openrouter_base_url", "https://openrouter.ai/api/v1"
         )
-        async with httpx.AsyncClient(timeout=7200.0) as client, client.stream(
+        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client, client.stream(
             "POST",
             f"{base_url.rstrip('/')}/chat/completions",
             headers={
@@ -958,7 +958,7 @@ class LLMClient:
             messages.append({"role": "user", "content": prompt})
 
             try:
-                async with httpx.AsyncClient(timeout=7200.0) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
                     resp = await client.post(
                         "https://api.openai.com/v1/chat/completions",
                         headers={
@@ -1011,7 +1011,7 @@ class LLMClient:
             base_url = getattr(self.config, "openrouter_base_url", "https://openrouter.ai/api/v1")
 
             try:
-                async with httpx.AsyncClient(timeout=7200.0) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
                     resp = await client.post(
                         f"{base_url.rstrip('/')}/chat/completions",
                         headers={
@@ -1249,7 +1249,7 @@ class LLMClient:
             }
 
             try:
-                async with httpx.AsyncClient(timeout=7200.0) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
                     resp = await client.post(
                         base_url, params=params, headers=headers, json=body,
                     )

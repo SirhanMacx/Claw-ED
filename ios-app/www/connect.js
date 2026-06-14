@@ -28,6 +28,13 @@
   var isStreamingLive = false; // a live SSE turn is open (vs. reconnect/poll)
   var resumePollTimer = null; // setTimeout handle for the reconnect "still working" poll
   var resumePolls = 0; // poll count, so a stuck background turn can't poll forever
+  // Bumped whenever the conversation context resets (new conversation, switch Mac,
+  // forget, fresh connect). Every async render path captures the generation it
+  // started in and drops its result if the generation has moved on — so a late
+  // SSE event or a slow resume fetch can never paint stale content into a fresh
+  // conversation. The active stream's AbortController lets us also stop the wire.
+  var convGen = 0;
+  var activeStreamCtrl = null;
 
   // ---- tiny DOM helpers -------------------------------------------------
   function $(id) {
@@ -178,6 +185,31 @@
     } catch (err) {
       /* no-op */
     }
+  }
+
+  function clearLastSeenTurn() {
+    try {
+      window.localStorage.removeItem(LAST_SEEN_TURN_KEY);
+    } catch (err) {
+      /* no-op */
+    }
+  }
+
+  // Reset the conversation context: invalidate any in-flight stream/resume work
+  // so it can't paint into what comes next, and stop the wire. Call this on new
+  // conversation, switch Mac, forget, and fresh connect.
+  function resetConversationContext() {
+    convGen += 1;
+    stopResumePoll();
+    if (activeStreamCtrl) {
+      try {
+        activeStreamCtrl.abort();
+      } catch (err) {
+        /* no-op */
+      }
+      activeStreamCtrl = null;
+    }
+    isStreamingLive = false;
   }
 
   // ---- URL normalization + validation -----------------------------------
@@ -822,12 +854,19 @@
     turnGotFinal = false;
     liveTurnId = '';
     isStreamingLive = true;
+    // Tag this turn with the current conversation generation + an abort handle,
+    // so "New conversation" mid-stream can both stop the wire and drop any late
+    // events instead of painting them into the fresh conversation.
+    var myGen = convGen;
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    activeStreamCtrl = ctrl;
     remoteAppend('user', text);
     setRemoteBusy(true);
     fetch(activeServerUrl + '/api/gateway/chat/stream', {
       method: 'POST',
       headers: authHeaders(true),
       body: JSON.stringify({ message: text }),
+      signal: ctrl ? ctrl.signal : undefined,
     })
       .then(function (res) {
         if (!res.ok || !res.body) {
@@ -837,18 +876,29 @@
           throw new Error('The Mac agent answered ' + res.status + '.');
         }
         return readEventStream(res.body, function (event, data) {
+          // Drop events from a turn the user has since moved on from.
+          if (convGen !== myGen) {
+            return;
+          }
           handleRemoteEvent(activeServerUrl, event, data);
         });
       })
       .catch(function (err) {
-        // If the turn already produced its result (final/error/done), a stream
-        // close that rejects afterward is benign — don't alarm the teacher.
-        if (turnGotFinal) {
+        // Superseded by a new conversation (aborted) or already produced its
+        // result — either way, don't alarm the teacher.
+        if (convGen !== myGen || turnGotFinal || (err && err.name === 'AbortError')) {
           return;
         }
         remoteAppend('error', friendlyStreamError(err));
       })
       .then(function () {
+        // Only this turn's settle should touch shared busy state.
+        if (convGen !== myGen) {
+          return;
+        }
+        if (activeStreamCtrl === ctrl) {
+          activeStreamCtrl = null;
+        }
         // Don't auto-focus the composer — on a phone that pops the keyboard
         // over the agent's reply. The teacher taps the field when ready.
         isStreamingLive = false;
@@ -934,11 +984,12 @@
   }
 
   function pollLatestTurn(baseUrl) {
+    var myGen = convGen;
     fetch(baseUrl + '/api/agent/latest-turn', { headers: authHeaders(false) })
       .then(function (res) { return res.ok ? res.json() : null; })
       .catch(function () { return null; })
       .then(function (body) {
-        if (!body || activeServerUrl !== baseUrl || isStreamingLive) {
+        if (!body || convGen !== myGen || activeServerUrl !== baseUrl || isStreamingLive) {
           return;
         }
         var turn = body.turn;
@@ -988,12 +1039,14 @@
     if (!baseUrl) {
       return;
     }
+    var myGen = convGen;
     fetch(baseUrl + '/api/agent/latest-turn', { headers: authHeaders(false) })
       .then(function (res) { return res.ok ? res.json() : null; })
       .catch(function () { return null; })
       .then(function (body) {
-        // Bail if the teacher switched Macs or started a task while we waited.
-        if (!body || activeServerUrl !== baseUrl || isStreamingLive) {
+        // Bail if the conversation reset, the teacher switched Macs, or started
+        // a task while we waited — never paint a resume into a fresh context.
+        if (!body || convGen !== myGen || activeServerUrl !== baseUrl || isStreamingLive) {
           return;
         }
         applyResume(baseUrl, body);
@@ -1002,6 +1055,9 @@
 
   function showRemote(url) {
     hideAllCards();
+    // Fresh connect is a new conversation context — invalidate anything in
+    // flight from a previous server/session before we start fetching.
+    resetConversationContext();
     activeServerUrl = url;
     document.body.classList.add('remote-on');
     if (els.remoteServer) {
@@ -1338,9 +1394,10 @@
 
     if (els.forgetBtn) {
       els.forgetBtn.addEventListener('click', function () {
-        stopResumePoll();
+        resetConversationContext();
         clearSavedUrl();
         clearToken();
+        clearLastSeenTurn();
         renderReconnect('');
         revealConnectScreen();
         if (els.input) {
@@ -1358,7 +1415,7 @@
       els.remoteSwitch.addEventListener('click', function () {
         committed = false;
         activeServerUrl = '';
-        stopResumePoll();
+        resetConversationContext();
         setRemoteBusy(false);
         revealConnectScreen();
         renderReconnect(loadSavedUrl());
@@ -1398,10 +1455,11 @@
       });
     }
 
-    // New conversation — clear the feed back to the greeting.
+    // New conversation — clear the feed back to the greeting, and invalidate
+    // any in-flight stream/resume so it can't paint into the fresh conversation.
     if (els.remoteNew) {
       els.remoteNew.addEventListener('click', function () {
-        stopResumePoll();
+        resetConversationContext();
         setRemoteBusy(false);
         resetFeedToEmpty();
       });
