@@ -271,9 +271,25 @@ body.remote-on .connect {
   display: none;
 }
 
+/* Once we're in the chat, the fixed .chat owns the screen — lock the body so it
+   can't scroll or rubber-band behind it (a big source of the "sloppy" feel). */
+body.remote-on {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
 .chat {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* Height tracks the VISUAL viewport (set from visualViewport in connect.js),
+     so when the iOS keyboard opens the whole chat shrinks to the visible area
+     and the composer sits just above the keyboard instead of behind it.
+     100dvh is the pre-JS / no-keyboard fallback. */
+  height: var(--app-h, 100dvh);
   display: flex;
   flex-direction: column;
   background-color: var(--cream);
@@ -358,6 +374,9 @@ body.remote-on .connect {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Keep scroll momentum inside the feed — never chain to the body. */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   display: flex;
   flex-direction: column;
   gap: 14px;

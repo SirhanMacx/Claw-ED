@@ -390,6 +390,55 @@
     }
   }
 
+  // ---- viewport / keyboard handling -------------------------------------
+  // iOS overlays the software keyboard on top of the WebView (no @capacitor/
+  // keyboard plugin here), so a full-screen fixed chat leaves the composer
+  // hidden behind the keyboard and the user typing blind. We drive the chat's
+  // height from window.visualViewport — the real visible area — so the whole
+  // chat shrinks to sit above the keyboard, and keep it pinned if iOS offsets
+  // the layout viewport. Works in the app AND in mobile Safari, no plugin.
+  var _vvRaf = 0;
+  function _syncViewport(scrollToEnd) {
+    var vv = window.visualViewport;
+    var h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', h + 'px');
+    if (els.remoteCard) {
+      var off = vv ? vv.offsetTop : 0;
+      els.remoteCard.style.transform = off ? 'translateY(' + off + 'px)' : '';
+    }
+    if (scrollToEnd) {
+      // Keep the newest message + the composer visible as the keyboard settles.
+      feedScroll();
+    }
+  }
+
+  function installViewportFix() {
+    var vv = window.visualViewport;
+    var onResize = function () {
+      // Coalesce bursts of resize/scroll events into one frame.
+      if (_vvRaf) {
+        return;
+      }
+      _vvRaf = window.requestAnimationFrame(function () {
+        _vvRaf = 0;
+        _syncViewport(true);
+      });
+    };
+    var onScroll = function () {
+      // Only re-pin position on viewport scroll — do NOT yank the feed, or we'd
+      // fight a teacher scrolling up through history with the keyboard open.
+      _syncViewport(false);
+    };
+    if (vv) {
+      vv.addEventListener('resize', onResize);
+      vv.addEventListener('scroll', onScroll);
+    }
+    window.addEventListener('orientationchange', function () {
+      window.setTimeout(function () { _syncViewport(true); }, 300);
+    });
+    _syncViewport(false);
+  }
+
   // Drop the empty state (chips) the first time a real message lands.
   function dropEmptyState() {
     if (!els.remoteFeed) {
@@ -1082,6 +1131,10 @@
     if (els.remoteCard) {
       els.remoteCard.hidden = false;
     }
+    // Size the chat to the current visible viewport now that it's on screen.
+    if (typeof _syncViewport === 'function') {
+      _syncViewport(false);
+    }
     // Show the greeting + suggestion chips (a fresh conversation)…
     resetFeedToEmpty();
     // …then re-attach to anything in flight on the Mac (pending approval,
@@ -1458,7 +1511,15 @@
         els.remoteInput.style.height = 'auto';
         els.remoteInput.style.height = Math.min(els.remoteInput.scrollHeight, 220) + 'px';
       });
+      // When the field gains focus the keyboard animates in; once it settles,
+      // bring the newest message + composer back into view.
+      els.remoteInput.addEventListener('focus', function () {
+        window.setTimeout(function () { _syncViewport(true); }, 300);
+      });
     }
+
+    // Keep the chat sized to the visible viewport (keyboard-aware).
+    installViewportFix();
 
     // Suggestion chips live inside the feed and are re-injected on a new
     // conversation, so wire them by delegation rather than per-node listeners.
