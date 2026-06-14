@@ -266,44 +266,54 @@ async def _run_auto_chain(
         except Exception as e:
             logger.debug("Auto-differentiation failed: %s", e)
 
-    # Auto-generate review game
-    if config and getattr(config, "auto_game", True):
+    # The review game, learning journey, and deep-research report are mutually
+    # independent (each only reads `master` and writes its own file). Generate
+    # them concurrently instead of one-after-another — on the interactive build
+    # path this collapses three serial LLM-heavy stages into ~one.
+    async def _auto_game() -> tuple[Any, str] | None:
+        if not (config and getattr(config, "auto_game", True)):
+            return None
         try:
             from clawed.compile_game import compile_game
             game_path = await compile_game(master=master, persona=persona,
                                            output_dir=output_dir, config=config)
             if game_path and game_path.exists():
-                generated_files.append(game_path)
-                side_effects.append(f"Review game: {game_path.name}")
+                return game_path, f"Review game: {game_path.name}"
         except Exception as e:
             logger.debug("Auto-game failed: %s", e)
+        return None
 
-    # Auto-generate learning journey
-    try:
-        from clawed.compile_journey import compile_journey
-        journey_path = await compile_journey(master=master, persona=persona, output_dir=output_dir)
-        if journey_path and journey_path.exists():
-            generated_files.append(journey_path)
-            side_effects.append(f"Learning journey: {journey_path.name}")
-    except Exception as e:
-        logger.debug("Auto-journey failed: %s", e)
+    async def _auto_journey() -> tuple[Any, str] | None:
+        try:
+            from clawed.compile_journey import compile_journey
+            journey_path = await compile_journey(master=master, persona=persona, output_dir=output_dir)
+            if journey_path and journey_path.exists():
+                return journey_path, f"Learning journey: {journey_path.name}"
+        except Exception as e:
+            logger.debug("Auto-journey failed: %s", e)
+        return None
 
-    # Auto-deep-research
-    try:
-        from clawed.deep_research import deep_research
-        from clawed.llm import LLMClient
-        research_llm = LLMClient(config=config)
-        research_report = await deep_research(
-            topic=getattr(master, "topic", master.title),
-            subject=subject, grade=grade, llm=research_llm, max_sub_queries=3,
-        )
-        if research_report and len(research_report) > 100:
-            research_path = output_dir / f"{safe_title}_research.md"
-            research_path.write_text(research_report, encoding="utf-8")
-            generated_files.append(research_path)
-            side_effects.append(f"Research report: {research_path.name}")
-    except Exception as e:
-        logger.debug("Auto-research failed: %s", e)
+    async def _auto_research() -> tuple[Any, str] | None:
+        try:
+            from clawed.deep_research import deep_research
+            from clawed.llm import LLMClient
+            research_llm = LLMClient(config=config)
+            research_report = await deep_research(
+                topic=getattr(master, "topic", master.title),
+                subject=subject, grade=grade, llm=research_llm, max_sub_queries=3,
+            )
+            if research_report and len(research_report) > 100:
+                research_path = output_dir / f"{safe_title}_research.md"
+                research_path.write_text(research_report, encoding="utf-8")
+                return research_path, f"Research report: {research_path.name}"
+        except Exception as e:
+            logger.debug("Auto-research failed: %s", e)
+        return None
+
+    for res in await asyncio.gather(_auto_game(), _auto_journey(), _auto_research()):
+        if res:
+            generated_files.append(res[0])
+            side_effects.append(res[1])
 
     # Auto-lookup state standards
     if config and getattr(config, "auto_standards", True):
