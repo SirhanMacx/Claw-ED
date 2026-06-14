@@ -23,6 +23,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import secrets
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -56,6 +58,18 @@ def _detach_to_background(task: Any) -> None:
     _BACKGROUND_TASKS.add(task)
     task.add_done_callback(_BACKGROUND_TASKS.discard)
     logger.info("SSE client disconnected; agent turn continues in the background.")
+
+
+# Per-teacher record of the latest agent turn. A phone that dropped the SSE
+# stream queries GET /api/agent/latest-turn on reconnect to re-attach: see a
+# pending approval, "still working", or the result that finished while it was
+# gone. Recorded from the task's done-callback so it captures even turns that
+# finished after the client disconnected.
+_LATEST_TURN: dict[str, dict[str, Any]] = {}
+
+
+def _strip_turn_footer(text: str) -> str:
+    return str(text).split("\nAuthoritative approval log for this turn:")[0].rstrip()
 
 
 def _append_approval_footer(
@@ -161,8 +175,39 @@ async def gateway_chat_stream(request: Request, req: StreamChatRequest) -> Strea
         ),
     )
 
+    # Record this turn so a reconnecting client can re-attach to it.
+    turn_id = secrets.token_hex(6)
+    _LATEST_TURN[teacher_id] = {
+        "turn_id": turn_id,
+        "status": "running",
+        "message": req.message[:400],
+        "final_text": "",
+        "files": [],
+        "started_at": time.time(),
+        "done_at": None,
+    }
+
+    def _record_turn_result(finished: Any) -> None:
+        entry = _LATEST_TURN.get(teacher_id)
+        if not entry or entry.get("turn_id") != turn_id:
+            return  # a newer turn superseded this one
+        entry["done_at"] = time.time()
+        try:
+            result = finished.result()
+            entry["status"] = "done"
+            entry["final_text"] = _strip_turn_footer(result.text or "")
+            entry["files"] = [str(f) for f in result.files]
+        except asyncio.CancelledError:
+            entry["status"] = "cancelled"
+        except Exception:
+            entry["status"] = "error"
+
+    task.add_done_callback(_record_turn_result)
+
     async def generate() -> Any:
-        yield _sse("start", {})
+        # turn_id lets a reconnecting client tell "the turn I streamed to the end"
+        # from "a turn that finished while I was gone" (GET /agent/latest-turn).
+        yield _sse("start", {"turn_id": turn_id})
         idle = 0.0
         try:
             while True:
@@ -290,6 +335,34 @@ async def pending_approvals(request: Request) -> dict[str, Any]:
                 "created_at": pa.created_at,
             }
             for pa in items
+        ],
+    }
+
+
+@router.get("/agent/latest-turn", dependencies=[Depends(require_auth)])
+async def latest_turn(request: Request) -> dict[str, Any]:
+    """Reconnect/resume: the latest agent turn + any pending approvals.
+
+    A phone that dropped the SSE stream calls this on reconnect to re-attach —
+    surface a pending approval, show "still working", or render the result that
+    finished while it was away.
+    """
+    from clawed.agent_core.approvals import ApprovalManager
+    from clawed.agent_core.identity import get_teacher_id
+
+    teacher_id = get_teacher_id()
+    turn = _LATEST_TURN.get(teacher_id)
+    pending = ApprovalManager().pending_for_teacher(teacher_id)
+    return {
+        "turn": turn,
+        "pending_approvals": [
+            {
+                "approval_id": pa.id,
+                "description": pa.action_description,
+                "tool_name": pa.action_payload.get("tool_name"),
+                "risk_level": pa.action_payload.get("risk_level"),
+            }
+            for pa in pending
         ],
     }
 

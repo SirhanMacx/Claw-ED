@@ -14,6 +14,7 @@
   var STORAGE_KEY = 'clawed.serverUrl';
   var TOKEN_KEY = 'clawed.serverToken'; // device token for the paired server (remote/tunnel)
   var TOKEN_ORIGIN_KEY = 'clawed.serverTokenOrigin'; // origin the token is bound to
+  var LAST_SEEN_TURN_KEY = 'clawed.lastSeenTurnId'; // last turn this phone watched to the end
   var DEFAULT_PORT = '8000'; // matches `clawed app` / mac-app AppEnvironment.swift
 
   // Once true, we're connecting to or controlling a server. Every entry point
@@ -23,6 +24,10 @@
   var autoController = null; // AbortController for the in-flight launch probe
   var activeServerUrl = '';
   var cmdOutNode = null; // growing node for the current tool's streamed output
+  var liveTurnId = ''; // turn_id of the SSE stream we're currently watching
+  var isStreamingLive = false; // a live SSE turn is open (vs. reconnect/poll)
+  var resumePollTimer = null; // setTimeout handle for the reconnect "still working" poll
+  var resumePolls = 0; // poll count, so a stuck background turn can't poll forever
 
   // ---- tiny DOM helpers -------------------------------------------------
   function $(id) {
@@ -146,6 +151,30 @@
     try {
       window.localStorage.removeItem(TOKEN_KEY);
       window.localStorage.removeItem(TOKEN_ORIGIN_KEY);
+    } catch (err) {
+      /* no-op */
+    }
+  }
+
+  // ---- last-seen turn (reconnect / resume) ------------------------------
+  // The id of the most recent agent turn this phone watched to the end. On
+  // reconnect we ask the Mac for its latest turn (GET /api/agent/latest-turn);
+  // if that turn's id differs from this, the phone missed the result (dropped
+  // SSE stream) and we render it. Prevents re-showing a turn already seen live.
+  function loadLastSeenTurn() {
+    try {
+      return window.localStorage.getItem(LAST_SEEN_TURN_KEY) || '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function saveLastSeenTurn(id) {
+    if (!id) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(LAST_SEEN_TURN_KEY, id);
     } catch (err) {
       /* no-op */
     }
@@ -534,9 +563,17 @@
             if (body && body.ok === false) {
               setResolved(card, 'no', body.error ? 'Couldn’t apply: ' + body.error
                 : 'The Mac couldn’t apply that decision.');
+              return;
             }
-            // On ok:true the authoritative `approval_resolved` SSE event sets the
-            // truthful resolved line (allowed once / always / denied).
+            // On a LIVE stream the authoritative `approval_resolved` SSE event
+            // sets the truthful resolved line (allowed once / always / denied).
+            // On the RECONNECT path there's no live stream to carry that event,
+            // so set an honest line here from the decision the teacher made.
+            if (!isStreamingLive) {
+              setResolved(card, approved ? 'ok' : 'no', approved
+                ? 'Approved — your Mac is continuing.'
+                : 'Denied. Not running that action.');
+            }
           });
       })
       .catch(function () {
@@ -708,7 +745,10 @@
   }
 
   function handleRemoteEvent(baseUrl, event, data) {
-    if (event === 'progress') {
+    if (event === 'start') {
+      // The Mac names this turn so we can recognize its result on reconnect.
+      liveTurnId = data.turn_id || '';
+    } else if (event === 'progress') {
       remoteAppend('progress', data.message || 'Working…');
     } else if (event === 'tool_start') {
       cmdOutNode = null; // start a fresh output block for this tool run
@@ -739,6 +779,8 @@
       markApprovalResolved(data.approval_id, data.approved, data.always);
     } else if (event === 'final') {
       turnGotFinal = true;
+      // We watched this turn to its result — don't re-render it on reconnect.
+      saveLastSeenTurn(liveTurnId);
       if (data.text) {
         // The server appends an "Authoritative approval log for this turn:"
         // footer for transparency, but the chat already shows that status on
@@ -751,9 +793,11 @@
       (data.files || []).forEach(appendArtifact);
     } else if (event === 'error') {
       turnGotFinal = true;
+      saveLastSeenTurn(liveTurnId);
       remoteAppend('error', data.message || 'Something went wrong.');
     } else if (event === 'done') {
       turnGotFinal = true;
+      saveLastSeenTurn(liveTurnId);
     }
   }
 
@@ -773,7 +817,11 @@
     if (!text || !activeServerUrl) {
       return;
     }
+    // A freshly sent task supersedes any reconnect "still working" poll.
+    stopResumePoll();
     turnGotFinal = false;
+    liveTurnId = '';
+    isStreamingLive = true;
     remoteAppend('user', text);
     setRemoteBusy(true);
     fetch(activeServerUrl + '/api/gateway/chat/stream', {
@@ -803,7 +851,152 @@
       .then(function () {
         // Don't auto-focus the composer — on a phone that pops the keyboard
         // over the agent's reply. The teacher taps the field when ready.
+        isStreamingLive = false;
         setRemoteBusy(false);
+      });
+  }
+
+  // ---- reconnect / resume ----------------------------------------------
+  // A phone's SSE stream drops easily over a tunnel on a long task. The Mac
+  // keeps the turn running (server detaches it to the background) and records
+  // its outcome. On (re)connect we ask GET /api/agent/latest-turn and re-attach:
+  // surface a still-pending approval, show "still working" (and poll for the
+  // result), or render the result that landed while the phone was away.
+  var RESUME_POLL_MS = 3000;
+  var RESUME_POLL_MAX = 80; // ~4 min ceiling so a stuck turn can't poll forever
+
+  function stopResumePoll() {
+    if (resumePollTimer) {
+      window.clearTimeout(resumePollTimer);
+      resumePollTimer = null;
+    }
+    resumePolls = 0;
+  }
+
+  // A small contextual note above resumed content.
+  function resumeNote(text) {
+    var node = document.createElement('div');
+    node.className = 'note resume';
+    node.textContent = text;
+    return appendCard(node);
+  }
+
+  // Render the result of a turn that finished while the phone was away, exactly
+  // as the live stream would have: the task we sent, the agent's reply, files.
+  function renderResumedTurn(turn) {
+    if (turn.message) {
+      remoteAppend('user', turn.message);
+    }
+    if (turn.status === 'error') {
+      remoteAppend('error', 'That task ran into a problem on your Mac. Try sending it again.');
+    } else if (turn.status === 'cancelled') {
+      remoteAppend('error', 'That task was interrupted before it finished.');
+    } else {
+      if (turn.final_text) {
+        remoteAppend('agent', turn.final_text);
+      }
+      (turn.files || []).forEach(appendArtifact);
+      if (!turn.final_text && !(turn.files && turn.files.length)) {
+        remoteAppend('agent', 'Done.');
+      }
+    }
+  }
+
+  // Re-attach any approvals still waiting (process-wide broker → resolvable even
+  // on a fresh stream). Skips ones already on screen so polling can't duplicate.
+  function reattachApprovals(baseUrl, list) {
+    var shown = 0;
+    (list || []).forEach(function (item) {
+      if (item && item.approval_id && !approvalNodes[item.approval_id]) {
+        appendApproval(baseUrl, item);
+        shown += 1;
+      }
+    });
+    return shown;
+  }
+
+  function scheduleResumePoll(baseUrl) {
+    stopResumePoll();
+    resumePollTimer = window.setTimeout(function () {
+      resumePollTimer = null;
+      resumePolls += 1;
+      if (activeServerUrl !== baseUrl || isStreamingLive) {
+        return; // switched servers, or the teacher sent a new task
+      }
+      if (resumePolls > RESUME_POLL_MAX) {
+        // Stop watching a very long task — but don't leave the composer stuck.
+        setRemoteBusy(false);
+        resumeNote('Still working on your Mac — reconnect later to see the result.');
+        return;
+      }
+      pollLatestTurn(baseUrl);
+    }, RESUME_POLL_MS);
+  }
+
+  function pollLatestTurn(baseUrl) {
+    fetch(baseUrl + '/api/agent/latest-turn', { headers: authHeaders(false) })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .catch(function () { return null; })
+      .then(function (body) {
+        if (!body || activeServerUrl !== baseUrl || isStreamingLive) {
+          return;
+        }
+        var turn = body.turn;
+        reattachApprovals(baseUrl, body.pending_approvals);
+        if (turn && turn.status === 'running') {
+          scheduleResumePoll(baseUrl); // still working — keep watching
+          return;
+        }
+        if (turn && turn.turn_id && turn.turn_id !== loadLastSeenTurn()) {
+          saveLastSeenTurn(turn.turn_id);
+          setRemoteBusy(false);
+          renderResumedTurn(turn);
+        }
+      });
+  }
+
+  function applyResume(baseUrl, body) {
+    var turn = body.turn;
+    var pending = reattachApprovals(baseUrl, body.pending_approvals);
+
+    if (turn && turn.status === 'running') {
+      // The Mac is still working on a task this phone started earlier.
+      var label = turn.message
+        ? 'Your Mac is still working on: “' + turn.message + '”'
+        : 'Your Mac is still working on your last task.';
+      resumeNote(label + ' I’ll show the result here when it lands.');
+      setRemoteBusy(true);
+      scheduleResumePoll(baseUrl);
+      return;
+    }
+
+    if (turn && turn.turn_id && turn.turn_id !== loadLastSeenTurn()) {
+      // A turn finished while the phone was away — show what it produced.
+      saveLastSeenTurn(turn.turn_id);
+      resumeNote('Here’s what finished on your Mac while you were away.');
+      renderResumedTurn(turn);
+      return;
+    }
+
+    if (pending) {
+      // No new result, but an approval is still waiting on the teacher.
+      resumeNote('Your Mac is waiting on an approval.');
+    }
+  }
+
+  function resumeLatestTurn(baseUrl) {
+    if (!baseUrl) {
+      return;
+    }
+    fetch(baseUrl + '/api/agent/latest-turn', { headers: authHeaders(false) })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .catch(function () { return null; })
+      .then(function (body) {
+        // Bail if the teacher switched Macs or started a task while we waited.
+        if (!body || activeServerUrl !== baseUrl || isStreamingLive) {
+          return;
+        }
+        applyResume(baseUrl, body);
       });
   }
 
@@ -817,8 +1010,11 @@
     if (els.remoteCard) {
       els.remoteCard.hidden = false;
     }
-    // Show the greeting + suggestion chips (a fresh conversation).
+    // Show the greeting + suggestion chips (a fresh conversation)…
     resetFeedToEmpty();
+    // …then re-attach to anything in flight on the Mac (pending approval,
+    // still-running task, or a result that landed while the phone was away).
+    resumeLatestTurn(url);
   }
 
   // ---- card visibility --------------------------------------------------
@@ -1142,6 +1338,7 @@
 
     if (els.forgetBtn) {
       els.forgetBtn.addEventListener('click', function () {
+        stopResumePoll();
         clearSavedUrl();
         clearToken();
         renderReconnect('');
@@ -1161,6 +1358,7 @@
       els.remoteSwitch.addEventListener('click', function () {
         committed = false;
         activeServerUrl = '';
+        stopResumePoll();
         setRemoteBusy(false);
         revealConnectScreen();
         renderReconnect(loadSavedUrl());
@@ -1203,6 +1401,7 @@
     // New conversation — clear the feed back to the greeting.
     if (els.remoteNew) {
       els.remoteNew.addEventListener('click', function () {
+        stopResumePoll();
         setRemoteBusy(false);
         resetFeedToEmpty();
       });
