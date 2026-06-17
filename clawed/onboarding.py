@@ -869,7 +869,7 @@ def run_setup_wizard(reset: bool = False) -> AppConfig:
             "  [bold]clawed chat[/bold]                                  -- Start an interactive session\n"
             "  [bold]clawed lesson \"Topic\" -g 8 -s \"Subject\"[/bold]  -- Generate a lesson\n"
             "  [bold]clawed serve[/bold]                                 -- Launch the web dashboard\n"
-            "  [bold]clawed setup --reset[/bold]                         -- Re-run this wizard anytime",
+            "  [bold]clawed setup --reset[/bold]                         -- Re-run this wizard anytime\n\n[dim]Know a teacher who wants the lessons without the terminal? The done-for-you version is at [bold]macxlabs.app/teacherhq?src=clawed-cli[/bold].[/dim]",
             title="[bold green]\u2705 Ready[/bold green]",
             border_style="green",
             padding=(1, 2),
@@ -1029,7 +1029,7 @@ def _run_onboarding_legacy() -> AppConfig:
             "  [bold]clawed chat[/bold]         \u2014 Start an interactive session\n"
             "  [bold]clawed ingest <path>[/bold] \u2014 Feed me your lesson plans\n"
             "  [bold]clawed serve[/bold]         \u2014 Launch the web dashboard\n\n"
-            "[dim]Tip: Run [bold]clawed ingest <path>[/bold] anytime to add more materials.[/dim]",
+            "[dim]Tip: Run [bold]clawed ingest <path>[/bold] anytime to add more materials.[/dim]\n\n[dim]Know a teacher who wants the lessons without the terminal? The done-for-you version is at [bold]macxlabs.app/teacherhq?src=clawed-cli[/bold].[/dim]",
             title="[bold green]\u2705 Ready[/bold green]",
             border_style="green",
             padding=(1, 2),
