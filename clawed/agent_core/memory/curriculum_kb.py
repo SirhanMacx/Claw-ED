@@ -511,7 +511,9 @@ class CurriculumKB:
             embeddings.append(vec)
 
         # Pad to same dimension if needed (mixed embedder compatibility)
-        max_dim = max(len(e) for e in embeddings)
+        # Include the query length: a variable-dim embedder can produce a
+        # query longer than every stored doc, which previously crashed matmul.
+        max_dim = max(max((len(e) for e in embeddings), default=0), len(q))
         if len(q) < max_dim:
             q = np.pad(q, (0, max_dim - len(q)))
         matrix = np.zeros((len(embeddings), max_dim), dtype=np.float32)

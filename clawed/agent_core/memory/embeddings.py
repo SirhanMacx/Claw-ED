@@ -10,6 +10,7 @@ Produces 384-dimensional dense vectors — compact, fast, high quality.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
 import os
@@ -256,16 +257,17 @@ def _simple_stem(word: str) -> str:
 
 
 class TFIDFEmbedder:
-    """TF-IDF with bigrams — no dependencies, always available.
+    """Hashing term-frequency embedder — no dependencies, always available.
 
-    Vocabulary capped at 512 to keep vectors small in SQLite.
+    Tokens are hashed into a fixed DIM-dimensional space (the "hashing trick"),
+    so the embedder is stateless and deterministic across processes: vectors are
+    always the same length and embeddings stored in the KB stay comparable after
+    a restart. (The previous version grew a per-instance vocabulary that was
+    never persisted, so stored vectors silently rotted between runs and could
+    crash the search matmul when a query was longer than the indexed docs.)
     """
 
-    MAX_VOCAB = 512
-
-    def __init__(self) -> None:
-        self._vocab: dict[str, int] = {}
-        self._next_idx = 0
+    DIM = 512
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
@@ -277,20 +279,16 @@ class TFIDFEmbedder:
         ]
         return stemmed + bigrams
 
+    @staticmethod
+    def _bucket(token: str) -> int:
+        # Stable across processes (Python's built-in hash() is salted per run).
+        digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
+        return int.from_bytes(digest, "big") % TFIDFEmbedder.DIM
+
     def embed(self, text: str) -> list[float]:
-        tokens = self._tokenize(text)
-        for t in tokens:
-            if t not in self._vocab and self._next_idx < self.MAX_VOCAB:
-                self._vocab[t] = self._next_idx
-                self._next_idx += 1
-        dim = min(len(self._vocab), self.MAX_VOCAB)
-        if dim == 0:
-            return [0.0]
-        vec = [0.0] * dim
-        for t in tokens:
-            idx = self._vocab.get(t)
-            if idx is not None and idx < dim:
-                vec[idx] += 1.0
+        vec = [0.0] * self.DIM
+        for t in self._tokenize(text):
+            vec[self._bucket(t)] += 1.0
         norm = math.sqrt(sum(x * x for x in vec)) or 1.0
         return [x / norm for x in vec]
 
