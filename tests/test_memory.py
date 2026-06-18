@@ -83,6 +83,27 @@ class TestEmbeddingProvider:
         assert isinstance(embedder, embeddings.TFIDFEmbedder)
         assert attempts["count"] <= 1
 
+    def test_tfidf_fixed_dimension(self):
+        # Vectors must be a fixed length regardless of content, so the KB's
+        # similarity matmul never hits a dimension mismatch.
+        from clawed.agent_core.memory.embeddings import TFIDFEmbedder
+
+        e = TFIDFEmbedder()
+        vec_short = e.embed("cat")
+        vec_long = e.embed("the quick brown fox jumps over the lazy sleeping dog again")
+        assert len(vec_short) == len(vec_long)
+
+    def test_tfidf_token_index_independent_of_history(self):
+        # A token must map to the same dimension no matter what was embedded
+        # before it, or stored vectors become meaningless across processes.
+        from clawed.agent_core.memory.embeddings import TFIDFEmbedder
+
+        primed = TFIDFEmbedder()
+        primed.embed("alpha beta gamma delta epsilon")
+        v_primed = primed.embed("war")
+        v_fresh = TFIDFEmbedder().embed("war")
+        assert v_primed == v_fresh
+
     def test_tfidf_embed(self):
         from clawed.agent_core.memory.embeddings import get_embedder
         embedder = get_embedder()
