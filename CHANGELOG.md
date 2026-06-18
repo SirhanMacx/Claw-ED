@@ -1,5 +1,24 @@
 # Changelog
 
+## v6.18.2026 — 2026-06-18
+
+### Fixed — Memory and Embeddings
+
+- The local TF-IDF fallback embedder is now stateless and deterministic
+  (feature hashing into a fixed 512-dimensional space). Previously it grew a
+  per-instance vocabulary that was never persisted, so curriculum-search
+  embeddings silently became incompatible across process restarts and could
+  crash the search matmul when a query was longer than the indexed documents.
+- `get_embedder()` falls back cleanly to the TF-IDF embedder when the ONNX
+  MiniLM model cannot be downloaded, instead of returning a non-functional one.
+- Curriculum KB search pads to the larger of the query/document dimension for
+  robustness with mixed-dimension stores.
+
+### Changed
+
+- The landing page and first-run setup now point teachers who don't use the
+  command line to the hosted, done-for-you option.
+
 ## v5.15.2026 — 2026-05-15
 
 ### Hardened — Filesystem Boundaries and Release Trust
