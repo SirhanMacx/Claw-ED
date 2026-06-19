@@ -242,19 +242,26 @@ def test_slide_count(tmp_path):
     prs = Presentation(str(out))
     slide_count = len(prs.slides)
 
-    # Expected:
+    # Expected (matches the exemplar slide order):
     #   1 title slide
+    # + N Turn-and-Talk slides (one per Do Now question, capped at 2)
     # + 1 vocabulary slide (2 terms, fits on one)
     # + 2 instruction section slides
     # + 1 source analysis slide (1 primary source)
+    # + 0 image-activity grid (fixture has <6 fetched images, so none)
     # + 1 station overview slide
     # + 1 exit ticket slide
-    # = 7 total
+    #
+    # The image-activity grid only fires with ≥6 fetched images, and this
+    # fixture is compiled with images={}, so it contributes 0 here.
+    turn_and_talk = min(len(mc.do_now.questions), 2) if mc.do_now else 0
     expected = (
         1  # title
+        + turn_and_talk                    # 2 (Do Now has 2 questions)
         + 1  # vocabulary (2 terms on one slide, threshold is 5)
         + len(mc.direct_instruction)       # 2
         + len(mc.primary_sources)          # 1
+        + 0                                # image-activity grid (needs ≥6 imgs)
         + (1 if mc.stations else 0)        # 1
         + (1 if mc.exit_ticket else 0)     # 1
     )
