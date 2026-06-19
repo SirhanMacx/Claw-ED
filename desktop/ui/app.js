@@ -44,6 +44,43 @@ function renderProse(target, text) {
   }
 }
 
+// ── Connect / onboarding constants ────────────────────────────────────
+
+const PROVIDER_LABELS = {
+  anthropic: "Anthropic (Claude)",
+  openai: "OpenAI",
+  ollama: "Ollama",
+  openrouter: "OpenRouter",
+  google: "Google Gemini",
+};
+
+const DEFAULT_MODELS = {
+  anthropic: "claude-sonnet-4-6",
+  openai: "gpt-4.1",
+  ollama: "",
+  openrouter: "nvidia/nemotron-3-super-120b-a12b:free",
+  google: "gemini-2.5-flash",
+};
+
+const onboardingState = {
+  detected: null,
+  selected: null,
+  baseSettings: null,
+  detectLoaded: false,
+};
+let onboardingDidAutoLaunch = false;
+
+function show(el) { if (el) el.hidden = false; }
+function hide(el) { if (el) el.hidden = true; }
+
+/** status-box helper, mirrors the proven web flow (loading / ok / error). */
+function showStatus(el, msg, type) {
+  if (!el) return;
+  el.hidden = false;
+  el.textContent = msg;
+  el.className = "status-box mat-result" + (type ? " status-" + type : "");
+}
+
 // ── Status pills (driven by REAL health probes) ───────────────────────
 
 let lastSidecar = null; // latest sidecar-status event from the shell
@@ -53,6 +90,8 @@ function paintStatus() {
   const dot = $("statusDot");
   const text = $("statusText");
   const model = $("modelPill");
+  const pill = $("statusPill");
+  let needsSetup = false;
 
   if (lastHealth && lastHealth.status === "ok") {
     if (lastHealth.llm_connected) {
@@ -61,6 +100,7 @@ function paintStatus() {
     } else {
       dot.className = "dot warn";
       text.textContent = "Provider needs setup";
+      needsSetup = true;
     }
     model.textContent = lastHealth.llm_model || lastHealth.llm_provider || "—";
   } else if (lastSidecar && lastSidecar.state === "starting") {
@@ -85,6 +125,21 @@ function paintStatus() {
       : lastSidecar.pid
         ? `Supervised by this app (pid ${lastSidecar.pid})`
         : "Supervised by this app";
+  }
+
+  // Dead-end routing: surface the status pill as clickable and show the
+  // inline "Connect your AI" banner in the empty chat state when the
+  // provider isn't configured.
+  if (pill) pill.classList.toggle("needs-setup", needsSetup);
+  const banner = $("connectBanner");
+  if (banner) banner.hidden = !needsSetup;
+
+  // First-run gating: auto-open onboarding once when the agent is up but no
+  // provider is connected. Only auto-launch a single time so we don't yank
+  // the teacher out of Settings while they're mid-fix.
+  if (needsSetup && !onboardingDidAutoLaunch) {
+    onboardingDidAutoLaunch = true;
+    enterOnboarding();
   }
 }
 
@@ -550,6 +605,11 @@ const MAX_MESSAGE_CHARS = 10000;
 async function sendMessage(text) {
   const trimmed = (text || "").trim();
   if (busy || !trimmed) return;
+  // Gate: no provider yet → route to onboarding instead of a confusing failure.
+  if (lastHealth && lastHealth.status === "ok" && !lastHealth.llm_connected) {
+    enterOnboarding();
+    return;
+  }
   if (trimmed.length > MAX_MESSAGE_CHARS) {
     addUserRow(trimmed.slice(0, 280) + "…");
     addVoiceRow().addProgress(
@@ -1068,6 +1128,7 @@ function paletteItems(query) {
   items.push(cmd("▣", "Go to Workspace", () => showView("workspace")));
   items.push(cmd("▢", "Go to Pair iPhone", () => showView("pair")));
   items.push(cmd("⚙", "Go to Settings", () => showView("settings")));
+  items.push(cmd("✧", "Connect your AI", () => enterOnboarding()));
   items.push(cmd("↻", "Restart agent", () => invoke("restart_sidecar").catch(() => {})));
   items.push(cmd("✓", "Export district readiness report", exportReadinessReport));
 
@@ -1133,6 +1194,353 @@ function paletteKeydown(e) {
   }
 }
 
+// ── Connect / onboarding flow (ported from the proven web wizard) ─────
+// EVERY fetch is BASE-prefixed — the native UI talks to an absolute
+// loopback base, not relative paths.
+
+/** Pull current settings once so a save preserves unrelated fields. */
+function loadBaseSettings() {
+  return fetch(`${BASE}/api/settings`)
+    .then((r) => r.json())
+    .then((s) => { onboardingState.baseSettings = s || {}; return onboardingState.baseSettings; })
+    .catch(() => { onboardingState.baseSettings = {}; return onboardingState.baseSettings; });
+}
+
+function defaultModelFor(prov) {
+  const d = onboardingState.detected;
+  if (prov === "ollama" && d && d.provider === "ollama" && d.models && d.models.length) {
+    return d.models[0];
+  }
+  return DEFAULT_MODELS[prov] || "";
+}
+
+/** POST /api/settings then GET /api/settings/test-connection. */
+function saveAndTest(provider, apiKey, model, cb) {
+  const bs = onboardingState.baseSettings || {};
+  const body = {
+    provider,
+    api_key: apiKey || null,
+    anthropic_model: bs.anthropic_model || DEFAULT_MODELS.anthropic,
+    openai_model: bs.openai_model || DEFAULT_MODELS.openai,
+    ollama_model: bs.ollama_model || "llama3.2",
+    ollama_base_url: bs.ollama_base_url || "http://localhost:11434",
+    openrouter_model: bs.openrouter_model || DEFAULT_MODELS.openrouter,
+    google_model: bs.google_model || DEFAULT_MODELS.google,
+    include_homework: (bs.include_homework !== undefined) ? bs.include_homework : true,
+    export_format: bs.export_format || "markdown",
+  };
+  if (model) body[provider + "_model"] = model;
+
+  fetch(`${BASE}/api/settings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then((r) => r.json().then((j) => ({ ok: r.ok, data: j })))
+    .then((res) => {
+      if (!res.ok || (res.data && res.data.error)) {
+        cb(false, (res.data && res.data.error) || "Could not save settings.", null);
+        return;
+      }
+      onboardingState.baseSettings = Object.assign({}, bs, { provider });
+      onboardingState.baseSettings[provider + "_model"] = model || body[provider + "_model"];
+      return fetch(`${BASE}/api/settings/test-connection`)
+        .then((r) => r.json())
+        .then((t) => {
+          if (t && t.connected) {
+            cb(true, t.message || "", t.model || model);
+            return;
+          }
+          // The tester only validates ollama/anthropic/openai; openrouter and
+          // google come back "Unknown provider" though the save succeeded.
+          // Confirm via /health (key present) so we don't falsely block.
+          const errText = (t && (t.error || t.message)) || "";
+          if (/unknown provider/i.test(errText)) {
+            return fetch(`${BASE}/api/health`)
+              .then((r) => r.json())
+              .then((h) => {
+                if (h && h.llm_connected) {
+                  cb(true, "", (h.llm_model || model), true);
+                } else {
+                  cb(false, "Saved, but Claw-ED could not confirm a working key. Double-check your key and model, then try again.", null);
+                }
+              });
+          }
+          cb(false, errText || "The provider rejected the connection. Double-check your key and model.", null);
+        });
+    }).catch((err) => {
+      cb(false, "Connection error: " + err, null);
+    });
+}
+
+function onboardingShowChooser() {
+  hide($("onb-detected"));
+  hide($("onb-success"));
+  show($("onb-chooser"));
+}
+
+function onboardingDetect() {
+  const detecting = $("onb-detecting");
+  show(detecting);
+  hide($("onb-detected"));
+  hide($("onb-chooser"));
+  hide($("onb-success"));
+
+  fetch(`${BASE}/api/onboarding/detect`, { signal: AbortSignal.timeout(5000) })
+    .then((r) => r.json())
+    .then((data) => {
+      hide(detecting);
+      const list = (data && data.detected) || [];
+      if (data && data.any && list.length) {
+        let pick = null;
+        for (let i = 0; i < list.length; i++) {
+          if (list[i].ready) { pick = list[i]; break; }
+        }
+        if (!pick) pick = list[0];
+        onboardingState.detected = pick;
+        const label = $("onb-detected-label");
+        const note = $("onb-detected-note");
+        if (label) label.textContent = "We found " + (pick.label || PROVIDER_LABELS[pick.provider] || pick.provider) + " on your machine";
+        if (note) note.textContent = pick.note || "Ready to use.";
+        show($("onb-detected"));
+      } else {
+        onboardingShowChooser();
+      }
+    })
+    .catch(() => {
+      hide(detecting);
+      onboardingShowChooser();
+    });
+}
+
+function onboardingShowSuccess(provider, model, soft) {
+  hide($("onb-detected"));
+  hide($("onb-chooser"));
+  hide($("onb-detecting"));
+  const title = $("onb-success-title");
+  const label = PROVIDER_LABELS[provider] || provider;
+  if (title) {
+    if (model) {
+      title.textContent = soft
+        ? (label + " is set up — using " + model + "!")
+        : ("Connected — using " + model + "!");
+    } else {
+      title.textContent = soft
+        ? (label + " is set up and ready!")
+        : ("Connected to " + label + "!");
+    }
+  }
+  show($("onb-success"));
+  pollHealth();
+}
+
+/** Switch to the onboarding view and (re)run detection. */
+function enterOnboarding() {
+  if (!onboardingState.detectLoaded) {
+    onboardingState.detectLoaded = true;
+    loadBaseSettings().then(() => onboardingDetect());
+  } else {
+    onboardingDetect();
+  }
+  showView("onboarding");
+}
+
+function setupOnboardingCards() {
+  const cards = $("onb-cards");
+  const formWrap = $("onb-form-wrap");
+  if (!cards) return;
+  for (const card of cards.querySelectorAll(".connect-card")) {
+    card.addEventListener("click", () => {
+      const prov = card.dataset.provider;
+      onboardingState.selected = prov;
+      for (const c of cards.querySelectorAll(".connect-card")) c.classList.remove("active");
+      card.classList.add("active");
+      for (const p of ["anthropic", "openai", "ollama", "openrouter", "google"]) {
+        const f = $("onb-" + p);
+        if (f) f.hidden = (p !== prov);
+      }
+      const modelInput = $("onb-" + prov + "-model");
+      if (modelInput && prov === "ollama" && !modelInput.value) {
+        modelInput.value = defaultModelFor("ollama");
+      }
+      hide($("onb-status"));
+      show(formWrap);
+      if (formWrap && typeof formWrap.scrollIntoView === "function") {
+        formWrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+  }
+}
+
+/** Wire every Show/Hide toggle next to a key field (onboarding + settings). */
+function setupShowKeyToggles() {
+  for (const btn of document.querySelectorAll(".connect-show-key")) {
+    btn.addEventListener("click", () => {
+      const input = btn.previousElementSibling;
+      if (input && input.tagName === "INPUT") {
+        input.type = input.type === "password" ? "text" : "password";
+        btn.textContent = input.type === "password" ? "Show" : "Hide";
+      }
+    });
+  }
+}
+
+function setupOnboardingButtons() {
+  const useBtn = $("onb-use-detected");
+  if (useBtn) {
+    useBtn.addEventListener("click", () => {
+      const d = onboardingState.detected;
+      if (!d) { onboardingShowChooser(); return; }
+      useBtn.disabled = true;
+      useBtn.textContent = "Connecting…";
+      const status = $("onb-detected-status");
+      showStatus(status, "Connecting to " + (d.label || d.provider) + "…", "loading");
+
+      let model = "";
+      if (d.provider === "ollama") {
+        model = defaultModelFor("ollama");
+      } else {
+        const bs = onboardingState.baseSettings || {};
+        model = bs[d.provider + "_model"] || DEFAULT_MODELS[d.provider] || "";
+      }
+      saveAndTest(d.provider, "", model, (ok, msg, testedModel, soft) => {
+        useBtn.disabled = false;
+        useBtn.textContent = "Use it & continue";
+        if (ok) onboardingShowSuccess(d.provider, testedModel || model, soft);
+        else showStatus(status, msg || "Could not connect. Try a different provider.", "error");
+      });
+    });
+  }
+
+  const chooserBtn = $("onb-show-chooser");
+  if (chooserBtn) chooserBtn.addEventListener("click", () => onboardingShowChooser());
+
+  const submit = $("onb-submit");
+  if (submit) {
+    submit.addEventListener("click", () => {
+      const prov = onboardingState.selected;
+      if (!prov) { showStatus($("onb-status"), "Pick a provider first.", "error"); return; }
+
+      const keyInput = $("onb-" + prov + "-key");
+      const modelInput = $("onb-" + prov + "-model");
+      const apiKey = keyInput ? keyInput.value.trim() : "";
+      const model = modelInput ? modelInput.value.trim() : "";
+
+      if (prov !== "ollama" && !apiKey) {
+        const bs = onboardingState.baseSettings || {};
+        if (!bs["has_" + prov + "_key"]) {
+          showStatus($("onb-status"), "Please paste your API key above.", "error");
+          if (keyInput) keyInput.focus();
+          return;
+        }
+      }
+      if (!model && prov === "ollama") {
+        showStatus($("onb-status"), "Enter the Ollama model name you pulled (e.g. qwen3.5).", "error");
+        if (modelInput) modelInput.focus();
+        return;
+      }
+
+      submit.disabled = true;
+      submit.textContent = "Connecting…";
+      showStatus($("onb-status"), "Saving and testing your connection…", "loading");
+      saveAndTest(prov, apiKey, model, (ok, msg, testedModel, soft) => {
+        submit.disabled = false;
+        submit.textContent = "Connect";
+        if (ok) onboardingShowSuccess(prov, testedModel || model, soft);
+        else showStatus($("onb-status"), msg || "Could not connect. Check your key and try again.", "error");
+      });
+    });
+  }
+
+  const cont = $("onb-continue");
+  if (cont) {
+    cont.addEventListener("click", () => {
+      showView("chat");
+      newSession();
+    });
+  }
+}
+
+// ── Settings view: editable provider/key/model ────────────────────────
+
+function updateKeyRowVisibility(provider) {
+  const keyRow = $("setKeyRow");
+  if (keyRow) keyRow.style.display = provider === "ollama" ? "none" : "block";
+}
+
+function loadSettingsIntoForm() {
+  fetch(`${BASE}/api/settings`)
+    .then((r) => r.json())
+    .then((settings) => {
+      if (!settings) return;
+      onboardingState.baseSettings = settings; // keep saveAndTest in sync
+      const provSelect = $("setProviderSelect");
+      const modelInput = $("setModelInput");
+      if (provSelect && settings.provider) {
+        provSelect.value = settings.provider;
+        updateKeyRowVisibility(settings.provider);
+      }
+      if (modelInput) {
+        const prov = settings.provider;
+        modelInput.value = settings[prov + "_model"] || DEFAULT_MODELS[prov] || "";
+      }
+    })
+    .catch(() => {});
+}
+
+function setupSettingsUI() {
+  const provSelect = $("setProviderSelect");
+  const testBtn = $("setTestConnBtn");
+  const saveBtn = $("setSaveSettingsBtn");
+
+  if (provSelect) {
+    provSelect.addEventListener("change", function () {
+      updateKeyRowVisibility(this.value);
+      const modelInput = $("setModelInput");
+      const bs = onboardingState.baseSettings || {};
+      if (modelInput) modelInput.value = bs[this.value + "_model"] || DEFAULT_MODELS[this.value] || "";
+    });
+  }
+
+  if (testBtn) {
+    testBtn.addEventListener("click", () => {
+      testBtn.disabled = true;
+      const result = $("setSettingsResult");
+      showStatus(result, "Testing connection…", "loading");
+      fetch(`${BASE}/api/settings/test-connection`)
+        .then((r) => r.json())
+        .then((t) => {
+          testBtn.disabled = false;
+          if (t && t.connected) showStatus(result, "Connected! " + (t.message || ""), "ok");
+          else showStatus(result, (t && (t.error || t.message)) || "Connection failed.", "error");
+        })
+        .catch((err) => { testBtn.disabled = false; showStatus(result, "Test error: " + err, "error"); });
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener("click", () => {
+      const provider = $("setProviderSelect").value;
+      const apiKey = $("setKeyInput").value.trim();
+      const model = $("setModelInput").value.trim();
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving…";
+      const result = $("setSettingsResult");
+      showStatus(result, "Saving settings…", "loading");
+      saveAndTest(provider, apiKey, model, (ok, msg, testedModel, soft) => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save settings";
+        if (ok) {
+          showStatus(result, "Settings saved and connection confirmed!", "ok");
+          if ($("setKeyInput")) $("setKeyInput").value = "";
+          pollHealth();
+        } else {
+          showStatus(result, msg || "Could not save settings.", "error");
+        }
+      });
+    });
+  }
+}
+
 // ── Views + composer wiring ───────────────────────────────────────────
 
 function showView(name) {
@@ -1145,6 +1553,7 @@ function showView(name) {
   if (name === "skills" && !skillsCache.length) fetchSkills();
   if (name === "materials") fetchProfiles();
   if (name === "pair") fetchPairing();
+  if (name === "settings") loadSettingsIntoForm();
 }
 
 function init() {
@@ -1180,6 +1589,20 @@ function init() {
     chip.onclick = () => sendMessage(chip.dataset.suggest);
   }
   $("teachChip").onclick = () => showView("materials");
+
+  // Connect / onboarding wiring
+  setupOnboardingCards();
+  setupOnboardingButtons();
+  setupShowKeyToggles();
+  setupSettingsUI();
+
+  // Dead-end routing: the "Provider needs setup" pill and the inline empty-state
+  // banner both open the in-window onboarding panel.
+  $("statusPill").onclick = () => {
+    if (lastHealth && lastHealth.status === "ok" && !lastHealth.llm_connected) enterOnboarding();
+  };
+  const connectBannerBtn = $("connectBannerBtn");
+  if (connectBannerBtn) connectBannerBtn.onclick = () => enterOnboarding();
 
   // Your Materials (ingest + profiles)
   $("pickFolderBtn").onclick = pickFolder;

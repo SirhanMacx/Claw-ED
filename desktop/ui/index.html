@@ -49,6 +49,13 @@
       <div class="ctx" id="ctxBar">&#10022;&nbsp; New conversation &nbsp;&middot;&nbsp; full Mac access &middot; approvals on</div>
       <div class="feed" id="feed">
         <div class="empty" id="emptyState">
+          <div class="connect-banner" id="connectBanner" hidden>
+            <div class="connect-banner-body">
+              <strong>First, let&rsquo;s connect an AI.</strong>
+              <span>Claw-ED needs an AI provider before it can help. It takes about a minute.</span>
+            </div>
+            <button class="btn primary" id="connectBannerBtn">Connect your AI</button>
+          </div>
           <h2 class="empty-title">What should we get done?</h2>
           <p class="empty-sub">I can act on this Mac — files, folders, commands — and I know your classroom work. Everything risky asks you first.</p>
           <div class="suggest">
@@ -162,8 +169,245 @@
         </div>
         <div class="mat-result" id="readinessResult" hidden></div>
       </div>
+      <div class="card pad settings-card" style="margin-top:14px">
+        <h3 style="margin-top:0">AI Provider</h3>
+        <p class="muted" style="margin:0 0 12px">Choose where Claw-ED gets its brainpower. Paste a key for a hosted provider, or pick Ollama to run locally and free.</p>
+        <div class="form-group">
+          <label for="setProviderSelect">Provider</label>
+          <select id="setProviderSelect">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="ollama">Ollama (local)</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="google">Google Gemini</option>
+          </select>
+        </div>
+        <div id="setKeyRow" class="form-group" style="display:none">
+          <label for="setKeyInput">API Key</label>
+          <div class="key-input-row">
+            <input type="password" id="setKeyInput" placeholder="••••••••••••••••" autocomplete="off">
+            <button type="button" class="btn btn-sm connect-show-key">Show</button>
+          </div>
+          <span class="key-note">Paste a new key to change. Leave blank to keep the current one.</span>
+        </div>
+        <div class="form-group">
+          <label for="setModelInput">Model</label>
+          <input type="text" id="setModelInput" placeholder="e.g. claude-sonnet-4-6">
+        </div>
+        <div class="btns" style="margin-top:14px">
+          <button class="btn" id="setTestConnBtn">Test connection</button>
+          <button class="btn primary" id="setSaveSettingsBtn">Save settings</button>
+        </div>
+        <div class="mat-result status-box" id="setSettingsResult" hidden></div>
+      </div>
       <div class="card pad" style="margin-top:14px">
         <p class="muted">Approvals are always on: shell commands and file writes pause and ask you first. &ldquo;Always allow&rdquo; is scoped to the exact command or file — anything different asks again.</p>
+      </div>
+    </main>
+
+    <!-- ========== ONBOARDING PANEL (shown in-window when llm_connected is false) ========== -->
+    <main class="view alt-view" id="view-onboarding" hidden>
+      <div class="alt-head"><h2>Connect your AI</h2><p>Pick where Claw-ED gets its brainpower. You only need a provider, a key, and a model &mdash; we&rsquo;ll wire up everything else automatically.</p></div>
+
+      <!-- Loading state: spinner while detecting -->
+      <div id="onb-detecting" class="connect-detecting" hidden>
+        <span class="spin" aria-hidden="true"></span>
+        <span>Looking for an AI provider on your computer&hellip;</span>
+      </div>
+
+      <!-- Magic card: auto-detected provider (local Ollama or pre-configured key) -->
+      <div id="onb-detected" class="connect-detected card pad" hidden>
+        <div class="connect-magic-card">
+          <span class="connect-magic-badge">Found it</span>
+          <h3 id="onb-detected-label">We found a provider on your machine</h3>
+          <p id="onb-detected-note" class="connect-magic-note"></p>
+          <div class="connect-magic-actions">
+            <button type="button" class="btn primary" id="onb-use-detected">Use it &amp; continue</button>
+            <button type="button" class="btn" id="onb-show-chooser">Connect a different provider</button>
+          </div>
+          <div id="onb-detected-status" class="status-box" hidden></div>
+        </div>
+      </div>
+
+      <!-- Provider chooser grid (shown when nothing detected or user clicks "different provider") -->
+      <div id="onb-chooser" class="connect-chooser card pad" hidden>
+        <p class="connect-chooser-label">Choose a provider:</p>
+        <div class="connect-cards" id="onb-cards">
+          <button type="button" class="connect-card" data-provider="ollama">
+            <span class="connect-card-top">
+              <strong>Ollama</strong>
+              <span class="connect-card-tag connect-tag-local">Local &middot; free &middot; private</span>
+            </span>
+            <span class="connect-card-desc">Runs on your Mac. No key, nothing leaves your computer. Recommended.</span>
+          </button>
+          <button type="button" class="connect-card" data-provider="openrouter">
+            <span class="connect-card-top">
+              <strong>OpenRouter</strong>
+              <span class="connect-card-tag connect-tag-free">Free models available</span>
+            </span>
+            <span class="connect-card-desc">One key, hundreds of models &mdash; including free ones.</span>
+          </button>
+          <button type="button" class="connect-card" data-provider="anthropic">
+            <span class="connect-card-top">
+              <strong>Anthropic</strong>
+              <span class="connect-card-tag">Claude &mdash; best quality</span>
+            </span>
+            <span class="connect-card-desc">Top-tier writing for your lessons. Pay-as-you-go.</span>
+          </button>
+          <button type="button" class="connect-card" data-provider="openai">
+            <span class="connect-card-top">
+              <strong>OpenAI</strong>
+              <span class="connect-card-tag">GPT</span>
+            </span>
+            <span class="connect-card-desc">Popular and capable. Pay-as-you-go.</span>
+          </button>
+          <button type="button" class="connect-card" data-provider="google">
+            <span class="connect-card-top">
+              <strong>Google Gemini</strong>
+              <span class="connect-card-tag connect-tag-free">Free tier</span>
+            </span>
+            <span class="connect-card-desc">Fast and low-cost, with a generous free tier.</span>
+          </button>
+        </div>
+
+        <!-- Per-provider forms (key help + key + model; only one shown at a time based on selected card) -->
+        <div id="onb-form-wrap" class="connect-form-wrap card" hidden>
+          <!-- Anthropic -->
+          <div class="connect-form" id="onb-anthropic" hidden>
+            <div class="key-help">
+              <strong>Don&rsquo;t have a key yet? Here&rsquo;s how &mdash; about 2 minutes:</strong>
+              <ol>
+                <li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign in (or make a free account).</li>
+                <li>Click <strong>Create Key</strong>, name it &ldquo;Claw-ED,&rdquo; and copy it.</li>
+                <li>Paste it below and click <strong>Connect</strong>. (It starts with <code>sk-ant-</code>.)</li>
+              </ol>
+              <a class="key-cta" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get an Anthropic key &rarr;</a>
+              <span class="key-note">Your key is stored only on this computer and is sent only to Anthropic to write your lessons &mdash; never to us. A typical lesson costs only a few cents.</span>
+            </div>
+            <div class="form-group">
+              <label for="onb-anthropic-key">API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="onb-anthropic-key" placeholder="sk-ant-..." autocomplete="off">
+                <button type="button" class="btn btn-sm connect-show-key">Show</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="onb-anthropic-model">Model</label>
+              <input type="text" id="onb-anthropic-model" value="claude-sonnet-4-6">
+              <span class="key-note">Recommended: <code>claude-sonnet-4-6</code> &mdash; great balance of quality and cost.</span>
+            </div>
+          </div>
+
+          <!-- OpenAI -->
+          <div class="connect-form" id="onb-openai" hidden>
+            <div class="key-help">
+              <strong>How to get an OpenAI key:</strong>
+              <ol>
+                <li>Open <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> and sign in.</li>
+                <li>Click <strong>Create new secret key</strong> and copy it.</li>
+                <li>Paste it below and click <strong>Connect</strong>. (It starts with <code>sk-</code>.)</li>
+              </ol>
+              <a class="key-cta" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key &rarr;</a>
+              <span class="key-note">Stored only on this computer; sent only to OpenAI.</span>
+            </div>
+            <div class="form-group">
+              <label for="onb-openai-key">API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="onb-openai-key" placeholder="sk-..." autocomplete="off">
+                <button type="button" class="btn btn-sm connect-show-key">Show</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="onb-openai-model">Model</label>
+              <input type="text" id="onb-openai-model" value="gpt-4.1">
+              <span class="key-note">Recommended: <code>gpt-4.1</code>. Cheaper option: <code>gpt-4.1-mini</code>.</span>
+            </div>
+          </div>
+
+          <!-- Ollama (no key needed) -->
+          <div class="connect-form" id="onb-ollama" hidden>
+            <div class="key-help">
+              <strong>Ollama runs AI locally &mdash; free and private, no key needed.</strong>
+              <ol>
+                <li>Install Ollama from <a href="https://ollama.com/download/mac" target="_blank" rel="noopener">ollama.com/download/mac</a> and open it.</li>
+                <li>Pull a model in Terminal, e.g. <code>ollama pull qwen3.5</code>.</li>
+                <li>Type that model name below and click <strong>Connect</strong>.</li>
+              </ol>
+              <a class="key-cta" href="https://ollama.com/download/mac" target="_blank" rel="noopener">Get Ollama &rarr;</a>
+              <span class="key-note">Everything stays on your Mac &mdash; nothing is sent to the cloud.</span>
+            </div>
+            <div class="form-group">
+              <label for="onb-ollama-model">Model Name</label>
+              <input type="text" id="onb-ollama-model" placeholder="qwen3.5">
+              <span class="key-note">Use the exact name you pulled (run <code>ollama list</code> to see them).</span>
+            </div>
+          </div>
+
+          <!-- OpenRouter -->
+          <div class="connect-form" id="onb-openrouter" hidden>
+            <div class="key-help">
+              <strong>One key, hundreds of models &mdash; including free &amp; open ones:</strong>
+              <ol>
+                <li>Open <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> and sign in (or make a free account).</li>
+                <li>Click <strong>Create Key</strong>, name it &ldquo;Claw-ED,&rdquo; and copy it.</li>
+                <li>Paste it below and click <strong>Connect</strong>. (It starts with <code>sk-or-</code>.)</li>
+              </ol>
+              <a class="key-cta" href="https://openrouter.ai/keys" target="_blank" rel="noopener">Get an OpenRouter key &rarr;</a>
+              <span class="key-note">Your key is stored only on this computer and is sent only to OpenRouter &mdash; never to us. Browse models at <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a>.</span>
+            </div>
+            <div class="form-group">
+              <label for="onb-openrouter-key">API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="onb-openrouter-key" placeholder="sk-or-..." autocomplete="off">
+                <button type="button" class="btn btn-sm connect-show-key">Show</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="onb-openrouter-model">Model</label>
+              <input type="text" id="onb-openrouter-model" value="nvidia/nemotron-3-super-120b-a12b:free">
+              <span class="key-note">Pre-filled with a <strong>free</strong> model. Prefer top quality? Try <code>anthropic/claude-sonnet-4</code> (paid).</span>
+            </div>
+          </div>
+
+          <!-- Google Gemini -->
+          <div class="connect-form" id="onb-google" hidden>
+            <div class="key-help">
+              <strong>How to get a Google Gemini key &mdash; about 2 minutes:</strong>
+              <ol>
+                <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with your Google account.</li>
+                <li>Click <strong>Create API key</strong> and copy it.</li>
+                <li>Paste it below and click <strong>Connect</strong>. (It starts with <code>AIza</code>.)</li>
+              </ol>
+              <a class="key-cta" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a Google Gemini key &rarr;</a>
+              <span class="key-note">Your key is stored only on this computer and is sent only to Google &mdash; never to us. Gemini has a generous free tier.</span>
+            </div>
+            <div class="form-group">
+              <label for="onb-google-key">API Key</label>
+              <div class="key-input-row">
+                <input type="password" id="onb-google-key" placeholder="AIza..." autocomplete="off">
+                <button type="button" class="btn btn-sm connect-show-key">Show</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="onb-google-model">Model</label>
+              <input type="text" id="onb-google-model" value="gemini-2.5-flash">
+              <span class="key-note">Recommended: <code>gemini-2.5-flash</code> (fast, free-tier friendly). Higher quality: <code>gemini-2.5-pro</code>.</span>
+            </div>
+          </div>
+
+          <div id="onb-status" class="status-box" hidden></div>
+          <div class="connect-form-actions">
+            <button type="button" class="btn primary" id="onb-submit">Connect</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success state: provider connected, ready to use -->
+      <div id="onb-success" class="connect-success card pad" hidden>
+        <div class="connect-success-check">&#10003;</div>
+        <h3 id="onb-success-title">Connected!</h3>
+        <p class="connect-success-note">That&rsquo;s the only setup Claw-ED needs &mdash; no extra configuration. You can start using it now.</p>
+        <button type="button" class="btn primary" id="onb-continue">Got it, let&rsquo;s chat</button>
       </div>
     </main>
   </div>

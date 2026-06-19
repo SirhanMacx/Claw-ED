@@ -450,3 +450,92 @@ html[data-theme="console"] .pair-qr-wrap{background:#fff;border-color:#55483E}
 .settings-card .kv > span:first-child{width:110px;color:var(--ink-faint);flex:none}
 .settings-card code{font-family:var(--mono);font-size:12.5px}
 .artifact-list{max-width:640px}
+
+/* ── Connect / Onboarding ───────────────────────────────────────── */
+#view-onboarding .card{max-width:640px}
+.connect-detecting{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:14px;padding:14px 2px;max-width:640px}
+
+/* Form controls (shared by onboarding + settings provider card) */
+.form-group{display:flex;flex-direction:column;gap:5px;margin:0 0 14px}
+.form-group:last-child{margin-bottom:0}
+.form-group label{font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:.2px}
+.form-group input[type="text"],.form-group input[type="password"],.form-group select,
+#setKeyInput,#setModelInput,#setProviderSelect{
+  font:inherit;font-size:13.5px;color:var(--ink);background:var(--raise);
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;outline:none;
+  user-select:text;-webkit-user-select:text;
+}
+.form-group input:focus,.form-group select:focus,
+#setKeyInput:focus,#setModelInput:focus,#setProviderSelect:focus{border-color:var(--clay)}
+.key-input-row{display:flex;gap:8px;align-items:stretch}
+.key-input-row input{flex:1}
+.btn.btn-sm{padding:6px 11px;font-size:12.5px;border-radius:8px;flex:none}
+
+/* Help block inside each provider form */
+.key-help{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin:0 0 14px;font-size:13px;color:var(--ink-soft)}
+.key-help strong{color:var(--ink);display:block;margin-bottom:6px}
+.key-help ol{margin:0 0 8px;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.key-help code{font-family:var(--mono);font-size:12px;background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.key-help a{color:var(--clay-ink);text-decoration:none}
+.key-help a:hover{text-decoration:underline}
+.key-cta{display:inline-block;font-weight:600;color:var(--clay-ink);margin:2px 0 8px}
+.key-note{display:block;font-size:12px;color:var(--ink-faint);margin-top:4px}
+.key-note code{font-family:var(--mono);font-size:11.5px}
+
+/* Detected "magic" card */
+.connect-magic-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  color:#fff;background:var(--ok);border-radius:999px;padding:3px 10px;margin-bottom:8px}
+.connect-magic-card h3{margin:0 0 4px;font-size:17px}
+.connect-magic-note{color:var(--ink-soft);margin:0 0 14px;font-size:13.5px}
+.connect-magic-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Provider chooser grid */
+.connect-chooser-label{font-size:13px;font-weight:600;color:var(--ink-soft);margin:0 0 12px}
+.connect-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.connect-card{display:flex;flex-direction:column;gap:5px;text-align:left;cursor:pointer;
+  border:1px solid var(--line);background:var(--raise);border-radius:10px;padding:12px 13px;
+  font:inherit;color:var(--ink);transition:border-color .12s,box-shadow .12s}
+.connect-card:hover{border-color:var(--ink-faint)}
+.connect-card.active{border-color:var(--clay);box-shadow:0 0 0 1px var(--clay)}
+.connect-card-top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.connect-card-top strong{font-size:14px}
+.connect-card-tag{font-size:10.5px;font-weight:600;letter-spacing:.2px;color:var(--ink-soft);
+  background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.connect-tag-free{color:var(--ok);border-color:var(--clay-soft)}
+.connect-tag-local{color:var(--clay-ink);border-color:var(--clay-soft);background:var(--clay-soft)}
+.connect-card-desc{font-size:12.5px;color:var(--ink-soft)}
+
+/* Provider form wrap */
+.connect-form-wrap{margin-top:14px;padding:16px 18px;max-width:none}
+.connect-form-actions{margin-top:14px}
+
+/* Status box (loading / ok / error) */
+.status-box{font-size:13px;border-radius:8px;padding:9px 12px;margin-top:12px;
+  background:var(--paper);border:1px solid var(--line);color:var(--ink-soft)}
+.status-box.status-ok,.status-box.ok{background:#EAF6F0;border-color:#BFE3D3;color:var(--ok)}
+.status-box.status-error,.status-box.error{background:#FBECEA;border-color:#EFC9C2;color:var(--stop)}
+.status-box.status-loading,.status-box.loading{background:var(--paper);border-color:var(--line);color:var(--ink-soft)}
+
+/* Success state */
+.connect-success{text-align:center}
+.connect-success-check{width:46px;height:46px;border-radius:50%;background:var(--ok);color:#fff;
+  font-size:24px;line-height:46px;margin:0 auto 12px}
+.connect-success h3{margin:0 0 6px;font-size:18px}
+.connect-success-note{color:var(--ink-soft);font-size:13.5px;margin:0 0 16px}
+
+/* Inline connect banner in the empty chat state */
+.connect-banner{display:flex;align-items:center;gap:16px;justify-content:space-between;
+  background:var(--clay-soft);border:1px solid #E6C3B5;border-radius:12px;
+  padding:14px 16px;margin:0 auto 22px;max-width:520px;text-align:left}
+.connect-banner-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.connect-banner-body strong{font-size:14px;color:var(--ink)}
+.connect-banner-body span{font-size:12.5px;color:var(--ink-soft)}
+.connect-banner .btn{flex:none}
+
+/* Status pill becomes clickable when provider needs setup */
+.pill.status.needs-setup{cursor:pointer;border-color:var(--warn)}
+.pill.status.needs-setup:hover{background:var(--paper)}
+
+html[data-theme="console"] .key-help,html[data-theme="console"] .connect-card-tag{background:#3A322B}
+html[data-theme="console"] .connect-card{background:#3F362E}
+html[data-theme="console"] .connect-tag-local{background:#4A3A30}
