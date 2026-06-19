@@ -270,7 +270,7 @@ def _build_title_slide(prs: Presentation, master: MasterContent) -> None:
         slide,
         left=Inches(0.6), top=Inches(3.7),
         width=W - Inches(1.2), height=Inches(1.2),
-        text=f"Objective: {_short(master.objective, words=14)}",
+        text=f"Objective: {_short(master.objective, words=10)}",
         font_size=15,
         hex_color=_C_WHITE, align_center=True,
     )
@@ -285,7 +285,7 @@ def _build_vocabulary_slides(prs: Presentation, master: MasterContent) -> None:
         return
 
     W = prs.slide_width  # noqa: N806
-    TERMS_PER_SLIDE = 5  # noqa: N806
+    TERMS_PER_SLIDE = 3  # noqa: N806
 
     vocab_chunks = [
         master.vocabulary[i: i + TERMS_PER_SLIDE]
@@ -328,7 +328,7 @@ def _build_vocabulary_slides(prs: Presentation, master: MasterContent) -> None:
                 slide,
                 left=Inches(3.1), top=top_offset,
                 width=Inches(6.6), height=row_height,
-                text=_short(entry.definition, words=6),
+                text=_short(entry.definition, words=4),
                 font_size=14,
                 hex_color=_C_DARK,
             )
@@ -353,10 +353,10 @@ def _build_instruction_slides(prs: Presentation, master: MasterContent,
         # Build ≤3 short bullets. Prefer key_points; otherwise fall back to the
         # short slide_summary, then a first-sentence slice of content. Each
         # bullet is capped tight so the slide stays near the exemplar density.
-        bullets = [_short(kp, words=8) for kp in section.key_points if kp.strip()][:3]
+        bullets = [_short(kp, words=6) for kp in section.key_points if kp.strip()][:2]
         if not bullets:
             summary = getattr(section, "slide_summary", "") or ""
-            phrase = _short(summary, words=18) if summary.strip() else _first_sentence(section.content, words=18)
+            phrase = _short(summary, words=14) if summary.strip() else _first_sentence(section.content, words=14)
             if phrase:
                 bullets = [phrase]
 
@@ -396,13 +396,13 @@ def _build_source_slides(prs: Presentation, master: MasterContent,
             slide,
             left=Inches(MARGIN_IN), top=Inches(0.9),
             width=text_w, height=Inches(0.4),
-            text=_short(f"{ps.source_type.replace('_', ' ').title()}  |  {ps.attribution}", words=10),
+            text=_short(f"{ps.source_type.replace('_', ' ').title()}  |  {ps.attribution}", words=7),
             font_size=12, italic=True,
             hex_color="666666",
         )
 
         excerpt = getattr(ps, "slide_excerpt", "") or ""
-        excerpt = _short(excerpt, words=16) if excerpt.strip() else _first_sentence(ps.content_text, words=16)
+        excerpt = _short(excerpt, words=12) if excerpt.strip() else _first_sentence(ps.content_text, words=12)
         if excerpt:
             _textbox(
                 slide,
