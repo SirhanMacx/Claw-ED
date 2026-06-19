@@ -162,7 +162,7 @@ def _apply_font(run: Any) -> None:
                 el = rpr.makeelement(qn(tag), {})
                 rpr.append(el)
             el.set("typeface", FONT_PRIMARY)
-    except Exception as exc:  # noqa: BLE001 — font hint is best-effort
+    except Exception as exc:
         logger.debug("Could not set font fallback hint: %s", exc)
 
 
@@ -175,7 +175,7 @@ def _add_slide(prs: Any, layout_idx: int = 6, bg_hex: str = _C_CREAM_BG) -> Any:
             fill = slide.background.fill
             fill.solid()
             fill.fore_color.rgb = _hex_to_rgb(bg_hex)
-        except Exception as exc:  # noqa: BLE001 — background is cosmetic
+        except Exception as exc:
             logger.debug("Could not set slide background: %s", exc)
     return slide
 
@@ -252,7 +252,7 @@ def _embed_image(slide: Any, image_spec: str, images: dict[str, Path],
 
             with Image.open(str(path)) as im:
                 iw, ih = im.size
-        except Exception as exc:  # noqa: BLE001 — Pillow optional / unreadable file
+        except Exception as exc:
             logger.debug("Could not read native size for %r: %s", image_spec, exc)
 
         if iw and ih:
@@ -267,7 +267,7 @@ def _embed_image(slide: Any, image_spec: str, images: dict[str, Path],
             # only the width, anchored at the box's top-left.
             slide.shapes.add_picture(str(path), int(box_left), int(box_top), width=int(box_w))
         return True
-    except Exception as exc:  # noqa: BLE001 — image embed is best-effort
+    except Exception as exc:
         logger.debug("Could not embed slide image %r: %s", image_spec, exc)
     return False
 
