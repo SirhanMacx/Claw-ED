@@ -1,5 +1,16 @@
 # Changelog
 
+## v6.19.2026.2 — 2026-06-19
+
+### Fixed — Lesson deck density + title-slide layout (real-content fixes)
+
+- A real generated lesson exposed slide types the fixtures missed: the station
+  overview dumped every station's full directions (~105 words/slide), exit
+  tickets ran long, long source titles bloated headers. Capped so even a
+  content-rich deck stays ~18 words/slide (max ~30).
+- Fixed the title slide: long lesson names auto-shrink (42/34/28pt) and the
+  meta/objective reposition with clearance instead of overlapping the title.
+
 ## v6.19.2026.1 — 2026-06-19
 
 ### Improved — Lesson slide decks (sparse, image-forward, exemplar-matched)
