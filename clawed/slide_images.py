@@ -452,6 +452,59 @@ def _build_search_query(topic: str, subject: str = "") -> str:
     return f"{query_base} {suffix}".strip()
 
 
+# ── Relevance gate ───────────────────────────────────────────────────
+#
+# A noisy slide-title query (e.g. "Two Worlds Collide: What Columbus Found")
+# can make Wikipedia's search rank a topically-unrelated article first — a real
+# deck once landed a Catherine the Great portrait on a Columbus slide. We guard
+# every accepted article by requiring it to share a meaningful word with the
+# query, and SKIP the image otherwise. A MISSING image is better than a WRONG
+# one: the slide compiler renders cleanly as text-only.
+
+# Words that carry no topical signal for the title/query overlap check —
+# includes the generic suffixes the query builder appends ("historical", etc.).
+_RELEVANCE_STOPWORDS = {
+    "the", "a", "an", "of", "in", "on", "for", "and", "to", "is", "are", "what",
+    "he", "she", "they", "his", "her", "their", "with", "from", "that", "this",
+    "was", "were", "by", "as", "at", "it", "its", "into", "how", "why", "who",
+    "when", "where", "two", "one", "new", "found", "wrote", "made", "over",
+    "under", "between", "across", "history", "historical", "primary", "source",
+    "sources", "education", "educational", "diagram", "illustration", "portrait",
+    "literature", "mathematics", "graph", "photo", "image", "picture",
+}
+
+
+def _key_tokens(text: str) -> set[str]:
+    """Significant lower-case tokens (>=4 chars, not stopwords) for relevance."""
+    cleaned = re.sub(r"[^a-zA-Z0-9\s]", " ", text or "").lower()
+    return {w for w in cleaned.split()
+            if len(w) >= 4 and w not in _RELEVANCE_STOPWORDS}
+
+
+def _pick_relevant_article(query: str, results: list[dict[str, Any]]) -> str | None:
+    """Pick the search result whose title best overlaps the query's key tokens.
+
+    Returns the title sharing the MOST meaningful words with the query, or None
+    when no result shares any — signalling the caller to skip the image rather
+    than show an unrelated one. Falls back to the top result only when the query
+    yields no usable tokens to validate against.
+    """
+    if not results:
+        return None
+    q_tokens = _key_tokens(query)
+    if not q_tokens:
+        return str(results[0].get("title") or "") or None
+    best_title: str | None = None
+    best_overlap = 0
+    for r in results:
+        title = str(r.get("title") or "")
+        overlap = len(_key_tokens(title) & q_tokens)
+        if overlap > best_overlap:
+            best_overlap = overlap
+            best_title = title
+    return best_title
+
+
 # ── Source selection ─────────────────────────────────────────────────
 
 
@@ -619,9 +672,16 @@ async def _fetch_wikimedia(
             search_data = search_resp.json()
             search_results = search_data.get("query", {}).get("search", [])
 
-            if search_results:
-                # Take top result — Wikipedia search is good at topic relevance
-                page_title = search_results[0]["title"]
+            # Relevance-gate the search results: skip an article that shares no
+            # meaningful word with the query (a MISSING image beats a WRONG one).
+            page_title = _pick_relevant_article(query, search_results)
+            if not page_title and search_results:
+                logger.info(
+                    "Wikipedia results for '%s' share no key term with the query "
+                    "(top: %r) — skipping to avoid an irrelevant image",
+                    query, [r.get("title") for r in search_results[:3]],
+                )
+            if page_title:
                 img_resp = await client.get(
                     "https://en.wikipedia.org/w/api.php",
                     params={

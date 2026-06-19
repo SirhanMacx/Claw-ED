@@ -1,5 +1,19 @@
 # Changelog
 
+## v6.19.2026.3 — 2026-06-19
+
+### Fixed — Lesson deck image relevance + source-slide layout
+
+- Image relevance gate: a noisy slide-title query could make Wikipedia rank an
+  unrelated article first (a real deck once put a Catherine the Great portrait on
+  a Columbus slide). Results are now kept only when the article title shares a
+  meaningful word with the query; otherwise the slide renders text-only. A
+  missing image beats a wrong one.
+- Source slides: long source titles wrapped to two lines and overlapped the
+  attribution. Source title shrinks to one line and the attribution/excerpt drop
+  to clear it; any long section heading now auto-shrinks so it never crowds its
+  body text.
+
 ## v6.19.2026.2 — 2026-06-19
 
 ### Fixed — Lesson deck density + title-slide layout (real-content fixes)
