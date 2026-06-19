@@ -248,7 +248,7 @@ def _embed_image(slide: Any, image_spec: str, images: dict[str, Path],
     try:
         iw = ih = None
         try:
-            from PIL import Image  # type: ignore[import-untyped]
+            from PIL import Image
 
             with Image.open(str(path)) as im:
                 iw, ih = im.size
@@ -759,8 +759,8 @@ async def compile_slides(
     # cleanly on macOS Keynote/PowerPoint and imports losslessly into Google
     # Slides. A non-standard canvas was the original macOS/Slides failure mode.
     from pptx.util import Emu
-    w_in = round(Emu(int(prs.slide_width)).inches, 3)
-    h_in = round(Emu(int(prs.slide_height)).inches, 3)
+    w_in = round(Emu(int(prs.slide_width or 0)).inches, 3)
+    h_in = round(Emu(int(prs.slide_height or 0)).inches, 3)
     if (w_in, h_in) != (SLIDE_W_IN, SLIDE_H_IN):
         logger.warning(
             "Slide deck canvas is %sx%s in, expected %sx%s — Slides/macOS import may scale.",
