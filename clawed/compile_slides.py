@@ -287,7 +287,7 @@ def _slide_title(slide: Any, prs_width: Any, text: str,
         slide,
         left=Inches(MARGIN_IN), top=Inches(TITLE_TOP_IN),
         width=prs_width - Inches(2 * MARGIN_IN), height=Inches(TITLE_H_IN),
-        text=_short(text, words=10),
+        text=_short(text, words=7),
         font_size=font_size, bold=True,
         hex_color=hex_color, align_center=align_center,
         word_wrap=False,
@@ -310,18 +310,22 @@ def _build_title_slide(prs: Presentation, master: MasterContent) -> None:
     W = prs.slide_width  # noqa: N806
     slide = _add_slide(prs)
 
+    # Auto-shrink the title for long generated lesson names so it stays ~2 lines
+    # and never overruns the meta/objective lines below it.
+    title = master.title or ""
+    title_size = 42 if len(title) <= 38 else (34 if len(title) <= 66 else 28)
     _textbox(
         slide,
-        left=Inches(0.6), top=Inches(1.5),
-        width=W - Inches(1.2), height=Inches(1.4),
-        text=master.title,
-        font_size=42, bold=True,
+        left=Inches(0.6), top=Inches(1.15),
+        width=W - Inches(1.2), height=Inches(2.05),
+        text=title,
+        font_size=title_size, bold=True,
         hex_color=_C_TERRACOTTA, align_center=True,
     )
     meta = f"{master.subject}  |  Grade {master.grade_level}  |  {master.duration_minutes} min"
     _textbox(
         slide,
-        left=Inches(0.6), top=Inches(3.0),
+        left=Inches(0.6), top=Inches(3.5),
         width=W - Inches(1.2), height=Inches(0.5),
         text=meta,
         font_size=18, bold=True,
@@ -329,8 +333,8 @@ def _build_title_slide(prs: Presentation, master: MasterContent) -> None:
     )
     _textbox(
         slide,
-        left=Inches(0.6), top=Inches(3.7),
-        width=W - Inches(1.2), height=Inches(1.2),
+        left=Inches(0.6), top=Inches(4.25),
+        width=W - Inches(1.2), height=Inches(1.0),
         text=f"Objective: {_short(master.objective, words=10)}",
         font_size=16,
         hex_color=_C_BODY, align_center=True,
@@ -474,7 +478,7 @@ def _build_source_slides(prs: Presentation, master: MasterContent,
 
     for ps in master.primary_sources:
         slide = _add_slide(prs)
-        _slide_title(slide, W, f"Source: {ps.title}", hex_color=_C_TERRACOTTA)
+        _slide_title(slide, W, f"Source: {_short(ps.title, words=6)}", hex_color=_C_TERRACOTTA)
 
         has_image = bool(ps.image_spec and ps.image_spec in images)
         text_w = Inches(TEXT_PANEL_W_IN) if has_image else Inches(FULL_TEXT_W_IN)
@@ -605,18 +609,20 @@ def _build_station_slide(prs: Presentation, master: MasterContent) -> None:
             top=top_offset,
             width=col_w - Inches(0.1),
             height=Inches(0.8),
-            text=_short(station.title, words=8),
+            text=_short(station.title, words=5),
             font_size=18, bold=True,
             hex_color=_C_TERRACOTTA,
         )
+        # Directions live in the handout, not the projected overview slide — keep
+        # this slide to station NAMES only so it stays sparse like the exemplar.
         _textbox(
             slide,
             left=left,
-            top=top_offset + Inches(0.9),
+            top=top_offset + Inches(0.85),
             width=col_w - Inches(0.1),
-            height=Inches(3.4),
-            text=_short(station.student_directions, words=18),
-            font_size=15,
+            height=Inches(0.6),
+            text=f"Station {i + 1}",
+            font_size=14,
             hex_color=_C_BODY,
         )
 
@@ -639,7 +645,7 @@ def _build_exit_ticket_slide(prs: Presentation, master: MasterContent,
         text_w = Inches(TEXT_PANEL_W_IN) if has_image else Inches(FULL_TEXT_W_IN)
 
         stim = getattr(sq, "slide_stimulus", "") or ""
-        stim = _short(stim, words=15) if stim.strip() else _short(sq.stimulus, words=15)
+        stim = _short(stim, words=8) if stim.strip() else _short(sq.stimulus, words=8)
         if stim:
             _textbox(
                 slide,
@@ -653,7 +659,7 @@ def _build_exit_ticket_slide(prs: Presentation, master: MasterContent,
             slide,
             left=Inches(MARGIN_IN), top=Inches(2.7),
             width=text_w, height=Inches(1.8),
-            text=f"Q{i}: {_short(sq.question, words=20)}",
+            text=f"Q{i}: {_short(sq.question, words=13)}",
             font_size=22, bold=True,
             hex_color=_C_TERRACOTTA,
         )
