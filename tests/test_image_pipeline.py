@@ -59,8 +59,13 @@ def test_collect_image_specs_empty():
     assert isinstance(specs, dict)
 
 
-def test_collect_image_specs_gathers_all_sources():
-    """Specs are collected from all four section types."""
+def test_collect_image_specs_gathers_content_specs():
+    """Specs are collected ONLY from slide types that embed an image.
+
+    Instruction sections and the exit ticket embed images; the vocabulary and
+    primary-source builders are text-only, so collecting their specs would waste
+    a fetch + a vision call on an image that never renders. They are skipped.
+    """
     mc = _make_mock_master(
         vocab_specs=["vocab_img_1", "vocab_img_2"],
         ps_specs=["source_img_1"],
@@ -69,18 +74,19 @@ def test_collect_image_specs_gathers_all_sources():
     )
     specs = _collect_image_specs(mc)
     assert set(specs.keys()) == {
-        "vocab_img_1", "vocab_img_2",
-        "source_img_1",
         "instruction_img_1",
         "ticket_img_1",
     }
+    # Vocabulary + primary-source slides are text-only — specs intentionally skipped.
+    assert "vocab_img_1" not in specs
+    assert "source_img_1" not in specs
 
 
 def test_collect_image_specs_deduplicates():
-    """Duplicate specs across sections are deduplicated."""
+    """Duplicate specs across collected section types are deduplicated."""
     mc = _make_mock_master(
-        vocab_specs=["shared_spec"],
-        ps_specs=["shared_spec"],
+        di_specs=["shared_spec"],
+        et_specs=["shared_spec"],
     )
     specs = _collect_image_specs(mc)
     assert len(specs) == 1
@@ -90,7 +96,7 @@ def test_collect_image_specs_deduplicates():
 def test_collect_image_specs_skips_empty_strings():
     """Empty image_spec strings are not collected."""
     mc = _make_mock_master(
-        vocab_specs=["", "real_spec"],
+        di_specs=["", "real_spec"],
         ps_specs=[""],
     )
     specs = _collect_image_specs(mc)
@@ -111,7 +117,7 @@ def test_fetch_all_images_empty():
 
 def test_fetch_all_images_with_specs():
     """Fetches images for each spec, returns successful ones."""
-    mc = _make_mock_master(vocab_specs=["test_image"])
+    mc = _make_mock_master(di_specs=["test_image"])
     mc.subject = "History"
 
     fake_path = MagicMock()
@@ -125,7 +131,9 @@ def test_fetch_all_images_with_specs():
 
         # We need to make it an awaitable
         async def run():
-            with patch("clawed.image_pipeline._fetch_one", new=AsyncMock(return_value=("test_image", fake_path))):
+            with patch("clawed.image_pipeline._fetch_one", new=AsyncMock(return_value=("test_image", fake_path))), \
+                 patch("clawed.image_pipeline.vision_filter_batch",
+                       new=AsyncMock(side_effect=lambda items, **kw: {s for s, _ in items})):
                 return await fetch_all_images(mc)
 
         result = asyncio.run(run())
@@ -134,7 +142,7 @@ def test_fetch_all_images_with_specs():
 
 def test_fetch_all_images_handles_failures():
     """Failed fetches are excluded from the result dict."""
-    mc = _make_mock_master(vocab_specs=["good_img", "bad_img"])
+    mc = _make_mock_master(di_specs=["good_img", "bad_img"])
     mc.subject = "Math"
 
     good_path = MagicMock()
@@ -145,7 +153,9 @@ def test_fetch_all_images_handles_failures():
             return (spec, good_path)
         return (spec, None)
 
-    with patch("clawed.image_pipeline._fetch_one", side_effect=fake_fetch_one):
+    with patch("clawed.image_pipeline._fetch_one", side_effect=fake_fetch_one), \
+         patch("clawed.image_pipeline.vision_filter_batch",
+               new=AsyncMock(side_effect=lambda items, **kw: {s for s, _ in items})):
         result = asyncio.run(fetch_all_images(mc))
         assert "good_img" in result
         assert "bad_img" not in result

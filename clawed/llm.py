@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -13,11 +14,25 @@ from pydantic import BaseModel, ValidationError
 from clawed.models import AppConfig, LLMProvider
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from clawed.models import AdminLessonPlan, StudentPacket
 
 logger = logging.getLogger(__name__)
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
+
+# Generous read timeout for slow cloud models (e.g. GLM on the free tier).
+_LLM_TIMEOUT = httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)
+
+# Free, vision-capable OpenRouter models tried in order for image relevance
+# screening. Each has its own free-tier rate bucket, so a 429 on one often clears
+# on the next — the fallback chain makes the screen resilient without paid usage.
+_OPENROUTER_VISION_FALLBACKS = (
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-nano-12b-v2-vl:free",
+    "google/gemma-4-26b-a4b-it:free",
+)
 
 
 class LLMClient:
@@ -33,6 +48,7 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: int = 4096,
         demo_hint: str = "",
+        json_mode: bool = False,
     ) -> str:
         """Generate text from the configured LLM backend.
 
@@ -57,7 +73,7 @@ class LLMClient:
         elif self.config.provider == LLMProvider.OPENAI:
             raw = await self._openai(prompt, system, temperature, max_tokens)
         elif self.config.provider == LLMProvider.OLLAMA:
-            raw = await self._ollama(prompt, system, temperature, max_tokens)
+            raw = await self._ollama(prompt, system, temperature, max_tokens, json_mode)
         elif self.config.provider == LLMProvider.GOOGLE:
             raw = await self._google(prompt, system, temperature, max_tokens)
         elif self.config.provider == LLMProvider.OPENROUTER:
@@ -65,6 +81,151 @@ class LLMClient:
         else:
             raise ValueError(f"Unknown provider: {self.config.provider}")
         return sanitize_text(raw)
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system: str = "",
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> AsyncIterator[str]:
+        """Stream a text completion token-by-token.
+
+        Yields incremental text chunks as the model produces them, so the UI
+        can render the answer live. OpenRouter and Ollama stream natively;
+        other providers fall back to a single yield of the full result.
+        """
+        from clawed.demo import is_demo_mode
+
+        if is_demo_mode(config=self.config):
+            yield self._demo_response(prompt, demo_hint="")
+            return
+
+        system = self._enrich_system_prompt(system, prompt=prompt)
+        provider = self.config.provider
+        if provider == LLMProvider.OPENROUTER:
+            async for chunk in self._openrouter_stream(
+                prompt, system, temperature, max_tokens
+            ):
+                yield chunk
+            return
+        if provider == LLMProvider.OLLAMA:
+            async for chunk in self._ollama_stream(
+                prompt, system, temperature, max_tokens
+            ):
+                yield chunk
+            return
+
+        # Providers without a streaming path here: emit the full result once.
+        from clawed.sanitize import sanitize_text
+
+        if provider == LLMProvider.ANTHROPIC:
+            raw = await self._anthropic(prompt, system, temperature, max_tokens)
+        elif provider == LLMProvider.OPENAI:
+            raw = await self._openai(prompt, system, temperature, max_tokens)
+        elif provider == LLMProvider.GOOGLE:
+            raw = await self._google(prompt, system, temperature, max_tokens)
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
+        yield sanitize_text(raw)
+
+    async def _openrouter_stream(
+        self, prompt: str, system: str, temperature: float, max_tokens: int
+    ) -> AsyncIterator[str]:
+        from clawed.config import get_api_key
+
+        api_key = get_api_key("openrouter")
+        if not api_key:
+            raise OSError(
+                "OpenRouter API key not found. Get one at https://openrouter.ai/keys"
+            )
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        base_url = getattr(
+            self.config, "openrouter_base_url", "https://openrouter.ai/api/v1"
+        )
+        async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client, client.stream(
+            "POST",
+            f"{base_url.rstrip('/')}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/SirhanMacx/Claw-ED",
+                "X-Title": "Claw-ED",
+            },
+            json={
+                "model": self.config.openrouter_model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True,
+                # Quick co-teacher help should feel instant. Tell reasoning
+                # models (e.g. minimax-m3) to skip the long chain-of-thought
+                # so the answer streams right away. Ignored by non-reasoning
+                # models. (OpenRouter unified `reasoning` control.)
+                "reasoning": {"enabled": False},
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line or not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    obj = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                choices = obj.get("choices") or [{}]
+                delta = choices[0].get("delta", {}).get("content")
+                if delta:
+                    yield str(delta)
+
+    async def _ollama_stream(
+        self, prompt: str, system: str, temperature: float, max_tokens: int
+    ) -> AsyncIterator[str]:
+        api_key = getattr(self.config, "ollama_api_key", None) or os.environ.get(
+            "OLLAMA_API_KEY"
+        )
+        headers = {}
+        if api_key and api_key != "ollama":
+            headers["Authorization"] = f"Bearer {api_key}"
+        base = self.config.ollama_base_url.rstrip("/")
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        num_ctx = getattr(self.config, "ollama_num_ctx", 0) or 8192
+        async with httpx.AsyncClient(timeout=600.0) as client, client.stream(
+            "POST",
+            f"{base}/api/chat",
+            headers=headers,
+            json={
+                "model": self.config.ollama_model,
+                "messages": messages,
+                "stream": True,
+                "think": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens,
+                    "num_ctx": num_ctx,
+                },
+            },
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line.strip():
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                chunk = obj.get("message", {}).get("content")
+                if chunk:
+                    yield str(chunk)
 
     async def generate_with_image(
         self,
@@ -113,6 +274,10 @@ class LLMClient:
             return await self._vision_openai(prompt, b64, media_type, system, temperature, max_tokens)
         if self.config.provider == LLMProvider.OLLAMA:
             return await self._vision_ollama(prompt, b64, temperature, max_tokens)
+        if self.config.provider == LLMProvider.OPENROUTER:
+            return await self._vision_openrouter(
+                prompt, b64, media_type, system, temperature, max_tokens,
+            )
 
         # Providers without vision support
         return "GOOD"
@@ -314,6 +479,87 @@ class LLMClient:
             logger.debug("Vision check failed (Ollama): %s", e)
             return "GOOD"
 
+    async def _vision_openrouter(
+        self,
+        prompt: str,
+        b64: str,
+        media_type: str,
+        system: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        """OpenRouter (OpenAI-compatible) vision API call.
+
+        The base ``openrouter_model`` may be text-only (e.g. GLM), so image
+        screening routes to ``openrouter_vision_model`` — a multimodal model that
+        actually reads the image. Retries on transient 429s (free-tier upstream
+        throttling). Raises on persistent failure so the caller can fail CLOSED
+        (reject the image) instead of silently passing an unscreened one.
+        """
+        from clawed.config import get_api_key
+
+        api_key = get_api_key("openrouter")
+        if not api_key:
+            raise RuntimeError("OpenRouter API key not configured for vision check")
+
+        base_url = getattr(
+            self.config, "openrouter_base_url", "https://openrouter.ai/api/v1",
+        ).rstrip("/")
+        primary = (
+            getattr(self.config, "openrouter_vision_model", "")
+            or _OPENROUTER_VISION_FALLBACKS[0]
+        )
+        models = [primary] + [m for m in _OPENROUTER_VISION_FALLBACKS if m != primary]
+        messages: list[dict[str, Any]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url",
+                 "image_url": {"url": f"data:{media_type};base64,{b64}"}},
+            ],
+        })
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "https://github.com/SirhanMacx/Claw-ED",
+            "X-Title": "Claw-ED",
+        }
+        last_err = "unknown"
+        async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
+            for model in models:
+                for attempt in range(2):
+                    try:
+                        resp = await client.post(
+                            f"{base_url}/chat/completions",
+                            headers=headers,
+                            json={
+                                "model": model,
+                                "max_tokens": max_tokens,
+                                "temperature": temperature,
+                                "messages": messages,
+                            },
+                        )
+                        if resp.status_code == 429:
+                            last_err = f"429 ({model})"
+                            await asyncio.sleep(1.5 * (attempt + 1))
+                            continue
+                        resp.raise_for_status()
+                        choices = resp.json().get("choices") or []
+                        if not choices:
+                            last_err = f"no choices ({model})"
+                            continue
+                        content = choices[0].get("message", {}).get("content")
+                        return str(content or "").strip()
+                    except httpx.HTTPStatusError as e:
+                        last_err = f"HTTP {e.response.status_code} ({model})"
+                        break
+                    except (httpx.HTTPError, ValueError, KeyError) as e:
+                        last_err = f"{type(e).__name__} ({model})"
+                        await asyncio.sleep(1)
+        raise RuntimeError(f"OpenRouter vision failed (all models): {last_err}")
+
     @staticmethod
     def _demo_response(prompt: str, demo_hint: str = "") -> str:
         """Return a canned demo response based on schema hint or prompt keywords."""
@@ -384,6 +630,19 @@ class LLMClient:
             except ImportError:
                 pass  # Memory engine not available -- that's fine
 
+            # Inject the teacher's ACTIVE STYLE PROFILE (learned from their
+            # own files via ingest_materials) so every generation — lessons,
+            # assessments, sub packets — matches their real voice. Off-switch:
+            # set_active_profile(None) makes this a no-op.
+            try:
+                from clawed.style_profile import active_prompt_block
+
+                style_ctx = active_prompt_block()
+                if style_ctx:
+                    system = (system + "\n\n" + style_ctx) if system else style_ctx
+            except ImportError:
+                pass  # Style profiles not available -- that's fine
+
             return system
 
     def _detect_subject_from_prompt(self, prompt: str) -> str:
@@ -443,7 +702,10 @@ class LLMClient:
             demo_hint: str = "",
     ) -> dict[str, Any]:
             """Generate and parse a JSON response from the LLM."""
-            raw = await self.generate(prompt, system, temperature, max_tokens, demo_hint=demo_hint)
+            raw = await self.generate(
+                prompt, system, temperature, max_tokens,
+                demo_hint=demo_hint, json_mode=True,
+            )
             if not raw or not raw.strip():
                 raise ValueError(
                     "LLM returned empty output. This model may not support "
@@ -794,7 +1056,7 @@ class LLMClient:
             messages.append({"role": "user", "content": prompt})
 
             try:
-                async with httpx.AsyncClient(timeout=7200.0) as client:
+                async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
                     resp = await client.post(
                         "https://api.openai.com/v1/chat/completions",
                         headers={
@@ -847,7 +1109,7 @@ class LLMClient:
             base_url = getattr(self.config, "openrouter_base_url", "https://openrouter.ai/api/v1")
 
             try:
-                async with httpx.AsyncClient(timeout=7200.0) as client:
+                async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
                     resp = await client.post(
                         f"{base_url.rstrip('/')}/chat/completions",
                         headers={
@@ -863,12 +1125,50 @@ class LLMClient:
                             "max_tokens": max_tokens,
                         },
                     )
-                    resp.raise_for_status()
-                    data = resp.json()
+                    if resp.status_code >= 400:
+                        detail = resp.text[:600]
+                        raise ConnectionError(
+                            f"OpenRouter request failed ({resp.status_code}): {detail}"
+                        )
+                    try:
+                        data = resp.json()
+                    except Exception as exc:
+                        # Free / overloaded tiers sometimes return a truncated or
+                        # non-JSON body. Surface it as a clean, retryable error
+                        # (the phase retry loop will try again) instead of letting
+                        # a raw JSONDecodeError escape.
+                        raise ConnectionError(
+                            "OpenRouter returned a malformed response body "
+                            f"({len(resp.text)} chars) — likely a transient "
+                            "free-tier hiccup; retrying."
+                        ) from exc
                     choices = data.get("choices", [])
                     if not choices:
-                        raise RuntimeError("OpenRouter returned an empty response (no choices)")
-                    return str(choices[0].get("message", {}).get("content", "") or "")
+                        # No choices usually means an API-level error (rate limit,
+                        # model overloaded, content filter). Surface the actual
+                        # reason so it's diagnosable and rate-limit-detectable.
+                        err = data.get("error")
+                        detail = f": {err}" if err else ""
+                        raise RuntimeError(
+                            f"OpenRouter returned no choices{detail}"
+                        )
+                    msg = choices[0].get("message", {}) or {}
+                    content = str(msg.get("content", "") or "")
+                    if not content.strip() and max_tokens > 64:
+                        # Reasoning models (e.g. minimax-m3) can spend the whole
+                        # max_tokens budget on chain-of-thought and return empty
+                        # content (finish_reason=length). Log a precise diagnostic
+                        # instead of an opaque empty string.
+                        finish = choices[0].get("finish_reason")
+                        reasoning = str(msg.get("reasoning") or msg.get("reasoning_content") or "")
+                        usage = data.get("usage", {})
+                        logger.warning(
+                            "OpenRouter %s empty content: finish_reason=%s "
+                            "reasoning_chars=%d completion_tokens=%s max_tokens=%d",
+                            self.config.openrouter_model, finish, len(reasoning),
+                            usage.get("completion_tokens"), max_tokens,
+                        )
+                    return content
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to OpenRouter. Check your internet connection."
@@ -883,7 +1183,8 @@ class LLMClient:
     # ── Ollama ───────────────────────────────────────────────────────────
 
     async def _ollama(
-            self, prompt: str, system: str, temperature: float, max_tokens: int
+            self, prompt: str, system: str, temperature: float, max_tokens: int,
+            json_mode: bool = False,
     ) -> str:
             # Support both local Ollama (no auth) and Ollama Cloud (Bearer token)
             api_key = getattr(self.config, "ollama_api_key", None) or os.environ.get("OLLAMA_API_KEY")
@@ -933,21 +1234,46 @@ class LLMClient:
                             raise RuntimeError("Ollama Cloud returned an empty response")
                         return str(choices[0].get("message", {}).get("content", "") or "")
                 else:
-                    # Local Ollama (or Ollama Cloud — cloud models need longer timeout)
-                    full_prompt = f"{system}\n\n{prompt}" if system else prompt
+                    # Local Ollama: use the chat endpoint so the model's chat
+                    # template is applied. Modern instruct/reasoning models
+                    # (Gemma 4, Qwen, etc.) return an EMPTY completion from the
+                    # raw /api/generate endpoint because the template isn't
+                    # applied; /api/chat fixes that. We also disable thinking
+                    # mode ("think": False) for fast, direct output — mirroring
+                    # the vision path — so a local 12B model answers in seconds
+                    # instead of spending hundreds of tokens reasoning aloud.
+                    messages = []
+                    if system:
+                        messages.append({"role": "system", "content": system})
+                    messages.append({"role": "user", "content": prompt})
+                    # Cap the context window. Some local models (e.g. Gemma 4)
+                    # ship a 128K default num_ctx; loading that KV cache is slow
+                    # and memory-hungry on consumer hardware. 8K is ample for a
+                    # persona + instructions + a generation, and keeps a local
+                    # 12B responsive. Overridable via config.ollama_num_ctx.
+                    num_ctx = getattr(self.config, "ollama_num_ctx", 0) or 8192
+                    payload: dict[str, Any] = {
+                        "model": model,
+                        "messages": messages,
+                        "stream": False,
+                        "think": False,
+                        "options": {
+                            "temperature": temperature,
+                            "num_predict": max_tokens,
+                            "num_ctx": num_ctx,
+                        },
+                    }
+                    if json_mode:
+                        # Constrain decoding to valid JSON. This eliminates
+                        # parse failures and the costly validate-then-retry
+                        # round-trip, which roughly halves wall-clock time for
+                        # structured generation on a local model.
+                        payload["format"] = "json"
                     async with httpx.AsyncClient(timeout=600.0) as client:
                         resp = await client.post(
-                            f"{base}/api/generate",
+                            f"{base}/api/chat",
                             headers=headers,
-                            json={
-                                "model": model,
-                                "prompt": full_prompt,
-                                "stream": False,
-                                "options": {
-                                    "temperature": temperature,
-                                    "num_predict": max_tokens,
-                                },
-                            },
+                            json=payload,
                         )
                         if resp.status_code == 404:
                             # Parse Ollama's error body for details
@@ -963,7 +1289,17 @@ class LLMClient:
                             )
                         resp.raise_for_status()
                         data = resp.json()
-                        return str(data.get("response", "") or "")
+                        content = str(
+                            data.get("message", {}).get("content", "") or ""
+                        )
+                        # Belt-and-suspenders: some builds ignore think=False and
+                        # still emit a <think>…</think> preamble — strip it.
+                        import re as _re
+
+                        content = _re.sub(
+                            r"<think>.*?</think>", "", content, flags=_re.DOTALL
+                        ).strip()
+                        return content
             except httpx.ConnectError as exc:
                 raise ConnectionError(
                     "Could not connect to Ollama.\n"
@@ -1011,7 +1347,7 @@ class LLMClient:
             }
 
             try:
-                async with httpx.AsyncClient(timeout=7200.0) as client:
+                async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
                     resp = await client.post(
                         base_url, params=params, headers=headers, json=body,
                     )

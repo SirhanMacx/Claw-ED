@@ -471,6 +471,9 @@ _RELEVANCE_STOPWORDS = {
     "under", "between", "across", "history", "historical", "primary", "source",
     "sources", "education", "educational", "diagram", "illustration", "portrait",
     "literature", "mathematics", "graph", "photo", "image", "picture",
+    "world", "worlds", "people", "account", "first", "describes", "writer",
+    "celebrates", "observes", "began", "begins", "everything", "change",
+    "changed", "goes", "ways", "both", "letter", "voyage",
 }
 
 
@@ -511,22 +514,19 @@ def _pick_relevant_article(query: str, results: list[dict[str, Any]]) -> str | N
 def _select_sources(subject: str, topic: str = "") -> list[str]:
     """Pick the best image sources for this subject.
 
-    Returns an ordered list of source identifiers to try.
-    Teacher's own images are always checked first.
-    Only uses academic sources (LOC, Wikimedia). No stock photos.
+    Returns an ordered list of source identifiers to try. Web image search
+    (broad topical coverage) is tried first, then license-clean academic sources
+    (LoC public domain, Wikipedia article thumbnails). Whatever is fetched is
+    then screened by the vision-model relevance filter (``check_image_quality``),
+    which looks at the actual pixels and rejects off-topic, text-only, and
+    watermarked results — so broad sourcing is safe here: a wrong or watermarked
+    image never survives the downstream screen. A missing image beats a wrong one.
     """
-    # Teacher images first, then web scraping (most comprehensive),
-    # then academic sources (LOC, Wikimedia), then stock (Unsplash).
     subject_lower = subject.strip().lower()
-    if any(s in subject_lower for s in ("history", "social", "civics", "government")):
-        return ["teacher_files", "web", "loc", "wikimedia", "unsplash"]
-    elif (
-        any(s in subject_lower for s in ("science", "biology", "chemistry", "physics"))
-        or any(s in subject_lower for s in ("art", "music"))
-    ):
-        return ["teacher_files", "web", "wikimedia", "loc", "unsplash"]
-    else:
-        return ["teacher_files", "web", "loc", "wikimedia", "unsplash"]
+    if any(s in subject_lower
+           for s in ("science", "biology", "chemistry", "physics", "art", "music")):
+        return ["teacher_files", "web", "wikimedia", "loc"]
+    return ["teacher_files", "web", "loc", "wikimedia"]
 
 
 # ── Cache helpers ────────────────────────────────────────────────────

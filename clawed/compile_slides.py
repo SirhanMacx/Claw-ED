@@ -616,21 +616,21 @@ def _build_station_slide(prs: Presentation, master: MasterContent) -> None:
             left=left,
             top=top_offset,
             width=col_w - Inches(0.1),
-            height=Inches(0.8),
-            text=_short(station.title, words=5),
-            font_size=18, bold=True,
+            height=Inches(1.5),
+            text=_short(station.title, words=4),
+            font_size=16, bold=True,
             hex_color=_C_TERRACOTTA,
         )
-        # Directions live in the handout, not the projected overview slide — keep
-        # this slide to station NAMES only so it stays sparse like the exemplar.
+        # Numbered label sits well below to clear a wrapped (up to 3-line) title
+        # in a narrow column. Names only here; directions live in the handout.
         _textbox(
             slide,
             left=left,
-            top=top_offset + Inches(0.85),
+            top=top_offset + Inches(1.55),
             width=col_w - Inches(0.1),
-            height=Inches(0.6),
+            height=Inches(0.5),
             text=f"Station {i + 1}",
-            font_size=14,
+            font_size=13,
             hex_color=_C_BODY,
         )
 

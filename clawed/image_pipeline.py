@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -40,7 +42,9 @@ _VISION_QUALITY_PROMPT = (
     "ACCEPTABLE — Low-res photograph of Frederick Douglass, subject clearly visible\n"
     "REJECT — Classroom agenda slide with date, not the topic\n"
     "REJECT — Generic background of a flag, no specific historical content\n"
-    "REJECT — Blurry thumbnail, unreadable, looks like a watermark\n\n"
+    "REJECT — Blurry thumbnail, unreadable, looks like a watermark\n"
+    "REJECT — Stock photo with an Alamy/Getty/Shutterstock watermark across it\n"
+    "REJECT — A book cover or title page (mostly text), not a real depiction\n\n"
     "Topic: {topic}\nSubject: {subject}"
 )
 
@@ -51,36 +55,136 @@ async def check_image_quality(
     subject: str = "",
     config: AppConfig | None = None,
 ) -> bool:
-    """Use a vision model to evaluate whether an image is good enough for a lesson.
+    """Vision-screen a fetched image: does it actually DEPICT the topic?
 
-    Returns True if the image passes (GOOD or ACCEPTABLE), False if REJECT.
-    Always returns True if no vision-capable model is configured (permissive).
+    Returns True only when a vision model affirms the image is on-topic and
+    classroom-appropriate. FAILS CLOSED — any error, rate-limit exhaustion, or
+    non-affirmative verdict returns False and the slide renders text-only. A
+    missing image beats a wrong one. (Text-only providers without a real vision
+    path still return their permissive "GOOD" from generate_with_image.)
     """
     try:
         from clawed.llm import LLMClient
-        from clawed.model_router import route as route_model
 
         cfg = config or AppConfig.load()
-        cfg = route_model("image_quality", cfg)
         client = LLMClient(cfg)
 
         prompt = _VISION_QUALITY_PROMPT.format(topic=spec, subject=subject)
         result = await client.generate_with_image(
             prompt=prompt,
             image_path=image_path,
-            temperature=0.1,
-            max_tokens=50,
+            temperature=0.0,
+            max_tokens=20,
         )
 
-        verdict = result.strip().split()[0].upper() if result.strip() else "GOOD"
-        if verdict == "REJECT":
-            logger.info("Image REJECTED by vision filter: %s — %s", spec[:60], result.strip())
-            return False
-        logger.debug("Image passed vision filter (%s): %s", verdict, spec[:60])
-        return True
+        verdict = ""
+        if result and result.strip():
+            verdict = result.strip().split()[0].upper().strip(".,:;!\"'")
+        ok = verdict in ("GOOD", "ACCEPTABLE", "RELEVANT")
+        if ok:
+            logger.debug("Image PASSED vision check (%s): %s", verdict, spec[:60])
+        else:
+            logger.info("Image REJECTED by vision check (%s): %s",
+                        verdict or "no-verdict", spec[:60])
+        return ok
     except Exception as e:
-        logger.debug("Vision quality check failed, permitting image: %s", e)
-        return True  # Always permissive on failure
+        logger.info("Vision check failed — rejecting image (fail-closed): %s", e)
+        return False
+
+
+def _build_vision_montage(items: list[tuple[str, Path]]) -> Path:
+    """Tile fetched images into a numbered grid PNG for one-shot vision screening.
+
+    Each cell is labelled "#N" so the vision model's verdict maps back to the Nth
+    (spec, path) in ``items``. Returns the montage image path.
+    """
+    from PIL import Image, ImageDraw
+
+    n = len(items)
+    cols = min(3, n)
+    rows = (n + cols - 1) // cols
+    cell, label_h = 340, 30
+    canvas = Image.new("RGB", (cols * cell, rows * (cell + label_h)), (255, 255, 255))
+    draw = ImageDraw.Draw(canvas)
+    for i, (_spec, path) in enumerate(items):
+        x = (i % cols) * cell
+        y = (i // cols) * (cell + label_h)
+        draw.text((x + 8, y + 6), f"#{i + 1}", fill=(200, 0, 0))
+        try:
+            with Image.open(str(path)) as im:
+                thumb = im.convert("RGB")
+                thumb.thumbnail((cell - 16, cell - 16))
+                canvas.paste(thumb, (x + 8, y + label_h))
+        except Exception as exc:
+            logger.debug("Montage cell %d failed: %s", i + 1, exc)
+            draw.rectangle(
+                [x + 8, y + label_h, x + cell - 8, y + cell + label_h - 8],
+                outline=(180, 180, 180),
+            )
+    out = Path(tempfile.gettempdir()) / "clawed_vision_montage.png"
+    canvas.save(str(out))
+    return out
+
+
+async def vision_filter_batch(
+    items: list[tuple[str, Path]],
+    subject: str = "",
+    config: AppConfig | None = None,
+) -> set[str]:
+    """Screen ALL candidate images in ONE vision call (free-tier friendly).
+
+    ``items`` is ``[(spec, path), ...]``. Builds a numbered montage and asks the
+    vision model, in a single request, which images actually depict their topic
+    (the spec) — far fewer API calls than per-image screening, so it survives
+    free-tier rate limits where N sequential calls would 429. Returns the set of
+    specs to KEEP.
+
+    Fails CLOSED: if the montage/call/parse fails, returns an empty set (every
+    slide renders text-only — a missing image beats a wrong one).
+    """
+    if not items:
+        return set()
+    try:
+        montage = _build_vision_montage(items)
+    except Exception as e:
+        logger.info("Vision montage build failed — rejecting all images: %s", e)
+        return set()
+
+    listing = "\n".join(f"#{i + 1}: {spec[:80]}" for i, (spec, _p) in enumerate(items))
+    prompt = (
+        f"This is a numbered grid of {len(items)} images fetched for a "
+        f"{subject or 'history'} lesson. Each image's intended topic:\n{listing}\n\n"
+        "Look at EACH numbered image. Decide if the image actually DEPICTS its "
+        "topic — a real photo, map, diagram, artwork, or period document of it. "
+        "REJECT book covers, title pages, mostly-text pages, watermarked stock "
+        "photos, promotional posters or movie/documentary thumbnails (e.g. with "
+        "'watch now' or other marketing text overlays), unrelated subjects, and "
+        "generic images. Reply with one verdict per image as '#N:Y' (keep) or "
+        "'#N:R' (reject), space-separated, covering every number. Example: "
+        "'#1:Y #2:R #3:Y'. Output ONLY the verdicts."
+    )
+    try:
+        from clawed.llm import LLMClient
+
+        cfg = config or AppConfig.load()
+        result = await LLMClient(cfg).generate_with_image(
+            prompt=prompt, image_path=montage, temperature=0.0,
+            max_tokens=6 * len(items) + 30,
+        )
+    except Exception as e:
+        logger.info("Batch vision call failed — rejecting all images: %s", e)
+        return set()
+
+    verdicts = {
+        int(num): v.upper()
+        for num, v in re.findall(r"#?(\d+)\s*:\s*([A-Za-z])", result or "")
+    }
+    keep = {spec for i, (spec, _p) in enumerate(items) if verdicts.get(i + 1) == "Y"}
+    logger.info(
+        "Batch vision screen: kept %d/%d images | verdicts=%r",
+        len(keep), len(items), (result or "").strip()[:120],
+    )
+    return keep
 
 
 def _collect_image_specs(master: MasterContent) -> dict[str, str]:
@@ -91,13 +195,15 @@ def _collect_image_specs(master: MasterContent) -> dict[str, str]:
     """
     specs: dict[str, str] = {}
 
-    for entry in master.vocabulary:
-        if entry.image_spec:
-            specs[entry.image_spec] = f"{entry.term}: {entry.definition}"
-
-    for ps in master.primary_sources:
-        if ps.image_spec:
-            specs[ps.image_spec] = getattr(ps, "title", "") or ps.image_spec
+    # ONLY collect specs for slide types that actually EMBED an image, so we
+    # never spend a fetch + a (rate-limited) vision call on an image that no
+    # slide will show. The vocabulary builder is text-only — its image_specs
+    # never render — so they are intentionally skipped. Primary-source slides are
+    # also text-only: reliable image retrieval for an arbitrary historical
+    # document/author proved consistently wrong (a rusty key for Las Casas,
+    # Copernicus for an English herbalist), so a clean text-only source slide
+    # beats a misleading image. Embedders kept below: instruction sections, the
+    # exit ticket, and the activity grid (which reuses those same images).
 
     for section in master.direct_instruction:
         if section.image_spec:
@@ -255,26 +361,21 @@ async def fetch_all_images(
             if path is not None:
                 images[spec] = path
 
-    # Phase 3: Vision-model quality filter (reject bad images)
+    # Phase 3: ONE-SHOT vision relevance screen. A single montage call (all
+    # candidates tiled into a numbered grid) survives free-tier rate limits where
+    # N sequential per-image calls would 429 and fail-closed every image.
     if images:
-        rejected: list[str] = []
-        for spec, path in list(images.items()):
-            passed = await check_image_quality(
-                image_path=path,
-                spec=spec,
-                subject=subject,
-                config=config,
-            )
-            if not passed:
-                rejected.append(spec)
-                del images[spec]
-
+        total = len(images)
+        keep = await vision_filter_batch(
+            list(images.items()), subject=subject, config=config,
+        )
+        rejected = [spec for spec in list(images) if spec not in keep]
+        for spec in rejected:
+            del images[spec]
         if rejected:
             logger.info(
-                "Vision filter rejected %d/%d images: %s",
-                len(rejected),
-                len(rejected) + len(images),
-                ", ".join(s[:40] for s in rejected),
+                "Vision batch rejected %d/%d images: %s",
+                len(rejected), total, ", ".join(s[:40] for s in rejected),
             )
 
     logger.info(

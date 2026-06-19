@@ -61,7 +61,7 @@ class ExportDocumentTool:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            # First generate a lesson to export
+            # Build the unit + persona; generation happens per-format below.
             from clawed.lesson import generate_lesson
             from clawed.models import LessonBrief, TeacherPersona, UnitPlan
 
@@ -85,23 +85,34 @@ class ExportDocumentTool:
                     )
                 ],
             )
-            lesson = await generate_lesson(
-                lesson_number=1,
-                unit=unit,
-                persona=persona,
-                config=context.config,
-            )
-
-            # Now export in the requested format
-            if fmt == "pdf":
-                from clawed.export_pdf import export_lesson_pdf
-                path = export_lesson_pdf(lesson, persona, output_dir)
-            elif fmt == "docx":
-                from clawed.export_docx import export_lesson_docx
-                path = export_lesson_docx(lesson, persona, output_dir)
-            elif fmt == "pptx":
-                from clawed.export_pptx import export_lesson_pptx
-                path = export_lesson_pptx(lesson, persona, output_dir, teacher_id=context.teacher_id)
+            # Generate + export per format. The pptx surface uses the SAME
+            # MasterContent -> compile_slides pipeline as the main lesson
+            # surfaces (sparse, image-forward, relevance-gated images), so every
+            # slide deck Claw-ED produces shares one builder. pdf/docx use the
+            # DailyLesson exporters.
+            if fmt == "pptx":
+                from clawed.compile_slides import compile_slides
+                from clawed.image_pipeline import fetch_all_images
+                from clawed.lesson import generate_master_content
+                master = await generate_master_content(
+                    lesson_number=1, unit=unit, persona=persona,
+                    config=context.config,
+                )
+                images = await fetch_all_images(
+                    master, context.config, teacher_id=context.teacher_id,
+                )
+                path = await compile_slides(master, images, output_dir)
+            elif fmt in ("pdf", "docx"):
+                lesson = await generate_lesson(
+                    lesson_number=1, unit=unit, persona=persona,
+                    config=context.config,
+                )
+                if fmt == "pdf":
+                    from clawed.export_pdf import export_lesson_pdf
+                    path = export_lesson_pdf(lesson, persona, output_dir)
+                else:
+                    from clawed.export_docx import export_lesson_docx
+                    path = export_lesson_docx(lesson, persona, output_dir)
             else:
                 return ToolResult(text=f"Unsupported format: {fmt}")
 
