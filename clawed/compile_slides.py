@@ -283,11 +283,17 @@ def _slide_title(slide: Any, prs_width: Any, text: str,
     """
     from pptx.util import Inches
 
+    capped = _short(text, words=7)
+    # Auto-shrink long headings so they stay on one line and never crowd the body
+    # content positioned just below (mirrors the title-slide auto-shrink).
+    if font_size > 26 and len(capped) > 40:
+        font_size = 28 if len(capped) <= 54 else 26
+
     _textbox(
         slide,
         left=Inches(MARGIN_IN), top=Inches(TITLE_TOP_IN),
         width=prs_width - Inches(2 * MARGIN_IN), height=Inches(TITLE_H_IN),
-        text=_short(text, words=7),
+        text=capped,
         font_size=font_size, bold=True,
         hex_color=hex_color, align_center=align_center,
         word_wrap=False,
@@ -478,14 +484,16 @@ def _build_source_slides(prs: Presentation, master: MasterContent,
 
     for ps in master.primary_sources:
         slide = _add_slide(prs)
-        _slide_title(slide, W, f"Source: {_short(ps.title, words=6)}", hex_color=_C_TERRACOTTA)
+        _slide_title(slide, W, f"Source: {_short(ps.title, words=5)}",
+                     hex_color=_C_TERRACOTTA, font_size=26)
 
         has_image = bool(ps.image_spec and ps.image_spec in images)
         text_w = Inches(TEXT_PANEL_W_IN) if has_image else Inches(FULL_TEXT_W_IN)
 
+        # Attribution + excerpt start low enough to clear a two-line source title.
         _textbox(
             slide,
-            left=Inches(MARGIN_IN), top=Inches(1.2),
+            left=Inches(MARGIN_IN), top=Inches(1.5),
             width=text_w, height=Inches(0.4),
             text=_short(f"{ps.source_type.replace('_', ' ').title()}  |  {ps.attribution}", words=7),
             font_size=13, italic=True,
@@ -497,8 +505,8 @@ def _build_source_slides(prs: Presentation, master: MasterContent,
         if excerpt:
             _textbox(
                 slide,
-                left=Inches(MARGIN_IN), top=Inches(1.8),
-                width=text_w, height=Inches(2.8),
+                left=Inches(MARGIN_IN), top=Inches(2.1),
+                width=text_w, height=Inches(2.4),
                 text=f'"{excerpt}"',
                 font_size=18, italic=True,
                 hex_color=_C_BODY,
