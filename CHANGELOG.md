@@ -1,5 +1,15 @@
 # Changelog
 
+## v6.19.2026 — 2026-06-19
+
+### Added — Optional support funnel at CLI + landing
+
+- Surfaced an optional, free-forever-respecting "support the project"
+  link (macxlabs.app/support) at both `clawed setup` completion panels
+  and on the landing page (support section + footer). The support rail
+  offers recurring monthly tiers; all links carry `?src` tags for
+  conversion measurement. No paywall — Claw-ED remains free.
+
 ## v6.18.2026 — 2026-06-18
 
 ### Fixed — Memory and Embeddings
