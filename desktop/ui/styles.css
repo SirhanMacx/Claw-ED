@@ -84,6 +84,11 @@ body{
 /* ── Views ──────────────────────────────────────────────────────── */
 .view{display:flex;flex-direction:column;min-width:0;min-height:0;background:transparent}
 .view[hidden]{display:none !important}
+/* Enforce the hidden attribute everywhere: a later CSS display rule (e.g.
+   .connect-banner{display:flex}) must never override [hidden], or elements
+   toggled via element.hidden stay visible (caused the "Connect your AI"
+   banner to show even when a provider was already connected). */
+[hidden]{display:none !important}
 .alt-view{padding:26px 30px;overflow:auto;display:block}
 .alt-head h2{font-family:var(--voice);font-weight:500;font-size:24px;margin:0 0 6px}
 .alt-head p{color:var(--ink-soft);margin:0 0 20px;max-width:560px}
