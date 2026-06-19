@@ -85,3 +85,5 @@ check_db.py
 update_jon_persona.py
 output/
 daemon/node_modules/
+
+sample_deck/
