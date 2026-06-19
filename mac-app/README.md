@@ -1,5 +1,11 @@
 # Claw-ED Menu Bar (macOS)
 
+> ⚠️ **DEPRECATED / Stage-0 legacy.** This Swift menu-bar launcher has been
+> **superseded by the Tauri desktop app in [`../desktop/`](../desktop/)**, which is
+> the canonical, signed + notarized, double-click distribution for non-technical
+> teachers (with in-window AI onboarding). This `mac-app/` is kept for reference
+> only — do not build or ship it as the teacher download path.
+
 > The friendly desktop launcher for Claw-ED — "Claude Code for teachers."
 
 A small, calm macOS **menu-bar app** that makes Claw-ED one‑click for
