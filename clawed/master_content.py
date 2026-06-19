@@ -128,6 +128,13 @@ class PrimarySource(BaseModel):
     attribution: str
     image_spec: str = ""
     scaffolding_questions: list[str] = Field(default_factory=list)
+    # Sparse, slide-only phrasing (<=25 words) so the deck stays visual. When
+    # empty, the slide compiler falls back to a short first-sentence slice of
+    # content_text. The full content_text still drives the teacher DOCX.
+    slide_excerpt: str = Field(
+        default="",
+        description="Short slide-only phrasing of the source (<=25 words, a phrase not a paragraph).",
+    )
 
     @field_validator("image_spec", mode="after")
     @classmethod
@@ -159,6 +166,13 @@ class InstructionSection(BaseModel):
     image_spec: str = ""
     hook: str = ""          # Opening hook — analogy, story, provocative question, character intro
     transition: str = ""    # Scripted pivot phrase to next section
+    # Sparse, slide-only summary (<=25 words). When empty, the slide compiler
+    # falls back to a short slice of key_points/content. The full content +
+    # teacher_script still drive the teacher DOCX.
+    slide_summary: str = Field(
+        default="",
+        description="Short slide-only summary of this section (<=25 words, a phrase not a sentence).",
+    )
 
     @field_validator("image_spec", mode="after")
     @classmethod
@@ -204,6 +218,12 @@ class StimulusQuestion(BaseModel):
     cognitive_level: str = ""  # "recall", "application", "analysis"
     sentence_starters: list[str] = Field(default_factory=list)  # ["According to the source, ___"]
     response_framework: str = ""  # "TEA", "RACE", "CER"
+    # Sparse, slide-only phrasing of the stimulus (<=20 words). When empty the
+    # slide compiler falls back to a short slice of `stimulus`.
+    slide_stimulus: str = Field(
+        default="",
+        description="Short slide-only phrasing of the stimulus (<=20 words, a phrase not a paragraph).",
+    )
 
     @field_validator("stimulus", mode="before")
     @classmethod

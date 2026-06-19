@@ -176,8 +176,13 @@ def _set_text_props(run: Any, font_size_pt: int, hex_color: str, bold: bool = Fa
     run.font.name = "Calibri"
 
 
-def _split_text(text: str, max_len: int = 550) -> list[str]:
-    """Split long text into chunks at sentence boundaries."""
+def _split_text(text: str, max_len: int = 120) -> list[str]:
+    """Split long text into chunks at sentence boundaries.
+
+    Default chunk size kept small (~18 words) so the secondary DailyLesson deck
+    stays sparse and visual, matching the teacher's exemplar density rather than
+    emitting paragraph-dense slides.
+    """
     sentences = text.replace("\n", " ").split(". ")
     chunks: list[str] = []
     current = ""
@@ -434,6 +439,22 @@ def _clean_slide_text(text: str) -> str:
     text = re.sub(r"^#{1,4}\s+", "", text, flags=re.MULTILINE)
     text = re.sub(r'^["\u201c\u2018\u2019\u201d]\s*', "", text.strip())
     return text.strip()
+
+
+def _cap_words(text: str, words: int = 18) -> str:
+    """Cap slide text to ``words`` whitespace tokens (keeps slides sparse).
+
+    The secondary DailyLesson deck previously emitted 50\u201390-word paragraph
+    slices; this keeps each slide near the teacher's ~15\u201320-word exemplar
+    density. Appends an ellipsis only when the text was actually truncated.
+    """
+    if not text:
+        return text
+    tokens = str(text).split()
+    if len(tokens) <= words:
+        return str(text).strip()
+    out = " ".join(tokens[:words]).rstrip(",;:.!?\u2014-\u2013 ").strip()
+    return out + "\u2026" if out else out
 
 
 # ── Slide context — shared state passed to every slide builder ───────
@@ -789,11 +810,7 @@ def _build_do_now_slide(ctx: _SlideCtx, lesson: DailyLesson) -> None:
     p.line_spacing = Pt(30)
     run = p.add_run()
     dn_text = _clean_slide_text(lesson.do_now)
-    if len(dn_text) > 300:
-        cutoff = dn_text[:300].rfind(". ")
-        dn_display = dn_text[:cutoff + 1] if cutoff > 80 else dn_text[:300].rsplit(" ", 1)[0] + "..."
-    else:
-        dn_display = dn_text
+    dn_display = _cap_words(dn_text, words=22)
     run.text = dn_display
     dn_font = 22 if len(dn_display) < 120 else 18 if len(dn_display) < 250 else 16
     _set_text_props(run, dn_font, ctx.theme["text_dark"])
@@ -1070,9 +1087,7 @@ def _build_primary_source_slides(ctx: _SlideCtx, lesson: DailyLesson) -> None:
             ctx.add_sidebar_image(slide, src_img)
         source_img_idx += 1
 
-        clean_text = _clean_slide_text(ps_text.strip())
-        if len(clean_text) > 400:
-            clean_text = clean_text[:397].rsplit(" ", 1)[0] + "\u2026"
+        clean_text = _cap_words(_clean_slide_text(ps_text.strip()), words=22)
 
         text_font = 18 if len(clean_text) < 200 else 15 if len(clean_text) < 350 else 13
         y_start = Inches(1.8) if attribution else Inches(1.5)
@@ -1207,10 +1222,7 @@ def _build_independent_work_slide(ctx: _SlideCtx, lesson: DailyLesson) -> None:
     ctx.bar(slide, Inches(0.6), Inches(1.7), Inches(0.06), Inches(5.0), ctx.theme["secondary"])
 
     iw_text = lesson.independent_work
-    iw_summary = iw_text
-    if len(iw_text) > 250:
-        cutoff = iw_text[:250].rfind(". ")
-        iw_summary = iw_text[:cutoff + 1] if cutoff > 80 else iw_text[:250].rsplit(" ", 1)[0] + "..."
+    iw_summary = _cap_words(_clean_slide_text(iw_text), words=22)
 
     tb = slide.shapes.add_textbox(
         Inches(1.0), Inches(1.8), ctx.slide_w - Inches(2.0), Inches(4.5),
@@ -1356,14 +1368,10 @@ def _build_closing_slide(
         p.line_spacing = Pt(30)
         run = p.add_run()
         hw_text = lesson.homework
-        if len(hw_text) > 200:
-            cutoff = hw_text[:200].rfind(". ")
-            hw_display = hw_text[:cutoff + 1] if cutoff > 60 else hw_text[:200].rsplit(" ", 1)[0] + "..."
-        else:
-            hw_display = hw_text
+        hw_display = _cap_words(_clean_slide_text(hw_text), words=20)
         run.text = hw_display
         _set_text_props(run, 22, "DDDDDD")
-        if len(hw_text) > 200:
+        if len(hw_text.split()) > 20:
             notes_slide = slide.notes_slide
             notes_tf = notes_slide.notes_text_frame
             notes_tf.text = f"HOMEWORK (full text):\n{hw_text}"

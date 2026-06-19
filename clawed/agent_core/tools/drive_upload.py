@@ -40,6 +40,16 @@ class DriveUploadTool:
                                 "(defaults to local filename)"
                             ),
                         },
+                        "convert_to_google_slides": {
+                            "type": "boolean",
+                            "description": (
+                                "When true and the file is a .pptx, Drive "
+                                "auto-converts it into a native, editable "
+                                "Google Slides on upload (Mac- and "
+                                "Slides-compatible). Defaults to false."
+                            ),
+                            "default": False,
+                        },
                     },
                     "required": ["file_path"],
                 },
@@ -54,6 +64,7 @@ class DriveUploadTool:
         file_path = Path(params["file_path"]).expanduser().resolve()
         folder_id = params.get("folder_id", "root")
         file_name = params.get("file_name")
+        convert = bool(params.get("convert_to_google_slides", False))
 
         if not file_path.exists():
             return ToolResult(text=f"Error: file not found: {file_path}")
@@ -64,11 +75,13 @@ class DriveUploadTool:
                 file_path=file_path,
                 folder_id=folder_id,
                 file_name=file_name,
+                convert_to_google=convert,
             )
             link = result.get("webViewLink", "(no link)")
             name = result.get("name", file_path.name)
+            kind = "Google Slides" if convert else "file"
             return ToolResult(
-                text=f"Uploaded '{name}' to Drive: {link}",
+                text=f"Uploaded '{name}' to Drive as {kind}: {link}",
                 data=result,
                 side_effects=[f"Uploaded {name} to Drive folder {folder_id}"],
             )

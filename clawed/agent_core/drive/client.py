@@ -97,27 +97,53 @@ class DriveClient:
         files: list[dict[str, Any]] = results.get("files", [])
         return files
 
+    # mimeType of an Office Open XML .pptx — the universal interchange format
+    # Google Slides imports losslessly. Setting the *target* file mimeType to a
+    # google-apps presentation tells Drive to auto-convert on ingest.
+    _PPTX_MIME = (
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
+    _GSLIDES_MIME = "application/vnd.google-apps.presentation"
+
     async def upload_file(
         self,
         file_path: Path,
         folder_id: str = "root",
         file_name: str | None = None,
+        convert_to_google: bool = False,
     ) -> dict[str, Any]:
-        """Upload a file to Drive."""
+        """Upload a file to Drive.
+
+        When ``convert_to_google`` is True and the file is a .pptx, Drive
+        auto-converts it into a native, editable Google Slides on ingest — so
+        the same clean .pptx satisfies BOTH "should be Google Slides" and "Mac
+        OS compatible" without a separate Slides-API build. The plain upload
+        (no conversion) remains the default; conversion is purely additive.
+        """
         self._check_auth()
         self._check_rate()
         service = self._get_service()
         from googleapiclient.http import MediaFileUpload
 
         name = file_name or file_path.name
-        file_metadata = {"name": name, "parents": [folder_id]}
-        media = MediaFileUpload(str(file_path))
+        file_metadata: dict[str, Any] = {"name": name, "parents": [folder_id]}
+
+        if convert_to_google:
+            # Declare the source mimeType so Drive knows it's a pptx, and set the
+            # destination mimeType so Drive converts pptx -> native Slides.
+            media = MediaFileUpload(
+                str(file_path), mimetype=self._PPTX_MIME, resumable=True
+            )
+            file_metadata["mimeType"] = self._GSLIDES_MIME
+        else:
+            media = MediaFileUpload(str(file_path))
+
         result: dict[str, Any] = (
             service.files()
             .create(
                 body=file_metadata,
                 media_body=media,
-                fields="id, name, webViewLink",
+                fields="id, name, webViewLink, mimeType",
             )
             .execute()
         )
