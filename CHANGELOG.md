@@ -1,5 +1,22 @@
 # Changelog
 
+## v6.19.2026.1 — 2026-06-19
+
+### Improved — Lesson slide decks (sparse, image-forward, exemplar-matched)
+
+- Reworked the deck builder (compile_slides.py / export_pptx.py) to a sparse,
+  image-forward 16:9 deck (~15-18 words/slide instead of paragraph dumps) on the
+  standard 10x5.625in canvas that opens cleanly on macOS and imports losslessly
+  into Google Slides. Aspect-ratio-preserving image grid (no stretch), Century
+  Gothic look, Turn-and-Talk + image-activity slides, and an optional Drive
+  upload that converts the deck to native Google Slides.
+
+### Fixed — Agent loop crash on empty model turns
+
+- save_turn no longer crashes with "TypeError: 'NoneType' object is not
+  subscriptable" when the model returns a tool-only or empty turn (seen with
+  some OpenRouter models); content is coerced to "" before slicing.
+
 ## v6.19.2026 — 2026-06-19
 
 ### Added — Optional support funnel at CLI + landing

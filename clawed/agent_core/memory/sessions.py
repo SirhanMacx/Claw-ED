@@ -61,10 +61,15 @@ def _ensure_db() -> None:
 def save_turn(
     teacher_id: str,
     role: str,
-    content: str,
+    content: str | None,
     transport: str = "cli",
 ) -> None:
-    """Save a single conversation turn with transport metadata."""
+    """Save a single conversation turn with transport metadata.
+
+    ``content`` may be None when the model returns a tool-only turn or an
+    empty completion (common with some OpenRouter models, e.g. GLM); coerce
+    to "" so the turn-save never crashes the agent loop.
+    """
     _ensure_db()
     with _get_conn() as conn:
         conn.execute(
@@ -74,7 +79,7 @@ def save_turn(
                 teacher_id,
                 transport,
                 role,
-                content[:4000],
+                (content or "")[:4000],
                 datetime.now(UTC).isoformat(),
             ),
         )

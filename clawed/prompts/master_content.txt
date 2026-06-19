@@ -324,6 +324,19 @@ If you reference a document, passage, data table, primary source, graphic organi
 
 ---
 
+## Slide Text Is SPARSE And Visual — NOT The Handout
+
+The full content above (content_text, content, teacher_script, stimulus) feeds the PRINTED handout and teacher plan. The PROJECTED SLIDE DECK is a different artifact: it is image-forward and sparse, like a great teaching deck — about 15–20 words per slide, never a paragraph.
+
+For EACH `direct_instruction` section, EACH `primary_source`, and EACH `exit_ticket` item, ALSO emit the short slide-only field:
+- `slide_summary` (direct_instruction): AT MOST 25 words — a short phrase that captures the section, NOT the full content.
+- `slide_excerpt` (primary_source): AT MOST 25 words — a short phrase pointing at the source, NOT the full excerpt.
+- `slide_stimulus` (exit_ticket): AT MOST 20 words — a short phrase, NOT the full stimulus.
+
+Write these as terse phrases (a few words), not sentences. The deck must average roughly 16 words per slide. The visual carries the lesson; the words are a prompt, not a transcript.
+
+---
+
 ## Stimulus-Based Assessment — MANDATORY FOR ALL SUBJECTS
 
 NEVER write a bare recall question. Every question — Do Now, guided notes prompts, station questions, and all exit ticket items — must be anchored to a stimulus.
@@ -448,6 +461,7 @@ Respond with ONLY a JSON object (no markdown fencing):
             "content_text": "The complete source excerpt or full data table — not a summary. Must be substantive (3–8 sentences for text; all rows/columns for tables). For political cartoons: write a detailed visual description of what the cartoon depicts (characters, symbols, captions, setting) so the reader can picture it.",
             "attribution": "Author, Title, Date/Year",
             "image_spec": "REQUIRED — a specific image search query (e.g. 'Thomas Nast Boss Tweed political cartoon 1871'). Must be real search terms, NOT emoji, NOT Unicode art, NOT decorative characters.",
+            "slide_excerpt": "AT MOST 25 words — a short slide-only phrasing of this source (a phrase, NOT the full excerpt). The full text stays in content_text for the handout; this is what appears on the projected slide.",
             "scaffolding_questions": [
                 "Identification-level question?",
                 "Analysis-level question?"
@@ -475,6 +489,7 @@ Respond with ONLY a JSON object (no markdown fencing):
             "teacher_script": "Scripted teacher language: what the teacher says, key questions to pose, think-aloud annotations, and transition phrases. Include checks for understanding every 3–5 minutes as specific questions.",
             "key_points": ["Key point 1", "Key point 2"],
             "image_spec": "REQUIRED for ALL subjects — a specific image search query. Use real search terms, NOT emoji.",
+            "slide_summary": "AT MOST 25 words — a short slide-only summary of this section (a phrase, NOT the full content). The full teaching content stays in `content` for the handout; this is what appears on the projected slide.",
             "hook": "Opening hook for this section — analogy, mystery, provocative question, or character intro. REQUIRED for the first section. Example: 'Imagine you just got your paycheck — now imagine the government takes 50% and you have no say in how it's spent.'",
             "transition": "Scripted pivot to the next section. Example: 'So we've seen why people were angry. But anger alone doesn't start a revolution — what else did they need?'"
         }
@@ -509,6 +524,7 @@ Respond with ONLY a JSON object (no markdown fencing):
             "stimulus": "The actual text, data excerpt, or scenario students read before answering. Must be non-empty.",
             "stimulus_type": "text_excerpt | scenario | data | image | map | diagram",
             "stimulus_image_spec": "Optional image description or empty string",
+            "slide_stimulus": "AT MOST 20 words — a short slide-only phrasing of the stimulus (a phrase). The full stimulus stays in `stimulus` for the handout; this is what appears on the projected slide.",
             "question": "Question anchored to the stimulus above?",
             "answer": "Expected proficient response",
             "cognitive_level": "recall",
