@@ -9,7 +9,7 @@ An open-source CLI agent that generates complete lesson bundles — plans, hando
 Claw-ED is maintained as part of [MacxLabs](https://macxlabs.app/?src=github-claw-ed-readme). Teaching AP or Regents? We also build [Review Arcade Teacher HQ](https://macxlabs.app/teacherhq/?src=github-claw-ed-readme) — ready-to-run review-week sprints, made by a fellow teacher. If Claw-ED saves you prep time, you can also [support the project](https://macxlabs.app/support/?src=github-claw-ed-readme).
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v6.19.2026.3-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-v6.19.2026.4-blue" alt="Version">
   <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/v/clawed?color=blue" alt="PyPI"></a>
   <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/pyversions/clawed" alt="Python"></a>
   <a href="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml"><img src="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml/badge.svg" alt="CI"></a>

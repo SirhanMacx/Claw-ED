@@ -1,5 +1,24 @@
 # Changelog
 
+## v6.19.2026.4 — 2026-06-19
+
+### Added / Fixed — Vision-screened lesson images
+
+- Lesson decks now place ONLY images a vision model confirms actually depict the
+  topic. Previously the "vision filter" was a silent no-op (OpenRouter vision was
+  never implemented — it returned a permissive "GOOD" without sending the image),
+  so off-topic images slipped through (a Catherine the Great portrait on a
+  Columbus slide, a solar-system diagram on a crops slide). Now a real free vision
+  model screens every fetched image in ONE batched montage call (model fallback
+  chain absorbs free-tier rate limits), and fails CLOSED — a missing image beats a
+  wrong one. Watermarked stock, book covers/title pages, promo thumbnails, and
+  off-topic images are rejected; the slide renders cleanly as text-only.
+- Only collect image specs for slide types that embed (instruction, exit, grid);
+  vocabulary and primary-source slides are text-only.
+- Source-slide title/attribution overlap, stations overlap, and long-heading
+  crowding fixed; the `export_document` tool now shares the `compile_slides`
+  builder so every deck Claw-ED emits is identical.
+
 ## v6.19.2026.3 — 2026-06-19
 
 ### Fixed — Lesson deck image relevance + source-slide layout
