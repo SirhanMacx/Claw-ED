@@ -1,5 +1,11 @@
 # Changelog
 
+## v6.19.2026.5 — 2026-06-19
+
+Ships the v6.19.2026.4 vision-screened lesson images (that build did not publish —
+a strict-mypy CI error). Removes a no-op `style_profile` import that leaked into
+`llm.py` and tripped `mypy --strict` in CI. No runtime change.
+
 ## v6.19.2026.4 — 2026-06-19
 
 ### Added / Fixed — Vision-screened lesson images
