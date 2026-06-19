@@ -870,7 +870,9 @@ def run_setup_wizard(reset: bool = False) -> AppConfig:
             "  [bold]clawed lesson \"Topic\" -g 8 -s \"Subject\"[/bold]  -- Generate a lesson\n"
             "  [bold]clawed serve[/bold]                                 -- Launch the web dashboard\n"
             "  [bold]clawed setup --reset[/bold]                         -- Re-run this wizard anytime\n\n"
-            "[dim]Know a teacher who wants the lessons without the terminal? "
+            "[dim]❤️  Claw-ED is free forever. If it saves you prep time, you can "
+            "[link=https://macxlabs.app/support?src=clawed-cli]support the project[/link]. "
+            "Know a teacher who wants the lessons without the terminal? "
             "The done-for-you version is at [bold]macxlabs.app/teacherhq?src=clawed-cli[/bold].[/dim]",
             title="[bold green]\u2705 Ready[/bold green]",
             border_style="green",
@@ -1032,7 +1034,9 @@ def _run_onboarding_legacy() -> AppConfig:
             "  [bold]clawed ingest <path>[/bold] \u2014 Feed me your lesson plans\n"
             "  [bold]clawed serve[/bold]         \u2014 Launch the web dashboard\n\n"
             "[dim]Tip: Run [bold]clawed ingest <path>[/bold] anytime to add more materials.[/dim]\n\n"
-            "[dim]Know a teacher who wants the lessons without the terminal? "
+            "[dim]❤️  Claw-ED is free forever. If it saves you prep time, you can "
+            "[link=https://macxlabs.app/support?src=clawed-cli]support the project[/link]. "
+            "Know a teacher who wants the lessons without the terminal? "
             "The done-for-you version is at [bold]macxlabs.app/teacherhq?src=clawed-cli[/bold].[/dim]",
             title="[bold green]\u2705 Ready[/bold green]",
             border_style="green",
