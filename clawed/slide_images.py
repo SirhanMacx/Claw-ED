@@ -49,6 +49,26 @@ _FETCH_TIMEOUT = 15.0
 # operator explicitly opts in via EDUAGENT_IMAGE_FETCH_ALLOW_INTERNAL=1.
 
 
+# Paid stock-photo sites serve WATERMARKED preview images (an "alamy" / "getty"
+# overlay across the picture) — never usable in a classroom deck, and a licensing
+# problem. We reject them at fetch time so a watermarked image never even becomes a
+# candidate for the vision screen (which can miss a small watermark in a thumbnail).
+_STOCK_PHOTO_HOSTS = (
+    "alamy", "gettyimages", "shutterstock", "istockphoto", "dreamstime",
+    "123rf", "depositphotos", "stock.adobe", "agefotostock", "fotosearch",
+    "bigstock", "canstockphoto", "stockphoto", "stocksy",
+)
+
+
+def _is_stock_photo_url(url: str) -> bool:
+    """True if the URL host is a paid stock-photo site (serves watermarked previews)."""
+    try:
+        host = urlparse(url).netloc.lower()
+    except ValueError:
+        return False
+    return any(s in host for s in _STOCK_PHOTO_HOSTS)
+
+
 def _is_safe_image_url(url: str) -> bool:
     """Return True if ``url`` is safe to fetch as a remote image.
 
@@ -1152,6 +1172,7 @@ async def _fetch_web_scrape(
                     url
                     and url.startswith("http")
                     and not url.endswith(".svg")
+                    and not _is_stock_photo_url(url)
                     and _is_safe_image_url(url)
                 ):
                     image_url = url

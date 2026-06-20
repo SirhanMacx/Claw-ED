@@ -1,5 +1,14 @@
 # Changelog
 
+## v6.19.2026.6 — 2026-06-19
+
+### Fixed — No watermarked stock images in lesson decks
+
+- Block paid stock-photo domains (alamy, getty, shutterstock, istockphoto, ...) at
+  image-fetch time. Web image search returns watermarked stock previews that the
+  vision screen can miss in a small montage thumbnail; now those hosts are rejected
+  before they ever become candidates. License-clean sources (Wikimedia, LoC) pass.
+
 ## v6.19.2026.5 — 2026-06-19
 
 Ships the v6.19.2026.4 vision-screened lesson images (that build did not publish —
