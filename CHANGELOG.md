@@ -23,6 +23,9 @@
 - Verify teacher DOCX, student DOCX, and slides separately. Preserve export
   failures, label partial packages and drafts, and skip optional extras when core
   exports fail.
+- Render structured lesson sections in the dashboard and shared lesson view.
+- Correct the CLI's stale version string to match the package metadata and add a
+  regression check to catch future release-version drift.
 
 ## v6.19.2026.6 — 2026-06-19
 
