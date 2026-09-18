@@ -4,8 +4,7 @@ When a teacher rates a lesson highly (4-5 stars), the generation prompt
 and lesson structure are saved as a "proven template" that Ed references
 for future generations of similar topics.
 
-Competitive borrowing from Claw-STU's template compounding pattern,
-adapted for the teacher-facing agent.
+Templates preserve patterns the teacher has explicitly rated highly.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 # HEARTBEAT.md — Runtime health and self-monitoring
 
 > This document describes the operational health contract for Claw-ED. It
-> is the companion to `SOUL.md` (via Claw-STU): if SOUL.md describes *who
+> is the companion to `SOUL.md`: if SOUL.md describes *who
 > the teaching voice is*, this describes *how we know Claw-ED is still
 > working as intended*.
 
@@ -23,8 +23,7 @@ These must hold everywhere in the codebase. Violations are bugs.
    exception class explicitly or re-raises. Bare `except:` and bare
    `except Exception: pass` are forbidden in production code.
 2. **No circular imports.** All imports resolve at module load time.
-3. **Function size cap.** No function exceeds ~100 lines (relaxed from
-   STU's 50 due to ED's 69K LOC). Functions over 100 lines are tracked
+3. **Function size cap.** No function exceeds ~100 lines. Functions over 100 lines are tracked
    for decomposition.
 4. **Quality gate invariants.** All 12 pedagogical checks must run.
    Auto-retry on failure. No lesson ships below threshold.

@@ -327,7 +327,7 @@ class CurriculumKB:
 
     @staticmethod
     def _diversify_query(query: str) -> list[str]:
-        """Generate query variants for broader recall — competitive borrowing from Claw-STU.
+        """Generate query variants for broader recall.
 
         Returns the original query plus 2 diversified variants:
         1. Keyword-expanded: extracts content words and joins them

@@ -26,6 +26,11 @@
 - Render structured lesson sections in the dashboard and shared lesson view.
 - Correct the CLI's stale version string to match the package metadata and add a
   regression check to catch future release-version drift.
+- Make agent instructions report the actual files and delivery status, and match
+  the requested output scope instead of promising a fixed nine-file bundle.
+- Rewrite the README and website around the current teacher workflow, with clear
+  beta status, setup requirements, data boundaries, and review limitations.
+- Remove retired companion-project branding from current code and documentation.
 
 ### Upgrade notes
 

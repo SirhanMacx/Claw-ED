@@ -1,174 +1,112 @@
 # Claw-ED
 
-> Made by a teacher, for teachers.
+> Your curriculum. Your teaching voice. Lessons you can review and edit.
 
-An open-source CLI agent that generates complete lesson bundles — plans, handouts, slides, differentiated versions, games, and more — in your teaching voice. Feed it your files. It learns how you teach. Then it does the work for you.
+Claw-ED is a local-first AI teaching assistant. Start with your existing lesson plans, slides, and assessments; use them to draft new lessons, student materials, and presentations. You choose the model and review the result before using or sharing it.
 
-**Sibling project:** [Claw-STU](https://sirhanmacx.github.io/Claw-STU/) — the student-facing personal learning agent. Ed builds the lessons; Stuart helps students understand them.
+**Current release: v9.18.2026 · Beta · Python 3.11+**
 
-Claw-ED is maintained as part of [MacxLabs](https://macxlabs.app/?src=github-claw-ed-readme). Teaching AP or Regents? We also build [Review Arcade Teacher HQ](https://macxlabs.app/teacherhq/?src=github-claw-ed-readme) — ready-to-run review-week sprints, made by a fellow teacher. If Claw-ED saves you prep time, you can also [support the project](https://macxlabs.app/support/?src=github-claw-ed-readme).
+[Install](#setup) · [Website](https://sirhanmacx.github.io/Claw-ED/) · [Release notes](CHANGELOG.md) · [Security and privacy](SECURITY.md) · [Report an issue](https://github.com/SirhanMacx/Claw-ED/issues)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-v9.18.2026-blue" alt="Version">
-  <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/v/clawed?color=blue" alt="PyPI"></a>
-  <a href="https://pypi.org/project/clawed/"><img src="https://img.shields.io/pypi/pyversions/clawed" alt="Python"></a>
-  <a href="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml"><img src="https://github.com/SirhanMacx/Claw-ED/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="MIT"></a>
-  <a href="https://pepy.tech/project/clawed"><img src="https://static.pepy.tech/badge/clawed" alt="Downloads"></a>
-  <a href="https://github.com/SirhanMacx/Claw-ED/stargazers"><img src="https://img.shields.io/github/stars/SirhanMacx/Claw-ED?style=social" alt="Stars"></a>
-</p>
+## Start with one lesson
 
-```bash
-pip install clawed
-clawed
-```
+1. **Bring your materials.** Import a folder of PDF, DOCX, PPTX, TXT, or Markdown files. Claw-ED extracts text, indexes material for retrieval, and builds a teaching-style profile.
+2. **Give it a concrete task.** Specify the topic, class, learning objective, and materials you need. Existing material and your saved profile can inform the draft.
+3. **Review the outputs.** Check source accuracy, answer keys, pacing, accessibility, and layout. Edit the DOCX and PPTX files in your usual tools.
+4. **Choose what to deliver.** Keep files locally or use configured integrations. Student access and external publication need deliberate setup.
 
----
-
-## What it does
-
-You point it at a folder of your old lessons. It reads them, figures out how you teach, and generates new ones that match your style. Teacher DOCX, student DOCX, slides PPTX — all at once.
-
-```
-$ clawed
-
-  🍎 Hey Mr. Maccarello! What are we working on today?
-
-❯ Make me a lesson on the causes of the French Revolution for 10th grade
-
-  Searching your materials...
-  Found 3 docs on this topic.
-  Generating lesson package...
-
-  ✓ French_Revolution_teacher.docx
-  ✓ French_Revolution_student.docx
-  ✓ French_Revolution_slides.pptx
-```
-
-It also runs as a Telegram bot. Same brain, same files, same memory. Ask it to make something from your phone and the files show up in chat.
-
----
-
-## Features
-
-- **51 agent tools** — lesson gen, assessments, games, simulations, animations, curriculum maps, differentiation, project arcs, and more
-- **Quality gate with auto-retry** — 12 pedagogical checks (Bloom's progression, stimulus-based assessment, differentiation specificity, diversity audit) validate every lesson before delivery. Failures auto-retry with specific feedback.
-- **Uses your own images** — extracts maps, cartoons, diagrams from your PPTX files and puts them in generated slides (58K+ images from real curriculum). Vision model filters for quality.
-- **Writes like you** — AI-ism removal strips "delve", "utilize", "leverage" and 70+ other LLM tells so output reads like a teacher wrote it
-- **Structured jigsaws + creative activities** — generates timed rotation schedules, graphic organizers, role plays, debates, podcast scripts, gallery walks, mock trials
-- **Multi-day project arcs** — 5-day projects with choice boards, curated research databases, rubrics, debate prep sheets, and culminating performances (gallery walks, Philosophical Chairs)
-- **Export everywhere** — Teacher DOCX, Student DOCX, PPTX slides, Anki flashcards, Kahoot quizzes, Common Cartridge (.imscc for Canvas/Moodle), audio narration scripts, study guides
-- Interactive curriculum map — visualize how your topics, standards, and vocabulary connect
-- Animated educational videos (timelines, concept maps, cause-effect diagrams) via [Manim](https://www.manim.community/)
-- Ingests PDF, DOCX, PPTX, TXT, MD — extracts teaching style, images, and curriculum structure
-- Semantic search over your curriculum (ONNX MiniLM embeddings, FTS5, embedding-based image matching)
-- [Karpathy-style wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — compiles your files into organized markdown articles
-- [Self-distillation](https://arxiv.org/abs/2604.01193) — learns from your ratings and edits, updates its own soul.md
-- Web search (DuckDuckGo + Playwright), Google Drive integration, Google Classroom posting
-- 50-state standards alignment (NY Regents, TX STAAR, CA CAASPP, etc.)
-- Telegram bot with file delivery, interactive `/models` selector, shared session memory
-- **Autonomous scheduling** — morning prep auto-generates lessons at 6am, weekly planning drafts next week every Sunday, gap detection scans standards coverage, self-distillation improves output quality
-- **Chrome extension** — highlight text on any webpage, right-click, generate a lesson using that text as a primary source
-- **Real-time classroom mode** — WebSocket-based live sessions with slide control, timers, and polls. Students connect via class code.
-- **Exit ticket auto-grading** — keyword analysis + formative feedback with sentence starter suggestions
-- **Classroom memory** — persistent profile (student count, ELL/IEP needs, tech available) injected into every generation
-- **Adaptive feedback loop** — exit ticket results feed into next lesson (reteach/extend recommendations + parent notifications)
-- Works with Ollama, Anthropic, OpenAI, Google, OpenRouter — interactive model switching
-- **Central approval policy** — every tool classified by risk level (read_only/write_local/network_call/package_install). Sensitive actions require teacher confirmation.
-- DOCX, PPTX, PDF, HTML, MP4, TSV, CSV, IMSCC, TXT export
-- MCP server for Claude Code / VS Code integration
-- MIT licensed, no telemetry, no accounts
-
-### What makes this different
-
-Other AI tools generate one thing at a time. Claw-ED generates **everything at once** — lesson plan, handout, slides, differentiated versions, a review game, a learning journey, flashcards, a Kahoot quiz, and a research report. One request, 9+ files, in your voice.
-
-Other tools don't know how you teach. Claw-ED **reads your actual files** — your old lessons, your PPTX slides, your assessments — and learns your vocabulary, scaffolding patterns, and teaching style. The output sounds like you wrote it.
-
-Other tools run in the cloud. Claw-ED runs **on your machine**. Your files, your students, your lessons — none of it leaves your computer.
-
-Claw-ED's quality gate checks for missing lesson sections, summaries instead of source text, generic differentiation, missing checks for understanding, and exit-ticket progression. Both generation paths use the same final checks and bounded repair attempts. Unresolved failures return an error; incomplete exports are labeled partial, and packages with an unsuccessful quality review are labeled draft. Teachers should review generated content before classroom use.
-
-### Trust model
-
-Claw-ED is a **local-first tool** designed for a teacher's own machine. It reads your files, calls LLM APIs you configure, and writes to `~/.eduagent/`. The web API (if you run `clawed serve`) requires a bearer token and binds to localhost by default. Self-equipping installs packages in `--user` scope only. The Telegram bot runs as a background process on your machine. Nothing is sent anywhere except the LLM provider you choose.
-
-### Feature Maturity
-
-| Tier | Features |
-|------|----------|
-| **Stable** | Lesson / unit / assessment generation, multi-format export (DOCX, PPTX, PDF, Markdown, IMSCC), provider & model setup, voice & style learning, quality gate pipeline |
-| **Beta** | Telegram bot, Chrome extension, classroom mode, community sharing, scheduler automation |
-| **Experimental** | Features that still rely on in-memory state without persistent backing (e.g., live classroom sessions, saved sources, community lesson store). These work within a single process lifetime but do not yet survive restarts. |
-
----
-
-## Commands
-
-```bash
-clawed                                    # chat with Ed
-clawed ingest ~/Documents/Lessons/        # teach it your style
-clawed lesson "Topic" -g 8 -s "US History"  # daily lesson
-clawed unit "Topic" -g 9 -w 3            # 3-week unit
-clawed assess "Topic" --type crq          # CRQ, DBQ, quiz, rubric
-clawed game create "Topic" -g 8           # HTML learning game
-clawed simulate create "Topic"            # interactive simulation
-clawed differentiate -l lesson.json       # IEP/504/ELL mods
-clawed kb compile                         # compile curriculum wiki
-clawed kb query "question"                # search your wiki
-clawed kb lint                            # wiki health check
-clawed bot                                # start Telegram bot
-clawed drive auth                         # connect Google Drive
-clawed schedule list                      # scheduled tasks
-clawed setup                              # re-run setup
-clawed mcp-server                         # MCP for Claude Code
-```
-
----
-
-## How the voice learning works
-
-It reads your files and extracts patterns:
-- Lesson structure (I Do / We Do / You Do, stations, seminars)
-- Assessment format (CRQ, DBQ, exit ticket style, Do Now format)
-- Writing frameworks (TEA, RACE, CER)
-- Scaffolding (sentence starters, graphic organizers, word banks)
-- Source preferences, grouping strategies, classroom personality
-
-Stored in `~/.eduagent/workspace/soul.md`. You can read it, edit it, or let it evolve.
-
----
+The lesson bundle tool creates a teacher DOCX, student DOCX, and PPTX slides. Optional extensions can add differentiated materials, games, and other formats. The actual result depends on the request, model, installed extras, and successful exports; a fixed file count is not guaranteed.
 
 ## Setup
 
+Use Python 3.11 or newer in a virtual environment:
+
 ```bash
-pip install clawed
-clawed
+python -m venv .venv
+# macOS / Linux:
+source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade clawed
+clawed setup
 ```
 
-It walks you through picking a provider and an API key.
+Choose a provider and configure access in the setup wizard. Then try the Python commands:
 
-**Recommended:** [Ollama Pro](https://ollama.com/pricing) ($20/mo) — unlimited access to good models, easiest setup. For best output quality, use an Anthropic or OpenAI API key (pay per use). OpenRouter lets you pick from any model. Google Gemini has a free tier. Local Ollama runs fully offline for free.
+```bash
+clawed ingest ./my-lessons/
+clawed lesson "Causes of the French Revolution" -g 10 -s "Global History"
+clawed serve                         # local dashboard and API
+clawed --version
+```
 
----
+Run `clawed` for interactive use. The terminal interface uses the bundled Node interface when Node.js is available and falls back to the Python CLI otherwise. `clawed --python` selects the Python path explicitly. For command-specific options, use `clawed <command> --help`.
 
-## Dev setup
+[Getting started](docs/GETTING_STARTED.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
+
+## What is available today
+
+| Area | What it provides | What to check |
+| --- | --- | --- |
+| Curriculum ingestion | Text extraction, search, teaching-style profiles, and image extraction | Retrieval may miss or shorten relevant material; inspect the sources used |
+| Lesson production | Structured lesson content, teacher/student documents, and slides | Factual accuracy, source attribution, answer keys, and classroom fit |
+| Quality checks | Section, source-text, differentiation, and assessment checks with bounded repair attempts | These are automated checks, not proof that a lesson is ready to teach |
+| Dashboard and API | Local lesson views, teacher chat, exports, and student embed snippets | Teacher authentication and correct share-link setup |
+| Integrations | Telegram, Google Drive, Classroom-related tools, and MCP | Provider credentials, permissions, and destination readback |
+| Experimental features | Games, simulations, scheduling, live classroom sessions, and student-facing tools | Feature-specific limitations; some session state does not survive restarts |
+
+The release is intended for a single teacher per instance. It is not a multi-tenant school platform. Student-facing features remain experimental within Claw-ED.
+
+## What v9.18.2026 changes
+
+- Separate chat histories by conversation, lesson, and teacher/student audience.
+- Require exact, expiring, single-use approvals for protected actions and keep file tools out of protected application state.
+- Restore dashboard cookie authentication and repair student widget embeds.
+- Run the final quality gate on both main lesson-generation paths.
+- Verify the three core bundle exports and report incomplete delivery as partial, failed, or draft.
+
+Existing lessons and chat rows are preserved. Old unscoped approvals need a fresh request; recopy student widget snippets after upgrading. See the [changelog](CHANGELOG.md) for migration details.
+
+## Models and privacy
+
+Provider adapters support Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter. Model support and tool behavior vary by provider and task. API pricing, quotas, and model availability are set by the provider; Claw-ED does not include model usage.
+
+Configuration and working data are stored locally under `~/.eduagent/` by default. **Local storage does not mean all processing stays on the device.** Hosted models receive the prompts and selected content needed for a request. Web search, image retrieval, Telegram, Google integrations, and package installation also contact their respective services when used.
+
+For local inference, configure a locally running model and avoid cloud providers and network-dependent features. Review what you ingest and share; remove student identifiers where possible. The application is not a certification of compliance with school data policies.
+
+Teacher web routes require authentication. The dashboard uses an HttpOnly session cookie with same-origin checks on changes; API clients can use a bearer token. Student embeds use lesson share tokens and separate conversation tokens. Keep the server local unless you have configured access controls for the intended audience.
+
+Read [SECURITY.md](SECURITY.md) for the trust boundary and reporting process.
+
+## Useful commands
+
+```bash
+clawed                                  # interactive assistant
+clawed ingest ./my-lessons/              # import teaching materials
+clawed lesson "Topic" -g 8 -s "History"  # draft a lesson
+clawed unit "Topic" -g 9 -w 3            # draft a multi-week unit
+clawed assess "Topic" --type crq         # draft an assessment
+clawed kb query "question"               # search the curriculum wiki
+clawed bot                              # Telegram interface
+clawed serve                            # local dashboard and API
+clawed drive auth                       # configure Google Drive access
+clawed schedule list                    # inspect configured schedules
+clawed mcp-server                       # expose tools to an MCP client
+```
+
+## Development
 
 ```bash
 git clone https://github.com/SirhanMacx/Claw-ED.git
 cd Claw-ED
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
+ruff check .
+mypy --strict clawed
 pytest tests/
 ```
 
-PRs welcome. Built by a teacher in New York. If you're a teacher, a developer, or just curious — jump in.
+CI exercises Python 3.11 and 3.12, the TypeScript build, wheel installation, and Docker startup. Most tests use synthetic data or mocked model responses; passing CI does not establish teaching quality across live models. The bundled terminal build additionally uses Node.js and Bun; see [cli/README.md](cli/README.md).
 
-- [Getting Started](docs/GETTING_STARTED.md) — 5-minute setup guide
-- [FAQ](docs/FAQ.md) — common questions
-- [Issues](https://github.com/SirhanMacx/Claw-ED/issues)
-- [Discussions](https://github.com/SirhanMacx/Claw-ED/discussions)
-- [Security](SECURITY.md) — privacy and data handling
+Useful contributions include reproducible bugs, teacher-reviewed sample lessons, source-fidelity checks, and improvements to a complete import → draft → review → export workflow. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [roadmap](ROADMAP.md).
 
----
-
-MIT License
+Claw-ED's original code is released under the [MIT license](LICENSE). Third-party components retain their own terms. The project is maintained by [MacxLabs](https://macxlabs.app/?src=github-claw-ed-readme); [supporting development](https://macxlabs.app/support/?src=github-claw-ed-readme) is optional.
