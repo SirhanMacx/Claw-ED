@@ -11,7 +11,16 @@ was set AFTER the module was first imported by another test.
 See clawed/paths.py for the centralized path definitions.
 """
 
+import tomllib
+from pathlib import Path
+
 import pytest
+
+
+@pytest.fixture
+def release_version():
+    """The package manifest is the source of truth for release displays."""
+    return tomllib.loads((Path(__file__).parent.parent / "pyproject.toml").read_text())["project"]["version"]
 
 
 @pytest.fixture(autouse=True)

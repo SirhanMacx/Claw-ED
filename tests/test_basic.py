@@ -331,10 +331,10 @@ class TestLessonMaterialsModel:
 
 
 class TestVersion:
-    def test_version_string(self):
+    def test_version_string(self, release_version):
         from clawed import __version__
 
-        assert __version__ == "5.15.2026"
+        assert __version__ == release_version
 
 
 # ── Standards module ───────────────────────────────────────────────

@@ -167,7 +167,8 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.mypy]
-python_version = "3.11"
+# Use the running interpreter, including CI's Python 3.11/3.12 matrix, so
+# dependency stubs are parsed using the Python version they were installed for.
 strict = true
 warn_unreachable = true
 # Narrow relaxations for parts of the codebase that interact with
