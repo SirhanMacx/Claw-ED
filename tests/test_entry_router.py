@@ -1,4 +1,5 @@
 """Tests for the entry point router."""
+import tomllib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -120,7 +121,9 @@ def test_main_version_uses_python_package_version(capsys):
             main()
 
     captured = capsys.readouterr()
-    assert "5.15.2026 (Claw-ED)" in captured.out
+    manifest = Path(__file__).parent.parent / "pyproject.toml"
+    version = tomllib.loads(manifest.read_text())["project"]["version"]
+    assert f"{version} (Claw-ED)" in captured.out
     mock_run.assert_not_called()
 
 

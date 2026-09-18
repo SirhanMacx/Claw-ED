@@ -37,6 +37,28 @@ def path_is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def agent_file_allowed(path: Path, output_dir: Path) -> bool:
+    """Limit file tools to workspace/output without exposing application state.
+
+    Check the resolved target even when output_dir is an ancestor of the data
+    directory, or an in-bounds symlink points into credentials/approvals.
+    """
+    try:
+        target = path.expanduser().resolve()
+        root = data_dir().expanduser().resolve()
+        if target.is_relative_to(root):
+            # These legacy export destinations are also produced by the app's
+            # deterministic export/substitute-packet handlers.
+            for name in ("workspace", "exports", "sub_packets"):
+                allowed = root / name
+                if target.is_relative_to(allowed) and allowed.resolve() == allowed:
+                    return True
+            return False
+        return target.is_relative_to(output_dir.expanduser().resolve())
+    except (OSError, ValueError):
+        return False
+
+
 # ── Workspace ────────────────────────────────────────────────────────
 
 def workspace_dir() -> Path:

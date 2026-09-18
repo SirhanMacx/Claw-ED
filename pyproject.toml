@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clawed"
-version = "6.19.2026.6"
+version = "9.18.2026"
 description = "Your AI co-teacher. Generate lessons, games, slides, and assessments from your terminal. Learns your teaching voice, aligns to your state standards, and works with any LLM provider."
 readme = "README.md"
 license = "MIT"
@@ -167,7 +167,8 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.mypy]
-python_version = "3.11"
+# Use the running interpreter, including CI's Python 3.11/3.12 matrix, so
+# dependency stubs are parsed using the Python version they were installed for.
 strict = true
 warn_unreachable = true
 # Narrow relaxations for parts of the codebase that interact with

@@ -2,10 +2,11 @@
  * Claw-ED Student Chatbot Widget
  *
  * Self-contained, no-dependency JS widget that teachers paste into any webpage.
- * Usage: <script src="http://localhost:8000/static/widget.js" data-lesson-id="abc123"></script>
+ * Use the embed snippet from the lesson page or `clawed export share --embed`.
  *
  * Optional attributes:
  *   data-lesson-id   — lesson ID to chat about
+ *   data-share-token — lesson share token (required; never the teacher API token)
  *   data-teacher     — teacher name for header
  *   data-subject     — subject for header
  *   data-api-url     — base URL (default: script src origin)
@@ -15,8 +16,10 @@
 
     // Find our script tag to read data attributes
     var scripts = document.getElementsByTagName('script');
-    var thisScript = scripts[scripts.length - 1];
+    var thisScript = document.currentScript || scripts[scripts.length - 1];
     var lessonId = thisScript.getAttribute('data-lesson-id') || '';
+    var shareToken = thisScript.getAttribute('data-share-token') || thisScript.getAttribute('data-token') || '';
+    var conversationToken = null;
     var teacherName = thisScript.getAttribute('data-teacher') || 'Your Teacher';
     var subject = thisScript.getAttribute('data-subject') || '';
     var apiUrl = thisScript.getAttribute('data-api-url') || '';
@@ -27,6 +30,8 @@
         var idx = src.indexOf('/static/widget.js');
         apiUrl = idx !== -1 ? src.substring(0, idx) : '';
     }
+    // Accept older snippets that supplied the full endpoint as the base URL.
+    apiUrl = apiUrl.replace(/\/+$/, '').replace(/\/api\/chat(?:\/student)?$/, '');
 
     var headerText = 'Ask ' + teacherName + (subject ? ' about ' + subject : '');
 
@@ -139,7 +144,11 @@
 
     function sendMessage() {
         var question = input.value.trim();
-        if (!question || !lessonId) return;
+        if (!question || sendBtn.disabled) return;
+        if (!lessonId || !shareToken) {
+            appendMsg('assistant', 'This chat link is incomplete. Ask your teacher for a new embed link.');
+            return;
+        }
 
         appendMsg('user', question);
         input.value = '';
@@ -149,7 +158,7 @@
         var typing = appendMsg('typing', 'Thinking...');
 
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', apiUrl + '/api/chat', true);
+        xhr.open('POST', apiUrl + '/api/chat/student', true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
@@ -160,6 +169,7 @@
             if (xhr.status === 200) {
                 try {
                     var data = JSON.parse(xhr.responseText);
+                    conversationToken = data.conversation_token || conversationToken;
                     appendMsg('assistant', data.response || data.error || 'No response');
                 } catch (e) {
                     appendMsg('assistant', 'Error parsing response.');
@@ -168,7 +178,10 @@
                 appendMsg('assistant', 'Error: could not reach the server.');
             }
         };
-        xhr.send(JSON.stringify({ lesson_id: lessonId, question: question }));
+        xhr.send(JSON.stringify({
+            lesson_id: lessonId, share_token: shareToken,
+            question: question, conversation_token: conversationToken
+        }));
     }
 
     sendBtn.addEventListener('click', sendMessage);

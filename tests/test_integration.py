@@ -287,6 +287,15 @@ def _mock_master_content_json() -> dict:
             "among European powers by examining primary sources."
         ),
         "duration_minutes": 45,
+        "lesson_personality": "A conference of competing national movements",
+        "creative_activity": {
+            "activity_type": "debate", "title": "The Nationalism Conference",
+            "scenario": "Groups compare the goals of unification movements and multi-ethnic empires.",
+            "roles": ["Unification advocates", "Empire representatives"],
+            "student_directions": "Choose a position and support it with two details from the sources.",
+            "deliverable": "A position statement with evidence and a response to an opposing claim",
+            "debrief": "How can the same idea unite one group and divide another?", "time_minutes": 10,
+        },
         "vocabulary": [
             {
                 "term": "nationalism",
@@ -304,6 +313,7 @@ def _mock_master_content_json() -> dict:
                     "and majority decisions but by iron and blood."
                 ),
                 "attribution": "Otto von Bismarck, 1862",
+                "image_spec": "Otto von Bismarck portrait 1862 Prussia",
                 "scaffolding_questions": [
                     "What does Bismarck mean by 'iron and blood'?",
                     "How does this speech reflect nationalist sentiment?",
@@ -318,6 +328,7 @@ def _mock_master_content_json() -> dict:
                     "alongside older empires (Austria-Hungary, Ottoman, Russian)."
                 ),
                 "attribution": "Historical Atlas, 1871",
+                "image_spec": "Map of Europe 1871 German and Italian unification",
                 "scaffolding_questions": [
                     "Which new nations appear on this map?",
                     "How might their formation affect the balance of power?",
@@ -343,6 +354,8 @@ def _mock_master_content_json() -> dict:
         "direct_instruction": [
             {
                 "heading": "The Rise of Nationalism",
+                "hook": "Can a shared identity bring people together and pull an empire apart?",
+                "image_spec": "Map of German states before unification 1871",
                 "content": (
                     "Nationalism — the belief that a people sharing a common language, "
                     "history, and culture should form an independent nation — reshaped "
@@ -360,6 +373,12 @@ def _mock_master_content_json() -> dict:
             },
         ],
         "guided_notes": [
+            {"prompt": "Shared language, history, and ________ can support a national identity.",
+             "answer": "culture", "section_ref": "The Rise of Nationalism"},
+            {"prompt": "Nationalist movements sought political ________.",
+             "answer": "independence", "section_ref": "The Rise of Nationalism"},
+            {"prompt": "Bismarck's iron and blood policy emphasized military ________.",
+             "answer": "force", "section_ref": "The Rise of Nationalism"},
             {
                 "prompt": "________ unified Germany through 'iron and blood' policies.",
                 "answer": "Bismarck",

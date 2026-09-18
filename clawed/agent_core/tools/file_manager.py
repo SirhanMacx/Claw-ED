@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from clawed.agent_core.context import AgentContext, ToolResult
-from clawed.paths import path_is_within
+from clawed.paths import agent_file_allowed, path_is_within
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def _get_output_dir(context: AgentContext) -> Path:
 def _resolve_output_path(output_dir: Path, relative_path: str) -> Path | None:
     """Resolve a user-supplied path under output_dir, rejecting traversal."""
     candidate = (output_dir / relative_path).expanduser().resolve()
-    return candidate if path_is_within(candidate, output_dir) else None
+    return candidate if path_is_within(candidate, output_dir) and agent_file_allowed(candidate, output_dir) else None
 
 
 class FileListTool:
@@ -69,13 +69,13 @@ class FileListTool:
             else output_dir.resolve()
         )
         # Prevent path traversal outside output directory
-        if target is None:
+        if target is None or not agent_file_allowed(target, output_dir):
             return ToolResult(text="ERROR: path outside output directory")
         if not target.exists():
             return ToolResult(text=f"Directory not found: {target}")
 
         try:
-            files = sorted(target.glob(pattern))
+            files = sorted(f for f in target.glob(pattern) if agent_file_allowed(f, output_dir))
             if not files:
                 return ToolResult(text=f"No files matching '{pattern}' in {target}")
 
@@ -163,12 +163,14 @@ class FileOrganizeTool:
             elif action == "archive_old":
                 # Move files older than 30 days to archive/
                 import time
-                archive_dir = output_dir / "archive"
+                archive_dir = _resolve_output_path(output_dir, "archive")
+                if archive_dir is None:
+                    return ToolResult(text="ERROR: archive must stay inside the output directory")
                 archive_dir.mkdir(exist_ok=True)
                 cutoff = time.time() - (30 * 86400)
                 moved = 0
                 for f in output_dir.iterdir():
-                    if f.is_file() and f.stat().st_mtime < cutoff:
+                    if f.is_file() and agent_file_allowed(f, output_dir) and f.stat().st_mtime < cutoff:
                         shutil.move(str(f), str(archive_dir / f.name))
                         moved += 1
                 return ToolResult(text=f"Archived {moved} files older than 30 days.")

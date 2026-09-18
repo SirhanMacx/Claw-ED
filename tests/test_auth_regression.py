@@ -97,13 +97,13 @@ class TestClassroomStudentRoutes:
         assert "error" in data or resp.status_code == 404
 
 
-# ── Fix 4: Standing approval path tests ──────────────────────────────
+# ── Fix 4: Scoped approval path tests ────────────────────────────────
 
 
-class TestStandingApprovalPath:
-    """Prove get_standing_approval works end-to-end with the registry."""
+class TestScopedApprovalPath:
+    """Prove scoped approval consumption works end-to-end with the registry."""
 
-    def test_get_standing_approval_returns_approved(self, tmp_path):
+    def test_get_scoped_approval_returns_approved(self, tmp_path):
         from clawed.agent_core.approvals import ApprovalManager
 
         mgr = ApprovalManager(base_dir=tmp_path)
@@ -111,22 +111,22 @@ class TestStandingApprovalPath:
         pa = mgr.create(
             teacher_id="teacher1",
             action_description="Allow export",
-            action_payload={"tool_name": "export_document"},
+            action_payload={"tool_name": "export_document", "params": {}},
             agent_state={},
             transport="cli",
         )
-        mgr.approve(pa.id)
+        mgr.approve(pa.id, teacher_id=pa.teacher_id)
 
-        # Should find the standing approval
-        result = mgr.get_standing_approval("teacher1", "export_document")
+        # Consume the exact approved action once.
+        result = mgr.consume_approval("teacher1", "export_document", {})
         assert result is not None
-        assert result.status == "approved"
+        assert result.status == "consumed"
 
-    def test_get_standing_approval_returns_none_when_missing(self, tmp_path):
+    def test_get_scoped_approval_returns_none_when_missing(self, tmp_path):
         from clawed.agent_core.approvals import ApprovalManager
 
         mgr = ApprovalManager(base_dir=tmp_path)
-        result = mgr.get_standing_approval("teacher1", "nonexistent_tool")
+        result = mgr.consume_approval("teacher1", "nonexistent_tool", {})
         assert result is None
 
     def test_rejected_approval_not_returned(self, tmp_path):
@@ -136,13 +136,13 @@ class TestStandingApprovalPath:
         pa = mgr.create(
             teacher_id="teacher1",
             action_description="Reject this",
-            action_payload={"tool_name": "some_tool"},
+            action_payload={"tool_name": "some_tool", "params": {}},
             agent_state={},
             transport="cli",
         )
-        mgr.reject(pa.id)
+        mgr.reject(pa.id, teacher_id=pa.teacher_id)
 
-        result = mgr.get_standing_approval("teacher1", "some_tool")
+        result = mgr.consume_approval("teacher1", "some_tool", {})
         assert result is None  # Rejected does not count
 
     def test_pending_approval_not_returned(self, tmp_path):
@@ -152,16 +152,16 @@ class TestStandingApprovalPath:
         mgr.create(
             teacher_id="teacher1",
             action_description="Still pending",
-            action_payload={"tool_name": "pending_tool"},
+            action_payload={"tool_name": "pending_tool", "params": {}},
             agent_state={},
             transport="cli",
         )
 
-        result = mgr.get_standing_approval("teacher1", "pending_tool")
+        result = mgr.consume_approval("teacher1", "pending_tool", {})
         assert result is None  # Pending does not count
 
     @pytest.mark.asyncio
-    async def test_registry_allows_tool_with_standing_approval(
+    async def test_registry_allows_tool_with_scoped_approval(
         self, tmp_path, monkeypatch,
     ):
         """Integration: registry executes a gated tool when approval exists."""
@@ -174,11 +174,11 @@ class TestStandingApprovalPath:
         pa = mgr.create(
             teacher_id="test",
             action_description="Allow write",
-            action_payload={"tool_name": "approved_write"},
+            action_payload={"tool_name": "approved_write", "params": {}},
             agent_state={},
             transport="cli",
         )
-        mgr.approve(pa.id)
+        mgr.approve(pa.id, teacher_id=pa.teacher_id)
 
         # Create a write_local tool
         class _ApprovedTool:

@@ -11,8 +11,10 @@ Storage locations (consolidation planned for v0.2):
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
+import secrets
 import sqlite3
 import uuid
 from collections.abc import Iterator
@@ -133,6 +135,15 @@ class Database:
                 lesson_id TEXT,
                 role TEXT,
                 content TEXT,
+                conversation_id TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS chat_conversations (
+                id TEXT PRIMARY KEY,
+                token_hash TEXT UNIQUE NOT NULL,
+                lesson_id TEXT NOT NULL,
+                audience TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -235,6 +246,11 @@ class Database:
             conn.execute("SELECT scores_json FROM lessons LIMIT 1")
         except sqlite3.OperationalError:
             conn.execute("ALTER TABLE lessons ADD COLUMN scores_json TEXT")
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(chat_messages)")}
+        if "conversation_id" not in columns:
+            # Keep historical records, but do not assign mixed history to a new student.
+            conn.execute("ALTER TABLE chat_messages ADD COLUMN conversation_id TEXT")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_chat_conversation ON chat_messages(conversation_id, created_at)")
 
     def close(self) -> None:
         # No persistent connection to close; kept for API compatibility.
@@ -426,20 +442,52 @@ class Database:
 
     # -- chat messages ----------------------------------------------------
 
-    def insert_chat_message(self, lesson_id: str, role: str, content: str) -> str:
+    def create_chat_conversation(self, lesson_id: str, audience: str) -> tuple[str, str]:
+        """Issue an unguessable capability scoped to one lesson and audience."""
+        token = secrets.token_urlsafe(32)
+        conversation_id = self._new_id()
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO chat_conversations (id, token_hash, lesson_id, audience) VALUES (?,?,?,?)",
+                (conversation_id, hashlib.sha256(token.encode()).hexdigest(), lesson_id, audience),
+            )
+        return conversation_id, token
+
+    def get_chat_conversation(self, token: str, lesson_id: str, audience: str) -> str | None:
+        row = self._fetchone(
+            "SELECT id FROM chat_conversations WHERE token_hash=? AND lesson_id=? AND audience=?",
+            (hashlib.sha256(token.encode()).hexdigest(), lesson_id, audience),
+        )
+        return str(row["id"]) if row else None
+
+    def insert_chat_message(
+        self, lesson_id: str, role: str, content: str, *, conversation_id: str | None = None,
+    ) -> str:
         mid = self._new_id()
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO chat_messages (id, lesson_id, role, content) VALUES (?,?,?,?)",
-                (mid, lesson_id, role, content),
+                "INSERT INTO chat_messages (id, lesson_id, role, content, conversation_id) VALUES (?,?,?,?,?)",
+                (mid, lesson_id, role, content, conversation_id),
             )
         return mid
 
-    def get_chat_history(self, lesson_id: str, limit: int = 20) -> list[dict[str, Any]]:
+    def get_chat_history(
+        self, lesson_id: str, limit: int = 20, *, conversation_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         return self._fetchall(
-            "SELECT * FROM chat_messages WHERE lesson_id=? ORDER BY created_at DESC LIMIT ?",
-            (lesson_id, limit),
+            "SELECT * FROM chat_messages WHERE lesson_id=? AND conversation_id IS ? "
+            "ORDER BY created_at DESC, rowid DESC LIMIT ?",
+            (lesson_id, conversation_id, limit),
         )
+
+    def get_lesson_chat_activity(self, lesson_id: str) -> dict[str, Any]:
+        """Teacher-only aggregate activity; never reuse this as model history."""
+        return self._fetchone(
+            "SELECT COUNT(*) AS question_count, MAX(m.created_at) AS last_question "
+            "FROM chat_messages m LEFT JOIN chat_conversations c ON c.id=m.conversation_id "
+            "WHERE m.lesson_id=? AND m.role='user' AND (c.audience='student' OR m.conversation_id IS NULL)",
+            (lesson_id,),
+        ) or {"question_count": 0, "last_question": None}
 
     def count_chat_sessions(self) -> int:
         with self._connect() as conn:

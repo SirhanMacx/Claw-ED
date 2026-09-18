@@ -4,21 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Claw-ED -- Open Source CLI Teaching Assistant</title>
-<meta name="description" content="Claw-ED is an open source CLI agent that helps teachers generate lessons, assessments, and games from their own curriculum files. MIT licensed. Python.">
+<title>Claw-ED — Your AI Teaching Assistant</title>
+<meta name="description" content="Draft lessons, student materials, and slides from your existing curriculum. Choose your model, review the results, and keep control of delivery.">
 <meta name="keywords" content="clawed, CLI teaching assistant, open source education, lesson plan generator, AI for teachers, MIT license">
 <link rel="canonical" href="https://sirhanmacx.github.io/Claw-ED/">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sirhanmacx.github.io/Claw-ED/">
-<meta property="og:title" content="Claw-ED -- Open Source CLI Teaching Assistant">
+<meta property="og:title" content="Claw-ED — Your AI Teaching Assistant">
 <meta property="og:description" content="CLI agent that helps teachers generate lessons from their own files. Multi-provider, voice learning, 50-state standards. MIT licensed.">
 <meta property="og:image" content="https://sirhanmacx.github.io/Claw-ED/og-image.png">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Claw-ED -- Open Source CLI Teaching Assistant">
+<meta name="twitter:title" content="Claw-ED — Your AI Teaching Assistant">
 <meta name="twitter:description" content="CLI agent that helps teachers generate lessons from their own files. MIT licensed.">
 <meta name="twitter:image" content="https://sirhanmacx.github.io/Claw-ED/og-image.png">
 
@@ -33,7 +33,7 @@
   "applicationCategory": "EducationalApplication",
   "operatingSystem": "macOS, Windows, Linux",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "softwareVersion": "6.19.2026",
+  "softwareVersion": "9.18.2026",
   "author": {
     "@type": "Organization",
     "name": "Claw-ED",
@@ -41,13 +41,7 @@
   },
   "license": "https://opensource.org/licenses/MIT",
   "downloadUrl": "https://pypi.org/project/clawed/",
-  "programmingLanguage": "Python",
-  "isRelatedTo": {
-    "@type": "SoftwareApplication",
-    "name": "Claw-STU",
-    "url": "https://sirhanmacx.github.io/Claw-STU/",
-    "description": "Student-facing counterpart. Stuart, a personal learning agent that runs an adaptive teach-assess-adapt loop."
-  }
+  "programmingLanguage": "Python"
 }
 </script>
 
@@ -70,7 +64,7 @@
       "name": "Is my data sent anywhere?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Your curriculum files are processed and stored locally. The only external call is to your chosen AI provider for text generation. No accounts, no telemetry. With Ollama local, everything runs fully offline."
+        "text": "Working data is stored locally. Hosted AI providers receive prompts and selected content. Enabled search, image, messaging, and Google integrations contact their services. Local inference requires a local model; network-dependent features still need a connection."
       }
     },
     {
@@ -94,7 +88,7 @@
   --bg-alt: #16161f;
   --text: #c8c8d0;
   --text-bright: #e8e8ee;
-  --text-muted: #707080;
+  --text-muted: #a0a0ae;
   --accent: #7eb87e;
   --accent-dim: #5a8a5a;
   --border: #2a2a35;
@@ -115,6 +109,7 @@ body {
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 img { max-width: 100%; height: auto; }
 
 /* ── Layout ─────────────────────────────────────── */
@@ -157,21 +152,7 @@ header nav {
 }
 
 /* ── Sibling banner ─────────────────────────────── */
-.sibling {
-  background: var(--bg-alt);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.9rem 1.25rem;
-  margin: 1.5rem 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  text-align: center;
-}
 
-.sibling a {
-  color: #d4a843;
-  font-weight: 600;
-}
 
 /* ── Install block ──────────────────────────────── */
 .install-block {
@@ -345,335 +326,110 @@ footer a:hover { color: var(--text-bright); }
 
 <body>
 <div class="wrap">
-
-<!-- ── Header ─────────────────────────────────────── -->
 <header>
   <img src="ed-mascot.png" alt="Ed, the Claw-ED mascot">
   <h1>Claw-ED</h1>
-  <p class="tagline">Your AI co-teacher that writes like you teach. One command, 9 files.</p>
-  <nav>
+  <p class="tagline">Your curriculum. Your teaching voice.<br>Lessons you can review and edit.</p>
+  <p>v9.18.2026 &middot; Beta &middot; Python 3.11+</p>
+  <nav aria-label="Main navigation">
+    <a href="#workflow">How it works</a>
     <a href="#install">Install</a>
-    <a href="#features">Features</a>
-    <a href="#voice">Voice Learning</a>
-    <a href="#providers">Providers</a>
-    <a href="#commands">Commands</a>
-    <a href="GETTING_STARTED.md">Get Started</a>
-    <a href="FAQ.md">FAQ</a>
+    <a href="#features">Capabilities</a>
+    <a href="#privacy">Privacy</a>
     <a href="https://github.com/SirhanMacx/Claw-ED">GitHub</a>
   </nav>
-  <div class="sibling">
-    Student-facing counterpart: <a href="https://sirhanmacx.github.io/Claw-STU/">Claw-STU</a> &mdash; meet Stuart, the personal learning agent.
-  </div>
 </header>
 
-<!-- ── What it is ─────────────────────────────────── -->
-<section>
-  <p>
-    Claw-ED is a command-line tool that helps teachers generate lesson plans,
-    assessments, slides, interactive games, and more from their own curriculum
-    files. It learns your teaching style from your existing materials and produces
-    content that sounds like you wrote it.
-  </p>
-  <p>
-    It works with multiple AI providers (Anthropic, OpenAI, Google, Ollama) so
-    you can pick what fits your budget. Your files stay on your machine. The only
-    external call is to the AI provider you choose.
-  </p>
-  <p>
-    Requires Python 3.10+. Works on macOS, Windows, and Linux.
-  </p>
-</section>
-
-<!-- ── Install ────────────────────────────────────── -->
-<!-- For teachers who don't code -->
-<section id="for-teachers" style="background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:1.25rem 1.5rem;margin:1.5rem 0;">
-  <h2 style="margin-top:0;">Don't want the command line?</h2>
-  <p style="margin-bottom:0.6rem;">
-    Claw-ED is a developer tool. If you're a teacher who just wants the lessons &mdash; or you
-    know a colleague who does &mdash; there's a done-for-you version: ready-to-run AP &amp; Regents
-    review packs, no install required.
-  </p>
-  <p style="margin:0.6rem 0;">
-    <a href="https://macxlabs.app/teacherhq/?src=clawed-landing"><strong>Get the done-for-you version &rarr; Teacher HQ</strong></a>
-  </p>
-  <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0;">
-    A hosted, no-terminal version of Claw-ED is in the works &mdash;
-    <a href="https://macxlabs.app/?src=clawed-landing-hosted">see what MacxLabs is building &rarr;</a>
-  </p>
+<main>
+<section id="workflow">
+  <h2>Start with the lessons you already teach</h2>
+  <p>Claw-ED helps a teacher turn existing curriculum into new lesson drafts, student materials, and slides. Bring your files, describe the class and learning goal, then review and edit the results in the tools you already use.</p>
+  <ol>
+    <li><strong>Bring your materials.</strong> Import PDF, DOCX, PPTX, text, or Markdown files. Claw-ED extracts content for search and builds a teaching-style profile.</li>
+    <li><strong>Ask for a concrete lesson.</strong> Give the topic, grade, subject, and outputs you need. Your saved materials and profile can inform the draft.</li>
+    <li><strong>Review and edit.</strong> Check sources, answer keys, pacing, accessibility, and layout before classroom use.</li>
+    <li><strong>Choose how to deliver.</strong> Keep editable files locally or use integrations you have configured.</li>
+  </ol>
 </section>
 
 <section id="install">
-  <h2>Install</h2>
-  <div class="install-block">
-    <span class="comment"># install from PyPI</span><br>
-    <span class="prompt">$ </span><span class="cmd">pip install clawed</span><br>
-    <br>
-    <span class="comment"># run the setup wizard (picks your provider, creates workspace)</span><br>
-    <span class="prompt">$ </span><span class="cmd">clawed setup</span><br>
-    <br>
-    <span class="comment"># ingest your curriculum files</span><br>
-    <span class="prompt">$ </span><span class="cmd">clawed ingest ./my-lessons/</span><br>
-    <br>
-    <span class="comment"># generate a lesson</span><br>
-    <span class="prompt">$ </span><span class="cmd">clawed lesson "The Civil War"</span>
-  </div>
-  <p>
-    The setup wizard is interactive. It walks you through provider selection,
-    API key configuration, and workspace creation. If you have curriculum files
-    ready, it'll ingest those too.
-  </p>
-  <p>
-    <a href="https://pypi.org/project/clawed/">PyPI page</a> &middot;
-    <a href="https://github.com/SirhanMacx/Claw-ED#setup">Setup guide</a>
-  </p>
+  <h2>Try it with one lesson</h2>
+  <p>The current beta starts from a terminal. A local browser dashboard is available after setup. You will need Python 3.11 or newer and access to a supported model.</p>
+  <pre>python -m venv .venv
+# macOS / Linux:
+source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade clawed
+clawed setup
+clawed ingest ./my-lessons/
+clawed lesson "Causes of the French Revolution" -g 10 -s "Global History"</pre>
+  <p>Use <code>clawed serve</code> to start the local dashboard, or <code>clawed</code> for interactive use. Run <code>clawed &lt;command&gt; --help</code> for the options supported by that command.</p>
+  <p><a href="https://github.com/SirhanMacx/Claw-ED/blob/main/docs/GETTING_STARTED.md">Getting started</a> &middot; <a href="https://pypi.org/project/clawed/">Install from PyPI</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/docs/TROUBLESHOOTING.md">Troubleshooting</a></p>
 </section>
 
-<!-- ── Terminal session ───────────────────────────── -->
-<section>
-  <h2>What it looks like</h2>
-  <div class="terminal">
-    <div class="terminal-bar">
-      <div class="terminal-dots"><span></span><span></span><span></span></div>
-      clawed
-    </div>
-    <div class="terminal-body">
-<span class="prompt">$ </span><span class="cmd">clawed ingest ./history-10/</span>
-<span class="output">Scanning 47 files...</span>
-<span class="output">  PDF: 23  DOCX: 14  PPTX: 8  TXT: 2</span>
-<span class="output">Extracting voice profile...</span>
-<span class="highlight">Voice persona created: "Ms. Rivera"</span>
-<span class="output">  Vocabulary patterns: 342 extracted</span>
-<span class="output">  Scaffolding moves: inquiry-based, document analysis</span>
-<span class="output">  Assessment style: DBQ-heavy, evidence-based claims</span>
-<span class="output">Done. 47 files indexed.</span>
-<br>
-<span class="prompt">$ </span><span class="cmd">clawed lesson "Causes of World War II" --grade 10 --standards</span>
-<span class="output">Generating lesson package...</span>
-<span class="output">  Standards: CCSS.RH.9-10.2, CCSS.RH.9-10.6</span>
-<span class="output">  Quality gate: 12/12 checks passed</span>
-<span class="highlight">Saved 9 files:</span>
-<span class="output">  teacher_plan.docx      (lesson plan + answer keys)</span>
-<span class="output">  student_packet.docx    (handout, no answers)</span>
-<span class="output">  slides.pptx            (warm brown theme)</span>
-<span class="output">  review_game.html       (interactive)</span>
-<span class="output">  anki_flashcards.tsv    (spaced repetition)</span>
-<span class="output">  kahoot_quiz.csv        (import to Kahoot)</span>
-<span class="output">  narration.txt          (TTS-ready audio script)</span>
-<span class="output">  study_guide.txt        (review sheet)</span>
-<span class="output">  lesson.imscc           (Canvas/Moodle import)</span>
-    </div>
-  </div>
-</section>
-
-<!-- ── Features ────────────────────────────────────── -->
 <section id="features">
-  <h2>Features</h2>
+  <h2>Useful outputs, with an honest status</h2>
+  <p>The lesson bundle tool creates three core files from shared lesson content. Optional extensions can add other materials; a fixed file count is not guaranteed.</p>
+  <div class="terminal" role="group" aria-label="Core lesson bundle formats">
+    <div class="terminal-bar">Core lesson bundle</div>
+    <div class="terminal-body"><span class="highlight">Teacher plan &middot; DOCX</span>
+<span class="output">Teaching notes, timing, questions, and answer keys</span>
+
+<span class="highlight">Student packet &middot; DOCX</span>
+<span class="output">Student-facing activities and handouts</span>
+
+<span class="highlight">Lesson slides &middot; PPTX</span>
+<span class="output">An editable presentation built from the lesson content</span></div>
+  </div>
+  <p>Automated checks catch missing sections and some content problems. Failed checks trigger bounded repair attempts. Core bundle exports are checked individually; incomplete delivery is reported as partial or failed, and an unsuccessful package review is labeled draft. These checks do not replace teacher judgment.</p>
   <ul class="plain">
-    <li><strong>Voice learning</strong> -- ingests your files, extracts your teaching style, generates content that sounds like you</li>
-    <li><strong>Quality gate with auto-retry</strong> -- 12 pedagogical checks (Bloom's progression, primary source depth, differentiation specificity, diversity audit). Bad output gets rejected and regenerated with feedback.</li>
-    <li><strong>Your images, your slides</strong> -- extracts maps, cartoons, diagrams from your PPTX files. Vision model filters images for quality before embedding.</li>
-    <li><strong>Structured jigsaws + creative activities</strong> -- timed rotations, graphic organizers, role plays, debates, podcast scripts, gallery walks, mock trials</li>
-    <li><strong>Multi-day project arcs</strong> -- 5-day projects with choice boards, research databases, rubrics, debate prep sheets, culminating performances</li>
-    <li><strong>Export everywhere</strong> -- Teacher DOCX, Student DOCX, PPTX, Anki flashcards, Kahoot quizzes, Common Cartridge (.imscc), audio narration, study guides</li>
-    <li><strong>Autonomous scheduling</strong> -- Ed auto-generates missing lessons at 6am, drafts next week's plans Sunday night, scans standards coverage, and improves its own quality</li>
-    <li><strong>Chrome extension</strong> -- highlight text on any webpage, right-click, generate a lesson</li>
-    <li><strong>Real-time classroom</strong> -- live WebSocket sessions with slide control, timers, and polls. Students connect via class code.</li>
-    <li><strong>Exit ticket auto-grading</strong> -- keyword analysis + formative feedback with sentence starters</li>
-    <li><strong>Adaptive feedback loop</strong> -- exit ticket results feed into next lesson (reteach/extend recommendations)</li>
-    <li>Multi-provider -- Anthropic, OpenAI, Google Gemini, Ollama (local or cloud), OpenRouter</li>
-    <li>51+ agent tools, interactive HTML games, animated videos via Manim</li>
-    <li>50-state standards alignment -- CCSS, NGSS, C3, and state-specific databases</li>
-    <li>Telegram bot with file delivery, Google Drive integration, MCP server</li>
-    <li>Central approval policy -- every tool classified by risk level, sensitive actions require teacher confirmation</li>
-    <li>Data stays local -- no accounts, no telemetry, no data collection</li>
+    <li><strong>Curriculum and style:</strong> search imported material and use a saved teaching-style profile. Inspect retrieval and source attribution before relying on them.</li>
+    <li><strong>More teaching formats:</strong> assessment drafts, differentiation, games, simulations, and additional export formats, with feature-specific setup and limitations.</li>
+    <li><strong>Connected work:</strong> Telegram, Google integrations, and MCP tools when configured. Verify permissions and the actual delivery destination.</li>
+    <li><strong>Experimental classroom features:</strong> live sessions, student-facing tools, and scheduling. Some session state does not survive a restart.</li>
   </ul>
+  <p>Claw-ED is designed for one teacher per instance. It is not a multi-tenant school platform.</p>
 </section>
 
-<!-- ── Voice learning ─────────────────────────────── -->
-<section id="voice">
-  <h2>How voice learning works</h2>
-  <p>
-    When you run <code>clawed ingest</code>, Ed reads through your existing
-    lesson plans, worksheets, assessments, and slides. It extracts:
-  </p>
+<section id="release">
+  <h2>What changed in v9.18.2026</h2>
   <ul class="plain">
-    <li>Your vocabulary choices and phrasing patterns</li>
-    <li>How you structure lessons (warm-ups, activities, exits)</li>
-    <li>Your question framing style (Socratic, inquiry-based, direct, etc.)</li>
-    <li>Scaffolding moves you use repeatedly</li>
-    <li>Assessment preferences (multiple choice, DBQs, open response)</li>
+    <li>Chat histories are separated by conversation, lesson, and teacher/student audience.</li>
+    <li>Protected actions use exact, expiring, single-use approvals.</li>
+    <li>Dashboard login and student widget embeds have been repaired.</li>
+    <li>Both main lesson-generation paths use the same final quality gate.</li>
+    <li>Bundle delivery reports the files actually produced and the status of the review.</li>
   </ul>
-  <p>
-    This creates a voice persona stored locally on your machine. Every time
-    Ed generates content, it applies that persona so the output matches how
-    you actually teach. A physics teacher who relies on worked examples and
-    checkpoint questions will get different output than a history teacher
-    who leads with primary sources and Socratic seminars.
-  </p>
-  <p>
-    You can have multiple personas (e.g., one per course). The ingest command
-    can be pointed at different folders to build them.
-  </p>
-  <pre>
-# ingest AP History files into one persona
-clawed ingest ./ap-history/ --persona "AP-Rivera"
-
-# ingest regular History files into another
-clawed ingest ./history-10/ --persona "Gen-Rivera"
-
-# generate with a specific persona
-clawed lesson "The New Deal" --persona "AP-Rivera"</pre>
+  <p>Existing lessons and chat records are preserved. Old unscoped approvals need a fresh request; recopy student widget snippets after upgrading. <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/CHANGELOG.md">Read the changelog and upgrade notes.</a></p>
 </section>
 
-<!-- ── Providers ───────────────────────────────────── -->
 <section id="providers">
-  <h2>AI providers</h2>
-  <p>
-    Claw-ED is BYOK (bring your own key). You pick a provider during setup.
-    Switch anytime. Here's what's available:
-  </p>
-  <table class="providers">
-    <thead>
-      <tr>
-        <th>Provider</th>
-        <th>Models</th>
-        <th>Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Anthropic</td>
-        <td>Claude Opus 4.6 (1M ctx), Sonnet 4.6, Haiku 4.5</td>
-        <td>Best voice matching and pedagogy. 128K output. <span class="rec">Best quality</span></td>
-      </tr>
-      <tr>
-        <td>OpenAI</td>
-        <td>GPT-5.4, o3, GPT-4.1</td>
-        <td>Strong reasoning and coding. Reliable output across subjects.</td>
-      </tr>
-      <tr>
-        <td>Google</td>
-        <td>Gemini 3.1 Pro, 2.5 Flash</td>
-        <td>94.3% GPQA reasoning. Free tier available for trying things out.</td>
-      </tr>
-      <tr>
-        <td>Ollama Cloud</td>
-        <td>GLM-5.1, Gemma 4, Llama 4 Maverick (400B, 10M ctx)</td>
-        <td>~$20/mo unlimited. Best value for daily use. <span class="rec">Recommended</span></td>
-      </tr>
-      <tr>
-        <td>Ollama Local</td>
-        <td>Gemma 4, Llama 4, GLM-5, DeepSeek V3.2, Qwen 3</td>
-        <td>Free. Fully offline. Quality depends on hardware. DeepSeek V3.2 is 90% of GPT-5.4 at 1/50th cost.</td>
-      </tr>
-      <tr>
-        <td>OpenRouter</td>
-        <td>All models from all providers</td>
-        <td>One API key, access to everything. Pay per token. Best for trying multiple models.</td>
-      </tr>
-    </tbody>
-  </table>
-  <p>
-    For most teachers, Ollama Cloud at ~$20/month hits the sweet spot &mdash;
-    unlimited access to GLM-5.1, Gemma 4, and Llama 4. For the highest quality
-    voice matching, use Anthropic Claude Opus 4.6 (1M context window, 128K output).
-    Google Gemini has a free tier for trying things out. For fully offline use,
-    install Ollama locally with DeepSeek V3.2 or Gemma 4.
-  </p>
+  <h2>Choose your model</h2>
+  <p>Provider adapters support Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter. Configure a provider in <code>clawed setup</code>. Model compatibility and tool support vary by task.</p>
+  <p>Model access is separate from Claw-ED. Your provider sets pricing, quotas, and availability. For local inference, use a model running on your own machine; hardware and model choice affect speed and output quality.</p>
 </section>
 
-<!-- ── Commands ────────────────────────────────────── -->
-<section id="commands">
-  <h2>Commands</h2>
-  <pre>
-clawed                                    # chat with Ed
-clawed lesson "Topic" -g 8 -s "US History"  # daily lesson (9+ files)
-clawed unit "Topic" -g 9 -w 3            # multi-week unit
-clawed year-map "US History" -g 8         # 180-day curriculum plan
-clawed assess "Topic" --type crq          # CRQ, DBQ, quiz, rubric
-clawed game create "Topic" -g 8           # interactive HTML game
-clawed simulate create "Topic"            # interactive simulation
-clawed ingest ~/Documents/Lessons/        # teach it your style
-clawed differentiate -l lesson.json       # IEP/504/ELL mods
-clawed bot                                # start Telegram bot
-clawed serve                              # start web dashboard + API
-clawed mcp-server                         # MCP for Claude Code
-clawed schedule list                      # view autonomous tasks
-clawed drive auth                         # connect Google Drive
-clawed setup                              # re-run setup wizard</pre>
-  <p>
-    Most commands accept <code>--grade</code>, <code>--standards</code>,
-    <code>--persona</code>, and <code>--format</code> flags. Run
-    <code>clawed &lt;command&gt; --help</code> for details.
-  </p>
+<section id="privacy">
+  <h2>Local storage, clear data boundaries</h2>
+  <p>Configuration and working data are stored locally under <code>~/.eduagent/</code> by default. Hosted models receive prompts and selected content for the tasks you run. Web search, image retrieval, Telegram, Google integrations, and package installation contact their respective services when used.</p>
+  <p>For local inference, configure a local model and avoid cloud providers and network-dependent features. Review what you ingest and share, remove student identifiers where possible, and follow your school's data rules.</p>
+  <p>Teacher routes require authentication. The dashboard uses an HttpOnly cookie with same-origin checks for changes; API clients can use a bearer token. Student embeds use lesson share tokens and separate conversation tokens. Keep the server local unless access controls have been configured for your intended audience.</p>
+  <p><a href="https://github.com/SirhanMacx/Claw-ED/blob/main/SECURITY.md">Read the security and privacy model.</a></p>
 </section>
 
-<!-- ── Contributing ────────────────────────────────── -->
 <section id="contributing">
-  <h2>Contributing</h2>
-  <p>
-    Claw-ED is built in public. Contributions are welcome.
-  </p>
-
-  <h3>Getting started</h3>
-  <pre>
-git clone https://github.com/SirhanMacx/Claw-ED.git
-cd Claw-ED
-pip install -e ".[dev]"
-pytest</pre>
-
-  <h3>Where to help</h3>
-  <ul class="plain">
-    <li>
-      <a href="https://github.com/SirhanMacx/Claw-ED/issues">Issues</a> --
-      bug reports and feature requests
-    </li>
-    <li>
-      <a href="https://github.com/SirhanMacx/Claw-ED/discussions">Discussions</a> --
-      questions, ideas, show and tell
-    </li>
-    <li>
-      <a href="https://github.com/SirhanMacx/Claw-ED/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">Good first issues</a> --
-      if you're looking for something to pick up
-    </li>
-  </ul>
-
-  <h3>Things we'd especially appreciate</h3>
-  <ul class="plain">
-    <li>Standards databases for non-US curricula (UK, Canada, Australia, etc.)</li>
-    <li>File format support (more ingestion parsers)</li>
-    <li>Voice learning improvements</li>
-    <li>Quality gate refinements</li>
-    <li>Documentation and examples</li>
-    <li>Testing with different AI providers and models</li>
-  </ul>
-
-  <h3>Support the project</h3>
-  <p>
-    Claw-ED is free and open-source, and always will be. If it saves you prep time and
-    you'd like to help cover its development, you can
-    <a href="https://macxlabs.app/support/?src=clawed-landing">support the project</a>.
-    Entirely optional &mdash; thank you. &#10084;&#65039;
-  </p>
+  <h2>Help improve the complete teaching workflow</h2>
+  <p>The most useful contributions make import, drafting, review, and export work better together: reproducible bugs, source-fidelity checks, teacher-reviewed examples, and clearer output status.</p>
+  <p>CI checks Python 3.11 and 3.12, the TypeScript build, wheel installation, and Docker startup. Most model tests use synthetic data or mocks. Passing tests does not establish classroom quality across live models.</p>
+  <p><a href="https://github.com/SirhanMacx/Claw-ED/blob/main/CONTRIBUTING.md">Contributing guide</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/issues">Report an issue</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/ROADMAP.md">Roadmap</a></p>
+  <p>Claw-ED is maintained by <a href="https://macxlabs.app/?src=clawed-landing">MacxLabs</a>. <a href="https://macxlabs.app/support/?src=clawed-landing">Supporting development</a> is optional.</p>
 </section>
-
-<!-- ── Footer ──────────────────────────────────────── -->
+</main>
 <footer>
-  <p>
-    <a href="https://github.com/SirhanMacx/Claw-ED">GitHub</a> &middot;
-    <a href="https://pypi.org/project/clawed/">PyPI</a> &middot;
-    <a href="https://macxlabs.app/support/?src=clawed-landing-footer">Support</a> &middot;
-    <a href="https://sirhanmacx.github.io/Claw-STU/">Claw-STU</a> &middot;
-    <a href="GETTING_STARTED.html">Getting Started</a> &middot;
-    <a href="FAQ.html">FAQ</a> &middot;
-    <a href="https://github.com/SirhanMacx/Claw-ED/issues">Issues</a> &middot;
-    <a href="https://github.com/SirhanMacx/Claw-ED/discussions">Discussions</a>
-  </p>
-  <p style="margin-top: 0.5rem;">
-    MIT License &middot; v6.19.2026
-  </p>
+  <p><a href="https://github.com/SirhanMacx/Claw-ED">GitHub</a> &middot; <a href="https://pypi.org/project/clawed/">PyPI</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/docs/FAQ.md">FAQ</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/LICENSE">License</a></p>
+  <p>Claw-ED original code: MIT &middot; Third-party components retain their own terms.</p>
+  <p>v9.18.2026</p>
 </footer>
-
 </div>
 </body>
 </html>

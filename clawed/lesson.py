@@ -15,6 +15,14 @@ from clawed.models import AppConfig, DailyLesson, ProjectArc, TeacherPersona, Un
 
 logger = logging.getLogger(__name__)
 
+
+class LessonQualityError(ValueError):
+    """Generation exhausted its retries without producing a teachable lesson."""
+
+    def __init__(self, issues: list[str]) -> None:
+        self.issues = issues
+        super().__init__("Lesson quality checks failed: " + "; ".join(issues))
+
 # ── Quality gate ──────────────────────────────────────────────────────────
 # Phrases that indicate lazy, generic differentiation. If any differentiation
 # item contains one of these, the quality gate rejects the lesson for retry.
@@ -39,6 +47,15 @@ def _validate_quality(master: MasterContent) -> list[str]:
     lesson passed all checks.
     """
     issues: list[str] = []
+
+    if not master.objective.strip():
+        issues.append("Lesson objective is missing")
+    if not master.direct_instruction:
+        issues.append("Direct instruction is missing")
+    if not master.exit_ticket:
+        issues.append("Exit ticket is missing")
+    if not master.do_now.stimulus.strip() or not master.do_now.questions:
+        issues.append("Do Now needs a stimulus and student questions")
 
     # ── Primary sources ───────────────────────────────────────────────
     for ps in master.primary_sources:
@@ -345,14 +362,13 @@ async def generate_master_content(
         A fully populated MasterContent.
     """
     # v4.10.2026.1: Try the 4-phase split pipeline first
+    master = None
     if not os.environ.get("CLAWED_SINGLE_CALL_GEN"):
-        result = await _try_phased_pipeline(
+        master = await _try_phased_pipeline(
             lesson_number, unit, persona, include_homework, config, task_type, state, teacher_materials,
         )
-        if result is not None:
-            return result
 
-    # Legacy single-call path (fallback)
+    # Both generation paths share the final validation and bounded repair loop.
     lesson_brief = None
     for brief in unit.daily_lessons:
         if brief.lesson_number == lesson_number:
@@ -375,19 +391,23 @@ async def generate_master_content(
         config = route_model(task_type, config)
     client = LLMClient(config)
 
-    master = await client.safe_generate_json(
-        prompt=prompt,
-        model_class=MasterContent,
-        system=system,
-        temperature=0.6,
-        max_tokens=12000,
-    )
+    if master is None:
+        master = await client.safe_generate_json(
+            prompt=prompt,
+            model_class=MasterContent,
+            system=system,
+            temperature=0.6,
+            max_tokens=12000,
+        )
+
+    master = await _run_quality_gate(master, client, prompt, system)
 
     if brain_ctx_obj is not None:
         master.brain_context = brain_ctx_obj
         master.source_attributions = list(brain_ctx_obj.citations)
 
-    master = await _run_quality_gate(master, client, prompt, system)
+    if not include_homework:
+        master.homework = None
     await _run_teaching_critic(master, client)
     _write_brain_results(master, unit.title, lesson_number)
 
@@ -413,7 +433,6 @@ async def _try_phased_pipeline(
             include_homework=include_homework, config=config,
             task_type=task_type, state=state, teacher_materials=teacher_materials,
         )
-        _write_brain_results(master, unit.title, lesson_number)
         return master
     except Exception as phased_error:
         logger.warning(
@@ -574,11 +593,7 @@ async def _run_quality_gate(
 
     remaining = _validate_quality(master)
     if remaining:
-        logger.warning(
-            "Delivering lesson with %d quality warnings after %d retries:\n%s",
-            len(remaining), _MAX_QUALITY_RETRIES,
-            "\n".join(f"  - {i}" for i in remaining),
-        )
+        raise LessonQualityError(remaining)
     return master
 
 

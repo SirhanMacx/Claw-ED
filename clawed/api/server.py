@@ -20,7 +20,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from clawed.api.deps import get_db, set_db
+from clawed.api.middleware import StudentWidgetCORS
 from clawed.database import Database
+from clawed.widget import build_embed_snippet
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +91,7 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
 
     Returns the configured *Jinja2Templates* instance for use by page routes.
     """
-    # CORS — single middleware instance.
+    # Teacher API CORS. The student widget has a separate public scope below.
     # Supports localhost + Chrome extension origins (regex for extension IDs).
     cors_origins_raw = os.environ.get("EDUAGENT_CORS_ORIGINS", "")
     if cors_origins_raw:
@@ -107,6 +109,7 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
         allow_methods=["GET", "POST"],
         allow_headers=["Authorization", "Content-Type"],
     )
+    app.add_middleware(StudentWidgetCORS)
 
     # Static files
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
@@ -552,11 +555,7 @@ async def _page_lesson_detail(request: Request, lesson_id: str, templates: Jinja
         logger.warning("Failed to parse scores_json for %s: %s", lesson_id, exc)
         scores_data = None
     feedback_list = db.get_feedback_for_lesson(lesson_id)
-    embed_snippet = (
-        f'<script src="/static/widget.js" '
-        f'data-lesson-id="{lesson_id}" '
-        f'data-api-url="/api/chat/student"></script>'
-    )
+    embed_snippet = build_embed_snippet(str(request.base_url), lesson_id, lesson_row["share_token"])
 
     class_codes = []
     try:
@@ -890,14 +889,13 @@ async def _page_students(request: Request, templates: Jinja2Templates) -> HTMLRe
     units = db.list_units()
     for u in units[:10]:
         for lesson in db.list_lessons(u["id"]):
-            history = db.get_chat_history(lesson["id"], limit=100)
-            user_msgs = [m for m in history if m.get("role") == "user"]
-            if user_msgs:
+            activity = db.get_lesson_chat_activity(lesson["id"])
+            if activity["question_count"]:
                 lesson_chats.append({
                     "lesson_title": lesson.get("title") or "Untitled",
                     "lesson_id": lesson["id"],
-                    "question_count": len(user_msgs),
-                    "last_question": (user_msgs[0].get("created_at") or "")[:16] if user_msgs else "",
+                    "question_count": activity["question_count"],
+                    "last_question": (activity["last_question"] or "")[:16],
                 })
     lesson_chats.sort(key=lambda x: x["question_count"], reverse=True)
 

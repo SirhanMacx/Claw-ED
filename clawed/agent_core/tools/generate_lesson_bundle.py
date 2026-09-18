@@ -10,6 +10,15 @@ from clawed.failure_codes import FailureCode
 
 logger = logging.getLogger(__name__)
 
+_CORE_ROLES = ("teacher", "student", "slides")
+
+
+def _verified_output(path: Any) -> Path:
+    output = Path(path)
+    if not output.is_file() or output.stat().st_size == 0:
+        raise ValueError(f"Compiler did not produce a nonempty file: {output.name}")
+    return output
+
 _CJK_RANGES = [
     (0x4E00, 0x9FFF),    # CJK Unified Ideographs
     (0x3400, 0x4DBF),    # CJK Extension A
@@ -171,15 +180,17 @@ def _validate_and_humanize(master: Any, topic: str, report: Any) -> None:
 
 async def _compile_core_views(
     master: Any, images: dict[str, Any], output_dir: Any, config: Any,
-) -> tuple[list[Any], list[str], list[str]]:
-    """Compile teacher DOCX, student DOCX, and PPTX. Returns (files, side_effects, errors)."""
+) -> tuple[list[Any], list[str], list[str], dict[str, Path]]:
+    """Compile and verify each required output, tracking roles independently."""
     generated_files: list[Any] = []
     side_effects: list[str] = []
     errors: list[str] = []
+    core_files: dict[str, Path] = {}
 
     try:
         from clawed.compile_teacher import compile_teacher_view
-        teacher_path = await compile_teacher_view(master, images, output_dir)
+        teacher_path = _verified_output(await compile_teacher_view(master, images, output_dir))
+        core_files["teacher"] = teacher_path
         generated_files.append(teacher_path)
         side_effects.append(f"Teacher lesson plan DOCX: {teacher_path.name}")
     except Exception as e:
@@ -188,7 +199,8 @@ async def _compile_core_views(
 
     try:
         from clawed.compile_student import compile_student_view
-        student_path = await compile_student_view(master, images, output_dir)
+        student_path = _verified_output(await compile_student_view(master, images, output_dir))
+        core_files["student"] = student_path
         generated_files.append(student_path)
         side_effects.append(f"Student packet DOCX: {student_path.name}")
     except Exception as e:
@@ -197,14 +209,15 @@ async def _compile_core_views(
 
     try:
         from clawed.compile_slides import compile_slides
-        pptx_path = await compile_slides(master, images, output_dir)
+        pptx_path = _verified_output(await compile_slides(master, images, output_dir))
+        core_files["slides"] = pptx_path
         generated_files.append(pptx_path)
         side_effects.append(f"Slideshow PPTX: {pptx_path.name}")
     except Exception as e:
         logger.error("Slides compile failed: %s", e)
         errors.append(f"Slideshow PPTX failed: {e}")
 
-    return generated_files, side_effects, errors
+    return generated_files, side_effects, errors, core_files
 
 
 async def _run_auto_chain(
@@ -310,7 +323,7 @@ async def _run_auto_chain(
 
 async def _run_quality_review(
     master: Any, config: Any, persona: Any,
-    standards_list: list[Any], generated_files: list[Any], report: Any,
+    standards_list: list[Any], core_files: dict[str, Path], report: Any,
 ) -> float | None:
     """Run quality review and voice scoring. Returns voice_score or None."""
     voice_score = None
@@ -322,7 +335,7 @@ async def _run_quality_review(
         master_json = master.model_dump_json(indent=2)[:3000]
         review = await llm.review_lesson_package(
             lesson_json=master_json, standards_present=bool(standards_list),
-            has_handout=len(generated_files) >= 2, has_slideshow=len(generated_files) >= 3,
+            has_handout="student" in core_files, has_slideshow="slides" in core_files,
         )
         report.quality_review_passed = review.get("passed", False)
         report.quality_review_issues = review.get("issues", [])
@@ -341,6 +354,7 @@ async def _run_quality_review(
         logger.warning("Quality review/voice check failed: %s", e)
         report.quality_review_passed = False
         report.quality_review_issues = [f"Review failed: {type(e).__name__}"]
+        report.warnings.append(f"Quality review could not finish: {type(e).__name__}")
     return voice_score
 
 
@@ -348,15 +362,27 @@ def _build_bundle_response(
     master: Any, generated_files: list[Any], errors: list[str],
     side_effects: list[str], kb_prompt_section: str, report: Any,
     standards_list: list[Any], voice_score: float | None,
+    core_files: dict[str, Path],
 ) -> ToolResult:
     """Format the final ToolResult response for the bundle."""
     lines: list[str] = []
+    missing = [role for role in _CORE_ROLES if role not in core_files]
+    status = "complete"
+    if not core_files:
+        status = "failed"
+    elif missing or errors:
+        status = "partial"
+    elif report.quality_review_passed is not True or report.voice_check_passed is not True:
+        status = "draft"
 
     if generated_files:
-        lines.append(f"Complete teaching package for: **{master.title}**")
+        label = {
+            "complete": "Complete teaching package", "partial": "Partial teaching package",
+            "draft": "Draft teaching package — quality review needs attention", "failed": "Core package failed",
+        }[status]
+        lines.append(f"{label} for: **{master.title}**")
         lines.append(f"{len(generated_files)} files generated:\n")
-        core = [f for f in generated_files if f.suffix in (".docx", ".pptx")
-                and "diff_" not in f.name]
+        core = list(core_files.values())
         diffs = [f for f in generated_files if "diff_" in f.name]
         extras = [f for f in generated_files if f.suffix in (".html", ".md") or f not in core + diffs]
         if core:
@@ -391,8 +417,12 @@ def _build_bundle_response(
             lines.append(f"\nQuality: {' | '.join(quality_parts)}")
     else:
         lines.append(f"Failed to generate package for: {master.title}")
-        for err in errors:
-            lines.append(f"  - {err}")
+
+    if missing:
+        lines.append(f"\nMissing required outputs: {', '.join(missing)}.")
+    if errors:
+        lines.append("\nExport errors:")
+        lines.extend(f"  - {err}" for err in errors)
 
     if kb_prompt_section:
         lines.append("\nReferenced your existing materials on this topic.")
@@ -401,7 +431,12 @@ def _build_bundle_response(
         for w in report.warnings[:5]:
             lines.append(f"  - {w}")
 
-    return ToolResult(text="\n".join(lines), files=generated_files, side_effects=side_effects)
+    return ToolResult(
+        text="\n".join(lines), files=generated_files, side_effects=side_effects,
+        data={"status": status, "required_outputs": {role: str(path) for role, path in core_files.items()},
+              "missing_outputs": missing, "errors": errors, "warnings": report.warnings,
+              "quality_review_passed": report.quality_review_passed},
+    )
 
 
 class GenerateLessonBundleTool:
@@ -519,13 +554,15 @@ class GenerateLessonBundleTool:
         )
 
         # Generate MasterContent
-        from clawed.lesson import generate_master_content
+        from clawed.lesson import LessonQualityError, generate_master_content
         logger.info("Generating master content for '%s' (grade=%s, subject=%s)", topic, grade, subject)
         try:
             master = await generate_master_content(
                 lesson_number=1, unit=unit, persona=persona, config=config,
                 state=state, teacher_materials=kb_prompt_section,
             )
+        except LessonQualityError as e:
+            return ToolResult(text=str(e), data={"status": "failed", "errors": e.issues})
         except Exception as e:
             logger.error("NLAH_FAILURE=%s: %s", FailureCode.API_FAILURE, e)
             return ToolResult(text=f"[{FailureCode.API_FAILURE}] Failed to generate lesson: {type(e).__name__}")
@@ -551,10 +588,12 @@ class GenerateLessonBundleTool:
             output_dir = Path(config.output_dir).expanduser().resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        generated_files, side_effects, errors = await _compile_core_views(master, images, output_dir, config)
+        generated_files, side_effects, errors, core_files = await _compile_core_views(
+            master, images, output_dir, config,
+        )
 
         # Track generation
-        if generated_files:
+        if len(core_files) == len(_CORE_ROLES):
             try:
                 from clawed.agent_core.quality import record_generation
                 record_generation(
@@ -567,19 +606,21 @@ class GenerateLessonBundleTool:
 
         # Quality review + voice scoring
         voice_score = await _run_quality_review(
-            master, config, persona, standards_list, generated_files, report,
+            master, config, persona, standards_list, core_files, report,
         )
 
         # Auto-chain
-        await _run_auto_chain(
-            master, persona, config, output_dir, subject, grade, topic,
-            generated_files, side_effects,
-        )
+        if len(core_files) == len(_CORE_ROLES):
+            await _run_auto_chain(
+                master, persona, config, output_dir, subject, grade, topic,
+                generated_files, side_effects,
+            )
 
         # Quality gate warning
         try:
             qt = getattr(config, "quality_threshold", 3.5)
             if voice_score and voice_score < qt and voice_score > 0:
+                report.voice_check_passed = False
                 report.warnings.append(
                     f"Quality below threshold ({voice_score:.1f}/{qt}) — "
                     "consider regenerating with more specific instructions"
@@ -589,5 +630,5 @@ class GenerateLessonBundleTool:
 
         return _build_bundle_response(
             master, generated_files, errors, side_effects,
-            kb_prompt_section, report, standards_list, voice_score,
+            kb_prompt_section, report, standards_list, voice_score, core_files,
         )

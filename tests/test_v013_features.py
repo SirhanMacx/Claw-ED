@@ -461,15 +461,15 @@ class TestDashboardPage:
 
 
 class TestVersion:
-    def test_version_string(self):
+    def test_version_string(self, release_version):
         from clawed import __version__
 
-        assert __version__ == "5.15.2026"
+        assert __version__ == release_version
 
-    def test_version_in_health_endpoint(self, client):
+    def test_version_in_health_endpoint(self, client, release_version):
         resp = client.get("/api/health")
         data = resp.json()
-        assert data["version"] == "5.15.2026"
+        assert data["version"] == release_version
 
 
 # ═══════════════════════════════════════════════════════════════════════════

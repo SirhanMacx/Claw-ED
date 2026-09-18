@@ -400,7 +400,7 @@ class TestRequestApprovalTool:
             result = await tool.execute(
                 {
                     "action_description": "Send grade report",
-                    "action_payload": {"grades": [90, 85]},
+                    "action_payload": {"tool_name": "export_document", "params": {"format": "pdf"}},
                 },
                 _ctx(),
             )

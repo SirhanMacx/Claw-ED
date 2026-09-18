@@ -15,7 +15,9 @@ from clawed.agent_core.tools.file_manager import (
 
 
 @pytest.fixture
-def output_dir(tmp_path):
+def output_dir(tmp_path, monkeypatch):
+    # Production keeps application state and lesson exports in separate roots.
+    monkeypatch.setenv("EDUAGENT_DATA_DIR", str(tmp_path / "app-state"))
     d = tmp_path / "clawed_output"
     d.mkdir()
     (d / "lesson1.docx").write_text("lesson content")

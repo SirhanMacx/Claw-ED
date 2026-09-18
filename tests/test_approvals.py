@@ -46,7 +46,7 @@ class TestApprovalManager:
             teacher_id="t1", action_description="test",
             action_payload={}, agent_state={}, transport="cli",
         )
-        mgr.approve(pa.id)
+        mgr.approve(pa.id, teacher_id=pa.teacher_id)
         loaded = mgr.load(pa.id)
         assert loaded.status == "approved"
 
@@ -56,7 +56,7 @@ class TestApprovalManager:
             teacher_id="t1", action_description="test",
             action_payload={}, agent_state={}, transport="cli",
         )
-        mgr.reject(pa.id)
+        mgr.reject(pa.id, teacher_id=pa.teacher_id)
         loaded = mgr.load(pa.id)
         assert loaded.status == "rejected"
 

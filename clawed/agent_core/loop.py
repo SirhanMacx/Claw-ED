@@ -11,7 +11,7 @@ from typing import Any, Protocol
 
 from clawed.agent_core.context import AgentContext, ToolResult
 from clawed.agent_core.tools.base import ToolRegistry
-from clawed.gateway_response import GatewayResponse
+from clawed.gateway_response import Button, GatewayResponse
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,18 @@ async def run_agent_loop(
 
                 all_files.extend(result.files)
                 all_side_effects.extend(result.side_effects)
+
+                if result.approval_id:
+                    # The teacher sees the persisted action, not an LLM paraphrase.
+                    return GatewayResponse(text=result.text, files=all_files, buttons=[
+                        Button(label="Approve once", callback_data=f"approve:{result.approval_id}"),
+                        Button(label="Reject", callback_data=f"reject:{result.approval_id}"),
+                    ])
+
+                if name == "generate_lesson_bundle" and result.data.get("status") in {"partial", "failed", "draft"}:
+                    # Preserve verified delivery status instead of inviting an
+                    # optimistic model summary of a failed or incomplete export.
+                    return GatewayResponse(text=result.text, files=all_files)
 
                 # Convert ToolResult content to string for the message
                 content = result.text

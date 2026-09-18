@@ -3,7 +3,11 @@
   "subject": "Social Studies",
   "grade_level": "8",
   "topic": "Colonial Grievances and the Road to Revolution",
-  "standards": ["C3 D2.His.1.6-8", "C3 D2.Civ.2.6-8", "CCSS.ELA-LITERACY.RH.6-8.2"],
+  "standards": [
+    "C3 D2.His.1.6-8",
+    "C3 D2.Civ.2.6-8",
+    "CCSS.ELA-LITERACY.RH.6-8.2"
+  ],
   "objective": "Students will analyze three major causes of the American Revolution by examining primary source documents and connecting colonial grievances to Enlightenment ideals of natural rights.",
   "duration_minutes": 45,
   "vocabulary": [
@@ -45,7 +49,7 @@
       "source_type": "text_excerpt",
       "content_text": "There is something absurd in supposing a continent to be perpetually governed by an island. In no instance hath nature made the satellite larger than its primary planet; and as England and America, with respect to each other, reverse the common order of nature, it is evident they belong to different systems. England to Europe: America to itself.",
       "attribution": "Thomas Paine, Common Sense, January 1776",
-      "image_spec": "",
+      "image_spec": "Thomas Paine Common Sense 1776 title page",
       "scaffolding_questions": [
         "What is Paine's main argument in this excerpt?",
         "What metaphor does Paine use to describe the relationship between England and America?",
@@ -58,7 +62,7 @@
       "source_type": "text_excerpt",
       "content_text": "We are taxed without our consent, expressed by ourselves or our representatives. We are therefore — SLAVES. The Parliament of Great Britain virtually represents the whole empire. But a virtual representation is no representation at all — it is a fiction invented to justify theft from those who have no voice.",
       "attribution": "Colonial broadside circulated in Boston, 1765",
-      "image_spec": "",
+      "image_spec": "Stamp Act protest 1765 colonial broadside",
       "scaffolding_questions": [
         "What word does the author use to describe colonists under unjust taxation?",
         "What argument does the author make against 'virtual representation'?",
@@ -71,7 +75,7 @@
       "source_type": "text_excerpt",
       "content_text": "The people shall be judge; for who shall be judge whether his trustee or deputy acts well and according to the trust reposed in him, but he who deputes him, and must, by having deputed him, have still a power to discard him when he fails in his trust?",
       "attribution": "John Locke, Second Treatise of Government, 1689",
-      "image_spec": "",
+      "image_spec": "John Locke Second Treatise of Government 1689 title page",
       "scaffolding_questions": [
         "According to Locke, who has the power to judge whether a government is doing its job?",
         "What can the people do if their government breaks their trust?",
@@ -104,19 +108,20 @@
         "Townshend Acts (1767): taxed imported goods like glass, paint, paper, and tea.",
         "Tea Act (1773): gave the East India Company a monopoly on tea sales, undercutting colonial merchants."
       ],
-      "image_spec": ""
+      "image_spec": "Stamp Act 1765 colonial protest newspaper",
+      "hook": "Would you accept a tax if you had no voice in deciding it?"
     },
     {
       "heading": "Enlightenment Ideas Fuel Resistance",
       "content": "Colonists did not just complain — they had a philosophical framework. John Locke argued that governments exist to protect natural rights (life, liberty, property), and that people have the right to remove a government that violates those rights. Colonial leaders used Locke directly in their arguments against Parliament.",
-      "teacher_script": "Here is where it gets interesting. The colonists weren't just angry — they had a language for their anger. John Locke gave them that language. Read PS-3 with me. Locke says the PEOPLE are the judge of whether the government is doing its job. If it fails... they can remove it. Every time you see the phrase 'natural rights' in a colonial document, you're seeing Locke's fingerprints.",
+      "teacher_script": "Here is where it gets interesting. The colonists weren't just angry — they had a language for their anger. John Locke gave them that language. Read PS-3 with me. Locke says the PEOPLE are the judge of whether the government is doing its job. If it fails... they can remove it. Every time you see the phrase 'natural rights' in a colonial document, you're seeing Locke's fingerprints. What condition, according to Locke, justifies replacing a government?",
       "key_points": [
         "John Locke: government derives power from the consent of the governed.",
         "Natural rights — life, liberty, property — cannot be taken away by any government.",
         "If a government breaks the social contract, the people have the right to replace it.",
         "Colonists saw Parliament's taxes as a violation of their natural right to property."
       ],
-      "image_spec": ""
+      "image_spec": "John Locke portrait natural rights"
     }
   ],
   "guided_notes": [
@@ -149,6 +154,16 @@
       "prompt": "Colonists responded to the Townshend Acts with a __________ of British goods.",
       "answer": "boycott",
       "section_ref": "Setting the Scene: 1763"
+    },
+    {
+      "prompt": "Colonists used a ________ to refuse to buy British goods.",
+      "answer": "boycott",
+      "section_ref": "Setting the Scene: 1763"
+    },
+    {
+      "prompt": "Locke argued that government depends on the ________ of the governed.",
+      "answer": "consent",
+      "section_ref": "Enlightenment Ideas Fuel Resistance"
     }
   ],
   "stations": [
@@ -177,9 +192,9 @@
       "stimulus": "No taxation without representation was the rallying cry of colonial resistance. Colonists paid taxes passed by Parliament, a body in which no American colonist held a seat.",
       "stimulus_type": "text_excerpt",
       "stimulus_image_spec": "",
-      "question": "Why did colonists consider parliamentary taxation a violation of their rights?",
-      "answer": "Colonists believed they could only be taxed by a legislature in which they had representation. Parliament had no colonial members, so colonists argued taxation without representation was tyranny and a violation of their natural rights.",
-      "cognitive_level": "analysis"
+      "question": "Which law-making body passed taxes on the American colonists?",
+      "answer": "The British Parliament.",
+      "cognitive_level": "recall"
     },
     {
       "stimulus": "John Locke wrote: 'The end of government is the good of mankind — and which is best for mankind, that the people should be always exposed to the boundless will of tyranny, or that the rulers should be sometimes liable to be opposed?'",
@@ -221,5 +236,20 @@
     "Three-column graphic organizer",
     "Exit ticket half-sheets",
     "Bilingual vocabulary cards (for ELL students)"
-  ]
+  ],
+  "lesson_personality": "A colonial town meeting weighing arguments for resistance",
+  "creative_activity": {
+    "activity_type": "debate",
+    "title": "Colonial Town Meeting",
+    "scenario": "A town meeting must decide how to respond to taxation without representation.",
+    "roles": [
+      "Petition advocates",
+      "Boycott advocates",
+      "Independence advocates"
+    ],
+    "student_directions": "Select a response and support it with two details from the source excerpts. Respond to another group.",
+    "deliverable": "A proposed town resolution with two evidence citations and a counterargument",
+    "debrief": "Which evidence changed your position, and what cost does your proposal carry?",
+    "time_minutes": 10
+  }
 }

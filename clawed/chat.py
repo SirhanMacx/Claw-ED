@@ -8,6 +8,22 @@ from clawed.llm import LLMClient
 from clawed.models import AppConfig, TeacherPersona
 
 
+def _lesson_text(value: Any) -> str:
+    """Read both legacy string lessons and structured MasterContent sections.
+
+    Keep the student-facing fields; answer keys and teacher scripts are not
+    needed to render the instructional context.
+    """
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n".join(_lesson_text(item) for item in value)
+    if isinstance(value, dict):
+        fields = ("heading", "title", "stimulus", "content", "prompt", "student_directions", "question", "task")
+        return "\n".join(_lesson_text(value[key]) for key in fields if key in value)
+    return ""
+
+
 async def student_chat(
     question: str,
     lesson_json: dict[str, Any],
@@ -30,15 +46,15 @@ async def student_chat(
     # Build lesson context
     title = lesson_json.get("title", "Untitled Lesson")
     objective = lesson_json.get("objective", "")
-    do_now = lesson_json.get("do_now", "")
-    direct_instruction = lesson_json.get("direct_instruction", "")
-    guided_practice = lesson_json.get("guided_practice", "")
-    independent_work = lesson_json.get("independent_work", "")
+    do_now = _lesson_text(lesson_json.get("do_now", ""))
+    direct_instruction = _lesson_text(lesson_json.get("direct_instruction", ""))
+    guided_practice = _lesson_text(lesson_json.get("guided_practice", ""))
+    independent_work = _lesson_text(lesson_json.get("independent_work", ""))
     standards = lesson_json.get("standards", [])
 
     exit_ticket = lesson_json.get("exit_ticket", [])
     et_text = "\n".join(
-        f"- {q['question']}" for q in exit_ticket if isinstance(q, dict)
+        f"- {_lesson_text(q)}" for q in exit_ticket
     ) if exit_ticket else "None"
 
     lesson_context = (
