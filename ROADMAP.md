@@ -1,8 +1,14 @@
 # Roadmap
 
-Current version: **v5.15.2026**
+Current version: **v9.18.2026**
 
-## v5.16 — What's next
+## What's next
+
+### Recently shipped (v9.18.2026)
+- [x] **Chat privacy** — per-conversation history scoped to lesson and teacher/student audience
+- [x] **Exact action approvals** — requester-bound, expiring, single-use approvals and protected application state
+- [x] **Dashboard and student embeds** — cookie authentication, same-origin mutation checks, and working cross-origin student chat
+- [x] **Verified lesson delivery** — shared final quality gate, checked core exports, and truthful partial/failed/draft status
 
 ### Recently shipped (v5.15)
 - [x] **Boundary-aware filesystem guards** — agent file tools now use `clawed.paths.path_is_within()` instead of string-prefix checks, closing prefix-sibling path escapes across workspace reads, self-modification, output organization, and material ingestion

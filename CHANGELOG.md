@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v9.18.2026 — 2026-09-18
 
 ### Fixed — Chat privacy, action approvals, and delivery status
 
@@ -26,6 +26,19 @@
 - Render structured lesson sections in the dashboard and shared lesson view.
 - Correct the CLI's stale version string to match the package metadata and add a
   regression check to catch future release-version drift.
+
+### Upgrade notes
+
+- Existing lessons and chat records are preserved. New conversations start with
+  isolated history; legacy messages remain available to teacher activity reports.
+- Old unscoped approvals no longer authorize actions. Request a fresh approval
+  for the exact action, then use the approval button or `/approve ID` once.
+- Recopy student widget embeds from the dashboard or CLI to include the correct
+  endpoint, share token, and conversation support.
+- Bearer-token API clients continue to work. Cookie-authenticated mutations
+  require a matching `Origin` or `Referer` header.
+- Rejected lesson generation now returns an error after bounded repair attempts.
+  Incomplete exports report partial, failed, or draft status instead of complete.
 
 ## v6.19.2026.6 — 2026-06-19
 
