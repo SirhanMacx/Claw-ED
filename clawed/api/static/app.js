@@ -754,12 +754,15 @@ document.addEventListener('DOMContentLoaded', function () {
     var chatForm = document.getElementById('chat-form');
     var chatMessages = document.getElementById('chat-messages');
     var chatInput = document.getElementById('chat-input');
+    var chatConversationToken = null;
+    var chatPending = false;
 
     if (chatForm) {
         chatForm.addEventListener('submit', function (e) {
             e.preventDefault();
             var question = chatInput.value.trim();
-            if (!question) return;
+            if (!question || chatPending) return;
+            chatPending = true;
 
             var lessonId = chatForm.querySelector('[name=lesson_id]').value;
             appendChat('user', question);
@@ -768,19 +771,21 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lesson_id: lessonId, question: question })
+                body: JSON.stringify({ lesson_id: lessonId, question: question, conversation_token: chatConversationToken })
             })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (data.error) {
                     appendChat('assistant', 'Error: ' + data.error);
                 } else {
+                    chatConversationToken = data.conversation_token || chatConversationToken;
                     appendChat('assistant', data.response);
                 }
             })
             .catch(function (err) {
                 appendChat('assistant', 'Connection error: ' + err);
-            });
+            })
+            .finally(function () { chatPending = false; });
         });
     }
 

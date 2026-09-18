@@ -6,6 +6,10 @@ gaps and that the retry mechanism works as expected.
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from clawed.lesson import _validate_quality
 from clawed.master_content import (
     CreativeActivity,
@@ -19,6 +23,59 @@ from clawed.master_content import (
     VocabularyEntry,
 )
 from clawed.models import DifferentiationNotes
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("phased", [True, False])
+@pytest.mark.parametrize("repair_succeeds", [True, False])
+async def test_both_generation_paths_enforce_final_gate(phased, repair_succeeds, monkeypatch):
+    from clawed import lesson
+    from clawed.models import LessonBrief, TeacherPersona, UnitPlan
+
+    monkeypatch.delenv("CLAWED_SINGLE_CALL_GEN", raising=False)
+    if not phased:
+        monkeypatch.setenv("CLAWED_SINGLE_CALL_GEN", "1")
+    bad = _good_master()
+    bad.direct_instruction = []
+    bad.exit_ticket = []
+    good = _good_master()
+    pipeline = AsyncMock(return_value=bad)
+    monkeypatch.setattr(lesson, "_try_phased_pipeline", pipeline)
+    monkeypatch.setattr(lesson, "_build_generation_prompt", lambda *args: ("lesson prompt", None))
+    monkeypatch.setattr(lesson, "_build_system_prompt", lambda *args, **kwargs: "system")
+    results = ([bad] if not phased else []) + ([good] if repair_succeeds else [bad, bad])
+    client = MagicMock(safe_generate_json=AsyncMock(side_effect=results))
+    monkeypatch.setattr(lesson, "LLMClient", lambda _: client)
+    critic = AsyncMock()
+    writes = MagicMock()
+    monkeypatch.setattr(lesson, "_run_teaching_critic", critic)
+    monkeypatch.setattr(lesson, "_write_brain_results", writes)
+    unit = UnitPlan(title="Unit", subject="History", grade_level="10", topic="Revolution",
+                    duration_weeks=1, overview="Overview", daily_lessons=[
+                        LessonBrief(lesson_number=1, topic="Revolution", description="Analyze causes"),
+                    ])
+    if repair_succeeds:
+        result = await lesson.generate_master_content(1, unit, TeacherPersona())
+        assert result == good
+        writes.assert_called_once()
+        critic.assert_awaited_once()
+    else:
+        with pytest.raises(lesson.LessonQualityError, match="Direct instruction is missing"):
+            await lesson.generate_master_content(1, unit, TeacherPersona())
+        writes.assert_not_called()
+        critic.assert_not_awaited()
+    assert client.safe_generate_json.await_count == len(results)
+    assert pipeline.await_count == int(phased)
+
+
+@pytest.mark.asyncio
+async def test_valid_lesson_needs_no_quality_repair():
+    from clawed.lesson import _run_quality_gate
+
+    client = MagicMock(safe_generate_json=AsyncMock())
+    good = _good_master()
+    assert await _run_quality_gate(good, client, "prompt", "system") is good
+    client.safe_generate_json.assert_not_awaited()
 
 
 def _good_master() -> MasterContent:

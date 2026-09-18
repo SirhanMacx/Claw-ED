@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Fixed — Chat privacy, action approvals, and delivery status
+
+- Isolate chat history by an opaque conversation token, lesson, and teacher/student
+  audience. Preserve old messages for teacher activity reporting without adding
+  them to new conversations. Accept both legacy and structured lesson content.
+- Restrict file tools to workspace and export files, including resolved symlinks
+  and export directories that overlap protected application state.
+- Bind approvals to the requesting teacher and exact tool parameters. Approvals
+  expire and can be consumed only once, including concurrent requests. Present
+  approval buttons and `/approve ID` / `/reject ID` commands, and execute the
+  saved action when approved. Old unscoped grants require a fresh request.
+- Accept the dashboard's HttpOnly cookie on API routes with same-origin checks
+  for mutations. Existing bearer-token clients continue to work.
+- Fix dashboard and CLI widget snippets, send the lesson share token, retain
+  conversation tokens for follow-up questions, and allow LMS cross-origin
+  requests only on the student chat endpoint.
+- Apply the final quality gate to both generation paths. After bounded repair
+  attempts, rejected lessons return a clear error and are not saved as successes.
+- Verify teacher DOCX, student DOCX, and slides separately. Preserve export
+  failures, label partial packages and drafts, and skip optional extras when core
+  exports fail.
+
 ## v6.19.2026.6 — 2026-06-19
 
 ### Fixed — No watermarked stock images in lesson decks

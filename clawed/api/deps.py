@@ -138,7 +138,7 @@ def get_api_token() -> str:
 
 
 async def require_auth(request: Request) -> None:
-    """FastAPI dependency: require Bearer token on sensitive routes.
+    """Accept explicit bearer auth or the dashboard's same-origin session cookie.
 
     Localhost requests (127.0.0.1) bypass auth when
     EDUAGENT_LOCAL_AUTH_BYPASS=1 is set.
@@ -152,15 +152,30 @@ async def require_auth(request: Request) -> None:
             return
 
     auth = request.headers.get("authorization", "")
-    if not auth.startswith("Bearer "):
+    cookie_auth = not auth
+    token = request.cookies.get("clawed_token", "") if cookie_auth else (
+        auth[7:] if auth.startswith("Bearer ") else ""
+    )
+    if not token:
         raise HTTPException(status_code=401, detail="Missing auth token")
-    token = auth[7:]
     expected = _get_or_create_token()
     # Timing-safe: compare_digest avoids leaking the first-diverging byte
     # via wall-clock differences on mismatch. Both operands must be str
     # (bytes also work) and must be the same type.
-    if not secrets.compare_digest(token, expected):
+    if not secrets.compare_digest(token.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="Invalid auth token")
+    if cookie_auth and request.method not in {"GET", "HEAD", "OPTIONS"}:
+        from urllib.parse import urlsplit
+
+        # Cookies are ambient credentials. Require the dashboard's origin on
+        # mutations, even when an administrator has broadened the CORS list.
+        origin = request.headers.get("origin")
+        if origin is None:
+            referer = urlsplit(request.headers.get("referer", ""))
+            origin = f"{referer.scheme}://{referer.netloc}"
+        expected_origin = f"{request.url.scheme}://{request.url.netloc}"
+        if origin != expected_origin:
+            raise HTTPException(status_code=403, detail="Same-origin request required")
 
 
 # ── Database ─────────────────────────────────────────────────────────

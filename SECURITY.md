@@ -1,6 +1,7 @@
 # Security & Privacy
 
-Claw-ED is a local-first tool designed for teachers. Your data stays on your machine.
+Claw-ED stores its working data locally. The providers and integrations you enable
+determine which content leaves your machine.
 
 ## Data Residency
 
@@ -8,20 +9,43 @@ Claw-ED is a local-first tool designed for teachers. Your data stays on your mac
 - **Curriculum knowledge base** is stored in local SQLite at `~/.eduagent/memory/`
 - **Teacher images** extracted from your PPTX files stay in `~/.eduagent/cache/extracted/`
 - **Nothing is uploaded to our servers** — we don't have servers
-- The only external calls are to the LLM provider YOU choose (Ollama, Anthropic, OpenAI, Google, or OpenRouter)
+- Cloud LLM providers receive generation and chat prompts. Image search, web
+  research, Telegram, and Drive integrations also make external requests when used.
 
 ## API Key Storage
 
 - API keys are stored in `~/.eduagent/secrets.json` with `0600` file permissions (owner-only access)
 - On macOS, keys can optionally use the system Keychain via `pip install clawed[keyring]`
-- Keys are NEVER logged, transmitted, or included in generated output
+- Provider keys are sent to the configured provider to authenticate requests;
+  they should not be included in prompts or generated output.
 
 ## Student Data
 
 - The optional student bot runs on YOUR machine
-- Student questions and interactions are stored locally in `~/.eduagent/state.db`
-- No student data is sent anywhere without explicit teacher-initiated export
-- The student bot does not collect names, emails, or identifying information
+- Web chat messages are stored in `clawed_data/clawed.db`, or in `clawed.db`
+  under `EDUAGENT_DATA_DIR` when configured. Other bot state uses `~/.eduagent/state.db`.
+- Chat questions, recent conversation history, and lesson context are sent to the
+  configured model. A cloud model therefore receives this content without an export.
+- The widget does not ask for names or email addresses, but students can include
+  identifying information in free-text questions.
+- Each web chat conversation uses a random token scoped to its lesson and audience.
+  Separate students do not receive each other's stored conversation history. The
+  server stores only a hash of the token. The widget keeps its token in memory;
+  reloading the page starts a new conversation. Treat share links as access grants.
+
+## Dashboard and Tool Permissions
+
+- The dashboard uses an HttpOnly, SameSite=Strict session cookie. Cookie-authenticated
+  API mutations require a matching Origin or Referer. API clients can use a bearer
+  token. Localhost authentication bypass requires an explicit environment setting.
+- Student-widget CORS access applies only to `/api/chat/student`; it does not grant
+  access to teacher routes, and every student request still needs a lesson share token.
+- Action approvals cover one requesting teacher, tool, and exact parameter set.
+  They expire after the configured timeout and are consumed before execution, so
+  a failed action needs a fresh approval before retrying. Legacy unscoped grants
+  cannot authorize new actions.
+- File tools may access workspace and export files, but cannot access the other
+  application-state directories, even through symlinks or overlapping export roots.
 
 ## Compliance
 
@@ -41,7 +65,7 @@ formally certified FERPA/COPPA/GDPR compliance product.
 Claw-ED can install Python packages when it needs a new capability (e.g., Manim for animations). This is:
 - Limited to `--user` scope (never system-wide)
 - Logged in the terminal for teacher visibility
-- Requires teacher confirmation for the initial install
+- Requires a fresh, specific teacher approval for each install action
 - Blocked for built-in Python modules (os, sys, subprocess, etc.)
 
 ## Reporting Security Issues

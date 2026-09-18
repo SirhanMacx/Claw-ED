@@ -416,10 +416,9 @@ def share(
         # Build Rich panel content
         panel_lines = [f"[bold green]Share URL:[/bold green] {share_url}"]
 
-        embed_snippet = (
-            f'<script src="{host}/widget.js"'
-            f' data-token="{token}" async></script>'
-        )
+        from clawed.widget import build_embed_snippet
+
+        embed_snippet = build_embed_snippet(host, lesson_id, token)
         if embed:
             panel_lines.append(
                 f"\n[bold cyan]Embed snippet:[/bold cyan]\n{embed_snippet}"

@@ -25,6 +25,7 @@ class AgentContext:
     agent_name: str = "Claw-ED"
     transport: str = "cli"
     progress_callback: Callable[[str], None] | None = None
+    approval_owner: str | None = None
 
     def notify_progress(self, message: str) -> None:
         """Send a progress update to the user if a callback is registered."""
@@ -43,3 +44,4 @@ class ToolResult:
     files: list[Path] = field(default_factory=list)
     data: dict[str, Any] = field(default_factory=dict)
     side_effects: list[str] = field(default_factory=list)
+    approval_id: str | None = None

@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import logging
 import secrets
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -39,10 +39,16 @@ router = APIRouter(tags=["chat"], dependencies=[Depends(require_auth)])
 student_chat_router = APIRouter(tags=["chat-student"])
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., max_length=2000)
+
+
 class ChatRequest(BaseModel):
     lesson_id: str = Field(..., min_length=1, max_length=200)
     question: str = Field(..., min_length=1, max_length=2000)
-    history: list[dict[str, str]] = Field(default_factory=list, max_length=20)
+    history: list[ChatMessage] = Field(default_factory=list, max_length=20)
+    conversation_token: str | None = Field(default=None, min_length=32, max_length=200)
 
 
 class StudentChatRequest(ChatRequest):
@@ -50,7 +56,7 @@ class StudentChatRequest(ChatRequest):
     share_token: str = Field(..., min_length=1, max_length=200)
 
 
-async def _run_chat(req: ChatRequest) -> Any:
+async def _run_chat(req: ChatRequest, *, audience: str = "teacher") -> Any:
     """Shared chat backend used by both the teacher and student routes."""
     db = get_db()
 
@@ -64,15 +70,26 @@ async def _run_chat(req: ChatRequest) -> Any:
         logger.warning("Failed to parse lesson_json for lesson %s: %s", req.lesson_id, exc)
         lesson_data = {}
 
-    teacher = db.get_default_teacher()
+    unit = db.get_unit(lesson_row["unit_id"])
+    teacher = db.get_teacher(unit["teacher_id"]) if unit else None
     if not teacher or not teacher.get("persona_json"):
         return JSONResponse({"error": "No teacher persona found."}, status_code=400)
 
     persona = TeacherPersona.model_validate_json(teacher["persona_json"])
 
-    history = req.history
+    conversation_token = req.conversation_token
+    if conversation_token:
+        conversation_id = db.get_chat_conversation(conversation_token, req.lesson_id, audience)
+        if conversation_id is None:
+            return JSONResponse({"error": "Invalid conversation token."}, status_code=403)
+    else:
+        conversation_id, conversation_token = db.create_chat_conversation(req.lesson_id, audience)
+
+    # Older clients can supply their own history on a new conversation. Never
+    # retrieve the mixed legacy lesson history or override an existing session.
+    history = [message.model_dump() for message in req.history] if req.conversation_token is None else []
     if not history:
-        db_history = db.get_chat_history(req.lesson_id, limit=10)
+        db_history = db.get_chat_history(req.lesson_id, limit=10, conversation_id=conversation_id)
         history = [{"role": m["role"], "content": m["content"]} for m in reversed(db_history)]
 
     try:
@@ -86,10 +103,10 @@ async def _run_chat(req: ChatRequest) -> Any:
         logger.error("Chat failed", exc_info=True)
         return JSONResponse({"error": "Chat failed. Please try again."}, status_code=500)
 
-    db.insert_chat_message(req.lesson_id, "user", req.question)
-    db.insert_chat_message(req.lesson_id, "assistant", response)
+    db.insert_chat_message(req.lesson_id, "user", req.question, conversation_id=conversation_id)
+    db.insert_chat_message(req.lesson_id, "assistant", response, conversation_id=conversation_id)
 
-    return {"response": response, "lesson_id": req.lesson_id}
+    return {"response": response, "lesson_id": req.lesson_id, "conversation_token": conversation_token}
 
 
 @router.post("/chat")
@@ -100,7 +117,7 @@ async def chat_endpoint(request: Request, req: ChatRequest) -> Any:
     Same backend as the student route; kept separate so teacher-only
     tooling can hit it with the bearer token and get richer rate limits.
     """
-    return await _run_chat(req)
+    return await _run_chat(req, audience="teacher")
 
 
 @student_chat_router.post("/chat/student")
@@ -118,7 +135,7 @@ async def chat_student_endpoint(request: Request, req: StudentChatRequest) -> An
         return JSONResponse({"error": "Lesson not found."}, status_code=404)
 
     stored_token = lesson_row.get("share_token") or ""
-    if not stored_token or not secrets.compare_digest(req.share_token, stored_token):
+    if not stored_token or not secrets.compare_digest(req.share_token.encode(), stored_token.encode()):
         return JSONResponse({"error": "Invalid share token."}, status_code=403)
 
-    return await _run_chat(req)
+    return await _run_chat(req, audience="student")

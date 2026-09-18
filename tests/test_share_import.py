@@ -215,7 +215,8 @@ class TestShareCommand:
             )
         assert result.exit_code == 0
         assert "widget.js" in result.output
-        assert "data-token" in result.output
+        assert "data-share-token" in result.output
+        assert "data-lesson-id" in result.output
         assert "<script" in result.output
 
     def test_share_shows_url(self, db):

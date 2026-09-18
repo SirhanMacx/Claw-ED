@@ -87,7 +87,7 @@ Other tools don't know how you teach. Claw-ED **reads your actual files** — yo
 
 Other tools run in the cloud. Claw-ED runs **on your machine**. Your files, your students, your lessons — none of it leaves your computer.
 
-Other tools give you a first draft you have to edit. Claw-ED has a **12-check quality gate** that catches summaries instead of real sources, generic differentiation, missing checks for understanding, and Bloom's Level 1 exit tickets. Bad output gets rejected and regenerated automatically — teachers get print-ready lessons.
+Claw-ED's quality gate checks for missing lesson sections, summaries instead of source text, generic differentiation, missing checks for understanding, and exit-ticket progression. Both generation paths use the same final checks and bounded repair attempts. Unresolved failures return an error; incomplete exports are labeled partial, and packages with an unsuccessful quality review are labeled draft. Teachers should review generated content before classroom use.
 
 ### Trust model
 

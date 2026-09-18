@@ -21,14 +21,33 @@
         {% if lesson_data.get('do_now') %}
         <div class="lesson-section">
             <h3>Do-Now / Warm-Up</h3>
-            <p>{{ lesson_data['do_now'] }}</p>
+            {% set warmup = lesson_data['do_now'] %}
+            {% if warmup is mapping %}
+            <p>{{ warmup.get('stimulus', '') }}</p>
+            <ol>{% for question in warmup.get('questions', []) %}<li>{{ question }}</li>{% endfor %}</ol>
+            {% else %}
+            <p>{{ warmup }}</p>
+            {% endif %}
         </div>
         {% endif %}
 
         {% if lesson_data.get('direct_instruction') %}
         <div class="lesson-section">
             <h3>Direct Instruction</h3>
-            <p>{{ lesson_data['direct_instruction'] }}</p>
+            {% set instruction = lesson_data['direct_instruction'] %}
+            {% if instruction is string %}
+            <p>{{ instruction }}</p>
+            {% else %}
+            {% for section in instruction %}
+                {% if section is mapping %}
+                <h4>{{ section.get('heading', '') }}</h4>
+                <p>{{ section.get('content', '') }}</p>
+                {% if not is_shared|default(false) and section.get('teacher_script') %}
+                <details><summary>Teacher notes</summary><p>{{ section['teacher_script'] }}</p></details>
+                {% endif %}
+                {% else %}<p>{{ section }}</p>{% endif %}
+            {% endfor %}
+            {% endif %}
         </div>
         {% endif %}
 
@@ -42,7 +61,8 @@
         {% if lesson_data.get('independent_work') %}
         <div class="lesson-section">
             <h3>Independent Work</h3>
-            <p>{{ lesson_data['independent_work'] }}</p>
+            {% set work = lesson_data['independent_work'] %}
+            <p>{{ work.get('task', '') if work is mapping else work }}</p>
         </div>
         {% endif %}
 
@@ -129,6 +149,14 @@
 
     <div class="lesson-sidebar">
         {% if not is_shared|default(false) %}
+        {% if embed_snippet %}
+        <div class="sidebar-card">
+            <h3>Student Chat Embed</h3>
+            <p>Copy this into your LMS's HTML editor. Students need access to this server's address.</p>
+            <label for="chat-embed">Embed code</label>
+            <textarea id="chat-embed" rows="5" readonly>{{ embed_snippet }}</textarea>
+        </div>
+        {% endif %}
         <!-- Feedback -->
         <div class="sidebar-card">
             <h3>Rate This Lesson</h3>

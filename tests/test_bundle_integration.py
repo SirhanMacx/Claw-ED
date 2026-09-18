@@ -8,6 +8,13 @@ DEMO_DIR = Path(__file__).parent.parent / "clawed" / "demo"
 class TestBundleIntegration:
     """Tests that the demo fixture flows through the full pipeline."""
 
+    def test_demo_master_passes_the_production_quality_gate(self):
+        from clawed.lesson import _validate_quality
+        from clawed.master_content import MasterContent
+
+        master = MasterContent.model_validate_json((DEMO_DIR / "demo_master_content.json").read_text())
+        assert _validate_quality(master) == []
+
     def test_demo_master_content_fixture_loads(self):
         """demo_master_content.json loads and validates."""
         from clawed.master_content import MasterContent

@@ -3,7 +3,12 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import re
+import tempfile
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -65,10 +70,48 @@ class ApprovalManager:
 
     def __init__(self, base_dir: Path | None = None) -> None:
         self._dir = base_dir or _default_dir()
-        self._dir.mkdir(parents=True, exist_ok=True)
+        self._dir.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     def _path(self, approval_id: str) -> Path:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", approval_id):
+            raise ValueError("Invalid approval ID")
         return self._dir / f"{approval_id}.json"
+
+    @contextmanager
+    def _lock(self, approval_id: str) -> Iterator[bool]:
+        """Fail closed if another process is resolving/consuming this record."""
+        lock_path = self._path(approval_id).with_suffix(".lock")
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            os.close(fd)
+            lock_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _expired(pa: PendingApproval) -> bool:
+        try:
+            created = datetime.fromisoformat(pa.created_at)
+            return datetime.now(created.tzinfo) >= created + timedelta(hours=pa.timeout_hours)
+        except (ValueError, TypeError, OverflowError):
+            return True
+
+    @staticmethod
+    def action_matches(pa: PendingApproval, tool_name: str, params: dict[str, Any]) -> bool:
+        """Legacy unscoped approvals cannot authorize a new action."""
+        payload = pa.action_payload
+        if payload.get("tool_name") != tool_name or not isinstance(payload.get("params"), dict):
+            return False
+        try:
+            expected = json.dumps(payload["params"], sort_keys=True, allow_nan=False)
+            actual = json.dumps(params, sort_keys=True, allow_nan=False)
+            return expected == actual
+        except (TypeError, ValueError):
+            return False
 
     def create(
         self,
@@ -92,71 +135,97 @@ class ApprovalManager:
         return pa
 
     def load(self, approval_id: str) -> PendingApproval | None:
-        path = self._path(approval_id)
-        if not path.exists():
-            return None
         try:
+            path = self._path(approval_id)
+            if path.is_symlink():
+                return None
             data = json.loads(path.read_text(encoding="utf-8"))
-            return PendingApproval.from_dict(data)
-        except (json.JSONDecodeError, KeyError) as e:
+            pa = PendingApproval.from_dict(data)
+            if pa.id != approval_id or not isinstance(pa.action_payload, dict):
+                return None
+            return pa
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError, KeyError, TypeError) as e:
             logger.warning("Failed to load approval %s: %s", approval_id, e)
             return None
 
-    def approve(self, approval_id: str) -> PendingApproval | None:
-        return self._update_status(approval_id, "approved")
+    def approve(self, approval_id: str, *, teacher_id: str) -> PendingApproval | None:
+        return self._resolve(approval_id, teacher_id, "approved")
 
-    def reject(self, approval_id: str) -> PendingApproval | None:
-        return self._update_status(approval_id, "rejected")
+    def reject(self, approval_id: str, *, teacher_id: str) -> PendingApproval | None:
+        return self._resolve(approval_id, teacher_id, "rejected")
 
     def pending_for_teacher(self, teacher_id: str) -> list[PendingApproval]:
         results = []
         for path in self._dir.glob("*.json"):
             pa = self.load(path.stem)
-            if pa and pa.teacher_id == teacher_id and pa.status == "pending":
+            if pa and pa.teacher_id == teacher_id and pa.status == "pending" and not self._expired(pa):
                 results.append(pa)
         return results
 
     def expire_old(self) -> list[PendingApproval]:
         expired = []
-        now = datetime.now()
         for path in self._dir.glob("*.json"):
-            pa = self.load(path.stem)
-            if pa and pa.status == "pending":
-                created = datetime.fromisoformat(pa.created_at)
-                if now - created > timedelta(hours=pa.timeout_hours):
-                    self._update_status(pa.id, "expired")
+            if self.load(path.stem) is None:
+                continue
+            with self._lock(path.stem) as locked:
+                pa = self.load(path.stem) if locked else None
+                if pa and pa.status in ("pending", "approved") and self._expired(pa):
                     pa.status = "expired"
+                    self._save(pa)
                     expired.append(pa)
         return expired
 
-    def get_standing_approval(
-        self, teacher_id: str, tool_name: str,
+    def consume_approval(
+        self, teacher_id: str, tool_name: str, params: dict[str, Any],
     ) -> PendingApproval | None:
-        """Check for an existing approved record for this tool.
-
-        A standing approval is any approval with status="approved" whose
-        action_payload contains the tool_name. This enables the central
-        policy layer to allow pre-approved tools through.
-        """
+        """Atomically consume one unexpired approval for this exact action."""
         for path in self._dir.glob("*.json"):
-            pa = self.load(path.stem)
-            if (
-                pa
-                and pa.teacher_id == teacher_id
-                and pa.status == "approved"
-                and pa.action_payload.get("tool_name") == tool_name
-            ):
+            if self.load(path.stem) is None:
+                continue
+            with self._lock(path.stem) as locked:
+                pa = self.load(path.stem) if locked else None
+                if not pa or pa.teacher_id != teacher_id or pa.status != "approved":
+                    continue
+                if self._expired(pa):
+                    pa.status = "expired"
+                    self._save(pa)
+                    continue
+                if not self.action_matches(pa, tool_name, params):
+                    continue
+                pa.status = "consumed"
+                self._save(pa)
                 return pa
         return None
 
-    def _update_status(self, approval_id: str, status: str) -> PendingApproval | None:
-        pa = self.load(approval_id)
-        if pa is None:
+    def _resolve(self, approval_id: str, teacher_id: str, status: str) -> PendingApproval | None:
+        if self.load(approval_id) is None:
             return None
-        pa.status = status
-        self._save(pa)
-        return pa
+        with self._lock(approval_id) as locked:
+            pa = self.load(approval_id) if locked else None
+            if not pa or pa.teacher_id != teacher_id or pa.status != "pending":
+                return None
+            if self._expired(pa):
+                pa.status = "expired"
+                self._save(pa)
+                return None
+            pa.status = status
+            self._save(pa)
+            return pa
 
     def _save(self, pa: PendingApproval) -> None:
         path = self._path(pa.id)
-        path.write_text(json.dumps(pa.to_dict(), indent=2), encoding="utf-8")
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self._dir, suffix=".tmp", delete=False) as f:
+            temporary = Path(f.name)
+            try:
+                json.dump(pa.to_dict(), f, indent=2, allow_nan=False)
+                f.flush()
+                os.fsync(f.fileno())
+            except BaseException:
+                temporary.unlink(missing_ok=True)
+                raise
+        try:
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)

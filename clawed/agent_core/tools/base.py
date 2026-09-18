@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import json
 import logging
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -76,7 +77,7 @@ class ToolRegistry:
         return [t.schema() for t in self._tools.values()]
 
     async def execute(self, name: str, params: dict[str, Any],
-                      context: AgentContext) -> ToolResult:
+                      context: AgentContext, *, require_approval: bool = False) -> ToolResult:
         """Execute a tool by name with policy enforcement.
 
         Every tool is checked against its declared risk_level before execution.
@@ -94,15 +95,11 @@ class ToolRegistry:
         # ── Policy enforcement ────────────────────────────────────────
         risk = getattr(tool, "risk_level", RISK_WRITE_LOCAL)
 
-        if risk in _ALWAYS_REQUIRE_APPROVAL:
+        if risk in _ALWAYS_REQUIRE_APPROVAL or require_approval:
             # NEVER auto-approve package installs or external publishing
             approved = await self._check_approval(name, risk, params, context)
             if not approved:
-                return ToolResult(
-                    text=f"BLOCKED: '{name}' requires explicit teacher approval "
-                         f"(risk level: {risk}). Ask the teacher to confirm "
-                         f"before proceeding."
-                )
+                return self._request_approval(name, params, context)
 
         elif risk in _REQUIRE_APPROVAL_BY_DEFAULT:
             # Check if auto-approve is enabled
@@ -111,12 +108,7 @@ class ToolRegistry:
             if not auto_approve:
                 approved = await self._check_approval(name, risk, params, context)
                 if not approved:
-                    return ToolResult(
-                        text=f"BLOCKED: '{name}' requires teacher approval "
-                             f"(risk level: {risk}). The teacher can enable "
-                             f"auto-approve with CLAWED_AUTO_APPROVE=1 for "
-                             f"low-risk write operations."
-                    )
+                    return self._request_approval(name, params, context)
 
         # risk == RISK_READ_ONLY → always allowed, no check needed
 
@@ -136,21 +128,15 @@ class ToolRegistry:
         self, tool_name: str, risk_level: str,
         params: dict[str, Any], context: AgentContext,
     ) -> bool:
-        """Check if the teacher has approved this action.
-
-        Returns True if approved, False if blocked.
-        Currently checks the approval DB for a standing approval
-        for this tool. Future: interactive approval via Telegram.
-        """
+        """Consume permission for the exact action before it starts."""
         try:
             from clawed.agent_core.approvals import ApprovalManager
             mgr = ApprovalManager()
-            # Check for standing approval for this tool
-            teacher_id = getattr(context, "teacher_id", "default")
-            existing = mgr.get_standing_approval(teacher_id, tool_name)
+            teacher_id = context.approval_owner or context.teacher_id
+            existing = mgr.consume_approval(teacher_id, tool_name, params)
             if existing:
                 logger.info(
-                    "Tool '%s' (risk=%s) approved via standing approval",
+                    "Tool '%s' (risk=%s) consumed a one-time approval",
                     tool_name, risk_level,
                 )
                 return True
@@ -162,6 +148,30 @@ class ToolRegistry:
             tool_name, risk_level,
         )
         return False
+
+    @staticmethod
+    def _request_approval(name: str, params: dict[str, Any], context: AgentContext) -> ToolResult:
+        from clawed.agent_core.approvals import ApprovalManager
+        try:
+            manager = ApprovalManager()
+            owner = context.approval_owner or context.teacher_id
+            pending = next((pa for pa in manager.pending_for_teacher(owner)
+                            if manager.action_matches(pa, name, params)), None)
+            if pending is None:
+                pending = manager.create(
+                    teacher_id=owner, action_description=name.replace("_", " "),
+                    action_payload={"tool_name": name, "params": params},
+                    agent_state={}, transport=context.transport,
+                )
+            return ToolResult(
+                text=(f"BLOCKED: Teacher approval required to {pending.action_description}.\n"
+                      f"{json.dumps(params, indent=2, ensure_ascii=False)}\n\n"
+                      f"Approve once: /approve {pending.id}\nReject: /reject {pending.id}"),
+                data=pending.to_dict(), approval_id=pending.id,
+            )
+        except Exception:
+            logger.exception("Could not persist approval request for %s", name)
+            return ToolResult(text=f"BLOCKED: Could not request approval for '{name}'. Please retry.")
 
     def discover_custom(self, dir_path: Path) -> None:
         """Load custom YAML prompt-template tools from a directory."""

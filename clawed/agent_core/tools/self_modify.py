@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from clawed.agent_core.context import AgentContext, ToolResult
-from clawed.paths import path_is_within
+from clawed.paths import agent_file_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -190,10 +190,7 @@ class WriteFileTool:
         # Block path traversal
         try:
             full_path = full_path.resolve()
-            if not (
-                path_is_within(full_path, data_dir)
-                or path_is_within(full_path, output_dir)
-            ):
+            if not agent_file_allowed(full_path, output_dir) or full_path.name.lower() in denied_files:
                 return ToolResult(text="ERROR: path must be within workspace or output directory")
         except Exception:
             logger.debug("operation_failed", exc_info=True)
@@ -278,14 +275,6 @@ class ReadFileTool:
                 text=f"ERROR: access denied for sensitive file: {base_name}"
             )
 
-        # Canonical allowed roots. Any read must resolve inside one of these.
-        try:
-            data_root = data_dir.resolve()
-            output_root = output_dir.resolve()
-        except Exception:
-            logger.debug("operation_failed", exc_info=True)
-            return ToolResult(text="ERROR: could not resolve data/output directories")
-
         # Try workspace first, then output
         candidates = [
             data_dir / rel_path,
@@ -301,10 +290,9 @@ class ReadFileTool:
                 # path containing "../" sequences could read arbitrary
                 # files on disk. WriteFileTool had this check; ReadFileTool
                 # did not.
-                if not (
-                    path_is_within(full_path, data_root)
-                    or path_is_within(full_path, output_root)
-                ):
+                if not agent_file_allowed(full_path, output_dir):
+                    continue
+                if full_path.name.lower() in self._DENIED_FILENAMES:
                     continue
                 if full_path.exists() and full_path.is_file():
                     content = full_path.read_text(encoding="utf-8")

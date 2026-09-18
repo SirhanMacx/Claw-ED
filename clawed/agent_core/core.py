@@ -163,6 +163,10 @@ class Gateway:
         transport: str = "cli",
     ) -> GatewayResponse:
         """Process any message from any transport."""
+        approval_owner = teacher_id
+        command = message.strip().split(maxsplit=1)
+        if len(command) == 2 and command[0].lower() in ("/approve", "/reject"):
+            return await self.handle_callback(f"{command[0][1:].lower()}:{command[1]}", approval_owner)
         # Normalize teacher_id so CLI, Telegram, and MCP all share one brain
         from clawed.agent_core.identity import get_teacher_id
         teacher_id = get_teacher_id()
@@ -226,7 +230,9 @@ class Gateway:
                 return self._handle_models_command()
 
             # 5. Natural-language → agent loop
-            return await self._agent_loop(message, teacher_id, progress_callback=progress_callback)
+            return await self._agent_loop(
+                message, teacher_id, progress_callback=progress_callback, approval_owner=approval_owner,
+            )
 
         except Exception as e:
             logger.error("Agent error for teacher %s: %s", teacher_id, e, exc_info=True)
@@ -265,14 +271,27 @@ class Gateway:
         # Approval callbacks
         if parts[0] == "approve" and len(parts) >= 2:
             approval_id = parts[1]
-            pa = self._approval_manager.approve(approval_id)
+            pa = self._approval_manager.approve(approval_id, teacher_id=teacher_id)
             if pa:
-                return GatewayResponse(text=f"Approved: {pa.action_description}")
+                from clawed.agent_core.identity import get_teacher_id
+                payload = pa.action_payload
+                if not payload.get("tool_name") or not isinstance(payload.get("params"), dict):
+                    return GatewayResponse(text="This older approval has no exact action. Please request it again.")
+                profile = self._load_teacher_profile()
+                context = AgentContext(
+                    teacher_id=get_teacher_id(), approval_owner=teacher_id, config=self.config,
+                    teacher_profile=profile or {}, persona=self._load_persona(profile),
+                    session_history=[], improvement_context="", transport=pa.transport,
+                )
+                result = await self._registry.execute(
+                    payload["tool_name"], payload["params"], context, require_approval=True,
+                )
+                return GatewayResponse(text=result.text, files=result.files)
             return GatewayResponse(text="Approval not found or already processed.")
 
         if parts[0] == "reject" and len(parts) >= 2:
             approval_id = parts[1]
-            pa = self._approval_manager.reject(approval_id)
+            pa = self._approval_manager.reject(approval_id, teacher_id=teacher_id)
             if pa:
                 return GatewayResponse(text=f"Rejected: {pa.action_description}")
             return GatewayResponse(text="Approval not found or already processed.")
@@ -568,7 +587,9 @@ class Gateway:
         except Exception as e:
             logger.debug("Failed to compress sessions: %s", e)
 
-    async def _agent_loop(self, message: str, teacher_id: str, progress_callback: Any = None) -> GatewayResponse:
+    async def _agent_loop(
+        self, message: str, teacher_id: str, progress_callback: Any = None, approval_owner: str | None = None,
+    ) -> GatewayResponse:
         """Load context, build prompt, and run the agent tool-use loop."""
         transport = getattr(self, "_last_transport", "cli")
 
@@ -596,6 +617,8 @@ class Gateway:
             improvement_context=memory_ctx["improvement_context"],
             agent_name=agent_name,
             progress_callback=progress_callback,
+            approval_owner=approval_owner,
+            transport=transport,
         )
 
         # 4. Get or create LLM adapter
