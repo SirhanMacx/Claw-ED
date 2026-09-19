@@ -4,7 +4,7 @@
 
 Claw-ED is a local-first AI teaching assistant. Start with your existing lesson plans, slides, and assessments; use them to draft new lessons, student materials, and presentations. You choose the model and review the result before using or sharing it.
 
-**Current release: v9.18.2026 · Beta · Python 3.11+**
+**Current release: v9.18.2026.1 · Beta · Python 3.11+**
 
 [Install](#setup) · [Website](https://sirhanmacx.github.io/Claw-ED/) · [Release notes](CHANGELOG.md) · [Security and privacy](SECURITY.md) · [Report an issue](https://github.com/SirhanMacx/Claw-ED/issues)
 
@@ -39,7 +39,7 @@ clawed serve                         # local dashboard and API
 clawed --version
 ```
 
-Run `clawed` for interactive use. The terminal interface uses the bundled Node interface when Node.js is available and falls back to the Python CLI otherwise. `clawed --python` selects the Python path explicitly. For command-specific options, use `clawed <command> --help`.
+Run `clawed` for the owned Python interface; Node.js and Bun are no longer required. `clawed -p "request"` uses the same gateway and tool policy. For command-specific options, use `clawed <command> --help`.
 
 [Getting started](docs/GETTING_STARTED.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
@@ -56,19 +56,32 @@ Run `clawed` for interactive use. The terminal interface uses the bundled Node i
 
 The release is intended for a single teacher per instance. It is not a multi-tenant school platform. Student-facing features remain experimental within Claw-ED.
 
-## What v9.18.2026 changes
+## What v9.18.2026.1 changes
 
-- Separate chat histories by conversation, lesson, and teacher/student audience.
-- Require exact, expiring, single-use approvals for protected actions and keep file tools out of protected application state.
-- Restore dashboard cookie authentication and repair student widget embeds.
-- Run the final quality gate on both main lesson-generation paths.
-- Verify the three core bundle exports and report incomplete delivery as partial, failed, or draft.
+- Remove the bundled third-party terminal runtime; all entry points use Python.
+- Keep your chosen model, isolate concurrent tool requests, and support GPT-6 Astra and Claude Fable 5.1 request formats.
+- Add a Jobs page and CLI cancel, recover, and resume commands with saved generation phases.
+- Preserve multilingual text and full source excerpts; include a source manifest that flags quotations needing review.
+- Refresh local and budget model recommendations against current provider catalogs.
 
-Existing lessons and chat rows are preserved. Old unscoped approvals need a fresh request; recopy student widget snippets after upgrading. See the [changelog](CHANGELOG.md) for migration details.
+For a recoverable bundle, use the dashboard's **Jobs** page or:
+
+```bash
+clawed queue submit bundle --topic "River civilizations" --grade 9 --subject History
+clawed queue worker
+# In another terminal, when needed:
+clawed queue cancel JOB_ID
+clawed queue recover
+clawed queue resume JOB_ID
+```
+
+The worker must be running to process jobs. Completed matching phases survive restarts; external publishing and arbitrary chat sessions are not automatically resumed. Existing configuration and teaching data are preserved. See the [changelog](CHANGELOG.md).
 
 ## Models and privacy
 
 Provider adapters support Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter. Model support and tool behavior vary by provider and task. API pricing, quotas, and model availability are set by the provider; Claw-ED does not include model usage.
+
+**Start here:** [dated model recommendations and setup](docs/CHOOSING_A_MODEL.md). Try Qwen 3.5 9B locally, GPT-OSS 20B or Gemma 4 31B on OpenRouter for a budget trial, and explicitly select Astra or Fable for premium work. Recommendations are starting points, not measured classroom rankings.
 
 Configuration and working data are stored locally under `~/.eduagent/` by default. **Local storage does not mean all processing stays on the device.** Hosted models receive the prompts and selected content needed for a request. Web search, image retrieval, Telegram, Google integrations, and package installation also contact their respective services when used.
 
@@ -105,7 +118,7 @@ mypy --strict clawed
 pytest tests/
 ```
 
-CI exercises Python 3.11 and 3.12, the TypeScript build, wheel installation, and Docker startup. Most tests use synthetic data or mocked model responses; passing CI does not establish teaching quality across live models. The bundled terminal build additionally uses Node.js and Bun; see [cli/README.md](cli/README.md).
+CI exercises Python 3.11 and 3.12, wheel installation, and Docker startup. Most tests use synthetic data or mocked model responses; passing CI does not establish teaching quality across live models. See the [architecture](docs/ARCHITECTURE.md) and [evaluation protocol](docs/EVALUATION.md).
 
 Useful contributions include reproducible bugs, teacher-reviewed sample lessons, source-fidelity checks, and improvements to a complete import → draft → review → export workflow. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [roadmap](ROADMAP.md).
 

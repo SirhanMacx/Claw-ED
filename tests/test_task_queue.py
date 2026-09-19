@@ -93,6 +93,7 @@ class TestListTasks:
 class TestMarkDoneAndFailed:
     def test_mark_done(self, queue: TaskQueue) -> None:
         task_id = queue.submit(TaskType.GENERATE_LESSON)
+        queue.next_queued()
         queue.mark_done(task_id, {"title": "Lesson 1"})
         task = queue.get_status(task_id)
         assert task is not None
@@ -102,6 +103,7 @@ class TestMarkDoneAndFailed:
 
     def test_mark_failed(self, queue: TaskQueue) -> None:
         task_id = queue.submit(TaskType.GENERATE_UNIT)
+        queue.next_queued()
         queue.mark_failed(task_id, "LLM timeout")
         task = queue.get_status(task_id)
         assert task is not None
@@ -140,6 +142,7 @@ class TestNextQueued:
 class TestGetResult:
     def test_get_result_returns_result(self, queue: TaskQueue) -> None:
         task_id = queue.submit(TaskType.GENERATE_LESSON)
+        queue.next_queued()
         queue.mark_done(task_id, {"output": "Great lesson"})
         result = queue.get_result(task_id)
         assert result == {"output": "Great lesson"}

@@ -18,7 +18,10 @@ from clawed.models import DifferentiationNotes  # reuse — do not duplicate
 if TYPE_CHECKING:
     from clawed.models import DailyLesson
 
+from clawed.source_manifest import SourceEvidence
+
 logger = logging.getLogger(__name__)
+
 
 
 class Citation(BaseModel):
@@ -125,6 +128,7 @@ class PrimarySource(BaseModel):
     title: str
     source_type: str  # "text_excerpt", "political_cartoon", "map", "data_table", "photograph", "diagram"
     content_text: str
+    source_refs: list[str] = Field(default_factory=list, description="IDs from supplied source evidence only")
     attribution: str
     image_spec: str = ""
     scaffolding_questions: list[str] = Field(default_factory=list)
@@ -215,6 +219,7 @@ class StimulusQuestion(BaseModel):
     stimulus_image_spec: str = ""
     question: str
     answer: str
+    source_refs: list[str] = Field(default_factory=list, description="Evidence IDs supporting the answer")
     cognitive_level: str = ""  # "recall", "application", "analysis"
     sentence_starters: list[str] = Field(default_factory=list)  # ["According to the source, ___"]
     response_framework: str = ""  # "TEA", "RACE", "CER"
@@ -338,6 +343,7 @@ class MasterContent(BaseModel):
         default=None,
         description="Context pulled from the brain before generation (not serialized to prompt JSON)",
     )
+    source_manifest: list[SourceEvidence] = Field(default_factory=list)
     source_attributions: list[Citation] = Field(
         default_factory=list,
         description="All sources consulted during lesson generation",

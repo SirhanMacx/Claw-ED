@@ -25,7 +25,7 @@ warn()  { echo -e "${YELLOW}!${NC} $*"; }
 err()   { echo -e "${RED}✗${NC} $*" >&2; }
 
 echo ""
-echo -e "${BOLD}EDUagent Installer${NC}"
+echo -e "${BOLD}Claw-ED Installer${NC}"
 echo "Your teaching files → your AI co-teacher."
 echo ""
 
@@ -37,7 +37,7 @@ case "$OS" in
     Linux)  PLATFORM="linux" ;;
     *)
         err "Unsupported OS: $OS"
-        echo "EDUagent supports macOS and Linux. On Windows, use WSL or Docker."
+        echo "Claw-ED supports macOS and Linux. On Windows, use WSL or Docker."
         exit 1
         ;;
 esac
@@ -70,7 +70,7 @@ install_python_linux() {
     elif command -v pacman &>/dev/null; then
         sudo pacman -S --noconfirm python python-pip
     else
-        err "Could not detect package manager. Install Python 3.10+ manually, then re-run."
+        err "Could not detect package manager. Install Python 3.11+ manually, then re-run."
         exit 1
     fi
 }
@@ -81,7 +81,7 @@ for candidate in python3 python; do
         version=$("$candidate" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
         major=$(echo "$version" | cut -d. -f1)
         minor=$(echo "$version" | cut -d. -f2)
-        if [[ "$major" -ge 3 && "$minor" -ge 10 ]]; then
+        if [[ "$major" -ge 3 && "$minor" -ge 11 ]]; then
             PYTHON="$candidate"
             break
         fi
@@ -89,7 +89,7 @@ for candidate in python3 python; do
 done
 
 if [[ -z "$PYTHON" ]]; then
-    warn "Python 3.10+ not found."
+    warn "Python 3.11+ not found."
     if [[ "$PLATFORM" == "mac" ]]; then
         install_python_mac
     else
@@ -103,7 +103,7 @@ if [[ -z "$PYTHON" ]]; then
         fi
     done
     if [[ -z "$PYTHON" ]]; then
-        err "Python installation failed. Install Python 3.10+ manually and re-run."
+        err "Python installation failed. Install Python 3.11+ manually and re-run."
         exit 1
     fi
 fi
@@ -141,10 +141,10 @@ mkdir -p "$CONFIG_DIR"
 echo ""
 info "LLM Backend Setup"
 echo ""
-echo "EDUagent needs an AI model to generate lessons. Pick one:"
+echo "Claw-ED needs an AI model to generate lessons. Pick one:"
 echo ""
-echo "  1) Anthropic (Claude) — best quality, pay per use"
-echo "  2) OpenAI (GPT-4o) — great quality, pay per use"
+echo "  1) Anthropic (Claude) — hosted, pay per use"
+echo "  2) OpenAI (GPT) — hosted, pay per use"
 echo "  3) Ollama — free, runs locally on your machine"
 echo ""
 

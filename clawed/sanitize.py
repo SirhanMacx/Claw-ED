@@ -1,6 +1,6 @@
 """Output sanitization — clean LLM artifacts before export.
 
-Strips XML/HTML tags, markdown formatting, CJK character leakage,
+Strips XML/HTML tags and markdown formatting while preserving language,
 and other artifacts from multilingual LLM output so exported documents
 (DOCX, PPTX) contain only clean, print-ready prose.
 """
@@ -38,14 +38,6 @@ _RE_MD_ITALIC = re.compile(r'\*([^*]+)\*')
 # HTML entities
 _RE_HTML_ENTITIES = re.compile(r'&(?:amp|lt|gt|nbsp|quot|apos|#\d{1,4}|#x[0-9a-fA-F]{1,4});')
 
-# CJK character leakage between Latin text
-_RE_CJK_LEAK = re.compile(
-    r'(?<=[a-zA-Z0-9.,;:!?\s])'
-    r'[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f'
-    r'\u30a0-\u30ff\u3040-\u309f]+'
-    r'(?=[\sa-zA-Z0-9.,;:!?])',
-)
-
 # Whitespace cleanup
 _RE_TRIPLE_NEWLINES = re.compile(r'\n{3,}')
 _RE_MULTI_SPACES = re.compile(r'  +')
@@ -70,7 +62,6 @@ def sanitize_text(text: str) -> str:
     - Markdown headers (## → plain text)
     - Markdown bold/italic (**text** / *text* → text)
     - HTML entities (&amp; → &)
-    - CJK character leakage from multilingual models
     - Excessive whitespace
     """
     if not isinstance(text, str):
@@ -96,9 +87,6 @@ def sanitize_text(text: str) -> str:
         text = text.replace(entity, replacement)
     # Strip any remaining numeric/hex entities
     text = _RE_HTML_ENTITIES.sub('', text)
-
-    # Strip CJK character leakage
-    text = _RE_CJK_LEAK.sub('', text)
 
     # Clean up whitespace
     text = _RE_TRIPLE_NEWLINES.sub('\n\n', text)

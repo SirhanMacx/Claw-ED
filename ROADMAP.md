@@ -1,8 +1,21 @@
 # Roadmap
 
-Current version: **v9.18.2026**
+Current version: **v9.18.2026.1**
 
-## What's next
+## What’s next
+
+### Recently shipped (v9.18.2026.1)
+- [x] Owned Python runtime; removed bundled third-party terminal source
+- [x] Selected-model preservation and request-local tool definitions
+- [x] Queued bundle recovery, cancellation, phase checkpoints, and Jobs page
+- [x] Full source excerpts, evidence manifests, and multilingual preservation
+- [x] Dated local, budget, Astra, and Fable model guidance
+
+### Next evidence to collect
+- [ ] Teacher-scored lesson comparisons: accuracy, supported answers, source fidelity, editing time, and cost
+- [ ] Full conversational recovery and verified external delivery in the shared job ledger
+- [ ] Evaluate a maintained workflow SDK against the current backend using identical fixtures and budgets
+
 
 ### Recently shipped (v9.18.2026)
 - [x] **Chat privacy** — per-conversation history scoped to lesson and teacher/student audience

@@ -392,11 +392,11 @@ def _ask_provider_wizard() -> tuple[LLMProvider | None, str | None, str | None, 
     """
     console.print(
         "\n[bold]Claw-ED needs an AI service to generate your lessons.[/bold]\n"
-        "We recommend Ollama Cloud — one flat monthly fee, unlimited lessons.\n"
+        "Choose a local model for privacy or a hosted provider for convenience.\n"
     )
     console.print(
-        "  [bold yellow]\u2605[/bold yellow] [bold]Ollama Cloud[/bold] — $20/month, unlimited lessons, great quality\n"
-        "    Best for daily use. No surprise charges.\n"
+        "  [bold yellow]\u2605[/bold yellow] [bold]Ollama Cloud[/bold] — hosted models; plan limits apply\n"
+        "    Check current plans and quotas at ollama.com.\n"
         "    Sign up: [cyan]https://ollama.com[/cyan] \u2192 create account \u2192 Settings \u2192 API Keys\n"
     )
 
@@ -415,13 +415,13 @@ def _ask_provider_wizard() -> tuple[LLMProvider | None, str | None, str | None, 
     # Show alternatives with plain-English descriptions
     console.print("\n[bold]Other options:[/bold]\n")
     console.print(
-        "  [bold][1][/bold] Claude (by Anthropic) — highest quality, ~$0.10/lesson"
+        "  [bold][1][/bold] Claude (by Anthropic) — hosted models, billed by usage"
     )
     console.print(
         "        Sign up: [cyan]https://console.anthropic.com[/cyan] \u2192 API Keys"
     )
     console.print(
-        "  [bold][2][/bold] GPT (by OpenAI) — high quality, ~$0.15/lesson"
+        "  [bold][2][/bold] GPT (by OpenAI) — hosted models, billed by usage"
     )
     console.print(
         "        Sign up: [cyan]https://platform.openai.com/api-keys[/cyan]"
@@ -665,16 +665,16 @@ def quick_model_setup() -> str:
         "good quality [dim](easiest to start)[/dim]"
     )
     console.print("        Sign up: [cyan]https://aistudio.google.com/apikey[/cyan]")
-    console.print("  [bold cyan][2][/bold cyan] Claude (Anthropic) \u2014 highest quality, ~$0.10/lesson")
+    console.print("  [bold cyan][2][/bold cyan] Claude (Anthropic) \u2014 hosted models, billed by usage")
     console.print("        Sign up: [cyan]https://console.anthropic.com[/cyan] \u2192 API Keys")
-    console.print("  [bold cyan][3][/bold cyan] Ollama Cloud \u2014 $20/month, unlimited lessons")
+    console.print("  [bold cyan][3][/bold cyan] Ollama Cloud \u2014 hosted models with plan limits")
     console.print("        Sign up: [cyan]https://ollama.com[/cyan] \u2192 Settings \u2192 API Keys")
     if local_ollama:
         console.print("  [bold cyan][4][/bold cyan] Local Ollama \u2014 detected on this machine, completely free")
     else:
         console.print("  [bold cyan][4][/bold cyan] Local Ollama \u2014 free, runs on your computer")
         console.print("        Install: [cyan]https://ollama.com/download[/cyan]")
-    console.print("  [bold cyan][5][/bold cyan] GPT (OpenAI) \u2014 high quality, ~$0.15/lesson")
+    console.print("  [bold cyan][5][/bold cyan] GPT (OpenAI) \u2014 hosted models, billed by usage")
     console.print("        Sign up: [cyan]https://platform.openai.com/api-keys[/cyan]")
     console.print("  [bold cyan][6][/bold cyan] Try demo mode \u2014 no API key needed, see example output first")
     console.print("  [bold cyan][7][/bold cyan] Skip \u2014 I'll set this up later\n")

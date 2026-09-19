@@ -101,19 +101,16 @@ def list_openrouter_models(
         return []
 
 
-# Known models for providers without listing APIs
+# Curated choices checked 2026-09-18; discovery remains authoritative.
 ANTHROPIC_MODELS = [
-    {"name": "claude-sonnet-4-6", "tier": "work"},
-    {"name": "claude-opus-4-6", "tier": "deep"},
-    {"name": "claude-haiku-3.5", "tier": "fast"},
+    {"name": "claude-fable-5-1", "tier": "deep"},
+    {"name": "claude-sonnet-5", "tier": "work"},
+    {"name": "claude-haiku-4-5", "tier": "fast"},
 ]
 
 OPENAI_MODELS = [
-    {"name": "gpt-4.1", "tier": "deep"},
+    {"name": "gpt-6-astra", "tier": "deep"},
     {"name": "gpt-4.1-mini", "tier": "fast"},
-    {"name": "gpt-4.1-nano", "tier": "fast"},
-    {"name": "o3", "tier": "deep"},
-    {"name": "o4-mini", "tier": "work"},
 ]
 
 GOOGLE_MODELS = [
@@ -121,15 +118,15 @@ GOOGLE_MODELS = [
     {"name": "gemini-2.5-pro", "tier": "deep"},
 ]
 
-# OpenRouter curated models (paid first, then free options)
+# Compatibility name: consumers also display paid choices from this list.
 OPENROUTER_FREE_MODELS = [
-    {"id": "zhipu/glm-5.1", "name": "GLM 5.1", "free": False, "tools": True},
-    {"id": "qwen/qwen3.6-plus:free", "name": "Qwen 3.6 Plus", "free": True},
-    {"id": "nvidia/nemotron-3-super-120b-a12b:free", "name": "Nemotron 3 Super 120B", "free": True},
-    {"id": "google/gemma-3-27b-it:free", "name": "Gemma 3 27B", "free": True},
-    {"id": "deepseek/deepseek-chat-v3-0324:free", "name": "DeepSeek V3", "free": True},
-    {"id": "meta-llama/llama-4-scout:free", "name": "Llama 4 Scout", "free": True},
-    {"id": "mistralai/mistral-small-3.2-24b-instruct:free", "name": "Mistral Small 3.2", "free": True},
+    {"id": "openai/gpt-oss-20b", "name": "GPT-OSS 20B (budget)", "free": False, "tools": True},
+    {"id": "google/gemma-4-31b-it", "name": "Gemma 4 31B (budget)", "free": False, "tools": True},
+    {"id": "qwen/qwen3.8-flash", "name": "Qwen 3.8 Flash (budget)", "free": False, "tools": True},
+    {"id": "openai/gpt-6-astra", "name": "GPT-6 Astra (premium)", "free": False, "tools": True},
+    {"id": "anthropic/claude-fable-5.1", "name": "Claude Fable 5.1 (premium)", "free": False, "tools": True},
+    {"id": "qwen/qwen3.8-27b:free", "name": "Qwen 3.8 27B (free)", "free": True, "tools": True},
+    {"id": "google/gemma-4-31b-it:free", "name": "Gemma 4 31B (free)", "free": True, "tools": True},
 ]
 
 

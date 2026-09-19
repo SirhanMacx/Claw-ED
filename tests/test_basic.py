@@ -167,7 +167,7 @@ class TestAppConfigDefaults:
         assert config.provider == LLMProvider.ANTHROPIC
         assert config.anthropic_model == "claude-sonnet-4-6"
         assert config.openai_model == "gpt-4.1"
-        assert config.ollama_model == "gemma4:31b-cloud"
+        assert config.ollama_model == "qwen3.5:9b"
         assert config.ollama_base_url == "http://localhost:11434"
         assert config.output_dir == "~/clawed_output"
         assert config.include_homework is True

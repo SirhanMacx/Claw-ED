@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from clawed.model_capabilities import output_parameters, sampling_parameters
 from clawed.models import AppConfig, LLMProvider
 
 if TYPE_CHECKING:
@@ -158,14 +159,10 @@ class LLMClient:
             json={
                 "model": self.config.openrouter_model,
                 "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
+                **sampling_parameters(self.config.openrouter_model, temperature),
+                **output_parameters(self.config.openrouter_model, max_tokens),
                 "stream": True,
-                # Quick co-teacher help should feel instant. Tell reasoning
-                # models (e.g. minimax-m3) to skip the long chain-of-thought
-                # so the answer streams right away. Ignored by non-reasoning
-                # models. (OpenRouter unified `reasoning` control.)
-                "reasoning": {"enabled": False},
+
             },
         ) as resp:
             resp.raise_for_status()
@@ -304,7 +301,7 @@ class LLMClient:
             is_oauth = is_anthropic_oauth_token(api_key)
             client: Any
             if is_oauth:
-                client = anthropic.Anthropic(
+                client = anthropic.AsyncAnthropic(
                     auth_token=api_key,
                     default_headers={
                         "anthropic-beta": "oauth-2025-04-20",
@@ -312,12 +309,12 @@ class LLMClient:
                     },
                 )
             else:
-                client = anthropic.Anthropic(api_key=api_key)
+                client = anthropic.AsyncAnthropic(api_key=api_key)
 
-            msg = client.messages.create(
+            msg = await client.messages.create(
                 model=self.config.anthropic_model,
                 max_tokens=max_tokens,
-                temperature=temperature,
+                **sampling_parameters(self.config.anthropic_model, temperature),
                 system=system or "",
                 messages=[{
                     "role": "user",
@@ -334,7 +331,7 @@ class LLMClient:
                     ],
                 }],
             )
-            return str(msg.content[0].text)
+            return "\n".join(str(block.text) for block in msg.content if block.type == "text")
         except Exception as e:
             logger.debug("Vision check failed (Anthropic): %s", e)
             return "GOOD"  # Permissive on failure
@@ -362,8 +359,8 @@ class LLMClient:
                     headers={"Authorization": f"Bearer {api_key}"},
                     json={
                         "model": self.config.openai_model,
-                        "max_tokens": max_tokens,
-                        "temperature": temperature,
+                        **output_parameters(self.config.openai_model, max_tokens),
+                        **sampling_parameters(self.config.openai_model, temperature),
                         "messages": [
                             {"role": "system", "content": system} if system else None,
                             {
@@ -983,7 +980,7 @@ class LLMClient:
             # Use the official SDK — handles OAuth (auth_token) and API keys properly
             is_oauth = is_anthropic_oauth_token(api_key)
             if is_oauth:
-                client = anthropic.Anthropic(
+                client = anthropic.AsyncAnthropic(
                     auth_token=api_key,
                     default_headers={
                         "anthropic-beta": "oauth-2025-04-20",
@@ -992,7 +989,7 @@ class LLMClient:
                     max_retries=3,
                 )
             else:
-                client = anthropic.Anthropic(
+                client = anthropic.AsyncAnthropic(
                     api_key=api_key,
                     max_retries=3,
                 )
@@ -1001,14 +998,14 @@ class LLMClient:
                 kwargs: dict[str, Any] = {
                     "model": self.config.anthropic_model,
                     "max_tokens": max_tokens,
-                    "temperature": temperature,
+                    **sampling_parameters(self.config.anthropic_model, temperature),
                     "messages": [{"role": "user", "content": prompt}],
                 }
                 if system:
                     kwargs["system"] = system
 
-                msg = client.messages.create(**kwargs)
-                return str(msg.content[0].text)
+                msg = await client.messages.create(**kwargs)
+                return "\n".join(str(block.text) for block in msg.content if block.type == "text")
 
             except anthropic.AuthenticationError as e:
                 raise OSError(
@@ -1053,8 +1050,8 @@ class LLMClient:
                         json={
                             "model": self.config.openai_model,
                             "messages": messages,
-                            "temperature": temperature,
-                            "max_tokens": max_tokens,
+                            **sampling_parameters(self.config.openai_model, temperature),
+                            **output_parameters(self.config.openai_model, max_tokens),
                         },
                     )
                     resp.raise_for_status()
@@ -1108,8 +1105,8 @@ class LLMClient:
                         json={
                             "model": self.config.openrouter_model,
                             "messages": messages,
-                            "temperature": temperature,
-                            "max_tokens": max_tokens,
+                            **sampling_parameters(self.config.openrouter_model, temperature),
+                            **output_parameters(self.config.openrouter_model, max_tokens),
                         },
                     )
                     if resp.status_code >= 400:

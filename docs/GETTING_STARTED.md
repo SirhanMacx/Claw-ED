@@ -1,87 +1,15 @@
-# Getting Started in 5 Minutes
+# Getting started
 
-No technical background needed. If you can use email, you can use Claw-ED.
+Use Python 3.11 or newer. Follow the [README installation steps](../README.md#setup) to create a virtual environment and install `clawed`.
 
-## 1. Install (1 minute)
+1. Run `clawed setup` and select a provider. [Choose a model](CHOOSING_A_MODEL.md) using the current local, budget, and premium options. Hosted usage is billed separately; local inference requires a downloaded model and enough memory.
+2. Import a small folder of your own permitted PDF, DOCX, PPTX, TXT, or Markdown materials with `clawed ingest ./my-lessons/`. Check the extracted text; ingestion cannot guarantee that every layout or source location survives.
+3. Run `clawed` for an interactive request, or `clawed serve` for the local dashboard. No Node.js installation is needed.
+4. For a recoverable lesson bundle, open **Jobs**, enter a topic, subject, and grade, and queue the draft. Start `clawed queue worker` in another terminal. Jobs do not run while the worker is stopped.
+5. Inspect the source manifest, teacher plan, student packet, and slides. Check every quotation and answer against the supplied sources, then edit the documents before sharing.
 
-Open your terminal (Mac: Terminal app, Windows: PowerShell) and run:
+A failed worker can be recovered after five minutes without a heartbeat. Use **Recover interrupted jobs**, then **Resume draft**. Matching completed phases are reused. Cancellation cannot undo a request already running at your model provider.
 
-```bash
-pip install clawed
-```
+Configuration normally lives in `~/.eduagent/`; exports normally live in `~/clawed_output/`. Hosted models receive selected content. Keep private student information out of material sent to services unless your school has approved that use. Telegram and external sharing require their own setup; start the bot explicitly with `clawed bot`.
 
-## 2. First Run (1 minute)
-
-```bash
-clawed
-```
-
-Ed will walk you through setup:
-- **Pick a model**: We recommend [Ollama Pro](https://ollama.com/pro) ($20/month) — best quality for the price. Free options available too.
-- **Enter your API key**: One time only. Stored securely on your machine.
-- **Tell Ed about you**: Name, school, subjects, grade levels.
-
-## 3. Feed Ed Your Materials (2 minutes)
-
-Point Ed at your lesson files — PPTX, DOCX, PDF, anything:
-
-```bash
-clawed ingest ~/Documents/MyLessons/
-```
-
-Ed reads through everything and learns:
-- How you structure lessons (Do Now style, activity types, exit ticket format)
-- Your vocabulary choices and scaffolding patterns
-- Your images, maps, cartoons, and diagrams (extracted and catalogued)
-- Your favorite primary sources and assessment formats
-
-This runs once. After that, Ed knows your teaching voice.
-
-## 4. Generate Your First Lesson (1 minute)
-
-```bash
-clawed lesson "Causes of the French Revolution" -g 10
-```
-
-In about 2 minutes, Ed produces:
-- **Teacher lesson plan** (DOCX) with answer key and teacher scripts
-- **Student handout** (DOCX) with fill-in-the-blank and scaffolding
-- **Slideshow** (PPTX) with your own images from your files
-- **IEP/504 accommodations** (DOCX)
-- **ELL scaffolding** (DOCX)
-- **Gifted extensions** (DOCX)
-- **Review game** (HTML) — open in any browser
-- **Learning journey** (HTML) — interactive student walkthrough
-- **Research report** (Markdown) — topic deep-dive grounded in your materials
-
-9 files. One command. In your voice.
-
-## 5. Try Telegram (Optional)
-
-Run Ed as a Telegram bot so you can generate lessons from your phone:
-
-```bash
-clawed bot
-```
-
-Message @YourBotName on Telegram: "Make me a lesson on Reconstruction for 8th grade" — files arrive in chat.
-
-See [BOT_SETUP.md](BOT_SETUP.md) for setup details.
-
----
-
-## What's Next?
-
-- **Generate a full unit**: `clawed unit "World War II" -g 10 -w 3`
-- **Search your materials**: Ask Ed "What do I have on the Civil War?"
-- **Create an assessment**: `clawed assess "Reconstruction" --type crq`
-- **Build a game**: Ask Ed "Make a Jeopardy game on the Constitution"
-- **See your curriculum**: Ask Ed "Show me my curriculum map"
-
-## Need Help?
-
-- [Choosing a Model](CHOOSING_A_MODEL.md) — compare AI providers and costs
-- [Bot Setup](BOT_SETUP.md) — Telegram bot configuration
-- [Docker Setup](DOCKER_SETUP.md) — container deployment
-- [GitHub Issues](https://github.com/SirhanMacx/Claw-ED/issues) — report bugs or request features
-- [GitHub Discussions](https://github.com/SirhanMacx/Claw-ED/discussions) — ask questions
+See [troubleshooting](TROUBLESHOOTING.md) for setup problems and [the architecture](ARCHITECTURE.md) for recovery limits.

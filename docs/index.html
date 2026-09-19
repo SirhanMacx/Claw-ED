@@ -33,7 +33,7 @@
   "applicationCategory": "EducationalApplication",
   "operatingSystem": "macOS, Windows, Linux",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "softwareVersion": "9.18.2026",
+  "softwareVersion": "9.18.2026.1",
   "author": {
     "@type": "Organization",
     "name": "Claw-ED",
@@ -330,7 +330,7 @@ footer a:hover { color: var(--text-bright); }
   <img src="ed-mascot.png" alt="Ed, the Claw-ED mascot">
   <h1>Claw-ED</h1>
   <p class="tagline">Your curriculum. Your teaching voice.<br>Lessons you can review and edit.</p>
-  <p>v9.18.2026 &middot; Beta &middot; Python 3.11+</p>
+  <p>v9.18.2026.1 &middot; Beta &middot; Python 3.11+</p>
   <nav aria-label="Main navigation">
     <a href="#workflow">How it works</a>
     <a href="#install">Install</a>
@@ -392,21 +392,31 @@ clawed lesson "Causes of the French Revolution" -g 10 -s "Global History"</pre>
 </section>
 
 <section id="release">
-  <h2>What changed in v9.18.2026</h2>
-  <ul class="plain">
-    <li>Chat histories are separated by conversation, lesson, and teacher/student audience.</li>
-    <li>Protected actions use exact, expiring, single-use approvals.</li>
-    <li>Dashboard login and student widget embeds have been repaired.</li>
-    <li>Both main lesson-generation paths use the same final quality gate.</li>
-    <li>Bundle delivery reports the files actually produced and the status of the review.</li>
+  <h2>What changed in v9.18.2026.1</h2>
+  <p>One owned Python runtime. No bundled third-party terminal or Node.js requirement.</p>
+  <ul>
+    <li>Keep your selected model and isolate concurrent tool requests.</li>
+    <li>Queue, cancel, and resume lesson drafts with saved generation phases.</li>
+    <li>Preserve multilingual source text and review quotation provenance in a source manifest.</li>
+    <li>Use current local, budget, and premium model options.</li>
   </ul>
-  <p>Existing lessons and chat records are preserved. Old unscoped approvals need a fresh request; recopy student widget snippets after upgrading. <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/CHANGELOG.md">Read the changelog and upgrade notes.</a></p>
+  <p><a href="https://github.com/SirhanMacx/Claw-ED/blob/main/CHANGELOG.md">Release notes and upgrade details</a></p>
 </section>
 
 <section id="providers">
-  <h2>Choose your model</h2>
-  <p>Provider adapters support Anthropic, OpenAI, Google Gemini, Ollama, and OpenRouter. Configure a provider in <code>clawed setup</code>. Model compatibility and tool support vary by task.</p>
-  <p>Model access is separate from Claw-ED. Your provider sets pricing, quotas, and availability. For local inference, use a model running on your own machine; hardware and model choice affect speed and output quality.</p>
+  <h2>Choose the model for your budget</h2>
+  <p>Checked September 18, 2026. These are starting recommendations; teacher review and your own comparison matter.</p>
+  <div style="overflow-x:auto"><table class="providers">
+    <thead><tr><th>Use</th><th>Starting options</th><th>Tradeoff</th></tr></thead>
+    <tbody>
+      <tr><td>Local laptop</td><td>Qwen 3.5 4B / 9B, Gemma 4 12B</td><td>No per-token fee; leave memory for context and other apps.</td></tr>
+      <tr><td>Larger local machine</td><td>GPT-OSS 20B, Qwen 3.8 27B</td><td>More memory and time; compare using your actual lesson task.</td></tr>
+      <tr><td>Budget cloud</td><td>OpenRouter: GPT-OSS 20B, Gemma 4 31B, Qwen 3.8 Flash</td><td>Low token prices; content goes to hosted providers.</td></tr>
+      <tr><td>Premium</td><td>GPT-6 Astra, Claude Fable 5.1</td><td>Explicit choices for complex work; higher token prices.</td></tr>
+    </tbody>
+  </table></div>
+  <p><a href="https://github.com/SirhanMacx/Claw-ED/blob/main/docs/CHOOSING_A_MODEL.md">Exact model IDs, prices, memory estimates, setup, and official sources</a></p>
+  <p>Your provider sets access, pricing, and quotas. Claw-ED does not include usage. Ollama Cloud and free OpenRouter endpoints have limits.</p>
 </section>
 
 <section id="privacy">
@@ -420,7 +430,7 @@ clawed lesson "Causes of the French Revolution" -g 10 -s "Global History"</pre>
 <section id="contributing">
   <h2>Help improve the complete teaching workflow</h2>
   <p>The most useful contributions make import, drafting, review, and export work better together: reproducible bugs, source-fidelity checks, teacher-reviewed examples, and clearer output status.</p>
-  <p>CI checks Python 3.11 and 3.12, the TypeScript build, wheel installation, and Docker startup. Most model tests use synthetic data or mocks. Passing tests does not establish classroom quality across live models.</p>
+  <p>CI checks Python 3.11 and 3.12, wheel installation, and Docker startup. Most model tests use synthetic data or mocks. Passing tests does not establish classroom quality across live models.</p>
   <p><a href="https://github.com/SirhanMacx/Claw-ED/blob/main/CONTRIBUTING.md">Contributing guide</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/issues">Report an issue</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/ROADMAP.md">Roadmap</a></p>
   <p>Claw-ED is maintained by <a href="https://macxlabs.app/?src=clawed-landing">MacxLabs</a>. <a href="https://macxlabs.app/support/?src=clawed-landing">Supporting development</a> is optional.</p>
 </section>
@@ -428,7 +438,7 @@ clawed lesson "Causes of the French Revolution" -g 10 -s "Global History"</pre>
 <footer>
   <p><a href="https://github.com/SirhanMacx/Claw-ED">GitHub</a> &middot; <a href="https://pypi.org/project/clawed/">PyPI</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/docs/FAQ.md">FAQ</a> &middot; <a href="https://github.com/SirhanMacx/Claw-ED/blob/main/LICENSE">License</a></p>
   <p>Claw-ED original code: MIT &middot; Third-party components retain their own terms.</p>
-  <p>v9.18.2026</p>
+  <p>v9.18.2026.1</p>
 </footer>
 </div>
 </body>

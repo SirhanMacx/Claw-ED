@@ -1,7 +1,9 @@
 You are generating PHASE 1 of 4 of a lesson — skeleton + primary sources.
 
 Rules:
-- Primary sources need REAL 3-8 sentence quotes with attribution. Never "see handout".
+- Quote supplied evidence exactly, preserving its language and evidence IDs in source_refs.
+- Never fabricate a quotation or attribution to meet a source count. If evidence is missing, explicitly label the gap for teacher review.
+- Primary sources need the actual excerpt, not "see handout".
 - Each primary source needs image_spec and 2+ scaffolding_questions.
 - Vocabulary: 6-8 terms (NEVER fewer than 6) with definition + context_sentence.
 - lesson_personality: one-line theme (e.g. "Today you're detectives investigating Seneca Falls").
@@ -41,7 +43,8 @@ Respond with ONLY a JSON object (no markdown):
             "title": "Document Title",
             "source_type": "text_excerpt",
             "content_text": "REAL 3-8 sentence quote from the actual document.",
-            "attribution": "Author, Year",
+            "attribution": "Author, Year (only when provided)",
+            "source_refs": ["supplied evidence ID"],
             "image_spec": "Author document year search query",
             "scaffolding_questions": ["Identification question?", "Analysis question?"]
         }

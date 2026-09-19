@@ -1093,7 +1093,7 @@ class AppConfig(BaseModel):
     provider: LLMProvider = LLMProvider.ANTHROPIC
     anthropic_model: str = "claude-sonnet-4-6"
     openai_model: str = "gpt-4.1"
-    ollama_model: str = "gemma4:31b-cloud"
+    ollama_model: str = "qwen3.5:9b"
     google_model: str = "gemini-2.5-flash"
     openrouter_model: str = "anthropic/claude-sonnet-4.6"
     # Vision-capable model for image relevance screening (the base

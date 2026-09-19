@@ -132,11 +132,12 @@ def _register_api_routes(app: FastAPI) -> None:
     from clawed.api.routes.gateway_chat import router as gateway_chat_router
     from clawed.api.routes.generate import router as generate_router
     from clawed.api.routes.ingest import router as ingest_router
+    from clawed.api.routes.jobs import router as jobs_router
     from clawed.api.routes.lessons import router as lessons_router
     from clawed.api.routes.school import router as school_router
     from clawed.api.routes.settings import router as settings_router
     from clawed.api.routes.tools import router as tools_router
-
+    app.include_router(jobs_router, prefix="/api")
     app.include_router(ingest_router, prefix="/api")
     app.include_router(generate_router, prefix="/api")
     app.include_router(chat_router, prefix="/api")
@@ -613,6 +614,12 @@ def _register_page_routes(app: FastAPI, templates: Jinja2Templates) -> None:
     """
 
     app.post("/api/auth/bootstrap")(_page_auth_bootstrap)
+
+    @app.get("/jobs", response_class=HTMLResponse)
+    async def jobs_page(request: Request) -> Any:
+        if not _check_page_auth(request):
+            return _AUTH_DENIED
+        return templates.TemplateResponse(request, "jobs.html", {"active_nav": "jobs"})
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> Any:

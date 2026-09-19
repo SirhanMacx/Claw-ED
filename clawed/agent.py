@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from clawed.models import AppConfig, LLMProvider
 from clawed.tools import TOOL_DEFINITIONS, execute_tool
@@ -75,7 +75,7 @@ async def run_agent(
     messages.append({"role": "user", "content": message})
 
     for _iteration in range(_MAX_TOOL_ITERATIONS):
-        if config.provider in (LLMProvider.ANTHROPIC, LLMProvider.OPENAI):
+        if config.provider != LLMProvider.OLLAMA:
             response = await _call_with_native_tools(messages, system, config)
         else:
             response = await _call_with_ollama_tools(messages, system, config)
@@ -91,6 +91,8 @@ async def run_agent(
                 "role": "assistant",
                 "content": None,
                 "tool_calls": tool_calls,
+                "anthropic_content": response.get("anthropic_content"),
+                "response_output": response.get("response_output"),
             })
 
             # Execute each tool and add its result
@@ -112,17 +114,69 @@ async def run_agent(
 
 
 async def _call_with_native_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
+    messages: list[dict[str, Any]], system: str, config: AppConfig,
+    tool_definitions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Call Anthropic or OpenAI with native tool support."""
+    if config.provider == LLMProvider.OPENAI and config.openai_model.startswith("gpt-6"):
+        return await _responses_with_tools(messages, system, config, tool_definitions)
     if config.provider == LLMProvider.ANTHROPIC:
-        return await _anthropic_with_tools(messages, system, config)
+        return await _anthropic_with_tools(messages, system, config, tool_definitions)
     else:
-        return await _openai_with_tools(messages, system, config)
+        return await _openai_with_tools(messages, system, config, tool_definitions)
+
+
+async def _responses_with_tools(
+    messages: list[dict[str, Any]], system: str, config: AppConfig,
+    tool_definitions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Astra tool calls use Responses; keep native output across tool turns."""
+    import httpx
+
+    from clawed.config import get_api_key
+
+    api_key = get_api_key("openai")
+    if not api_key:
+        raise ValueError("No OpenAI API key configured")
+    inputs: list[dict[str, Any]] = []
+    for message in messages:
+        if message.get("response_output"):
+            inputs.extend(message["response_output"])
+        elif message["role"] == "tool":
+            inputs.append({"type": "function_call_output", "call_id": message["tool_call_id"],
+                           "output": message["content"]})
+        elif message.get("tool_calls"):
+            for call in message["tool_calls"]:
+                inputs.append({"type": "function_call", "call_id": call["id"], "name": call["name"],
+                               "arguments": json.dumps(call.get("arguments", {}))})
+        elif message.get("content"):
+            inputs.append({"role": message["role"], "content": message["content"]})
+    definitions = TOOL_DEFINITIONS if tool_definitions is None else tool_definitions
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        response = await client.post(
+            "https://api.openai.com/v1/responses",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": config.openai_model, "instructions": system, "input": inputs,
+                  "tools": [{"type": "function", **cast(dict[str, Any], tool["function"])} for tool in definitions],
+                  "store": False, "include": ["reasoning.encrypted_content"]},
+        )
+        response.raise_for_status()
+        data = response.json()
+    output = data.get("output", [])
+    calls = [{"id": item["call_id"], "name": item["name"], "arguments": json.loads(item["arguments"])}
+             for item in output if item.get("type") == "function_call"]
+    if calls:
+        return {"type": "tool_calls", "tool_calls": calls, "response_output": output}
+    text = "\n".join(block["text"] for item in output if item.get("type") == "message"
+                     for block in item.get("content", []) if block.get("type") == "output_text")
+    if not text:
+        raise RuntimeError("OpenAI returned no usable text or tool calls")
+    return {"type": "text", "content": text}
 
 
 async def _anthropic_with_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
+    messages: list[dict[str, Any]], system: str, config: AppConfig,
+    tool_definitions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Call Anthropic API with tool use."""
 
@@ -134,7 +188,7 @@ async def _anthropic_with_tools(
 
     # Convert tool definitions to Anthropic format
     tools = []
-    for t in TOOL_DEFINITIONS:
+    for t in (TOOL_DEFINITIONS if tool_definitions is None else tool_definitions):
         f: dict[str, Any] = t["function"]  # type: ignore[assignment]
         tools.append({
             "name": f["name"],
@@ -154,6 +208,8 @@ async def _anthropic_with_tools(
                     "content": m["content"],
                 }],
             })
+        elif m["role"] == "assistant" and m.get("anthropic_content"):
+            anthropic_messages.append({"role": "assistant", "content": m["anthropic_content"]})
         elif m["role"] == "assistant" and m.get("tool_calls"):
             # Single assistant message with ALL tool_use blocks
             content_blocks = []
@@ -172,15 +228,15 @@ async def _anthropic_with_tools(
 
     sdk_client: Any
     if _is_oauth_token(api_key):
-        sdk_client = _anthropic.Anthropic(
+        sdk_client = _anthropic.AsyncAnthropic(
             auth_token=api_key,
             default_headers={"anthropic-beta": "oauth-2025-04-20", "x-app": "cli"},
             max_retries=3,
         )
     else:
-        sdk_client = _anthropic.Anthropic(api_key=api_key, max_retries=3)
+        sdk_client = _anthropic.AsyncAnthropic(api_key=api_key, max_retries=3)
 
-    msg = sdk_client.messages.create(
+    msg = await sdk_client.messages.create(
         model=config.anthropic_model,
         max_tokens=4096,
         system=system,
@@ -202,14 +258,16 @@ async def _anthropic_with_tools(
             text_parts.append(block.text)
 
     if tool_calls:
-        return {"type": "tool_calls", "tool_calls": tool_calls}
+        return {"type": "tool_calls", "tool_calls": tool_calls,
+                "anthropic_content": [block.model_dump() for block in msg.content]}
     if text_parts:
         return {"type": "text", "content": "\n".join(text_parts)}
     return {"type": "text", "content": ""}
 
 
 async def _openai_with_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
+    messages: list[dict[str, Any]], system: str, config: AppConfig,
+    tool_definitions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Call OpenAI-compatible API with function calling (OpenAI, OpenRouter)."""
     import httpx
@@ -217,9 +275,9 @@ async def _openai_with_tools(
     from clawed.config import get_api_key
 
     # Route to the right provider's API key
-    api_key = get_api_key("openrouter") if config.provider == LLMProvider.OPENROUTER else get_api_key("openai")
+    api_key = get_api_key(config.provider.value)
     if not api_key:
-        raise ValueError("No OpenAI API key configured")
+        raise ValueError(f"No {config.provider.value} API key configured")
 
     oai_messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for m in messages:
@@ -250,10 +308,16 @@ async def _openai_with_tools(
         url = f"{getattr(config, 'openrouter_base_url', 'https://openrouter.ai/api/v1').rstrip('/')}/chat/completions"
         model = config.openrouter_model
         extra_headers = {"HTTP-Referer": "https://github.com/SirhanMacx/Claw-ED", "X-Title": "Claw-ED"}
+    elif config.provider == LLMProvider.GOOGLE:
+        url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        model = config.google_model
+        extra_headers = {}
     else:
         url = "https://api.openai.com/v1/chat/completions"
         model = config.openai_model
         extra_headers = {}
+
+    from clawed.model_capabilities import sampling_parameters
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         resp = await client.post(
@@ -266,8 +330,8 @@ async def _openai_with_tools(
             json={
                 "model": model,
                 "messages": oai_messages,
-                "tools": TOOL_DEFINITIONS,
-                "temperature": 0.7,
+                "tools": TOOL_DEFINITIONS if tool_definitions is None else tool_definitions,
+                **sampling_parameters(model, 0.7),
             },
         )
         resp.raise_for_status()
@@ -291,7 +355,8 @@ async def _openai_with_tools(
 
 
 async def _call_with_ollama_tools(
-    messages: list[dict[str, Any]], system: str, config: AppConfig
+    messages: list[dict[str, Any]], system: str, config: AppConfig,
+    tool_definitions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Call Ollama with tool support (native if available, prompt-based fallback)."""
     import httpx
@@ -342,7 +407,7 @@ async def _call_with_ollama_tools(
                 json={
                     "model": config.ollama_model,
                     "messages": oai_messages,
-                    "tools": TOOL_DEFINITIONS,
+                    "tools": TOOL_DEFINITIONS if tool_definitions is None else tool_definitions,
                     "temperature": 0.7,
                 },
             )

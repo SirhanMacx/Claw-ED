@@ -35,20 +35,11 @@ def config_set_model(
     cfg = AppConfig.load()
     cfg.provider = llm_provider
 
+    field = f"{llm_provider.value}_model"
     if model:
-        if llm_provider == LLMProvider.ANTHROPIC:
-            cfg.anthropic_model = model
-        elif llm_provider == LLMProvider.OPENAI:
-            cfg.openai_model = model
-        elif llm_provider == LLMProvider.OLLAMA:
-            cfg.ollama_model = model
-
+        setattr(cfg, field, model)
     cfg.save()
-    model_name = model or {
-        LLMProvider.ANTHROPIC: cfg.anthropic_model,
-        LLMProvider.OPENAI: cfg.openai_model,
-        LLMProvider.OLLAMA: cfg.ollama_model,
-    }[llm_provider]
+    model_name = str(getattr(cfg, field))
 
     console.print(
         Panel(
@@ -93,7 +84,7 @@ def config_set_model(
                 resp = _httpx.get(f"{base}/api/version", timeout=5)
                 version = resp.json().get("version", "unknown")
                 console.print(f"[green]Connected to Ollama v{version}[/green]")
-            except (json.JSONDecodeError, KeyError):
+            except (_httpx.HTTPError, json.JSONDecodeError, KeyError):
                 console.print(
                     "[yellow]Warning: Can't reach Ollama at "
                     f"{cfg.ollama_base_url}. Is it running?[/yellow]"
