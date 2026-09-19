@@ -115,7 +115,11 @@ def _configure_middleware(app: FastAPI) -> Jinja2Templates:
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
     # Templates
-    return Jinja2Templates(directory=str(_TEMPLATE_DIR))
+    from clawed import __version__
+
+    templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+    templates.env.globals["asset_version"] = __version__
+    return templates
 
 
 def _register_api_routes(app: FastAPI) -> None:

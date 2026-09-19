@@ -83,6 +83,44 @@ async def test_google_tools_use_google_endpoint(monkeypatch):
     assert result["content"] == "ok"
 
 
+async def test_fable_preserves_native_thinking_across_tool_turns(monkeypatch):
+    import anthropic
+
+    from clawed.agent import _anthropic_with_tools
+    from clawed.llm import LLMClient
+
+    monkeypatch.setattr("clawed.config.get_api_key", lambda provider: "synthetic-key")
+    native = [
+        {"type": "thinking", "thinking": "Synthetic reasoning", "signature": "opaque-signature"},
+        {"type": "tool_use", "id": "call-1", "name": "search", "input": {"query": "fixture"}},
+    ]
+
+    def block(data):
+        return SimpleNamespace(**data, model_dump=lambda: dict(data))
+
+    create = AsyncMock(side_effect=[
+        SimpleNamespace(content=[block(data) for data in native]),
+        SimpleNamespace(content=[block({"type": "text", "text": "Tool completed"})]),
+        SimpleNamespace(content=[block(native[0]), block({"type": "text", "text": "Draft"})]),
+    ])
+    monkeypatch.setattr(anthropic, "AsyncAnthropic", lambda **kwargs: SimpleNamespace(
+        messages=SimpleNamespace(create=create)))
+    config = AppConfig(provider=LLMProvider.ANTHROPIC, anthropic_model="claude-fable-5-1")
+    tools = [{"type": "function", "function": {
+        "name": "search", "description": "Find a fixture", "parameters": {"type": "object"}}}]
+    first = await _anthropic_with_tools([{"role": "user", "content": "Find it"}], "system", config, tools)
+    result = await _anthropic_with_tools([
+        {"role": "assistant", "anthropic_content": first["anthropic_content"]},
+        {"role": "tool", "tool_call_id": "call-1", "content": "Fixture found"},
+    ], "system", config, tools)
+    assert result["content"] == "Tool completed"
+    second = create.await_args_list[1].kwargs
+    assert second["messages"][0]["content"] == native
+    assert second["messages"][1]["content"][0]["tool_use_id"] == "call-1"
+    assert await LLMClient(config)._anthropic("prompt", "system", .4, 1000) == "Draft"
+    assert "temperature" not in create.await_args_list[2].kwargs
+
+
 def test_frontier_parameters_and_multilingual_evidence():
     from clawed.sanitize import sanitize_text
     for name in ("gpt-6-astra", "anthropic/claude-fable-5.1", "claude-sonnet-5"):
@@ -112,6 +150,27 @@ def test_atomic_claim_and_worker_ownership(tmp_path):
     assert second.get_result(job) == {"correct_worker": True}
     first.close()
     second.close()
+
+
+def test_cancel_at_completion_and_stale_recovery(tmp_path):
+    queue = TaskQueue(tmp_path / "jobs.db")
+    for finalize in (lambda job: queue.mark_done(job, {"ok": True}),
+                     lambda job: queue.mark_failed(job, "Failed")):
+        job = queue.submit(TaskType.LESSON_BUNDLE)
+        queue.next_queued()
+        queue.cancel(job)
+        finalize(job)
+        assert queue.get_status(job).status == TaskStatus.CANCELLED
+    stale = queue.submit(TaskType.LESSON_BUNDLE)
+    queue.next_queued()
+    assert queue.recover_interrupted() == 0
+    queue._get_conn().execute("UPDATE tasks SET heartbeat = 0 WHERE id = ?", (stale,))
+    queue._get_conn().commit()
+    assert queue.recover_interrupted() == 1
+    assert queue.get_status(stale).status == TaskStatus.INTERRUPTED
+    assert queue.resume(stale)
+    assert queue.next_queued().id == stale
+    queue.close()
 
 
 async def test_cancel_running_job_without_marking_done(tmp_path, monkeypatch):

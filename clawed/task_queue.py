@@ -239,23 +239,29 @@ class TaskQueue:
         """Mark a task as successfully completed with its result."""
         now = datetime.now(UTC).isoformat()
         conn = self._get_conn()
-        conn.execute(
+        cursor = conn.execute(
             "UPDATE tasks SET status = 'done', result_json = ?, completed_at = ? "
             "WHERE id = ? AND status = 'running' AND worker_id = ?",
             (json.dumps(result), now, task_id, self.worker_id),
         )
         conn.commit()
+        if not cursor.rowcount:
+            # Cancellation can arrive after generation finishes but before this
+            # commit. A completed coroutine must still acknowledge that request.
+            self.mark_stopped(task_id)
 
     def mark_failed(self, task_id: str, error: str, result: dict[str, Any] | None = None) -> None:
         """Mark a task as failed with an error message."""
         now = datetime.now(UTC).isoformat()
         conn = self._get_conn()
-        conn.execute(
+        cursor = conn.execute(
             "UPDATE tasks SET status = 'failed', error = ?, result_json = ?, completed_at = ? "
             "WHERE id = ? AND status = 'running' AND worker_id = ?",
             (error, json.dumps(result) if result else None, now, task_id, self.worker_id),
         )
         conn.commit()
+        if not cursor.rowcount:
+            self.mark_stopped(task_id)
 
     # ── Helpers ───────────────────────────────────────────────────────
 
