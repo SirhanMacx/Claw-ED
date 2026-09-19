@@ -2,7 +2,7 @@
 
 **Catalog and price check: September 18, 2026.** These are starting recommendations, not a classroom benchmark. Compare the same lesson and sources on your own hardware. Measure factual errors, source fidelity, answer quality, editing time, latency, and total cost including retries.
 
-Claw-ED uses the model you select. Task and tier overrides apply only when you configure them explicitly. Generation retries keep the selected model; they no longer rotate automatically into cloud alternatives. Existing saved selections are preserved on upgrade.
+Claw-ED uses the model you select. Task, tier, and vision overrides apply when configured. Generation retries keep the selected model; they no longer rotate automatically into cloud alternatives. Existing saved selections are preserved on upgrade, including an existing `openrouter_vision_model` value. Clear that optional setting to use your main OpenRouter model for images; `OLLAMA_VISION_MODEL` is the equivalent explicit local override. Failed or unsupported image checks omit the image rather than approve it.
 
 ## Local Ollama: start with the hardware you have
 

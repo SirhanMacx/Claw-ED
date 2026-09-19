@@ -26,14 +26,6 @@ _ModelT = TypeVar("_ModelT", bound=BaseModel)
 # Generous read timeout for slow cloud models (e.g. GLM on the free tier).
 _LLM_TIMEOUT = httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)
 
-# Free, vision-capable OpenRouter models tried in order for image relevance
-# screening. Each has its own free-tier rate bucket, so a 429 on one often clears
-# on the next — the fallback chain makes the screen resilient without paid usage.
-_OPENROUTER_VISION_FALLBACKS = (
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-nano-12b-v2-vl:free",
-    "google/gemma-4-26b-a4b-it:free",
-)
 
 
 class LLMClient:
@@ -237,8 +229,8 @@ class LLMClient:
         Used for image quality filtering — the vision model evaluates whether
         a fetched image is educationally appropriate, clear, and relevant.
 
-        Falls back to text-only generate() if the provider doesn't support
-        vision, returning a permissive "GOOD" to avoid blocking images.
+        Missing vision support and provider errors reject the image. They never
+        certify an image that the selected model did not inspect.
         """
         import base64
         from pathlib import Path
@@ -276,8 +268,8 @@ class LLMClient:
                 prompt, b64, media_type, system, temperature, max_tokens,
             )
 
-        # Providers without vision support
-        return "GOOD"
+        # Providers without a configured vision adapter cannot screen images.
+        return "REJECT: Vision screening is unavailable for this provider"
 
     async def _vision_anthropic(
         self,
@@ -296,7 +288,7 @@ class LLMClient:
 
             api_key = get_api_key("anthropic")
             if not api_key:
-                return "GOOD"  # No key = permissive
+                raise RuntimeError("Anthropic API key not configured for vision check")
 
             is_oauth = is_anthropic_oauth_token(api_key)
             client: Any
@@ -334,7 +326,7 @@ class LLMClient:
             return "\n".join(str(block.text) for block in msg.content if block.type == "text")
         except Exception as e:
             logger.debug("Vision check failed (Anthropic): %s", e)
-            return "GOOD"  # Permissive on failure
+            raise RuntimeError("Anthropic vision screening failed") from e
 
     async def _vision_openai(
         self,
@@ -351,7 +343,7 @@ class LLMClient:
 
             api_key = get_api_key("openai")
             if not api_key:
-                return "GOOD"
+                raise RuntimeError("OpenAI API key not configured for vision check")
 
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(
@@ -361,7 +353,7 @@ class LLMClient:
                         "model": self.config.openai_model,
                         **output_parameters(self.config.openai_model, max_tokens),
                         **sampling_parameters(self.config.openai_model, temperature),
-                        "messages": [
+                        "messages": [message for message in [
                             {"role": "system", "content": system} if system else None,
                             {
                                 "role": "user",
@@ -376,14 +368,14 @@ class LLMClient:
                                     },
                                 ],
                             },
-                        ],
+                        ] if message is not None],
                     },
                 )
                 resp.raise_for_status()
                 return str(resp.json()["choices"][0]["message"]["content"])
         except Exception as e:
             logger.debug("Vision check failed (OpenAI): %s", e)
-            return "GOOD"
+            raise RuntimeError("OpenAI vision screening failed") from e
 
     async def _vision_ollama(
         self,
@@ -392,48 +384,9 @@ class LLMClient:
         temperature: float,
         max_tokens: int,
     ) -> str:
-        """Ollama vision API call with auto-detection of vision model."""
+        """Use the selected Ollama model or an explicit vision override."""
         try:
-            # Pick a vision-capable model. Allow override via
-            # OLLAMA_VISION_MODEL env var.
-            import os as _os
-            vision_model = _os.environ.get("OLLAMA_VISION_MODEL", "")
-            if not vision_model:
-                # Auto-detect: query /api/tags and pick a vision model
-                async with httpx.AsyncClient(timeout=10) as c:
-                    tags_resp = await c.get(
-                        f"{self.config.ollama_base_url.rstrip('/')}/api/tags"
-                    )
-                if tags_resp.status_code == 200:
-                    models = tags_resp.json().get("models", [])
-                    # Probe capabilities for each, in priority order
-                    vision_candidates = []
-                    for m in models:
-                        name = m.get("name", "")
-                        # Known vision model families
-                        if any(k in name.lower() for k in [
-                            "gemma4", "gemma3", "llava", "qwen2.5-vl",
-                            "minicpm-v", "cogvlm", "boris",
-                        ]):
-                            vision_candidates.append(name)
-                    if vision_candidates:
-                        # Prefer gemma4 (Google vision), then boris
-                        for pref in ["gemma4:latest", "gemma4", "boris:latest", "boris"]:
-                            for cand in vision_candidates:
-                                if cand.startswith(pref):
-                                    vision_model = cand
-                                    break
-                            if vision_model:
-                                break
-                        if not vision_model:
-                            vision_model = vision_candidates[0]
-
-            if not vision_model:
-                logger.debug(
-                    "No vision-capable Ollama model found. Install one "
-                    "with 'ollama pull gemma3' or similar."
-                )
-                return "GOOD"
+            vision_model = os.environ.get("OLLAMA_VISION_MODEL", "") or self.config.ollama_model
 
             logger.debug("Using Ollama vision model: %s", vision_model)
             base = self.config.ollama_base_url.rstrip("/")
@@ -461,7 +414,7 @@ class LLMClient:
                         "Ollama vision returned %d: %s",
                         resp.status_code, resp.text[:200],
                     )
-                    return "GOOD"
+                    raise RuntimeError("Ollama vision screening returned no usable verdict")
                 data = resp.json()
                 response_text: str = str(data.get("response", "") or "").strip()
                 if not response_text:
@@ -470,11 +423,11 @@ class LLMClient:
                         data.get("eval_count"),
                         bool(data.get("thinking")),
                     )
-                    return "GOOD"
+                    raise RuntimeError("Ollama vision screening returned no usable verdict")
                 return response_text
         except Exception as e:
             logger.debug("Vision check failed (Ollama): %s", e)
-            return "GOOD"
+            raise RuntimeError("Ollama vision screening failed") from e
 
     async def _vision_openrouter(
         self,
@@ -485,13 +438,10 @@ class LLMClient:
         temperature: float,
         max_tokens: int,
     ) -> str:
-        """OpenRouter (OpenAI-compatible) vision API call.
+        """Screen with the selected model or saved vision override.
 
-        The base ``openrouter_model`` may be text-only (e.g. GLM), so image
-        screening routes to ``openrouter_vision_model`` — a multimodal model that
-        actually reads the image. Retries on transient 429s (free-tier upstream
-        throttling). Raises on persistent failure so the caller can fail CLOSED
-        (reject the image) instead of silently passing an unscreened one.
+        Retry transient failures on that same model. Persistent failures propagate
+        so callers reject unverified images instead of silently switching models.
         """
         from clawed.config import get_api_key
 
@@ -504,9 +454,8 @@ class LLMClient:
         ).rstrip("/")
         primary = (
             getattr(self.config, "openrouter_vision_model", "")
-            or _OPENROUTER_VISION_FALLBACKS[0]
+            or self.config.openrouter_model
         )
-        models = [primary] + [m for m in _OPENROUTER_VISION_FALLBACKS if m != primary]
         messages: list[dict[str, Any]] = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -525,37 +474,36 @@ class LLMClient:
         }
         last_err = "unknown"
         async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
-            for model in models:
-                for attempt in range(2):
-                    try:
-                        resp = await client.post(
-                            f"{base_url}/chat/completions",
-                            headers=headers,
-                            json={
-                                "model": model,
-                                "max_tokens": max_tokens,
-                                "temperature": temperature,
-                                "messages": messages,
-                            },
-                        )
-                        if resp.status_code == 429:
-                            last_err = f"429 ({model})"
-                            await asyncio.sleep(1.5 * (attempt + 1))
-                            continue
-                        resp.raise_for_status()
-                        choices = resp.json().get("choices") or []
-                        if not choices:
-                            last_err = f"no choices ({model})"
-                            continue
-                        content = choices[0].get("message", {}).get("content")
-                        return str(content or "").strip()
-                    except httpx.HTTPStatusError as e:
-                        last_err = f"HTTP {e.response.status_code} ({model})"
-                        break
-                    except (httpx.HTTPError, ValueError, KeyError) as e:
-                        last_err = f"{type(e).__name__} ({model})"
-                        await asyncio.sleep(1)
-        raise RuntimeError(f"OpenRouter vision failed (all models): {last_err}")
+            for attempt in range(2):
+                try:
+                    resp = await client.post(
+                        f"{base_url}/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": primary,
+                            **output_parameters(primary, max_tokens),
+                            **sampling_parameters(primary, temperature),
+                            "messages": messages,
+                        },
+                    )
+                    if resp.status_code == 429:
+                        last_err = f"429 ({primary})"
+                        await asyncio.sleep(1.5 * (attempt + 1))
+                        continue
+                    resp.raise_for_status()
+                    choices = resp.json().get("choices") or []
+                    if not choices:
+                        last_err = f"no choices ({primary})"
+                        continue
+                    content = choices[0].get("message", {}).get("content")
+                    return str(content or "").strip()
+                except httpx.HTTPStatusError as e:
+                    last_err = f"HTTP {e.response.status_code} ({primary})"
+                    break
+                except (httpx.HTTPError, ValueError, KeyError) as e:
+                    last_err = f"{type(e).__name__} ({primary})"
+                    await asyncio.sleep(1)
+        raise RuntimeError(f"OpenRouter vision screening failed: {last_err}")
 
     @staticmethod
     def _demo_response(prompt: str, demo_hint: str = "") -> str:

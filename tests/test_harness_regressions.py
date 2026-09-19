@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import httpx
+import pytest
 from pydantic import BaseModel
 
 from clawed.agent import _call_with_native_tools
@@ -119,6 +120,64 @@ async def test_fable_preserves_native_thinking_across_tool_turns(monkeypatch):
     assert second["messages"][1]["content"][0]["tool_use_id"] == "call-1"
     assert await LLMClient(config)._anthropic("prompt", "system", .4, 1000) == "Draft"
     assert "temperature" not in create.await_args_list[2].kwargs
+
+
+async def test_vision_keeps_selected_models_and_fails_closed(monkeypatch, tmp_path):
+    from clawed.image_pipeline import check_image_quality
+    from clawed.llm import LLMClient
+
+    monkeypatch.setattr("clawed.config.get_api_key", lambda provider: "synthetic-key")
+    monkeypatch.delenv("OLLAMA_VISION_MODEL", raising=False)
+    monkeypatch.setattr("clawed.llm.asyncio.sleep", AsyncMock())
+    requests = []
+
+    async def post(self, url, **kwargs):
+        requests.append(kwargs["json"])
+        return httpx.Response(429, json={}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", post)
+    config = AppConfig(provider=LLMProvider.OPENROUTER, openrouter_model="openai/gpt-6-astra")
+    with pytest.raises(RuntimeError, match="vision screening failed"):
+        await LLMClient(config)._vision_openrouter("prompt", "image", "image/png", "", .3, 100)
+    assert [req["model"] for req in requests] == ["openai/gpt-6-astra"] * 2
+    assert all("temperature" not in req for req in requests)
+    requests.clear()
+    config = AppConfig(provider=LLMProvider.OLLAMA, ollama_model="qwen3.5:9b")
+    with pytest.raises(RuntimeError, match="vision screening failed"):
+        await LLMClient(config)._vision_ollama("prompt", "image", .3, 100)
+    assert requests[0]["model"] == "qwen3.5:9b"
+    monkeypatch.setattr("clawed.config.get_api_key", lambda provider: None)
+    image = tmp_path / "fixture.png"
+    image.write_bytes(b"synthetic-image" * 100)
+    for provider in (LLMProvider.ANTHROPIC, LLMProvider.OPENAI, LLMProvider.GOOGLE):
+        assert not await check_image_quality(image, "Synthetic", config=AppConfig(provider=provider))
+
+
+async def test_concurrent_image_montages_are_isolated_and_removed(tmp_path, monkeypatch):
+    from PIL import Image
+
+    from clawed.image_pipeline import vision_filter_batch
+
+    source = tmp_path / "fixture.png"
+    Image.new("RGB", (100, 100), "green").save(source)
+    paths = []
+    both_started = asyncio.Event()
+
+    async def inspect(self, **kwargs):
+        path = kwargs["image_path"]
+        paths.append(path)
+        if len(paths) == 2:
+            both_started.set()
+        await both_started.wait()
+        assert path.exists()
+        return "#1:Y"
+
+    monkeypatch.setattr("clawed.llm.LLMClient.generate_with_image", inspect)
+    results = await asyncio.gather(*[
+        vision_filter_batch([(spec, source)], config=AppConfig()) for spec in ("one", "two")])
+    assert results == [{"one"}, {"two"}]
+    assert len(set(paths)) == 2
+    assert not any(path.exists() for path in paths)
 
 
 def test_frontier_parameters_and_multilingual_evidence():

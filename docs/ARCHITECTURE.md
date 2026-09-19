@@ -26,6 +26,8 @@ Bundle outputs include a manifest with quotation checks. A match means text occu
 
 Task and tier overrides are opt-in. Otherwise, generation keeps the teacher's selected model. No hard-coded cloud fallback chain changes the model after a failure. Astra native tool calls use OpenAI Responses. Anthropic native thinking and tool blocks are retained across turns; Google tools use Google's compatibility endpoint. OpenRouter and Ollama retain their compatible adapters.
 
+Image screening also keeps the selected model unless a saved `openrouter_vision_model` or `OLLAMA_VISION_MODEL` override is present. It rejects unverified images when vision is unavailable or fails. Concurrent image checks use separate temporary montages, removed after the call.
+
 ## What should come next
 
 Prove one repeatable source-to-reviewed-lesson workflow with teacher-scored evaluations before adding new agents or student products. The next architectural decision should compare this small backend with a maintained workflow or agent SDK using the same fixtures, provider, budget, and failure scenarios. Adopt another framework only if measured recovery, editing time, or maintainability improves. See [EVALUATION.md](EVALUATION.md).

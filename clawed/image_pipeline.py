@@ -60,8 +60,8 @@ async def check_image_quality(
     Returns True only when a vision model affirms the image is on-topic and
     classroom-appropriate. FAILS CLOSED — any error, rate-limit exhaustion, or
     non-affirmative verdict returns False and the slide renders text-only. A
-    missing image beats a wrong one. (Text-only providers without a real vision
-    path still return their permissive "GOOD" from generate_with_image.)
+    missing image beats a wrong one. Providers without a working vision path
+    reject images too.
     """
     try:
         from clawed.llm import LLMClient
@@ -121,8 +121,13 @@ def _build_vision_montage(items: list[tuple[str, Path]]) -> Path:
                 [x + 8, y + label_h, x + cell - 8, y + cell + label_h - 8],
                 outline=(180, 180, 180),
             )
-    out = Path(tempfile.gettempdir()) / "clawed_vision_montage.png"
-    canvas.save(str(out))
+    with tempfile.NamedTemporaryFile(prefix="clawed_vision_", suffix=".png", delete=False) as temporary:
+        out = Path(temporary.name)
+    try:
+        canvas.save(str(out))
+    except Exception:
+        out.unlink(missing_ok=True)
+        raise
     return out
 
 
@@ -174,6 +179,8 @@ async def vision_filter_batch(
     except Exception as e:
         logger.info("Batch vision call failed — rejecting all images: %s", e)
         return set()
+    finally:
+        montage.unlink(missing_ok=True)
 
     verdicts = {
         int(num): v.upper()
@@ -480,7 +487,7 @@ async def _vision_rerank_candidates(
                 temperature=0.1,
                 max_tokens=80,
             )
-            verdict = result.strip().split()[0].upper() if result.strip() else "GOOD"
+            verdict = result.strip().split()[0].upper() if result.strip() else "REJECT"
             logger.debug(
                 "Vision rerank %s -> %s (%s)",
                 path.name, verdict, result.strip()[:80],

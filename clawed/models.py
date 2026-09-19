@@ -1096,10 +1096,8 @@ class AppConfig(BaseModel):
     ollama_model: str = "qwen3.5:9b"
     google_model: str = "gemini-2.5-flash"
     openrouter_model: str = "anthropic/claude-sonnet-4.6"
-    # Vision-capable model for image relevance screening (the base
-    # openrouter_model may be text-only, e.g. GLM). A free multimodal model that
-    # actually "sees" the image — used to reject off-topic fetched images.
-    openrouter_vision_model: str = "google/gemma-4-31b-it:free"
+    # Optional explicit vision override; otherwise keep the selected model.
+    openrouter_vision_model: str = ""
     ollama_base_url: str = "http://localhost:11434"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     output_dir: str = "~/clawed_output"

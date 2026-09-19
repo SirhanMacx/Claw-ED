@@ -8,6 +8,7 @@
 - Add an authenticated Jobs page with bundle submission, artifact downloads, cancellation, stale-worker recovery, explicit resume, and persistent phase checkpoints. Atomic job claims prevent competing workers from processing the same queued job. Recovery covers queued generation, not arbitrary chat or external publication.
 - Keep complete retrieved excerpts and downstream source text, preserve multilingual content, and attach source manifests with evidence hashes and honest quotation verification status.
 - Correct model configuration for Google and OpenRouter. Refresh dated model recommendations for local Ollama, cheap hosted options, Astra, and Fable; remove unlimited-use claims.
+- Keep image screening on the selected model or explicit vision override, reject failed vision checks, and isolate temporary image montages across concurrent jobs.
 - Replace the obsolete Python 3.10 branch check with the current Python, wheel, and Docker checks.
 
 Existing configuration and teaching data are preserved. The removed terminal runtime and Node daemon are no longer entry paths. Existing job rows are migrated additively; interrupted jobs require explicit recovery/resume. Model catalogs were checked live; provider-wire and recovery tests use synthetic responses, not paid model evaluations.
