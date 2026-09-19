@@ -53,18 +53,17 @@ class TestResolveModel:
     def test_default_fast_model_ollama(self):
         config = AppConfig(provider=LLMProvider.OLLAMA)
         model = resolve_model(ModelTier.FAST, config)
-        assert model == DEFAULT_TIER_MODELS["fast"]
+        assert model == config.ollama_model
 
     def test_default_deep_model_ollama(self):
         config = AppConfig(provider=LLMProvider.OLLAMA)
         model = resolve_model(ModelTier.DEEP, config)
-        assert model == DEFAULT_TIER_MODELS["deep"]
+        assert model == config.ollama_model
 
     def test_default_model_uses_provider_defaults(self):
-        from clawed.model_router import PROVIDER_TIER_MODELS
         config = AppConfig(provider=LLMProvider.ANTHROPIC)
         model = resolve_model(ModelTier.DEEP, config)
-        assert model == PROVIDER_TIER_MODELS["anthropic"]["deep"]
+        assert model == config.anthropic_model
 
     def test_teacher_tier_override(self):
         config = AppConfig(tier_models={"fast": "my-fast-model"})
@@ -74,7 +73,7 @@ class TestResolveModel:
     def test_teacher_tier_override_only_affects_specified(self):
         config = AppConfig(provider=LLMProvider.OLLAMA, tier_models={"fast": "my-fast-model"})
         model = resolve_model(ModelTier.DEEP, config)
-        assert model == DEFAULT_TIER_MODELS["deep"]
+        assert model == config.ollama_model
 
 
 class TestTierConfig:
@@ -102,7 +101,7 @@ class TestRouteFunction:
         config = AppConfig(provider=LLMProvider.OLLAMA, ollama_model="llama3.2")
         routed = route("lesson_plan", config)
         assert routed is not config
-        assert routed.ollama_model == DEFAULT_TIER_MODELS["deep"]
+        assert routed.ollama_model == config.ollama_model
 
     def test_route_does_not_mutate_original(self):
         config = AppConfig(provider=LLMProvider.OLLAMA, ollama_model="llama3.2")
@@ -112,22 +111,22 @@ class TestRouteFunction:
     def test_route_fast_task(self):
         config = AppConfig(provider=LLMProvider.OLLAMA, ollama_model="llama3.2")
         routed = route("bellringer", config)
-        assert routed.ollama_model == DEFAULT_TIER_MODELS["fast"]
+        assert routed.ollama_model == config.ollama_model
 
     def test_route_deep_task(self):
         config = AppConfig(provider=LLMProvider.OLLAMA, ollama_model="llama3.2")
         routed = route("persona_extract", config)
-        assert routed.ollama_model == DEFAULT_TIER_MODELS["deep"]
+        assert routed.ollama_model == config.ollama_model
 
     def test_route_lesson_is_deep(self):
         config = AppConfig(provider=LLMProvider.OLLAMA, ollama_model="llama3.2")
         routed = route("lesson_plan", config)
-        assert routed.ollama_model == DEFAULT_TIER_MODELS["deep"]
+        assert routed.ollama_model == config.ollama_model
 
     def test_route_unknown_task_falls_back_to_deep_tier(self):
         config = AppConfig(provider=LLMProvider.OLLAMA, ollama_model="llama3.2")
         routed = route("unknown_task_type", config)
-        assert routed.ollama_model == DEFAULT_TIER_MODELS["deep"]
+        assert routed.ollama_model == config.ollama_model
 
     def test_route_preserves_other_config_fields(self):
         config = AppConfig(
@@ -169,9 +168,8 @@ class TestRouteFunction:
         assert routed.ollama_model == "task-specific-model"
 
     def test_route_with_anthropic_provider(self):
-        from clawed.model_router import PROVIDER_TIER_MODELS
         config = AppConfig(provider=LLMProvider.ANTHROPIC)
         routed = route("quick_answer", config)
         # Model should be written to anthropic_model, not ollama_model
-        assert routed.anthropic_model == PROVIDER_TIER_MODELS["anthropic"]["fast"]
+        assert routed.anthropic_model == config.anthropic_model
         assert routed.provider == LLMProvider.ANTHROPIC

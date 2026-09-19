@@ -26,6 +26,7 @@ class AgentContext:
     transport: str = "cli"
     progress_callback: Callable[[str], None] | None = None
     approval_owner: str | None = None
+    source_manifest: list[dict[str, Any]] = field(default_factory=list)
 
     def notify_progress(self, message: str) -> None:
         """Send a progress update to the user if a callback is registered."""

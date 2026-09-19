@@ -23,6 +23,7 @@ def submit(
 ) -> None:
     """Submit a generation task to the background queue."""
     type_map = {
+        "bundle": TaskType.LESSON_BUNDLE,
         "lesson": TaskType.GENERATE_LESSON,
         "unit": TaskType.GENERATE_UNIT,
         "worksheet": TaskType.GENERATE_WORKSHEET,
@@ -112,5 +113,39 @@ def worker(
         run_async(run_worker(q, poll_interval=poll_interval))
     except KeyboardInterrupt:
         console.print("\n[yellow]Worker stopped.[/yellow]")
+    finally:
+        q.close()
+
+
+@queue_app.command()
+def cancel(task_id: str) -> None:
+    """Cancel a queued job or request cancellation of a running job."""
+    q = TaskQueue()
+    try:
+        if not q.cancel(task_id):
+            raise typer.BadParameter("Job is missing or is already finished.")
+        console.print("Cancellation recorded. A running worker stops at its next cancellation check.")
+    finally:
+        q.close()
+
+
+@queue_app.command()
+def resume(task_id: str) -> None:
+    """Resume a stopped job, reusing matching completed phase checkpoints."""
+    q = TaskQueue()
+    try:
+        if not q.resume(task_id):
+            raise typer.BadParameter("Only failed, interrupted, or cancelled jobs can resume.")
+        console.print("Job queued; completed phases will be reused when inputs and model match.")
+    finally:
+        q.close()
+
+
+@queue_app.command()
+def recover() -> None:
+    """Mark jobs without a worker heartbeat for five minutes as interrupted."""
+    q = TaskQueue()
+    try:
+        console.print(f"Recovered {q.recover_interrupted()} stopped jobs. Resume them explicitly.")
     finally:
         q.close()

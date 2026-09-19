@@ -1,5 +1,7 @@
 # Claw-ED v3.0 Design Spec
 
+> Historical design, superseded in v9.18.2026.1. The bundled terminal and daemon were retired. See [the current architecture](../../ARCHITECTURE.md).
+
 **Date:** 2026-04-01
 **Status:** Reviewed (rev 2)
 **Author:** Claude (with Jon)

@@ -6,7 +6,7 @@ Teachers configure which model serves each tier via AppConfig.tier_models.
 Resolution order for a given task:
   1. config.task_models[task]    -- per-task override (legacy, highest priority)
   2. config.tier_models[tier]    -- teacher's tier preference
-  3. DEFAULT_TIER_MODELS[tier]   -- built-in defaults
+  3. Teacher-selected provider model (never silently upgraded)
 """
 from __future__ import annotations
 
@@ -51,18 +51,18 @@ TASK_TIERS: dict[str, ModelTier] = {
 }
 
 DEFAULT_TIER_MODELS: dict[str, str] = {
-    "fast": "qwen3.5:cloud",
-    "work": "gemma4:31b-cloud",
-    "deep": "gemma4:31b-cloud",
+    "fast": "qwen3.5:4b",
+    "work": "qwen3.5:9b",
+    "deep": "qwen3.5:9b",
 }
 
 # Per-provider tier defaults (used when the teacher selects a provider).
 PROVIDER_TIER_MODELS: dict[str, dict[str, str]] = {
     "ollama": DEFAULT_TIER_MODELS,
     "anthropic": {
-        "fast": "claude-opus-4-20250514",
-        "work": "claude-opus-4-20250514",
-        "deep": "claude-opus-4-20250514",
+        "fast": "claude-sonnet-4-6",
+        "work": "claude-sonnet-4-6",
+        "deep": "claude-sonnet-4-6",
     },
     "openai": {
         "fast": "gpt-4.1-mini",
@@ -87,10 +87,7 @@ def resolve_model(tier: ModelTier, config: AppConfig) -> str:
     teacher_tiers = config.tier_models or {}
     if teacher_tiers.get(tier.value):
         return teacher_tiers[tier.value]
-    # Use provider-specific defaults if available
-    provider_key = config.provider.value if hasattr(config.provider, "value") else str(config.provider)
-    provider_defaults = PROVIDER_TIER_MODELS.get(provider_key, DEFAULT_TIER_MODELS)
-    return provider_defaults.get(tier.value, DEFAULT_TIER_MODELS[tier.value])
+    return str(getattr(config, f"{config.provider.value}_model"))
 
 
 def route(task_type: str, config: AppConfig) -> AppConfig:
@@ -100,8 +97,7 @@ def route(task_type: str, config: AppConfig) -> AppConfig:
       1. config.task_models[task]    -- per-task override (legacy compat)
       2. config.tier_providers[tier] -- route this tier to a different provider
       3. config.tier_models[tier]    -- teacher's tier preference
-      4. PROVIDER_TIER_MODELS        -- provider-specific defaults
-      5. DEFAULT_TIER_MODELS[tier]   -- built-in defaults
+      4. Teacher-selected model for the active provider
     """
     from clawed.models import LLMProvider
 

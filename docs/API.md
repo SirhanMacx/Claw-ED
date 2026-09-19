@@ -87,6 +87,21 @@ Exceeding the limit returns `429 Too Many Requests`:
 
 ## Endpoints
 
+### Recoverable lesson jobs
+
+All job endpoints require the teacher's bearer token or dashboard cookie. Cookie-authenticated mutations also require a same-origin `Origin` or `Referer` header. The `/jobs` dashboard uses these endpoints and the same SQLite ledger as `clawed queue`.
+
+| Method and path | Behavior |
+| --- | --- |
+| `POST /api/jobs` | Queue a lesson bundle with required `topic`, `subject`, and `grade` strings; optional `course_id`, `unit_id`, and `lesson_id` |
+| `GET /api/jobs` | Return the 20 most recent jobs, status, saved phase metadata, and available results |
+| `POST /api/jobs/{id}/cancel` | Cancel a queued job or request cancellation of a running job |
+| `POST /api/jobs/{id}/resume` | Requeue a failed, interrupted, or cancelled job |
+| `POST /api/jobs/recover` | Mark jobs with stale worker heartbeats as interrupted, or cancelled if cancellation was requested |
+| `GET /api/jobs/{id}/files/{index}` | Download an existing result file inside that job's output directory |
+
+Run `clawed queue worker` separately to process jobs. Recovery waits at least five minutes after the last worker heartbeat and does not automatically resume generation. Matching completed phases are reused; changed inputs or models invalidate their checkpoints. Cancellation cannot retract a request already processing at a provider. A finished draft still needs teacher review. These endpoints do not publish files externally or resume arbitrary chat sessions.
+
 ### Health & Settings
 
 #### `GET /api/health`

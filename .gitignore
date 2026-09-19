@@ -18,7 +18,6 @@ build/
 !examples/**/*.json
 !eduagent/demo/*.json
 !clawed/demo/*.json
-!cli/**/*.json
 eduagent_output/
 clawed_output/
 eduagent_data/
@@ -64,17 +63,10 @@ bot_token.json
 htmlcov/
 .ruff_cache/
 
-# CLI (TypeScript/Ink build)
-cli/node_modules/
-cli/dist/
-cli/.bun/
-cli/source/cli.js
-# cli/source/cli.js.map — tracked via git-lfs (needed for TS build in CI)
-
-# Bundled CLI (build artifacts, included in wheel via force-include)
-# Track .gitkeep so the directory exists for pip install from git
-clawed/_cli_bundle/*
-!clawed/_cli_bundle/.gitkeep
+# Retired terminal sources and build artifacts must not be repackaged.
+cli/
+daemon/
+clawed/_cli_bundle/
 
 # Build prompts (internal)
 BUILD_PROMPT.md
@@ -84,6 +76,5 @@ check_jon.py
 check_db.py
 update_jon_persona.py
 output/
-daemon/node_modules/
 
 sample_deck/

@@ -30,8 +30,6 @@ from clawed.models import AppConfig
 logger = logging.getLogger(__name__)
 
 
-_tool_lock = threading.Lock()
-
 
 class _LLMClientAdapter:
     """Adapts the existing clawed.agent module's LLM calling to LLMInterface.
@@ -50,26 +48,15 @@ class _LLMClientAdapter:
         tools: list[dict[str, Any]] | None = None,
         system: str = "",
     ) -> dict[str, Any]:
-        # The legacy agent functions operate on the global TOOL_DEFINITIONS.
-        # We temporarily swap them under a lock so concurrent requests don't
-        # clobber each other's tool definitions.
-        import clawed.agent as _agent_mod
+        from copy import deepcopy
+
         from clawed.agent import _call_with_native_tools, _call_with_ollama_tools
         from clawed.models import LLMProvider
 
-        with _tool_lock:
-            original_defs = _agent_mod.TOOL_DEFINITIONS  # type: ignore[attr-defined]  # runtime-patched module global
-            _agent_mod.TOOL_DEFINITIONS = tools or []  # type: ignore[attr-defined]  # runtime-patched module global
-        try:
-            if self._config.provider in (
-                LLMProvider.ANTHROPIC, LLMProvider.OPENAI, LLMProvider.OPENROUTER,
-            ):
-                return await _call_with_native_tools(messages, system, self._config)
-            else:
-                return await _call_with_ollama_tools(messages, system, self._config)
-        finally:
-            with _tool_lock:
-                _agent_mod.TOOL_DEFINITIONS = original_defs  # type: ignore[attr-defined]  # runtime-patched module global
+        definitions = deepcopy(tools or [])
+        if self._config.provider == LLMProvider.OLLAMA:
+            return await _call_with_ollama_tools(messages, system, self._config, definitions)
+        return await _call_with_native_tools(messages, system, self._config, definitions)
 
 
 class Gateway:
@@ -765,7 +752,6 @@ class Gateway:
             return
         Gateway._ingest_started = True
 
-        import threading
 
         def _do_ingest() -> None:
             import asyncio

@@ -1,8 +1,21 @@
 # Roadmap
 
-Current version: **v9.18.2026**
+Current version: **v9.18.2026.1**
 
-## What's next
+## What’s next
+
+### Recently shipped (v9.18.2026.1)
+- [x] Owned Python runtime; removed bundled third-party terminal source
+- [x] Selected-model preservation and request-local tool definitions
+- [x] Queued bundle recovery, cancellation, phase checkpoints, and Jobs page
+- [x] Full source excerpts, evidence manifests, and multilingual preservation
+- [x] Dated local, budget, Astra, and Fable model guidance
+
+### Next evidence to collect
+- [ ] Teacher-scored lesson comparisons: accuracy, supported answers, source fidelity, editing time, and cost
+- [ ] Full conversational recovery and verified external delivery in the shared job ledger
+- [ ] Evaluate a maintained workflow SDK against the current backend using identical fixtures and budgets
+
 
 ### Recently shipped (v9.18.2026)
 - [x] **Chat privacy** — per-conversation history scoped to lesson and teacher/student audience
@@ -19,7 +32,7 @@ Current version: **v9.18.2026**
 - [x] **`mypy --strict` project-wide** — 1074 errors → 0 across 270 files, 144 files touched. Surfaced and fixed 7+ real runtime bugs (wrong imports, sync calls to async methods, tuple-as-dict access, missing None guards)
 - [x] **B904 exception chaining** — 51 raise sites in `except` blocks now use `from <exc>` to preserve tracebacks. Suppression removed from ruff config
 - [x] **April 2026 audit regression pass** — 38/38 previously-fixed defects re-verified in v4.13 code; zero regressions
-- [x] **Version surface drift fixed** — `cli/source/package.json`, `daemon/package.json`, `docs/index.html`, `ROADMAP.md` were stuck at v4.9; all eight surfaces now track together
+- [x] **Version surface drift fixed** — package and documentation versions were aligned. The former terminal and daemon packages were subsequently retired in v9.18.2026.1.
 
 ### Architecture cleanup
 - [ ] **Database consolidation**: reduce 10 SQLite DBs to 3-4

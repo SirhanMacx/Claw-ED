@@ -1,5 +1,18 @@
 # Changelog
 
+## v9.18.2026.1 — 2026-09-18
+
+- Replace the bundled third-party coding-agent terminal with the owned Python interface. Node.js and Bun are no longer required; `python -m clawed` now works. Start Telegram explicitly with `clawed bot`.
+- Preserve the selected model unless task or tier overrides are explicitly configured. Remove the automatic cloud model rotation and concurrent global tool mutation.
+- Add GPT-6 Astra Responses tool support, preserve Anthropic native thinking/tool blocks, and route Google tool requests to its own endpoint. Update unsupported sampling and output-token parameters for current models.
+- Add an authenticated Jobs page with bundle submission, artifact downloads, cancellation, stale-worker recovery, explicit resume, and persistent phase checkpoints. Atomic job claims prevent competing workers from processing the same queued job. Recovery covers queued generation, not arbitrary chat or external publication.
+- Keep complete retrieved excerpts and downstream source text, preserve multilingual content, and attach source manifests with evidence hashes and honest quotation verification status.
+- Correct model configuration for Google and OpenRouter. Refresh dated model recommendations for local Ollama, cheap hosted options, Astra, and Fable; remove unlimited-use claims.
+- Keep image screening on the selected model or explicit vision override, reject failed vision checks, and isolate temporary image montages across concurrent jobs.
+- Replace the obsolete Python 3.10 branch check with the current Python, wheel, and Docker checks.
+
+Existing configuration and teaching data are preserved. The removed terminal runtime and Node daemon are no longer entry paths. Existing job rows are migrated additively; interrupted jobs require explicit recovery/resume. Model catalogs were checked live; provider-wire and recovery tests use synthetic responses, not paid model evaluations.
+
 ## v9.18.2026 — 2026-09-18
 
 ### Fixed — Chat privacy, action approvals, and delivery status

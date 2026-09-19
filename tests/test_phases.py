@@ -254,8 +254,8 @@ def test_render_primary_sources_block():
     assert "Industrial Revolution" in rendered
 
 
-def test_render_primary_sources_truncates_long_content():
-    """Ensure primary source block aggressively caps content (compressed for downstream phases)."""
+def test_render_primary_sources_preserves_evidence():
+    """Questions and answer keys must receive the full quoted evidence."""
     long_text = "x" * 2000
     sources = [
         PrimarySource(
@@ -268,9 +268,8 @@ def test_render_primary_sources_truncates_long_content():
         ),
     ]
     rendered = _render_primary_sources_block(sources)
-    # Compressed to ~150 chars per source
-    assert len(rendered) < 500
-    assert "..." in rendered
+    assert long_text in rendered
+    assert "..." not in rendered
 
 
 def test_render_direct_instruction_block():

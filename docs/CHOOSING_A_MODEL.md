@@ -1,90 +1,73 @@
-# Choosing a Model
+# Choosing a model
 
-Ed is the tool -- he needs an AI brain to do the thinking. Think of it like a car: Ed is the car, and the AI is the engine. **You pick the engine and pay for it directly.** Nothing goes through our servers.
+**Catalog and price check: September 18, 2026.** These are starting recommendations, not a classroom benchmark. Compare the same lesson and sources on your own hardware. Measure factual errors, source fidelity, answer quality, editing time, latency, and total cost including retries.
 
-There are four options, each with different tradeoffs between quality, speed, and convenience.
+Claw-ED uses the model you select. Task, tier, and vision overrides apply when configured. Generation retries keep the selected model; they no longer rotate automatically into cloud alternatives. Existing saved selections are preserved on upgrade, including an existing `openrouter_vision_model` value. Clear that optional setting to use your main OpenRouter model for images; `OLLAMA_VISION_MODEL` is the equivalent explicit local override. Failed or unsupported image checks omit the image rather than approve it.
 
----
+## Local Ollama: start with the hardware you have
 
-## Option 1 -- Anthropic Claude (best quality, pay per use)
+Local inference has no per-token provider charge. Hardware, electricity, and your time still cost something. Model downloads need internet; optional web search, images, and integrations remain separate network features. A `:cloud` model runs remotely even when selected through Ollama.
 
-Claude is widely considered the best AI for writing and nuanced instruction. Two models to choose from:
+| Starting point | Ollama model ID | Suggested use |
+| --- | --- | --- |
+| 8 GB laptop, short context | `qwen3.5:4b` | Small drafts, rewriting, and a first local trial |
+| 16 GB laptop | `qwen3.5:9b` | General drafting; the default for a new local configuration |
+| 16–24 GB | `gemma4:12b` | Alternative for document and image-informed drafting |
+| 24–32 GB | `gpt-oss:20b` | Text reasoning and tool use; compare against Qwen on the same task |
+| 32 GB or more | `qwen3.8:27b` | A current larger local option for harder drafting and reasoning |
 
-- **Claude Sonnet 4.6** -- excellent quality, more affordable. Great for daily lesson planning.
-- **Claude Opus 4.6** -- the smartest available. Noticeably better output for complex units and differentiation.
+Memory ranges above are conservative starting estimates, not guarantees. Leave room for your OS and the context cache; start with short excerpts. For example, Ollama lists Qwen 3.5 4B/9B downloads at 3.4/6.6 GB and Qwen 3.8 27B at 18 GB. Download size is smaller than total runtime memory. Check the exact quantization, model license, and installed Ollama support before downloading.
 
-**Setup:**
-1. Go to [console.anthropic.com](https://console.anthropic.com) and create an account
-2. Add a credit card (pay-per-use billing)
-3. Click **API Keys** in the left sidebar, then **Create Key**, and copy it
-4. In Terminal: `export ANTHROPIC_API_KEY=sk-ant-your-key-here`
+Sources: [Qwen 3.5 library](https://ollama.com/library/qwen3.5), [Gemma 4 12B](https://ollama.com/library/gemma4:12b), [GPT-OSS 20B](https://ollama.com/library/gpt-oss:20b), [Qwen 3.8 27B](https://ollama.com/library/qwen3.8:27b). These families provide open weights; verify each model's license for your use rather than assuming every downloadable model has the same terms.
 
----
+```bash
+ollama pull qwen3.5:9b
+clawed config set-model ollama --model qwen3.5:9b
+```
 
-## Option 2 -- OpenAI GPT-5.4 (professional grade, pay per use)
+Your Ollama endpoint must be local, normally `http://localhost:11434`. If you previously configured Ollama Cloud, change the endpoint in settings before treating a session as local.
 
-The company behind ChatGPT. GPT-5.4 is highly capable and produces professional-quality output.
+## Cheap hosted options through OpenRouter
 
-**Setup:**
-1. Go to [platform.openai.com](https://platform.openai.com) and create an account
-2. Add a credit card under **Billing**
-3. Click **API Keys**, then **Create new secret key**, and copy it
-4. In Terminal: `export OPENAI_API_KEY=sk-your-key-here`
+Start with **GPT-OSS 20B for a low-cost trial**, then compare **Gemma 4 31B** if the draft needs improvement. **Qwen 3.8 Flash** is another inexpensive current option. These recommendations are based on availability, capabilities, and advertised price, not a claim that one produces the best lessons.
 
----
+| Model ID | Input / 1M tokens | Output / 1M tokens |
+| --- | ---: | ---: |
+| `openai/gpt-oss-20b` | $0.03 | $0.13 |
+| `google/gemma-4-31b-it` | $0.09 | $0.34 |
+| `qwen/qwen3.8-flash` | $0.15 | $0.47 |
+| `qwen/qwen3.8-27b:free` | $0 | $0 |
+| `google/gemma-4-31b-it:free` | $0 | $0 |
 
-## Option 3 -- Google Gemini (fast and capable, pay per use)
+Prices are the advertised catalog rates at the check date; hosting routes, availability, fees, caching, and quotas can change. Free endpoints have limits and may be unavailable when needed. Hosted open-weight models still send your selected content to OpenRouter and the serving provider. Check their routing and data policies before using school material. [Live OpenRouter catalog](https://openrouter.ai/api/v1/models), [pricing and models](https://openrouter.ai/models).
 
-Google's Gemini models are fast and strong on structured content. Two models to choose from:
+Configure an OpenRouter API key in settings, then:
 
-- **Gemini 2.5 Flash** -- fast and affordable. Good for daily use when speed matters.
-- **Gemini 2.5 Pro** -- stronger reasoning. Better for complex unit plans and differentiated materials.
+```bash
+clawed config set-model openrouter --model openai/gpt-oss-20b
+```
 
-**Setup:**
-1. Go to [aistudio.google.com](https://aistudio.google.com) and sign in with your Google account
-2. Click **Get API Key**, then **Create API Key**, and copy it
-3. In Terminal: `export GOOGLE_API_KEY=your-key-here`
-4. Then: `clawed config set-model google`
+Ollama Cloud is another hosted option. Its plans have usage limits; Claw-ED does not promise unlimited lessons or a fixed cost per lesson. Check [current Ollama plans](https://ollama.com/pricing).
 
----
+## Premium choices: GPT-6 Astra and Claude Fable 5.1
 
-## Option 4 -- Ollama Cloud with MiniMax M2.7 (flat rate)
+Use these deliberately for difficult unit design, complex source comparison, or a second review pass. A stronger model still needs the actual sources and teacher review.
 
-Ollama is a platform that gives you access to powerful AI for a flat monthly fee -- no surprise bills. MiniMax M2.7 is an excellent model for education: smart, fast, and great at learning your teaching voice.
+| Provider | Direct API ID | OpenRouter ID | Standard input / output per 1M tokens |
+| --- | --- | --- | --- |
+| OpenAI | `gpt-6-astra` | `openai/gpt-6-astra` | $10 / $50 |
+| Anthropic | `claude-fable-5-1` | `anthropic/claude-fable-5.1` | $10 / $50 |
 
-**Setup:**
-1. Go to [ollama.com](https://ollama.com) and create a free account
-2. There is some free usage to try it before committing
-3. Upgrade to a paid plan for unlimited use
-4. Find your API key: log in, click your profile icon (top right), then **Settings**, then **API Keys**, then **Generate**
-5. In Terminal: `export OLLAMA_API_KEY=your-key-here` then `clawed config set-model ollama`
+Astra supports a 1.05M-token context and requires the Responses API for native tool calls; Claw-ED's OpenAI adapter uses that path. Fable 5.1 has a 1M-token context and always-on adaptive thinking; the adapter preserves its native content across tool turns. The adapters omit unsupported sampling parameters. Account access, retention rules, and rate limits still apply. Fable's documented 30-day retention requirement deserves particular attention before submitting school content. Sources: [OpenAI model specification](https://developers.openai.com/api/docs/models/gpt-6-astra), [Astra migration guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra), [Fable specification](https://platform.claude.com/docs/en/models/fable-5-1/overview), [Fable migration and retention requirements](https://platform.claude.com/docs/en/models/fable-5-1/migration-guide).
 
-**Best value for most teachers.** Flat rate, no surprises, and MiniMax M2.7 is excellent at capturing your specific teaching style.
+```bash
+clawed config set-model openai --model gpt-6-astra
+# Or:
+clawed config set-model anthropic --model claude-fable-5-1
+```
 
----
+For a less expensive direct Anthropic option, [Claude Sonnet 5](https://platform.claude.com/docs/en/models/sonnet-5/overview) (`claude-sonnet-5`) is listed at $2 input / $10 output per million tokens. It is included in the model picker. API billing is separate from consumer chat subscriptions.
 
-## Option 5 -- Local model on your own computer (free, limited quality)
+## What has been verified
 
-You can run a small AI model entirely on your computer -- free, no internet needed. The catch: local models are significantly less intelligent than cloud options. They often struggle to capture your teaching voice or write naturally. Most teachers will be disappointed with the results.
-
-If you want to try anyway, Ed works well with the **Gemma 4** series:
-
-| Your computer | Recommended model | Command to install |
-|--------------|-------------------|--------------------|
-| Basic laptop (8GB RAM) | Gemma 4 4B | `ollama pull gemma4:4b` |
-| Modern Mac or PC (16GB RAM) | Gemma 4 12B | `ollama pull gemma4:12b` |
-| High-end workstation (32GB+ RAM) | Gemma 4 27B | `ollama pull gemma4:27b` |
-
-Then run: `clawed config set-model ollama`
-
-> Start with Option 4 (Ollama Cloud) if cost is your concern -- a flat-rate cloud model is far better than a free local model.
-
----
-
-## Bottom line
-
-Most teachers should start with **Option 4 (Ollama Cloud)**. Flat rate, great quality, no surprises. If you want the best possible output regardless of cost, use **Option 1 with Claude Sonnet 4.6**. If Ed is struggling with a particular task, you can always switch models with `clawed config set-model`.
-
----
-
-Ready to get started? Head back to the [README quickstart](../README.md#-getting-started).
+Model identifiers and advertised prices were checked against official catalogs. Automated tests exercise request formatting, tool routing, selected-model preservation, and recovery with synthetic responses. No paid live-model comparison was performed for this release. Do not read this guide as a pedagogical quality ranking. See [the evaluation protocol](EVALUATION.md) before promoting a model to your daily workflow.

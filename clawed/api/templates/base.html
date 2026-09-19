@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Claw-ED{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
     <script>
         // Apply saved theme before paint to avoid flash
         (function() {
@@ -23,6 +23,7 @@
             <div class="nav-links" id="nav-links">
                 <a href="/" {% if active_nav == 'home' %}class="active"{% endif %}>Home</a>
                 <a href="/generate" {% if active_nav == 'generate' %}class="active"{% endif %}>Generate</a>
+                <a href="/jobs" {% if active_nav == 'jobs' %}class="active"{% endif %}>Jobs</a>
                 <a href="/library" {% if active_nav == 'library' %}class="active"{% endif %}>Library</a>
                 <a href="/students" {% if active_nav == 'students' %}class="active"{% endif %}>Students</a>
                 <span class="nav-notify">
@@ -46,7 +47,7 @@
         <p>Claw-ED &mdash; Your teaching files, your AI co-teacher.</p>
     </footer>
     <div class="toast" id="toast"></div>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v={{ asset_version }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

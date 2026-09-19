@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Lesson jobs — Claw-ED{% endblock %}
+{% block content %}
+<section class="jobs-page">
+<h1>Lesson jobs</h1>
+<p>Draft a lesson from your uploaded materials. Review its source manifest and editable files before sharing.</p>
+<p><a href="/">Upload source materials</a> · <a href="/settings">Check your selected model</a></p>
+<form id="job-form" class="gen-form-panel">
+  <div class="form-group"><label for="topic">Lesson topic</label><input type="text" id="topic" name="topic" required maxlength="500"></div>
+  <div class="form-row">
+    <div class="form-group"><label for="subject">Subject</label><input type="text" id="subject" name="subject" required maxlength="100"></div>
+    <div class="form-group"><label for="grade">Grade</label><input type="text" id="grade" name="grade" required maxlength="20"></div>
+  </div>
+  <div class="form-group"><label for="course">Course reference (optional)</label><input type="text" id="course" name="course_id" maxlength="100"></div>
+  <button type="submit" class="btn btn-primary">Queue lesson draft</button>
+</form>
+<p>Jobs run while <code>clawed queue worker</code> is running. Completed generation phases are saved.
+Resuming with the same inputs and model reuses them. Cancellation may not stop a request already processing at your model provider.</p>
+<div class="job-actions"><button id="refresh" class="btn">Refresh jobs</button>
+<button id="recover" class="btn">Recover interrupted jobs</button></div>
+<p class="job-help">Recovery finds jobs whose worker has been unresponsive for at least five minutes.</p>
+<p id="job-message" role="status" aria-live="polite"></p>
+<div id="jobs"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const message = document.getElementById('job-message');
+  async function request(path, options = {}) {
+    const response = await fetch('/api/jobs' + path, options);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Unable to update jobs');
+    return data;
+  }
+  function text(tag, value, parent) {
+    const node = document.createElement(tag);
+    node.textContent = value; parent.appendChild(node); return node;
+  }
+  async function refresh() {
+    try {
+      const jobs = await request('');
+      const container = document.getElementById('jobs'); container.replaceChildren();
+      if (!jobs.length) text('p', 'No lesson jobs yet.', container);
+      for (const job of jobs) {
+        const card = document.createElement('article'); card.className = 'job-card'; container.appendChild(card);
+        text('h2', job.payload.topic || job.task_type, card);
+        text('p', `${job.status} · ${job.id} · ${job.steps.length} saved phases`, card);
+        if (job.error) text('p', job.error, card);
+        if (job.result) {
+          text('p', job.result.text || 'Draft ready for teacher review.', card);
+          (job.result.files || []).forEach((file, index) => {
+            const link = text('a', file.split('/').pop(), text('p', '', card));
+            link.href = `/api/jobs/${encodeURIComponent(job.id)}/files/${index}`;
+          });
+        }
+        const actions = ['failed', 'interrupted', 'cancelled'].includes(job.status) ? ['resume'] :
+          ['queued', 'running'].includes(job.status) ? ['cancel'] : [];
+        for (const action of actions) {
+          const button = text('button', action === 'resume' ? 'Resume draft' : 'Cancel job', card);
+          button.className = 'btn';
+          button.onclick = async () => {
+            try {
+              await request(`/${job.id}/${action}`, {method: 'POST'});
+              message.textContent = action === 'resume' ? 'Draft queued to resume.' : 'Cancellation requested.';
+              await refresh();
+            }
+            catch (error) { message.textContent = error.message; }
+          };
+        }
+      }
+    } catch (error) { message.textContent = error.message; }
+  }
+  document.getElementById('job-form').onsubmit = async event => {
+    event.preventDefault();
+    const submit = event.target.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      await request('', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(Object.fromEntries(new FormData(event.target)))});
+      message.textContent = 'Draft queued. Your worker will process it.'; await refresh();
+    } catch (error) { message.textContent = error.message; }
+    finally { submit.disabled = false; }
+  };
+  document.getElementById('refresh').onclick = refresh;
+  document.getElementById('recover').onclick = async () => {
+    try {
+      const data = await request('/recover', {method: 'POST'});
+      message.textContent = `${data.recovered} jobs recovered. Resume a job to continue.`; await refresh();
+    } catch (error) { message.textContent = error.message; }
+  };
+  refresh();
+})();
+</script>
+{% endblock %}

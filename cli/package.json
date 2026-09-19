@@ -1,8 +1,0 @@
-{
-  "name": "clawed-source-build",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "bun ./scripts/build-cli.mjs"
-  }
-}

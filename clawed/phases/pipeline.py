@@ -35,13 +35,6 @@ _PROMPT_DIR = Path(__file__).parent / "prompts"
 _PHASE_TIMEOUT_SEC = 240  # 4 minutes per phase (5x shorter than monolith)
 _PHASE_MAX_RETRIES = 2
 
-# Ollama Cloud model fallback chain. When a phase fails repeatedly on the
-# configured model, we rotate through these alternatives automatically.
-# Override with CLAWED_PHASE_MODELS env var (comma-separated).
-_FALLBACK_MODEL_CHAIN = [
-    "glm-5.1:cloud",
-    "minimax-m2.7:cloud",
-]
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -78,19 +71,18 @@ def _render_vocabulary_list(vocab: list[Any]) -> str:
     return "\n".join(lines)
 
 
-def _render_primary_sources_block(sources: list[Any], content_chars: int = 150) -> str:
+def _render_primary_sources_block(sources: list[Any], content_chars: int | None = None) -> str:
     """Render Phase 1 primary sources for downstream phases.
 
-    Aggressively trimmed to keep downstream prompts <3KB. Downstream
-    phases mostly need to REFERENCE sources by id+title; full content
-    is rarely needed and bloats the input.
+    Full excerpts are required to write answerable source-dependent questions.
+    Callers may explicitly request truncation for display-only previews.
     """
     if not sources:
         return "_(no primary sources)_"
     lines = []
     for ps in sources:
         content = ps.content_text[:content_chars].replace("\n", " ")
-        if len(ps.content_text) > content_chars:
+        if content_chars is not None and len(ps.content_text) > content_chars:
             content += "..."
         lines.append(f"- {ps.id} | {ps.title} — {content}")
     return "\n".join(lines)
@@ -113,7 +105,7 @@ def _render_direct_instruction_block(sections: list[Any]) -> str:
         return "_(no direct instruction)_"
     lines = []
     for i, sec in enumerate(sections, start=1):
-        snippet = sec.content[:100].replace("\n", " ")
+        snippet = sec.content.replace("\n", " ")
         lines.append(f"{i}. {sec.heading} — {snippet}...")
     return "\n".join(lines)
 
@@ -237,85 +229,45 @@ async def _run_phase(
     client: LLMClient,
     task_type: str,
 ) -> _PhaseT:
-    """Run a single phase with multi-model fallback.
+    """Retry the selected provider/model without changing the teacher's budget.
 
-    Tries the configured model first. If it times out or returns empty,
-    automatically rotates through _FALLBACK_MODEL_CHAIN (or the
-    CLAWED_PHASE_MODELS env override). This handles Ollama Cloud
-    flakiness gracefully — when GLM 5.1 is down, minimax picks up.
+    Fallback to another model requires an explicit model selection and a new
+    attempt. Shared configuration is never mutated by concurrent phases.
     """
     import asyncio
-    import os as _os
+    import hashlib
+    import json
 
-    # Build the model chain: configured model first, then fallbacks
-    configured_model = getattr(client.config, "ollama_model", "") or ""
-    env_chain = _os.environ.get("CLAWED_PHASE_MODELS", "")
-    if env_chain:
-        chain = [m.strip() for m in env_chain.split(",") if m.strip()]
-    else:
-        chain = list(_FALLBACK_MODEL_CHAIN)
-        # Move the configured model to the front if it's in the list,
-        # otherwise prepend it
-        if configured_model in chain:
-            chain.remove(configured_model)
-        if configured_model:
-            chain.insert(0, configured_model)
+    from clawed.task_queue import current_task
 
-    last_error = None
-    for model_idx, model_name in enumerate(chain):
-        # Swap the client's model for this attempt
-        original_model = client.config.ollama_model
-        client.config.ollama_model = model_name
+    job = current_task.get()
+    fingerprint = hashlib.sha256(json.dumps({
+        "prompt": prompt, "system": system, "schema": model_class.model_json_schema(),
+        "provider": client.config.provider.value,
+        "model": getattr(client.config, f"{client.config.provider.value}_model"),
+    }, sort_keys=True).encode()).hexdigest() if job else ""
+    if job:
+        cached = job[0].cached_step(job[1], phase_name, fingerprint)
+        if cached is not None:
+            return model_class.model_validate(cached)
 
+    for attempt in range(_PHASE_MAX_RETRIES):
         try:
-            for attempt in range(_PHASE_MAX_RETRIES):
-                try:
-                    logger.info(
-                        "Phase %s model=%s attempt %d/%d",
-                        phase_name, model_name, attempt + 1, _PHASE_MAX_RETRIES,
-                    )
-                    result = await asyncio.wait_for(
-                        client.safe_generate_json(
-                            prompt=prompt,
-                            model_class=model_class,
-                            system=system,
-                            temperature=0.6,
-                            max_tokens=4000,
-                        ),
-                        timeout=_PHASE_TIMEOUT_SEC,
-                    )
-                    if model_idx > 0:
-                        logger.info(
-                            "Phase %s succeeded on fallback model %s",
-                            phase_name, model_name,
-                        )
-                    return result
-                except TimeoutError:
-                    last_error = (
-                        f"Phase {phase_name} timed out on {model_name} "
-                        f"after {_PHASE_TIMEOUT_SEC}s"
-                    )
-                    logger.warning(last_error)
-                    # On timeout, move to next model immediately (no retry)
-                    break
-                except Exception as e:
-                    last_error = (
-                        f"Phase {phase_name} failed on {model_name}: "
-                        f"{type(e).__name__}: {e}"
-                    )
-                    logger.warning(last_error)
-                    if attempt < _PHASE_MAX_RETRIES - 1:
-                        await asyncio.sleep(2 ** attempt)
-        finally:
-            client.config.ollama_model = original_model
-
-        if model_idx < len(chain) - 1:
-            logger.info(
-                "Phase %s: falling back from %s to %s",
-                phase_name, model_name, chain[model_idx + 1],
+            result = await asyncio.wait_for(
+                client.safe_generate_json(
+                    prompt=prompt, model_class=model_class, system=system,
+                    temperature=0.6, max_tokens=4000,
+                ),
+                timeout=_PHASE_TIMEOUT_SEC,
             )
-
-    raise RuntimeError(last_error or f"Phase {phase_name} exhausted all models")
+            if job:
+                job[0].checkpoint(job[1], phase_name, fingerprint, result.model_dump())
+            return result
+        except Exception as exc:
+            if attempt + 1 == _PHASE_MAX_RETRIES:
+                raise RuntimeError(f"Phase {phase_name} failed on the selected model: {exc}") from exc
+            await asyncio.sleep(2 ** attempt)
+    raise RuntimeError(f"Phase {phase_name} did not run")
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -359,7 +311,7 @@ async def _phase1_skeleton(
 ) -> Phase1Skeleton:
     """Generate Phase 1 with quality validation and retry."""
     template = _load_prompt("phase1_skeleton.txt")
-    tm = teacher_materials[:800] if teacher_materials else ""
+    tm = teacher_materials
     base_prompt = _fill_template(
         template,
         unit_title=unit.title[:200],
@@ -725,7 +677,7 @@ async def _phase3_activities(
         duration_minutes=phase1.duration_minutes,
         lesson_format=phase1.lesson_format,
         lesson_personality=phase1.lesson_personality,
-        primary_sources_block=_render_primary_sources_mini(phase1.primary_sources),
+        primary_sources_block=_render_primary_sources_block(phase1.primary_sources),
         direct_instruction_block=_render_direct_instruction_block(phase2.direct_instruction),
     )
     num_sources = len(phase1.primary_sources)

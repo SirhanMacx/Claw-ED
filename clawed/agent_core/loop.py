@@ -75,6 +75,8 @@ async def run_agent_loop(
                 "role": "assistant",
                 "content": None,
                 "tool_calls": tool_calls,
+                "anthropic_content": response.get("anthropic_content"),
+                "response_output": response.get("response_output"),
             })
 
             for tc in tool_calls:

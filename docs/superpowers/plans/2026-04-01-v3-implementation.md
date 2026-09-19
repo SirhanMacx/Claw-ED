@@ -1,6 +1,6 @@
 # Claw-ED v3.0 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Historical plan, superseded in v9.18.2026.1. The terminal and daemon described below have been removed. Use [the current architecture](../../ARCHITECTURE.md) for development; this document records an abandoned implementation.
 
 **Goal:** Transform Claw-ED into a polished AI co-teacher CLI by absorbing Claude Code's source build, rebranding it, wiring all 16 Python features as TypeScript tools, adding a background Telegram daemon, and shipping to PyPI + GitHub.
 

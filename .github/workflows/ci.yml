@@ -16,16 +16,12 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v5
-        with:
-          lfs: true
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          mkdir -p clawed/_cli_bundle
-          echo '{"type": "module"}' > clawed/_cli_bundle/package.json
           pip install -e ".[dev]"
       - name: Lint with ruff
         run: ruff check .
@@ -42,50 +38,14 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
-  typescript-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          lfs: true
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Verify Bun is available
-        run: bun --version
-      - name: Build TypeScript CLI
-        run: cd cli && node scripts/build-cli.mjs
-      - name: Verify build output
-        run: test -f cli/dist/cli.js
-      - uses: actions/upload-artifact@v4
-        with:
-          name: cli-bundle
-          path: |
-            cli/dist/cli.js
-            cli/dist/cli.bundle/
-
   wheel-build:
-    needs: [python-tests, typescript-build]
+    needs: [python-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          lfs: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/download-artifact@v4
-        with:
-          name: cli-bundle
-          path: cli/dist/
-      - name: Bundle CLI into Python package
-        run: |
-          mkdir -p clawed/_cli_bundle
-          cp -R cli/dist/cli.js cli/dist/cli.bundle clawed/_cli_bundle/
-          echo '{"type": "module"}' > clawed/_cli_bundle/package.json
       - name: Build wheel
         run: |
           pip install build
@@ -94,7 +54,7 @@ jobs:
         run: |
           ls -lh dist/*.whl
           WHEEL_SIZE=$(stat -c%s dist/*.whl 2>/dev/null || stat -f%z dist/*.whl)
-          MAX_SIZE=$((50 * 1024 * 1024))
+          MAX_SIZE=$((5 * 1024 * 1024))
           if [ "$WHEEL_SIZE" -gt "$MAX_SIZE" ]; then
             echo "ERROR: Wheel too large ($WHEEL_SIZE bytes)"
             exit 1
@@ -122,7 +82,7 @@ jobs:
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [wheel-build]
+    needs: [wheel-build, docker-build]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
